@@ -2,6 +2,14 @@
 	"name": "vscode-rpgle",
 	"displayName": "RPGLE language tools",
 	"description": "RPGLE content assist and linter for VS Code",
+	"author": {
+		"name": "Halcyon Tech Ltd",
+		"url": "https://github.com/halcyon-tech"
+	},
+	"publisher": "halcyontechltd",
+	"repository": {
+		"url": "https://github.com/halcyon-tech/vscode-rpgle"
+	},
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.62.0"
@@ -16,7 +24,7 @@
 	"extensionDependencies": [
 		"HalcyonTechLtd.code-for-ibmi"
 	],
-	"main": "./extension.js",
+	"main": "./dist/extension",
 	"contributes": {
 		"jsonValidation": [
 			{
@@ -52,7 +60,11 @@
 	"scripts": {
 		"lint": "eslint .",
 		"pretest": "npm run lint",
-		"test": "node ./test/runTest.js"
+		"test": "node ./test/runTest.js",
+		"package": "vsce package",
+		"vscode:prepublish": "webpack --mode production",
+		"webpack": "webpack --mode development",
+		"webpack-dev": "webpack --mode development --watch"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.62.0",
@@ -63,6 +75,8 @@
 		"glob": "^7.1.7",
 		"mocha": "^8.4.0",
 		"typescript": "^4.3.2",
-		"vscode-test": "^1.5.2"
+		"vscode-test": "^1.5.2",
+		"webpack": "^5.24.3",
+		"webpack-cli": "^4.5.0"
 	}
 }

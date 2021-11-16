@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require(`vscode`);
 
-const Worker = require(`./src/worker`);
+const Worker = require(`./worker`);
 
 const { instance } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
