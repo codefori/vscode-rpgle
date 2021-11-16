@@ -26,6 +26,12 @@
 	],
 	"main": "./dist/extension",
 	"contributes": {
+		"snippets": [
+			{
+				"path": "./snippets/rpgle.code-snippets",
+				"language": "rpgle"
+			}
+		],
 		"jsonValidation": [
 			{
 				"fileMatch": [
