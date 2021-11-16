@@ -1,0 +1,68 @@
+{
+	"name": "vscode-rpgle",
+	"displayName": "RPGLE language tools",
+	"description": "RPGLE content assist and linter for VS Code",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.62.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished",
+		"onLanguage:rpgle"
+	],
+	"extensionDependencies": [
+		"HalcyonTechLtd.code-for-ibmi"
+	],
+	"main": "./extension.js",
+	"contributes": {
+		"jsonValidation": [
+			{
+				"fileMatch": [
+					"rpglint.json",
+					"RPGLINT.JSON"
+				],
+				"url": "./src/schemas/rpglint.json"
+			}
+		],
+		"commands": [],
+		"configuration": {
+			"title": "RPGLE language tools",
+			"properties": {
+				"vscode-rpgle.rpgleLinterSupportEnabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Experimental feature. When enabled, will provide warnings for RPGLE sources. Supports total free RPG only."
+				},
+				"vscode-rpgle.rpgleContentAssistEnabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Experimental feature. When enabled, will provide content assist for procedures inside of your RPG sources. Supports total free RPG only."
+				},
+				"vscode-rpgle.rpgleColumnAssistEnabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Experimental feature. When enabled, will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "node ./test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.62.0",
+		"@types/glob": "^7.1.3",
+		"@types/mocha": "^8.2.2",
+		"@types/node": "14.x",
+		"eslint": "^7.27.0",
+		"glob": "^7.1.7",
+		"mocha": "^8.4.0",
+		"typescript": "^4.3.2",
+		"vscode-test": "^1.5.2"
+	}
+}
