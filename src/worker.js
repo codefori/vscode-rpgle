@@ -48,7 +48,7 @@ module.exports = class {
     context.subscriptions.push(
       this.linterDiagnostics,
 
-      vscode.commands.registerCommand(`code-for-ibmi.rpgleColumnAssistant`, async () => {
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleColumnAssistant`, async () => {
         if (Configuration.get(`rpgleColumnAssistEnabled`)) {
           const editor = vscode.window.activeTextEditor;
           if (editor) {
@@ -121,7 +121,7 @@ module.exports = class {
         }
       }),
 
-      vscode.commands.registerCommand(`code-for-ibmi.rpgleOpenInclude`, async => {
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, async => {
         if (Configuration.get(`rpgleContentAssistEnabled`)) {
           const editor = vscode.window.activeTextEditor;
           
