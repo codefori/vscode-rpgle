@@ -98,7 +98,7 @@ module.exports = class Linter {
 
       lineNumber += 1;
 
-      if (line.startsWith(`//`)) continue;
+      if (line.trimStart().startsWith(`//`)) continue;
 
       if (currentIndent >= 0) {
         skipIndentCheck = false;
