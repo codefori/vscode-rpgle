@@ -1,0 +1,4 @@
+module.exports = {
+  'DCL-DS': [`LIKEDS`, `LIKEREC`, `END-DS`],
+  'DCL-PI': [`END-PI`],
+}

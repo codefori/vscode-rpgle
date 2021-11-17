@@ -3,6 +3,7 @@ const vscode = require(`vscode`);
 
 const Cache = require(`./models/cache`);
 const Statement = require(`./statement`);
+const oneLineTriggers = require(`./models/oneLineTriggers`);
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -18,11 +19,6 @@ const errorText = {
   'IncorrectVariableCase': `Variable name casing does not match definition.`,
   'RequiresParameter': `Procedure calls require brackets.`,
   'RequiresProcedureDescription': `Proceudres require a title and description.`,
-}
-
-const oneLineTriggers = {
-  'DCL-DS': [`LIKEDS`, `LIKEREC`, `END-DS`],
-  'DCL-PI': [`END-PI`],
 }
 
 module.exports = class Linter {
@@ -44,6 +40,7 @@ module.exports = class Linter {
    *  UppercaseConstants?: boolean,
    *  IncorrectVariableCase?: boolean,
    *  RequiresParameter?: boolean,
+   *  RequiresProcedureDescription?: boolean,
    *  SpecificCasing?: {operation: string, expected: string}[],
    * }} rules 
    * @param {Cache|null} [definitions]
@@ -182,17 +179,19 @@ module.exports = class Linter {
 
               switch (statement[0].value.toUpperCase()) {
               case `DCL-PROC`:
-                value = statement[1].value;
-                const procDef = definitions.procedures.find(def => def.name.toUpperCase() === value.toUpperCase());
-                if (procDef) {
-                  if (!procDef.description) {
-                    errors.push({
-                      range: new vscode.Range(
-                        statementStart,
-                        statementEnd
-                      ),
-                      type: `RequiresProcedureDescription`
-                    });
+                if (rules.RequiresProcedureDescription) {
+                  value = statement[1].value;
+                  const procDef = definitions.procedures.find(def => def.name.toUpperCase() === value.toUpperCase());
+                  if (procDef) {
+                    if (!procDef.description) {
+                      errors.push({
+                        range: new vscode.Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        type: `RequiresProcedureDescription`
+                      });
+                    }
                   }
                 }
                 break;
@@ -235,7 +234,7 @@ module.exports = class Linter {
                 }
     
                 if (rules.QualifiedCheck) {
-                  if (!statement.some(part => part.value && part.value.toUpperCase() === `QUALIFIED`)) {
+                  if (!statement.some(part => part.value && [`LIKEDS`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
                     errors.push({
                       range: new vscode.Range(statementStart, statementEnd),
                       type: `QualifiedCheck`
@@ -311,10 +310,9 @@ module.exports = class Linter {
                     const lastStatement = statement[statement.length-1];
                     errors.push({
                       range: new vscode.Range(
-                        statementStart, 
+                        new vscode.Position(statementStart.line, statementStart.character + statement[0].value.length + 1),
                         statementEnd
                       ),
-                      offset: {position: statement[1].position, length: lastStatement.position + lastStatement.value.length},
                       type: `ForceOptionalParens`
                     });
                   }

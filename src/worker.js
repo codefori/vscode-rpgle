@@ -12,6 +12,7 @@ const Cache = require(`./models/cache`);
 const possibleTags = require(`./models/tags`);
 
 const Linter = require(`./linter`);
+const oneLineTriggers = require(`./models/oneLineTriggers`);
 
 const currentArea = vscode.window.createTextEditorDecorationType({
   backgroundColor: `rgba(242, 242, 109, 0.3)`,
@@ -813,6 +814,12 @@ module.exports = class {
                 line: lineNumber
               }
 
+              // Does the keywords include a keyword that makes end-ds useless?
+              if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
+                structs.push(currentItem);
+                resetDefinition = true;
+              }
+
               currentDescription = [];
             }
           }
@@ -1002,6 +1009,28 @@ module.exports = class {
     this.parsedCache[workingUri.path] = parsedData;
 
     return parsedData;
+  }
+
+  /**
+   * Returns relative linter configuration path
+   * @param {vscode.Uri} uri 
+   */
+  getLintConfigPath(uri) {
+    const lintPath = lintFile[uri.scheme];
+
+    let resultPath;
+
+    if (lintPath) {
+      let {finishedPath, type} = this.getPathInfo(uri, lintPath);
+      switch (type) {
+      case `member`:
+        return {path: `${finishedPath.substr(1)}.JSON`, type: `member`};
+      case `streamfile`:
+        return {path: finishedPath.toLowerCase(), type: `streamfile`};
+      }
+    }
+
+    return null;
   }
 
   /**
