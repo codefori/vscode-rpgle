@@ -533,15 +533,17 @@ module.exports = class {
       }),
 
       vscode.workspace.onDidOpenTextDocument((document) => {
-        if (document.languageId === `rpgle`) {
+        let text;
+        switch (document.languageId) {
+        case `rpgle`:
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-          const text = document.getText();
+          text = document.getText();
           if (Configuration.get(`rpgleContentAssistEnabled`)) {
             if (isFree) {
               this.updateCopybookCache(document.uri, text);
             }
           }
-
+  
           if (Configuration.get(`rpgleLinterSupportEnabled`)) {
             this.getLinterFile(document).then(file => {
               this.getDocs(document.uri, text).then(docs => {
@@ -549,6 +551,29 @@ module.exports = class {
               });
             });
           }
+
+          break;
+        
+        // We need to update our copy of the linter configuration
+        case `json`:
+          text = document.getText();
+          if (Configuration.get(`rpgleLinterSupportEnabled`)) {
+            let upperPath;
+            switch (document.uri.scheme) {
+            case `member`:
+              upperPath = document.uri.path.toUpperCase().substring(0, document.uri.path.length - 5); //without the extension
+              break;
+            case `streamfile`:
+              upperPath = document.uri.path.toUpperCase();
+              break;
+            }
+
+            if (upperPath.includes(`RPGLINT`)) {
+              if (!this.copyBooks[upperPath])
+                this.copyBooks[upperPath] = [text];
+            }
+          }
+          break;
         }
       })
     )
