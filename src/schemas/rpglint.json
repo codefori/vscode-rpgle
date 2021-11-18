@@ -86,6 +86,11 @@
             "type": "boolean",
             "description": "JOINs in Embedded SQL are not allowed."
         },
+        "NoGlobalsInProcedures": {
+            "$id": "#/properties/NoGlobalsInProcedures",
+            "type": "boolean",
+            "description": "Globals are not allowed in procedures."
+        },
         "SpecificCasing": {
             "$id": "#/properties/SpecificCasing",
             "type": "array",

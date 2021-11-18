@@ -2,6 +2,7 @@
 const vscode = require(`vscode`);
 
 const Cache = require(`./models/cache`);
+const Declaration = require(`./models/declaration`);
 const Statement = require(`./statement`);
 const oneLineTriggers = require(`./models/oneLineTriggers`);
 
@@ -24,6 +25,7 @@ const errorText = {
   'CopybookDirective': `Directive does not match requirement.`,
   'UppercaseDirectives': `Directives must be in uppercase.`,
   'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
+  'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
 }
 
 module.exports = class Linter {
@@ -51,6 +53,7 @@ module.exports = class Linter {
    *  CopybookDirective?: "copy"|"include"
    *  UppercaseDirectives?: boolean,
    *  NoSQLJoins?: boolean,
+   *  NoGlobalsInProcedures?: boolean,
    *  SpecificCasing?: {operation: string, expected: string}[],
    * }} rules 
    * @param {Cache|null} [definitions]
@@ -61,17 +64,28 @@ module.exports = class Linter {
 
     const indent = rules.indent || 2;
 
-    let definedNames = [];
+    /** @type {string[]} */
+    let definedNames = []
+
+    /** @type {Declaration[]} */
+    let globalVariables = [];
 
     if (definitions) {
+      globalVariables = [
+        ...definitions.variables,
+        ...definitions.structs
+      ]
+
       definedNames = [
         ...definitions.constants.map(def => def.name), 
-        ...definitions.variables.map(def => def.name), 
         ...definitions.procedures.map(def => def.name), 
         ...definitions.subroutines.map(def => def.name), 
-        ...definitions.structs.map(def => def.name)
+        ...globalVariables.map(def => def.name),
       ];
     }
+
+    let inProcedure = false;
+    let inPrototype = false;
 
     let lineNumber = -1;
 
@@ -86,7 +100,7 @@ module.exports = class Linter {
      *      "NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|
      *      "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
      *      "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
-     *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins", 
+     *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures", 
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -234,6 +248,7 @@ module.exports = class Linter {
 
               switch (statement[0].value.toUpperCase()) {
               case `DCL-PROC`:
+                inProcedure = true;
                 if (statement.length < 2) break;
                 if (rules.RequiresProcedureDescription) {
                   value = statement[1].value;
@@ -264,6 +279,12 @@ module.exports = class Linter {
                       newValue: value.toUpperCase()
                     });
                   }
+                }
+                break;
+
+              case `DCL-PI`:
+                if (!statement.some(s => s.type === `end`)) {
+                  inPrototype = true;
                 }
                 break;
 
@@ -309,6 +330,17 @@ module.exports = class Linter {
                 break;
               }
 
+              break;
+
+            case `end`:
+              switch (statement[0].value.toUpperCase()) {
+              case `END-PROC`:
+                inProcedure = false;
+                break;
+              case `END-PI`:
+                inPrototype = false;
+                break;
+              }
               break;
 
             case `word`:
@@ -397,6 +429,22 @@ module.exports = class Linter {
 
               if (part.type === `word` && part.value) {
                 const upperName = part.value.toUpperCase();
+
+                if (rules.NoGlobalsInProcedures) {
+                  if (inProcedure && !inPrototype) {
+                    const existingVariable = globalVariables.find(variable => variable.name.toUpperCase() === upperName);
+                    if (existingVariable) {
+                      errors.push({
+                        range: new vscode.Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        offset: {position: part.position, length: part.position + part.value.length},
+                        type: `NoGlobalsInProcedures`
+                      });
+                    }
+                  }
+                }
               
                 if (rules.IncorrectVariableCase) {
                   // Check the casing of the reference matches the definition
