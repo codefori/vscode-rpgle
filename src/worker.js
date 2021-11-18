@@ -105,41 +105,33 @@ module.exports = class {
                 ...options
               }, docs);
 
-              const fixIndent = detail.indentErrors.some(error => error.line === range.start.line);
-
-              if (fixIndent) {
-                action = new vscode.CodeAction(`Fix indentation`, vscode.CodeActionKind.Source);
-                action.edit = new vscode.WorkspaceEdit();
-                detail.indentErrors.forEach(error => {
-                  action.edit.replace(document.uri, range, `${` `.repeat(error.expectedIndent)}`);
-                });
-                actions.push(action);
-              }
-
               const fixErrors = detail.errors.filter(error => error.range.intersection(range) );
 
               if (fixErrors.length > 0) {
+                let errorRange;
                 fixErrors.forEach(error => {
+                  errorRange = this.calculateOffset(document, error);
+
                   switch (error.type) {
                   case `UppercaseConstants`:
                     action = new vscode.CodeAction(`Convert constant name to uppercase`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, range, error.newValue);
+                    action.edit.replace(document.uri, errorRange, error.newValue);
                     actions.push(action);
                     break;
   
                   case `ForceOptionalParens`:
                     action = new vscode.CodeAction(`Add brackets around expression`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
-                    action.edit.insert(document.uri, range.end, `)`);
-                    action.edit.insert(document.uri, range.start, `(`);
+                    action.edit.insert(document.uri, errorRange.end, `)`);
+                    action.edit.insert(document.uri, errorRange.start, `(`);
                     actions.push(action);
                     break;
   
                   case `UselessOperationCheck`:
                     action = new vscode.CodeAction(`Remove operation code`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
-                    action.edit.delete(document.uri, range);
+                    action.edit.delete(document.uri, errorRange);
                     actions.push(action);
                     break;
   
@@ -147,19 +139,21 @@ module.exports = class {
                   case `IncorrectVariableCase`:
                     action = new vscode.CodeAction(`Correct casing to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, range, error.newValue);
+                    action.edit.replace(document.uri, errorRange, error.newValue);
                     actions.push(action);
                     break;
 
                   case `RequiresProcedureDescription`:
                     action = new vscode.CodeAction(`Add title and description`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
-                    action.edit.insert(document.uri, range.start, `///\n// Title\n// Description\n///\n`);
+                    action.edit.insert(document.uri, errorRange.start, `///\n// Title\n// Description\n///\n`);
                     actions.push(action);
                     break;
                   }
                 });
               }
+
+              console.log(actions);
             }
           
             return actions;
@@ -1051,19 +1045,7 @@ module.exports = class {
 
       if (errors.length > 0) {
         errors.forEach(error => {
-          const offset = error.offset;
-          let range;
-
-          if (offset) {
-            const docOffsetStart = document.offsetAt(error.range.start) + offset.position;
-            const docOffsetEnd = document.offsetAt(error.range.start) + offset.length;
-            range = new vscode.Range(
-              document.positionAt(docOffsetStart),
-              document.positionAt(docOffsetEnd)
-            );
-          } else {
-            range = error.range;
-          }
+          const range = this.calculateOffset(document, error);
 
           const diagnostic = new vscode.Diagnostic(
             range, 
@@ -1077,5 +1059,27 @@ module.exports = class {
 
       this.linterDiagnostics.set(document.uri, [...indentDiags, ...generalDiags]);
     }
+  }
+
+  /**
+   * @param {vscode.TextDocument} document
+   * @param {{range: vscode.Range, offset?: {position: number, length: number}}} error 
+   */
+  calculateOffset(document, error) {
+    const offset = error.offset;
+    let range;
+
+    if (offset) {
+      const docOffsetStart = document.offsetAt(error.range.start) + offset.position;
+      const docOffsetEnd = document.offsetAt(error.range.start) + offset.length;
+      range = new vscode.Range(
+        document.positionAt(docOffsetStart),
+        document.positionAt(docOffsetEnd)
+      );
+    } else {
+      range = error.range;
+    }
+    
+    return range;
   }
 }

@@ -193,13 +193,13 @@ module.exports = class Statement {
     }
 
     result = this.fixStatement(result);
-    result = this.createBlocks(result);
+    //result = this.createBlocks(result);
 
     return result;
   }
 
   /**
-   * @param {{value: string|object[], type: string, position: number}[]} statement 
+   * @param {{value: string, type: string, position: number}[]} statement 
    */
   static fixStatement(statement) {
     for (let i = 0; i < statement.length; i++) {

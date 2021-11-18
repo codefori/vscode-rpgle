@@ -284,7 +284,7 @@ module.exports = class Linter {
                       statementStart,
                       statementEnd
                     ),
-                    offset: {position: statement[0].position, length: statement[0].position + value.length},
+                    offset: {position: statement[0].position, length: statement[0].position + value.length + 1},
                     type: `UselessOperationCheck`
                   });
                 }
@@ -306,8 +306,8 @@ module.exports = class Linter {
               case `DOW`:
               case `DOU`:
                 if (rules.ForceOptionalParens) {
-                  if (statement[1].type !== `block`) {
-                    const lastStatement = statement[statement.length-1];
+                  const lastStatement = statement[statement.length-1];
+                  if (statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`) {
                     errors.push({
                       range: new vscode.Range(
                         new vscode.Position(statementStart.line, statementStart.character + statement[0].value.length + 1),
@@ -357,7 +357,7 @@ module.exports = class Linter {
                       let requiresBlock = false;
                       if (statement.length <= i+1) {
                         requiresBlock = true;
-                      } else if (statement[i+1].type !== `block`) {
+                      } else if (statement[i+1].type !== `openbracket`) {
                         requiresBlock = true;
                       }
 
