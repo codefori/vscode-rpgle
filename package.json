@@ -55,9 +55,18 @@
 			{
 				"command": "vscode-rpgle.rpgleOpenInclude",
 				"title": "Open include at cursor",
-				"category": "IBM i (RPGLE)"
+				"category": "RPGLE"
 			}
 		],
+		"menus": {
+			"editor/context": [
+				{
+					"command": "vscode-rpgle.rpgleColumnAssistant",
+					"group": "1_rpgle",
+					"when": "editorLangId == rpgle"
+				}
+			]
+		},
 		"keybindings": [
 			{
 				"command": "vscode-rpgle.rpgleOpenInclude",
