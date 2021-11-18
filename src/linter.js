@@ -23,6 +23,7 @@ const errorText = {
   'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
   'CopybookDirective': `Directive does not match requirement.`,
   'UppercaseDirectives': `Directives must be in uppercase.`,
+  'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
 }
 
 module.exports = class Linter {
@@ -49,6 +50,7 @@ module.exports = class Linter {
    *  RequireBlankSpecial?: boolean,
    *  CopybookDirective?: "copy"|"include"
    *  UppercaseDirectives?: boolean,
+   *  NoSQLJoins?: boolean,
    *  SpecificCasing?: {operation: string, expected: string}[],
    * }} rules 
    * @param {Cache|null} [definitions]
@@ -79,7 +81,12 @@ module.exports = class Linter {
     /** @type {{
      *  range: vscode.Range, 
      *  offset?: {position: number, length: number}
-     *  type: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|"NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|"InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|"RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|"CopybookDirective"|"UppercaseDirectives", 
+     *  type: 
+     *      "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|
+     *      "NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|
+     *      "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
+     *      "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
+     *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins", 
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -344,6 +351,15 @@ module.exports = class Linter {
                     errors.push({
                       range: new vscode.Range(statementStart, statementEnd),
                       type: `NoSELECTAll`
+                    });
+                  }
+                }
+
+                if (rules.NoSQLJoins) {
+                  if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
+                    errors.push({
+                      range: new vscode.Range(statementStart, statementEnd),
+                      type: `NoSQLJoins`
                     });
                   }
                 }

@@ -81,6 +81,11 @@
             "type": "boolean",
             "description": "Directives must be in uppercase."
         },
+        "NoSQLJoins": {
+            "$id": "#/properties/NoSQLJoins",
+            "type": "boolean",
+            "description": "JOINs in Embedded SQL are not allowed."
+        },
         "SpecificCasing": {
             "$id": "#/properties/SpecificCasing",
             "type": "array",
