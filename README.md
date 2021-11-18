@@ -1,5 +1,7 @@
 # vscode-rpgle README
 
+<img src="https://github.com/halcyon-tech/vscode-rpgle/blob/main/media/logo.png?raw=true" height="180px" align="right">
+
 Adds functionality to improve writing RPGLE free-format (only `**FREE`), including:
 
 * Content assist
