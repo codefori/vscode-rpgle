@@ -2,7 +2,7 @@
 const vscode = require(`vscode`);
 const { instance } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
-const Generic = require(`./Generic`);
+const Generic = require(`./generic`);
 
 const Cache = require(`./models/cache`);
 const Declaration = require(`./models/declaration`);
