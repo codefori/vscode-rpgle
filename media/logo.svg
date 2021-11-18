@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg style="shape-rendering: crispedges;" width="256px" viewBox="0 0 256 256" height="256px" xmlns="http://www.w3.org/2000/svg">
+  <g transform="matrix(0.367338, 0, 0, 0.630478, 123.444794, 37.40778)" style="">
+    <path d="M 9.975 344.318 L 9.975 143.318 L -238.025 143.318 L -238.025 150.291 L -43.234 344.318 Z" style="fill: rgb(219,226,189);"/>
+    <path d="M -43.234 344.318 L -238.025 150.291 L -238.025 344.318 Z" style="fill: rgb(217,228,173);"/>
+    <path d="M 9.975 344.318 L 62.975 344.318 L 261.975 145.318 L 261.975 142.33 L 9.975 143.318 Z" style="fill: rgb(185,216,213);"/>
+    <path d="M -238.025 -55.682 L -238.025 143.318 L 9.975 143.318 L -187.47 -55.682 Z" style="fill: rgb(255,230,153);"/>
+    <path d="M 12.289 -55.682 L -187.47 -55.682 L 9.975 143.318 Z" style="fill: rgb(255,223,160);"/>
+    <path d="M 261.975 344.318 L 261.975 145.318 L 62.975 344.318 Z" style="fill: rgb(168,227,199);"/>
+    <path d="M 261.975 142.33 L 261.975 139.258 L 70.827 -55.682 L 12.289 -55.682 L 9.975 143.318 Z" style="fill: rgb(226,229,183);"/>
+  </g>
+  <text style="font-family: Futura; font-size: 10.4px; letter-spacing: 3.3px; text-anchor: middle; text-transform: lowercase; white-space: pre;" transform="matrix(5.245379, 0, 0, 4.804911, -226.662048, -578.818481)" x="67.445" y="149.268">RPG</text>
+</svg>

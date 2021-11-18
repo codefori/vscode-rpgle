@@ -6,6 +6,7 @@
 		"name": "Halcyon Tech Ltd",
 		"url": "https://github.com/halcyon-tech"
 	},
+	"icon": "./media/logo.png",
 	"publisher": "halcyontechltd",
 	"repository": {
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
