@@ -70,6 +70,17 @@
             "type": "boolean",
             "description": "*BLANK must be used over empty string literals."
         },
+        "CopybookDirective": {
+            "$id": "#/properties/CopybookDirective",
+            "type": "string",
+            "enum": ["copy", "include"],
+            "description": "Force which directive which must be used to include other source."
+        },
+        "UppercaseDirectives": {
+            "$id": "#/properties/UppercaseDirectives",
+            "type": "boolean",
+            "description": "Directives must be in uppercase."
+        },
         "SpecificCasing": {
             "$id": "#/properties/SpecificCasing",
             "type": "array",

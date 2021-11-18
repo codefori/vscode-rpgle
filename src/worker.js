@@ -132,6 +132,7 @@ module.exports = class Worker {
   
                   case `SpecificCasing`:
                   case `IncorrectVariableCase`:
+                  case `UppercaseDirectives`:
                     action = new vscode.CodeAction(`Correct casing to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
                     action.edit.replace(document.uri, errorRange, error.newValue);
@@ -147,6 +148,13 @@ module.exports = class Worker {
 
                   case `RequireBlankSpecial`:
                     action = new vscode.CodeAction(`Convert constant name to uppercase`, vscode.CodeActionKind.QuickFix);
+                    action.edit = new vscode.WorkspaceEdit();
+                    action.edit.replace(document.uri, errorRange, error.newValue);
+                    actions.push(action);
+                    break;
+
+                  case `CopybookDirective`:
+                    action = new vscode.CodeAction(`Switch to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
                     action.edit.replace(document.uri, errorRange, error.newValue);
                     actions.push(action);

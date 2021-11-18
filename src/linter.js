@@ -20,7 +20,9 @@ const errorText = {
   'RequiresParameter': `Procedure calls require brackets.`,
   'RequiresProcedureDescription': `Proceudres require a title and description.`,
   'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
-  'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`
+  'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
+  'CopybookDirective': `Directive does not match requirement.`,
+  'UppercaseDirectives': `Directives must be in uppercase.`,
 }
 
 module.exports = class Linter {
@@ -44,7 +46,9 @@ module.exports = class Linter {
    *  RequiresParameter?: boolean,
    *  RequiresProcedureDescription?: boolean,
    *  StringLiteralDupe?: boolean,
-   *  RequireBlankSpecial?: boolean
+   *  RequireBlankSpecial?: boolean,
+   *  CopybookDirective?: "copy"|"include"
+   *  UppercaseDirectives?: boolean,
    *  SpecificCasing?: {operation: string, expected: string}[],
    * }} rules 
    * @param {Cache|null} [definitions]
@@ -75,7 +79,7 @@ module.exports = class Linter {
     /** @type {{
      *  range: vscode.Range, 
      *  offset?: {position: number, length: number}
-     *  type: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|"NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|"InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|"RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial", 
+     *  type: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|"NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|"InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|"RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|"CopybookDirective"|"UppercaseDirectives", 
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -149,14 +153,16 @@ module.exports = class Linter {
 
         const upperLine = line.trim().toUpperCase();
 
-        // Generally ignore comments and directives.
-        if (upperLine.trimStart().startsWith(`/`)) {
+        // Generally ignore comments
+        if (upperLine.startsWith(`//`)) {
           currentStatement = ``;
+        } else if (upperLine.startsWith(`/`)) {
+          // But not directives!
+          continuedStatement = false;
         }
 
         // Ignore free directive.
         if (upperLine === `**FREE`) {
-          currentStatement = ``;
           continuedStatement = false;
         }
 
@@ -168,9 +174,44 @@ module.exports = class Linter {
           const statement = Statement.parseStatement(currentStatement);
           let value;
 
-          if (statement.length >= 2) {
+          if (statement.length >= 1) {
             switch (statement[0].type) {
+            case `directive`:
+              value = statement[0].value;
+              if (rules.UppercaseDirectives) {
+                if (value !== value.toUpperCase()) {
+                  errors.push({
+                    range: new vscode.Range(
+                      statementStart,
+                      statementEnd
+                    ),
+                    offset: {position: statement[0].position, length: statement[0].position + value.length},
+                    type: `UppercaseDirectives`,
+                    newValue: value.toUpperCase()
+                  });
+                }
+              }
+
+              if (rules.CopybookDirective) {
+                if ([`/COPY`, `/INCLUDE`].includes(value.toUpperCase())) {
+                  const correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
+                  if (value.toUpperCase() !== correctDirective) {
+                    errors.push({
+                      range: new vscode.Range(
+                        statementStart,
+                        statementEnd
+                      ),
+                      offset: {position: statement[0].position, length: statement[0].position + value.length},
+                      type: `CopybookDirective`,
+                      newValue: correctDirective
+                    });
+                  }
+                }
+              }
+              break;
+
             case `declare`:
+              if (statement.length < 2) break;
               value = statement[1].value;
 
               if (value.match(/^\d/)) {
@@ -186,6 +227,7 @@ module.exports = class Linter {
 
               switch (statement[0].value.toUpperCase()) {
               case `DCL-PROC`:
+                if (statement.length < 2) break;
                 if (rules.RequiresProcedureDescription) {
                   value = statement[1].value;
                   const procDef = definitions.procedures.find(def => def.name.toUpperCase() === value.toUpperCase());

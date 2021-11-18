@@ -16,7 +16,10 @@ const commonMatchers = [
     name: `DIRECTIVE`,
     match: [
       { type: `divide` },
-      { type: `word` },
+      { 
+        type: `word`, 
+        match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINED`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`].includes(word.toUpperCase())
+      },
     ],
     becomes: {
       type: `directive`
