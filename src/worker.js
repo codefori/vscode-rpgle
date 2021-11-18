@@ -2,35 +2,30 @@
 const path = require(`path`);
 const vscode = require(`vscode`);
 
-const { instance } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 const Configuration = require(`./configuration`);
 
 const { registerColumnAssist } = require(`./columnAssist`);
 
-const Declaration = require(`./models/declaration`);
 const Cache = require(`./models/cache`);
 const possibleTags = require(`./models/tags`);
 
 const Linter = require(`./linter`);
-const oneLineTriggers = require(`./models/oneLineTriggers`);
+const Parser = require(`./parser`);
+const Generic = require(`./generic`);
 
 const lintFile = {
   member: `vscode,rpglint`,
   streamfile: `.vscode/rpglint.json`
 };
 
-module.exports = class {
+module.exports = class Worker {
   /**
    * @param {vscode.ExtensionContext} context
    */
   constructor(context) {
     this.linterDiagnostics = vscode.languages.createDiagnosticCollection(`Lint`);
 
-    /** @type {{[path: string]: string[]}} */
-    this.copyBooks = {};
-
-    /** @type {{[path: string]: Cache}} */
-    this.parsedCache = {};
+    this.parser = new Parser();
 
     /** @type {{[spfPath: string]: object}} */
     this.linterRules = {};
@@ -50,7 +45,7 @@ module.exports = class {
             if (document.languageId === `rpgle`) {
               const linePieces = document.lineAt(position.line).text.trim().split(` `);
               if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-                const {finishedPath, type} = this.getPathInfo(document.uri, linePieces[1]);
+                const {finishedPath, type} = Generic.getPathInfo(document.uri, linePieces[1]);
 
                 switch (type) {
                 case `member`:
@@ -74,8 +69,8 @@ module.exports = class {
             if (Configuration.get(`rpgleLinterSupportEnabled`)) {
               if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
                 const text = document.getText();
-                this.parsedCache[document.uri.path] = undefined;
-                this.getDocs(document.uri, text).then(docs => {
+                this.parser.clearParsedCache(document.uri.path);
+                this.parser.getDocs(document.uri, text).then(docs => {
                   this.refreshDiagnostics(document, docs);
                 });
               }
@@ -98,7 +93,7 @@ module.exports = class {
             const text = document.getText();
             if (isFree) {
               const options = this.getLinterOptions(document.uri);
-              const docs = await this.getDocs(document.uri);
+              const docs = await this.parser.getDocs(document.uri);
 
               const detail = Linter.getErrors(text, {
                 indent: Number(vscode.window.activeTextEditor.options.tabSize),
@@ -165,7 +160,7 @@ module.exports = class {
         provideHover: async (document, position, token) => {
           if (Configuration.get(`rpgleContentAssistEnabled`)) {
             const text = document.getText();
-            const doc = await this.getDocs(document.uri, text);
+            const doc = await this.parser.getDocs(document.uri, text);
             const range = document.getWordRangeAtPosition(position);
             const word = document.getText(range).toUpperCase();
 
@@ -218,7 +213,7 @@ module.exports = class {
 
             const linePieces = document.lineAt(position.line).text.trim().split(` `);
             if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-              const {type, memberPath, finishedPath} = this.getPathInfo(document.uri, linePieces[1]);
+              const {type, memberPath, finishedPath} = Generic.getPathInfo(document.uri, linePieces[1]);
 
               return new vscode.Hover(
                 new vscode.MarkdownString(
@@ -240,7 +235,7 @@ module.exports = class {
               
               const text = document.getText();
               if (isFree) {
-                const doc = await this.getDocs(document.uri, text);
+                const doc = await this.parser.getDocs(document.uri, text);
 
                 const currentPath = document.uri.path;
 
@@ -304,7 +299,7 @@ module.exports = class {
         provideDefinition: async (document, position, token) => {
           if (Configuration.get(`rpgleContentAssistEnabled`)) {
             const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-            const doc = await this.getDocs(document.uri);
+            const doc = await this.parser.getDocs(document.uri);
             const range = document.getWordRangeAtPosition(position);
             const word = document.getText(range).toUpperCase();
 
@@ -314,7 +309,7 @@ module.exports = class {
               if (doc[type]) {
                 const def = doc[type].find(def => def.name.toUpperCase() === word);
                 if (def) {
-                  let {finishedPath, type} = this.getPathInfo(document.uri, def.position.path);
+                  let {finishedPath, type} = Generic.getPathInfo(document.uri, def.position.path);
                   if (type === `member`) {
                     finishedPath = `${finishedPath}.rpgle`;
                   }
@@ -336,7 +331,7 @@ module.exports = class {
             const text = document.getText();
             if (isFree) {
               const currentLine = document.getText(new vscode.Range(position.line, 0, position.line, position.character));
-              const doc = await this.getDocs(document.uri, text);
+              const doc = await this.parser.getDocs(document.uri, text);
 
               /** @type vscode.CompletionItem[] */
               let items = [];
@@ -405,9 +400,9 @@ module.exports = class {
             const text = document.getText();
             const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
             if (isFree) {
-              this.updateCopybookCache(document.uri, text);
+              this.parser.updateCopybookCache(document.uri, text);
 
-              this.getDocs(document.uri, text).then(doc => {
+              this.parser.getDocs(document.uri, text).then(doc => {
                 this.refreshDiagnostics(document, doc);
               });
             }
@@ -418,19 +413,19 @@ module.exports = class {
       vscode.workspace.onDidSaveTextDocument((document) => {
         if (Configuration.get(`rpgleContentAssistEnabled`)) {
           const workingUri = document.uri;
-          const {finishedPath} = this.getPathInfo(workingUri, path.basename(workingUri.path));
+          const {finishedPath} = Generic.getPathInfo(workingUri, path.basename(workingUri.path));
           const text = document.getText();
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
-          if (this.copyBooks[finishedPath]) {
+          if (this.parser.getCopybook(finishedPath)) {
             //Update stored copy book
             const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-            this.copyBooks[finishedPath] = lines;
+            this.parser.setCopybook(finishedPath, lines);
 
             // The user usually switches tabs very quickly, so we trigger this event too.
             if (vscode.window.activeTextEditor) {
               if (workingUri.path !== vscode.window.activeTextEditor.document.uri.path) {
-                this.getDocs(workingUri).then(docs => {
+                this.parser.getDocs(workingUri).then(docs => {
                   this.refreshDiagnostics(vscode.window.activeTextEditor.document, docs);
                 });
               }
@@ -439,7 +434,7 @@ module.exports = class {
           else if (document.languageId === `rpgle`) {
             //Else fetch new info from source being edited
             if (isFree) {
-              this.updateCopybookCache(workingUri, text).then(() => {});
+              this.parser.updateCopybookCache(workingUri, text)
             }
           }
         }
@@ -453,13 +448,13 @@ module.exports = class {
           text = document.getText();
           if (Configuration.get(`rpgleContentAssistEnabled`)) {
             if (isFree) {
-              this.updateCopybookCache(document.uri, text);
+              this.parser.updateCopybookCache(document.uri, text);
             }
           }
   
           if (Configuration.get(`rpgleLinterSupportEnabled`)) {
             this.getLinterFile(document).then(file => {
-              this.getDocs(document.uri, text).then(docs => {
+              this.parser.getDocs(document.uri, text).then(docs => {
                 this.refreshDiagnostics(document, docs);
               });
             });
@@ -482,8 +477,8 @@ module.exports = class {
             }
 
             if (upperPath.includes(`RPGLINT`)) {
-              if (!this.copyBooks[upperPath])
-                this.copyBooks[upperPath] = [text];
+              if (!this.parser.getCopybook(upperPath))
+                this.parser.setCopybook(upperPath, text);
             }
           }
           break;
@@ -494,472 +489,14 @@ module.exports = class {
   }
 
   /**
-   * @param {vscode.Uri} workingUri Path being worked with
-   * @param {string} getPath IFS or member path to fetch (in the format of an RPGLE copybook)
-   */
-  getPathInfo(workingUri, getPath) {
-    const config = instance.getConfig();
-
-    /** @type {string} */
-    let finishedPath = undefined;
-
-    /** @type {string[]} */
-    let memberPath = undefined;
-
-    /** @type {"streamfile"|"member"|undefined} */
-    let type = undefined;
-
-    if (workingUri.scheme === `streamfile`) {
-      type = `streamfile`;
-      //Fetch IFS
-
-      if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
-      if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
-
-      if (getPath.startsWith(`/`)) {
-        //Get from root
-        finishedPath = getPath;
-      } 
-
-      else {
-        finishedPath = path.posix.join(config.homeDirectory, getPath);
-      }
-
-    } else {
-      //Fetch member
-      const getLib = getPath.split(`/`);
-      const getMember = getLib[getLib.length-1].split(`,`);
-      const workingPath = workingUri.path.split(`/`);
-      memberPath = [undefined, undefined, `QRPGLEREF`, undefined];
-
-      if (workingPath.length === 4) { //ASP not included
-        memberPath[1] = workingPath[1];
-        memberPath[2] = workingPath[2];
-      } else {
-        memberPath[0] = workingPath[1];
-        memberPath[1] = workingPath[2];
-        memberPath[2] = workingPath[3];
-      }
-
-      switch (getMember.length) {
-      case 1:
-        memberPath[3] = getMember[0];
-        break;
-      case 2:
-        memberPath[2] = getMember[0];
-        memberPath[3] = getMember[1];
-      }
-
-      if (getLib.length === 2) {
-        memberPath[1] = getLib[0];
-      }
-
-      if (memberPath[3].includes(`.`)) {
-        memberPath[3] = memberPath[3].substr(0, memberPath[3].lastIndexOf(`.`));
-      }
-
-      finishedPath = memberPath.join(`/`);
-
-      if (workingPath.length === 5) {
-        finishedPath = `/${finishedPath}`;
-      }
-
-      type = `member`;
-    }
-
-    finishedPath = finishedPath.toUpperCase();
-
-    return {type, memberPath, finishedPath};
-  }
-
-  /**
-   * @param {vscode.Uri} workingUri Path being worked with
-   * @param {string} getPath IFS or member path to fetch
-   * @returns {Promise<string[]>}
-   */
-  async getContent(workingUri, getPath) {
-    const contentApi = instance.getContent();
-
-    let content;
-    let lines = undefined;
-
-    let {type, memberPath, finishedPath} = this.getPathInfo(workingUri, getPath);
-
-    try {
-      switch (type) {
-      case `member`:
-        if (this.copyBooks[finishedPath]) {
-          lines = this.copyBooks[finishedPath];
-        } else {  
-          content = await contentApi.downloadMemberContent(memberPath[0], memberPath[1], memberPath[2], memberPath[3]);
-          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          this.copyBooks[finishedPath] = lines;
-        }
-        break;
-
-      case `streamfile`:
-        if (this.copyBooks[finishedPath]) {
-          lines = this.copyBooks[finishedPath];
-        } else {
-          content = await contentApi.downloadStreamfile(finishedPath);
-          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          this.copyBooks[finishedPath] = lines;
-        }
-        break;
-      }
-    } catch (e) {
-      lines = [];
-    }
-
-    return lines;
-  }
-
-  /**
-   * @param {vscode.Uri} workingUri
-   * @param {string} content 
-   */
-  async updateCopybookCache(workingUri, content) {
-    if (this.parsedCache[workingUri.path]) {
-      this.parsedCache[workingUri.path] = undefined; //Clear parsed data
-
-      let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-
-      //First loop is for copy/include statements
-      for (let i = baseLines.length - 1; i >= 0; i--) {
-        const line = baseLines[i].trim(); //Paths are case insensitive so it's okay
-        if (line === ``) continue;
-
-        const pieces = line.split(` `).filter(piece => piece !== ``);
-
-        if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
-          await this.getContent(workingUri, pieces[1]);
-        }
-      }
-    }
-  }
-
-  /**
-   * @param {vscode.Uri} workingUri
-   * @param {string} [content] 
-   * @param {boolean} [withIncludes] To make sure include statements are parsed
-   * @returns {Promise<Cache|null>}
-   */
-  async getDocs(workingUri, content, withIncludes = true) {
-    if (this.parsedCache[workingUri.path]) {
-      return this.parsedCache[workingUri.path];
-    };
-
-    if (!content) return null;
-
-    let files = {};
-    let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-
-    let currentTitle = undefined, currentDescription = [];
-    /** @type {{tag: string, content: string}[]} */
-    let currentTags = [];
-
-    let currentItem, currentSub;
-
-    let resetDefinition = false; //Set to true when you're done defining a new item
-    let docs = false; // If section is for ILEDocs
-    let lineNumber, parts, partsLower, pieces;
-
-    const constants = [];
-    const variables = [];
-    const structs = [];
-    const procedures = [];
-    const subroutines = [];
-
-    files[workingUri.path] = baseLines;
-
-    if (withIncludes) {
-    //First loop is for copy/include statements
-      for (let i = baseLines.length - 1; i >= 0; i--) {
-        let line = baseLines[i].trim(); //Paths are case insensitive so it's okay
-        if (line === ``) continue;
-
-        pieces = line.split(` `).filter(piece => piece !== ``);
-
-        if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
-          files[pieces[1]] = (await this.getContent(workingUri, pieces[1]));
-        }
-      }
-    }
-
-    //Now the real work
-    for (const file in files) {
-      lineNumber = -1;
-      for (let line of files[file]) {
-        lineNumber += 1;
-
-        line = line.trim();
-
-        if (line === ``) continue;
-
-        pieces = line.split(`;`);
-        parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
-        partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
-
-        switch (parts[0]) {
-        case `DCL-C`:
-          if (currentItem === undefined) {
-            currentItem = new Declaration(`constant`);
-            currentItem.name = partsLower[1];
-            currentItem.keywords = parts.slice(2);
-            currentItem.description = currentDescription.join(` `);
-
-            currentItem.position = {
-              path: file,
-              line: lineNumber
-            }
-
-            constants.push(currentItem);
-            resetDefinition = true;
-          }
-          break;
-
-        case `DCL-S`:
-          if (currentItem === undefined) {
-            if (!parts.includes(`TEMPLATE`)) {
-              currentItem = new Declaration(`variable`);
-              currentItem.name = partsLower[1];
-              currentItem.keywords = parts.slice(2);
-              currentItem.description = currentDescription.join(` `);
-              currentItem.tags = currentTags;
-
-              currentItem.position = {
-                path: file,
-                line: lineNumber
-              }
-
-              variables.push(currentItem);
-              resetDefinition = true;
-            }
-          }
-          break;
-
-        case `DCL-DS`:
-          if (currentItem === undefined) {
-            if (!parts.includes(`TEMPLATE`)) {
-              currentItem = new Declaration(`struct`);
-              currentItem.name = partsLower[1];
-              currentItem.keywords = parts.slice(2);
-              currentItem.description = currentDescription.join(` `);
-              currentItem.tags = currentTags;
-
-              currentItem.position = {
-                path: file,
-                line: lineNumber
-              }
-
-              // Does the keywords include a keyword that makes end-ds useless?
-              if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                structs.push(currentItem);
-                resetDefinition = true;
-              }
-
-              currentDescription = [];
-            }
-          }
-          break;
-
-        case `END-DS`:
-          if (currentItem && currentItem.type === `struct`) {
-            structs.push(currentItem);
-            resetDefinition = true;
-          }
-          break;
-        
-        case `DCL-PR`:
-          if (currentItem === undefined) {
-            if (!procedures.find(proc => proc.name.toUpperCase() === parts[1])) {
-              currentItem = new Declaration(`procedure`);
-              currentItem.name = partsLower[1];
-              currentItem.keywords = parts.slice(2);
-              currentItem.description = currentDescription.join(` `);
-              currentItem.tags = currentTags;
-
-              currentItem.position = {
-                path: file,
-                line: lineNumber
-              }
-
-              currentItem.readParms = true;
-
-              currentDescription = [];
-            }
-          }
-          break;
-
-        case `END-PR`:
-          if (currentItem && currentItem.type === `procedure`) {
-            procedures.push(currentItem);
-            resetDefinition = true;
-          }
-          break;
-        
-        case `DCL-PROC`:
-          //We can overwrite it.. it might have been a PR before.
-          currentItem = procedures.find(proc => proc.name.toUpperCase() === parts[1]) || new Declaration(`procedure`);
-
-          currentItem.name = partsLower[1];
-          currentItem.keywords = parts.slice(2);
-          currentItem.description = currentDescription.join(` `);
-          currentItem.tags = currentTags;
-
-          currentItem.position = {
-            path: file,
-            line: lineNumber
-          }
-
-          currentItem.readParms = false;
-
-          currentDescription = [];
-          break;
-
-        case `DCL-PI`:
-          if (currentItem) {
-            currentItem.keywords = parts.slice(2);
-            currentItem.readParms = true;
-
-            currentDescription = [];
-          }
-          break;
-
-        case `END-PI`:
-          if (currentItem && currentItem.type === `procedure`) {
-            currentItem.readParms = false;
-          }
-          break;
-
-        case `END-PROC`:
-          if (currentItem && currentItem.type === `procedure`) {
-            procedures.push(currentItem);
-            resetDefinition = true;
-          }
-          break;
-
-        case `BEGSR`:
-          if (!subroutines.find(sub => sub.name.toUpperCase() === parts[1])) {
-            currentItem = new Declaration(`subroutine`);
-            currentItem.name = partsLower[1];
-            currentItem.description = currentDescription.join(` `);
-
-            currentItem.position = {
-              path: file,
-              line: lineNumber
-            }
-
-            currentDescription = [];
-          }
-          break;
-    
-        case `ENDSR`:
-          if (currentItem && currentItem.type === `subroutine`) {
-            subroutines.push(currentItem);
-            resetDefinition = true;
-          }
-          break;
-
-        case `///`:
-          docs = !docs;
-          
-          // When enabled
-          if (docs === true) {
-            currentTitle = undefined;
-            currentDescription = [];
-            currentTags = [];
-          }
-          break;
-
-        default:
-          if (line.startsWith(`//`)) {
-            if (docs) {
-              const content = line.substring(2).trim();
-              if (content.length > 0) {
-                if (content.startsWith(`@`)) {
-                  const lineData = content.substring(1).split(` `);
-                  currentTags.push({
-                    tag: lineData[0],
-                    content: lineData.slice(1).join(` `)
-                  });
-                } else {
-                  if (currentTags.length > 0) {
-                    currentTags[currentTags.length - 1].content += ` ${content}`;
-
-                  } else {
-                    if (currentTitle === undefined) {
-                      currentTitle = content;
-                    } else {
-                      currentDescription.push(content);
-                    }
-                  }
-                }
-              }
-
-            } else {
-              //Do nothing because it's a regular comment
-            }
-
-          } else {
-            if (currentItem && currentItem.type === `procedure`) {
-              if (currentItem.readParms) {
-                if (parts[0].startsWith(`DCL`))
-                  parts.slice(1);
-
-                currentSub = new Declaration(`subitem`);
-                currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;
-                currentSub.keywords = parts.slice(1);
-
-                const paramTags = currentTags.filter(tag => tag.tag === `param`);
-                const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
-                if (paramTag) {
-                  currentSub.description = paramTag.content;
-                }
-
-                currentItem.subItems.push(currentSub);
-                currentSub = undefined;
-              }
-            }
-          }
-          break;
-        }
-
-        if (resetDefinition) {
-          currentItem = undefined;
-          currentTitle = undefined;
-          currentDescription = [];
-          currentTags = [];
-          resetDefinition = false;
-        }
-      
-      }
-    }
-
-    const parsedData = new Cache({
-      procedures,
-      structs,
-      subroutines,
-      variables,
-      constants
-    });
-
-    this.parsedCache[workingUri.path] = parsedData;
-
-    return parsedData;
-  }
-
-  /**
    * Returns relative linter configuration path
    * @param {vscode.Uri} uri 
    */
   getLintConfigPath(uri) {
     const lintPath = lintFile[uri.scheme];
 
-    let resultPath;
-
     if (lintPath) {
-      let {finishedPath, type} = this.getPathInfo(uri, lintPath);
+      let {finishedPath, type} = Generic.getPathInfo(uri, lintPath);
       switch (type) {
       case `member`:
         return {path: `${finishedPath.substr(1)}.JSON`, type: `member`};
@@ -979,7 +516,7 @@ module.exports = class {
     // Will only download once.
     const lintPath = lintFile[document.uri.scheme];
     if (lintPath) {
-      return this.getContent(document.uri, lintPath);
+      return this.parser.getContent(document.uri, lintPath);
     }
   }
 
@@ -988,10 +525,11 @@ module.exports = class {
 
     const localLintPath = lintFile[workingUri.scheme];
     if (localLintPath) {
-      let {finishedPath} = this.getPathInfo(workingUri, localLintPath);
+      let {finishedPath} = Generic.getPathInfo(workingUri, localLintPath);
 
-      if (this.copyBooks[finishedPath]) {
-        const jsonString = this.copyBooks[finishedPath].join(``).trim();
+      const possibleJson = this.parser.getCopybook(finishedPath);
+      if (possibleJson) {
+        const jsonString = possibleJson.join(``).trim();
         if (jsonString) {
           try {
             options = JSON.parse(jsonString);
