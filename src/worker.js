@@ -144,6 +144,13 @@ module.exports = class Worker {
                     action.edit.insert(document.uri, errorRange.start, `///\n// Title\n// Description\n///\n`);
                     actions.push(action);
                     break;
+
+                  case `RequireBlankSpecial`:
+                    action = new vscode.CodeAction(`Convert constant name to uppercase`, vscode.CodeActionKind.QuickFix);
+                    action.edit = new vscode.WorkspaceEdit();
+                    action.edit.replace(document.uri, errorRange, error.newValue);
+                    actions.push(action);
+                    break;
                   }
                 });
               }

@@ -19,6 +19,8 @@ const errorText = {
   'IncorrectVariableCase': `Variable name casing does not match definition.`,
   'RequiresParameter': `Procedure calls require brackets.`,
   'RequiresProcedureDescription': `Proceudres require a title and description.`,
+  'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
+  'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`
 }
 
 module.exports = class Linter {
@@ -41,6 +43,8 @@ module.exports = class Linter {
    *  IncorrectVariableCase?: boolean,
    *  RequiresParameter?: boolean,
    *  RequiresProcedureDescription?: boolean,
+   *  StringLiteralDupe?: boolean,
+   *  RequireBlankSpecial?: boolean
    *  SpecificCasing?: {operation: string, expected: string}[],
    * }} rules 
    * @param {Cache|null} [definitions]
@@ -71,7 +75,7 @@ module.exports = class Linter {
     /** @type {{
      *  range: vscode.Range, 
      *  offset?: {position: number, length: number}
-     *  type: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|"NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|"InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|"RequiresProcedureDescription", 
+     *  type: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|"NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|"InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|"RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial", 
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -91,6 +95,9 @@ module.exports = class Linter {
     let statementStart;
     /** @type {vscode.Position} */
     let statementEnd;
+
+    /** @type {{value: string, list: {range: vscode.Range, offset: {position: number, length: number}}[]}[]} */
+    let stringLiterals = [];
 
     for (let currentLine of lines) {
       currentIndent = currentLine.search(/\S/);
@@ -323,61 +330,94 @@ module.exports = class Linter {
             }
           }
           
-          if (rules.IncorrectVariableCase || rules.RequiresParameter) {
-            let part;
+          let part;
 
-            if (statement.length > 0 && statement[0].type !== `declare`) {
+          if (statement.length > 0 && statement[0].type !== `declare`) {
 
-              for (let i = 0; i < statement.length; i++) {
-                part = statement[i];
+            for (let i = 0; i < statement.length; i++) {
+              part = statement[i];
 
-                if (part.type === `word` && part.value) {
-                  const upperName = part.value.toUpperCase();
+              if (part.type === `word` && part.value) {
+                const upperName = part.value.toUpperCase();
               
-                  if (rules.IncorrectVariableCase) {
-                    // Check the casing of the reference matches the definition
-                    const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
-                    if (definedName && definedName !== part.value) {
+                if (rules.IncorrectVariableCase) {
+                  // Check the casing of the reference matches the definition
+                  const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
+                  if (definedName && definedName !== part.value) {
+                    errors.push({
+                      range: new vscode.Range(
+                        statementStart,
+                        statementEnd
+                      ),
+                      offset: {position: part.position, length: part.position + part.value.length},
+                      type: `IncorrectVariableCase`,
+                      newValue: definedName
+                    });
+                  }
+                }
+
+                if (rules.RequiresParameter) {
+                  // Check the procedure reference has a block following it
+                  const definedProcedure = definitions.procedures.find(proc => proc.name.toUpperCase() === upperName);
+                  if (definedProcedure) {
+                    let requiresBlock = false;
+                    if (statement.length <= i+1) {
+                      requiresBlock = true;
+                    } else if (statement[i+1].type !== `openbracket`) {
+                      requiresBlock = true;
+                    }
+
+                    if (requiresBlock) {
                       errors.push({
                         range: new vscode.Range(
                           statementStart,
                           statementEnd
                         ),
                         offset: {position: part.position, length: part.position + part.value.length},
-                        type: `IncorrectVariableCase`,
-                        newValue: definedName
+                        type: `RequiresParameter`,
                       });
-                    }
-                  }
-
-                  if (rules.RequiresParameter) {
-                    // Check the procedure reference has a block following it
-                    const definedProcedure = definitions.procedures.find(proc => proc.name.toUpperCase() === upperName);
-                    if (definedProcedure) {
-                      let requiresBlock = false;
-                      if (statement.length <= i+1) {
-                        requiresBlock = true;
-                      } else if (statement[i+1].type !== `openbracket`) {
-                        requiresBlock = true;
-                      }
-
-                      if (requiresBlock) {
-                        errors.push({
-                          range: new vscode.Range(
-                            statementStart,
-                            statementEnd
-                          ),
-                          offset: {position: part.position, length: part.position + part.value.length},
-                          type: `RequiresParameter`,
-                        });
-                      }
                     }
                   }
                 }
               }
+
+              if (part.type === `string`) {
+                if (part.value.substring(1, part.value.length-1).trim() === `` && rules.RequireBlankSpecial) {
+                  errors.push({
+                    range: new vscode.Range(
+                      statementStart,
+                      statementEnd
+                    ),
+                    offset: {position: part.position, length: part.position + part.value.length},
+                    type: `RequireBlankSpecial`,
+                    newValue: `*BLANK`
+                  });
+
+                } else if (rules.StringLiteralDupe) {
+                  let foundBefore = stringLiterals.find(literal => literal.value === part.value);
+
+                  // If it does not exist on our list, we can add it
+                  if (!foundBefore) {
+                    foundBefore = {
+                      value: part.value,
+                      list: []
+                    };
+
+                    stringLiterals.push(foundBefore);
+                  }
+
+                  // Then add our new found literal location to the list
+                  foundBefore.list.push({
+                    range: new vscode.Range(
+                      statementStart,
+                      statementEnd
+                    ),
+                    offset: {position: part.position, length: part.position + part.value.length}
+                  });
+                }
+              }
             }
           }
-
           currentStatement = ``;
         }
 
@@ -425,6 +465,19 @@ module.exports = class Linter {
         }
           
       }
+    }
+
+    if (stringLiterals.length > 0) {
+      stringLiterals.forEach(literal => {
+        if (literal.list.length > 1) {
+          literal.list.forEach(location => {
+            errors.push({
+              ...location,
+              type: `StringLiteralDupe`
+            })
+          });
+        }
+      })
     }
 
     return {
