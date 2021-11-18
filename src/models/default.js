@@ -7,5 +7,7 @@ module.exports = {
   NoSELECTAll: true,
   UppercaseConstants: true,
   IncorrectVariableCase: true,
-  RequiresParameter: true
+  RequiresParameter: true,
+  StringLiteralDupe: true,
+  NoSQLJoins: true
 }
