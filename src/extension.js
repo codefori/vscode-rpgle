@@ -29,69 +29,85 @@ function activate(context) {
   });
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(`vscode-rpgle.openLintConfig`, async () => {
+    vscode.commands.registerCommand(`vscode-rpgle.openLintConfig`, async (filter) => {
       if (worker) {
+        /** @type {"member"|"streamfile"} */
+        let type = `member`;
         const editor = vscode.window.activeTextEditor;
+        let path;
 
-        if (editor) {
+        if (filter && filter.description) {
+          // Bad way to get the library for the filter ..
+          const library = filter.description.split(`/`)[0];
+          path = `${library}/VSCODE/RPGLINT.JSON`;
+        }
+        else if (editor) {
+          //@ts-ignore
+          type = editor.document.uri.scheme;
+          
           const lintInfo = worker.getLintConfigPath(editor.document.uri);
 
           if (lintInfo) {
-            const exists = await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, lintInfo.path);
-
-            if (!exists) {
-              const content = instance.getContent();
-
-              vscode.window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${lintInfo.path}?`, `Yes`, `No`).then
-              (async (value) => {
-                if (value === `Yes`) {
-                  const jsonString = JSON.stringify(defaultConfig, null, 2);
-
-                  switch (lintInfo.type) {
-                  case `member`:
-                    const memberPath = lintInfo.path.split(`/`);
-                    try {
-                      await vscode.commands.executeCommand(
-                        `code-for-ibmi.runCommand`,
-                        {
-                          'command': `CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
-                        }
-                      )
-                    } catch (e) {
-                      console.log(e);
-                    }
-
-                    try {
-                      await vscode.commands.executeCommand(
-                        `code-for-ibmi.runCommand`,
-                        {
-                          command: `ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
-                        }
-                      );
-                    } catch (e) {
-                      console.log(e);
-                    }
-
-                    try {
-                      await content.uploadMemberContent(null, memberPath[0], memberPath[1], `RPGLINT`, jsonString);
-                      await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, lintInfo.path);
-                    } catch (e) {
-                      console.log(e);
-                    }
-                    break;
-                  case `streamfile`:
-                    await content.writeStreamfile(lintInfo.path, jsonString);
-                    await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, lintInfo.path);
-                    break;
-                  }
-                }
-              });
-            }
+            path = lintInfo.path;
           } else {
             vscode.window.showErrorMessage(`No lint config path for this file. File must either be a member or a streamfile on the host IBM i.`);
           }
         } else {
           vscode.window.showErrorMessage(`No active editor found.`);
+        }
+
+        if (path) {
+          const exists = await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path);
+
+          if (!exists) {
+            const content = instance.getContent();
+
+            vscode.window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${path}?`, `Yes`, `No`).then
+            (async (value) => {
+              if (value === `Yes`) {
+                const jsonString = JSON.stringify(defaultConfig, null, 2);
+
+                switch (type) {
+                case `member`:
+                  const memberPath = path.split(`/`);
+                  try {
+                    await vscode.commands.executeCommand(
+                      `code-for-ibmi.runCommand`,
+                      {
+                        'command': `CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
+                      }
+                    )
+                  } catch (e) {
+                    console.log(e);
+                  }
+
+                  try {
+                    await vscode.commands.executeCommand(
+                      `code-for-ibmi.runCommand`,
+                      {
+                        command: `ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
+                      }
+                    );
+                  } catch (e) {
+                    console.log(e);
+                  }
+
+                  try {
+                    await content.uploadMemberContent(null, memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
+                    await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path);
+                  } catch (e) {
+                    console.log(e);
+                  }
+                  break;
+
+                case `streamfile`:
+                  await content.writeStreamfile(path, jsonString);
+                  await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path);
+                  break;
+                }
+              }
+            });
+          }
         }
       } else {
         vscode.window.showErrorMessage(`Not connected to a system.`);

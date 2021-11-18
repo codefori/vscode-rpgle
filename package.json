@@ -65,6 +65,13 @@
 					"group": "1_rpgle",
 					"when": "editorLangId == rpgle"
 				}
+			],
+			"view/item/context": [
+				{
+					"command": "vscode-rpgle.openLintConfig",
+					"when": "view == objectBrowser && viewItem == filter",
+					"group": "1_LibActions@2"
+				}
 			]
 		},
 		"keybindings": [
