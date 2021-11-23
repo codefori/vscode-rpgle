@@ -70,11 +70,15 @@ module.exports = class Linter {
     /** @type {Declaration[]} */
     let globalVariables = [];
 
+    let globalProcs = [];
+
     if (definitions) {
       globalVariables = [
         ...definitions.variables,
         ...definitions.structs
-      ]
+      ];
+
+      globalProcs = definitions.procedures;
 
       definedNames = [
         ...definitions.constants.map(def => def.name), 
@@ -190,7 +194,7 @@ module.exports = class Linter {
         // Linter checking
         if (continuedStatement === false && currentStatement.length > 0) {
           const currentStatementUpper = currentStatement.toUpperCase();
-          currentStatement = currentStatement.trim();
+          currentStatement = currentStatement.trimEnd();
 
           const statement = Statement.parseStatement(currentStatement);
           let value;
@@ -252,7 +256,7 @@ module.exports = class Linter {
                 if (statement.length < 2) break;
                 if (rules.RequiresProcedureDescription) {
                   value = statement[1].value;
-                  const procDef = definitions.procedures.find(def => def.name.toUpperCase() === value.toUpperCase());
+                  const procDef = globalProcs.find(def => def.name.toUpperCase() === value.toUpperCase());
                   if (procDef) {
                     if (!procDef.description) {
                       errors.push({
@@ -464,7 +468,7 @@ module.exports = class Linter {
 
                 if (rules.RequiresParameter) {
                   // Check the procedure reference has a block following it
-                  const definedProcedure = definitions.procedures.find(proc => proc.name.toUpperCase() === upperName);
+                  const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
                   if (definedProcedure) {
                     let requiresBlock = false;
                     if (statement.length <= i+1) {
