@@ -158,7 +158,7 @@ module.exports = class Linter {
         if (line.endsWith(`;`)) {
           statementEnd = new vscode.Position(lineNumber, currentLine.length - 1);
           line = line.substr(0, line.length-1);
-          currentStatement += line + ` `;
+          currentStatement += line + `  `;
           continuedStatement = false;
 
         } else {
@@ -172,8 +172,7 @@ module.exports = class Linter {
           } else {
             continuedStatement = true;
           }
-
-          currentStatement += line + ` `;
+          currentStatement += line + `  `;
         }
 
         const upperLine = line.trim().toUpperCase();
@@ -194,7 +193,7 @@ module.exports = class Linter {
         // Linter checking
         if (continuedStatement === false && currentStatement.length > 0) {
           const currentStatementUpper = currentStatement.toUpperCase();
-          currentStatement = currentStatement.trimEnd();
+          currentStatement = currentStatement.trim();
 
           const statement = Statement.parseStatement(currentStatement);
           let value;

@@ -160,7 +160,7 @@ module.exports = class Statement {
         case `'`:
           if (inString) {
             currentText += statement[i];
-            result.push({value: currentText, type: `string`, position: startsAt-1});
+            result.push({value: currentText, type: `string`, position: startsAt});
             currentText = ``;
           } else {
             startsAt = i;
