@@ -160,7 +160,7 @@ module.exports = class Statement {
         case `'`:
           if (inString) {
             currentText += statement[i];
-            result.push({value: currentText, type: `string`, position: startsAt});
+            result.push({value: currentText, type: `string`, position: startsAt-1});
             currentText = ``;
           } else {
             startsAt = i;
@@ -170,7 +170,7 @@ module.exports = class Statement {
           inString = !inString;
           break;
         default:
-          if (splitParts.includes(statement[i])) {
+          if (splitParts.includes(statement[i]) && inString === false) {
             if (currentText.trim() !== ``) {
               result.push({value: currentText, type: `word`, position: startsAt});
               currentText = ``;
