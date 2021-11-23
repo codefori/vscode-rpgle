@@ -101,14 +101,14 @@ const commonMatchers = [
     }
   },
   {
-    name: `FOREACH`,
+    name: `FOR-EACH`,
     match: [
       { type: `word`, match: (word) => word.toUpperCase() === `FOR` },
       { type: `minus` },
       { type: `word`, match: (word) => word.toUpperCase() === `EACH` },
     ],
     becomes: {
-      type: `end`
+      type: `word`
     }
   },
   {
@@ -119,7 +119,18 @@ const commonMatchers = [
       { type: `word`, match: (word) => word.toUpperCase() === `CORR` },
     ],
     becomes: {
-      type: `end`
+      type: `word`
+    }
+  },
+  {
+    name: `CTL-OPT`,
+    match: [
+      { type: `word`, match: (word) => word.toUpperCase() === `CTL` },
+      { type: `minus` },
+      { type: `word`, match: (word) => word.toUpperCase() === `OPT` },
+    ],
+    becomes: {
+      type: `declare`
     }
   }
 ]
