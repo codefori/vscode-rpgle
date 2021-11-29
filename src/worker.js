@@ -64,15 +64,15 @@ module.exports = class Worker {
         if (editor) {
           const document = editor.document;
           if (document.languageId === `rpgle`) {
-            if (Configuration.get(`rpgleLinterSupportEnabled`)) {
-              if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
-                const text = document.getText();
-                this.parser.clearParsedCache(document.uri.path);
-                this.parser.getDocs(document.uri, text).then(docs => {
+            if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
+              const text = document.getText();
+              this.parser.clearParsedCache(document.uri.path);
+              this.parser.getDocs(document.uri, text).then(docs => {
+                if (Configuration.get(`rpgleLinterSupportEnabled`)) {
                   this.refreshDiagnostics(document, docs);
-                });
-              }
-            }
+                }
+              });
+            } 
           }
         }
       }),
