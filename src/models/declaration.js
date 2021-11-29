@@ -22,5 +22,11 @@ module.exports = class Declaration {
 
     //Only used in procedure
     this.readParms = false;
+
+    /** @type {{start?: number, end?: number}} */
+    this.range = {
+      start: null,
+      end: null
+    }
   }
 }

@@ -57,6 +57,11 @@
 				"command": "vscode-rpgle.rpgleOpenInclude",
 				"title": "Open include at cursor",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.rpgleGetPrototype",
+				"title": "Copy prototype for procedure.",
+				"category": "RPGLE"
 			}
 		],
 		"menus": {
@@ -64,6 +69,11 @@
 				{
 					"command": "vscode-rpgle.rpgleColumnAssistant",
 					"group": "1_rpgle",
+					"when": "editorLangId == rpgle"
+				},
+				{
+					"command": "vscode-rpgle.rpgleGetPrototype",
+					"group": "2_rpgle",
 					"when": "editorLangId == rpgle"
 				}
 			],

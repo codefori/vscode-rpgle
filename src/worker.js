@@ -60,6 +60,41 @@ module.exports = class Worker {
         }
       }),
 
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleGetPrototype`, () => {
+        const editor = vscode.window.activeTextEditor;
+          
+        if (editor) {
+          const document = editor.document;
+          const position = editor.selection.active.line;
+          if (document.languageId === `rpgle`) {
+            if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
+              const text = document.getText();
+              this.parser.getDocs(document.uri).then(docs => {
+                const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
+
+                if (currentProcedure) {
+                  let prototype = [
+                    `Dcl-Pr ${currentProcedure.name} ${currentProcedure.keywords.join(` `)};`,
+                    ...currentProcedure.subItems.map(subItem => 
+                      `  ${subItem.name} ${subItem.keywords.join(` `)};`
+                    ),
+                    `End-Pr;`
+                  ].join(`\n`);
+
+                  vscode.env.clipboard.writeText(prototype);
+                  vscode.window.showInformationMessage(`Prototype copied to clipboard.`);
+
+                } else {
+                  vscode.window.showErrorMessage(`No procedure block at line ${position}.`);
+                }
+              });
+            } else {
+              vscode.window.showErrorMessage(`You can only get the prototype of a **FREE source.`);
+            }
+          }
+        }
+      }),
+
       vscode.workspace.onDidChangeTextDocument(async editor => {
         if (editor) {
           const document = editor.document;

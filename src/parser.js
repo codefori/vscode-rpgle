@@ -279,6 +279,11 @@ module.exports = class Parser {
 
           currentItem.readParms = false;
 
+          currentItem.range = {
+            start: lineNumber,
+            end: null
+          };
+
           currentDescription = [];
           break;
 
@@ -299,6 +304,7 @@ module.exports = class Parser {
 
         case `END-PROC`:
           if (currentItem && currentItem.type === `procedure`) {
+            currentItem.range.end = lineNumber;
             procedures.push(currentItem);
             resetDefinition = true;
           }
