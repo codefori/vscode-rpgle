@@ -95,17 +95,12 @@
 				"vscode-rpgle.rpgleLinterSupportEnabled": {
 					"type": "boolean",
 					"default": false,
-					"description": "Experimental feature. When enabled, will provide warnings for RPGLE sources. Supports total free RPG only."
+					"description": "Will provide warnings for RPGLE sources. Supports total free RPG only."
 				},
-				"vscode-rpgle.rpgleContentAssistEnabled": {
+				"vscode-rpgle.showFixedFormatOutline": {
 					"type": "boolean",
 					"default": false,
-					"description": "Experimental feature. When enabled, will provide content assist for procedures inside of your RPG sources. Supports total free RPG only."
-				},
-				"vscode-rpgle.rpgleColumnAssistEnabled": {
-					"type": "boolean",
-					"default": false,
-					"description": "Experimental feature. When enabled, will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
+					"description": "Will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
 				}
 			}
 		}

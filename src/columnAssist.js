@@ -139,36 +139,32 @@ const promptLine = async (line, index) => {
 function registerColumnAssist(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand(`vscode-rpgle.rpgleColumnAssistant`, async () => {
-      if (Configuration.get(`rpgleColumnAssistEnabled`)) {
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-          const document = editor.document;
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        const document = editor.document;
 
-          if (document.languageId === `rpgle`) {
-            if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() !== `**FREE`) { 
-              const lineNumber = editor.selection.start.line;
-              const positionIndex = editor.selection.start.character;
+        if (document.languageId === `rpgle`) {
+          if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() !== `**FREE`) { 
+            const lineNumber = editor.selection.start.line;
+            const positionIndex = editor.selection.start.character;
 
-              const positionsData = await promptLine(
-                document.getText(new vscode.Range(lineNumber, 0, lineNumber, 100)), 
-                positionIndex
-              );
+            const positionsData = await promptLine(
+              document.getText(new vscode.Range(lineNumber, 0, lineNumber, 100)), 
+              positionIndex
+            );
 
-              if (positionsData) {
-                editor.edit(editBuilder => {
-                  editBuilder.replace(new vscode.Range(lineNumber, 0, lineNumber, 80), positionsData);
-                });
-              }
+            if (positionsData) {
+              editor.edit(editBuilder => {
+                editBuilder.replace(new vscode.Range(lineNumber, 0, lineNumber, 80), positionsData);
+              });
             }
           }
         }
-      } else {
-        vscode.window.showInformationMessage(`Column assist disabled.`);
       }
     }),
 
     vscode.window.onDidChangeTextEditorSelection(e => {
-      if (Configuration.get(`rpgleColumnAssistEnabled`)) {
+      if (Configuration.get(`showFixedFormatOutline`)) {
         const editor = e.textEditor;
         const document = editor.document;
 

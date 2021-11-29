@@ -35,27 +35,25 @@ module.exports = class Worker {
     context.subscriptions.push(
       this.linterDiagnostics,
 
-      vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, async => {
-        if (Configuration.get(`rpgleContentAssistEnabled`)) {
-          const editor = vscode.window.activeTextEditor;
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, () => {
+        const editor = vscode.window.activeTextEditor;
           
-          if (editor) {
-            const document = editor.document;
-            const position = editor.selection.active;
-            if (document.languageId === `rpgle`) {
-              const linePieces = document.lineAt(position.line).text.trim().split(` `);
-              if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-                const {finishedPath, type} = Generic.getPathInfo(document.uri, linePieces[1]);
+        if (editor) {
+          const document = editor.document;
+          const position = editor.selection.active;
+          if (document.languageId === `rpgle`) {
+            const linePieces = document.lineAt(position.line).text.trim().split(` `);
+            if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
+              const {finishedPath, type} = Generic.getPathInfo(document.uri, linePieces[1]);
 
-                switch (type) {
-                case `member`:
-                  vscode.commands.executeCommand(`code-for-ibmi.openEditable`, `${finishedPath.substr(1)}.rpgle`);
-                  break;
+              switch (type) {
+              case `member`:
+                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, `${finishedPath.substr(1)}.rpgle`);
+                break;
 
-                case `streamfile`:
-                  vscode.commands.executeCommand(`code-for-ibmi.openEditable`, finishedPath);
-                  break;
-                }
+              case `streamfile`:
+                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, finishedPath);
+                break;
               }
             }
           }
@@ -173,69 +171,67 @@ module.exports = class Worker {
 
       vscode.languages.registerHoverProvider({language: `rpgle`}, {
         provideHover: async (document, position, token) => {
-          if (Configuration.get(`rpgleContentAssistEnabled`)) {
-            const text = document.getText();
-            const doc = await this.parser.getDocs(document.uri, text);
-            const range = document.getWordRangeAtPosition(position);
-            const word = document.getText(range).toUpperCase();
+          const text = document.getText();
+          const doc = await this.parser.getDocs(document.uri, text);
+          const range = document.getWordRangeAtPosition(position);
+          const word = document.getText(range).toUpperCase();
 
-            const procedure = doc.procedures.find(proc => proc.name.toUpperCase() === word);
+          const procedure = doc.procedures.find(proc => proc.name.toUpperCase() === word);
 
-            if (procedure) {
-              let markdown = ``;
-              let retrunValue = procedure.keywords.filter(keyword => keyword !== `EXTPROC`);
-              if (retrunValue.length === 0) retrunValue = [`void`];
+          if (procedure) {
+            let markdown = ``;
+            let retrunValue = procedure.keywords.filter(keyword => keyword !== `EXTPROC`);
+            if (retrunValue.length === 0) retrunValue = [`void`];
 
-              const returnTag = procedure.tags.find(tag => tag.tag === `return`);
-              const deprecatedTag = procedure.tags.find(tag => tag.tag === `deprecated`);
+            const returnTag = procedure.tags.find(tag => tag.tag === `return`);
+            const deprecatedTag = procedure.tags.find(tag => tag.tag === `deprecated`);
 
-              // Deprecated notice
-              if (deprecatedTag) {
-                markdown += `**Deprecated:** ${deprecatedTag.content}\n\n`;
-              }
-
-              // Formatted code
-              markdown += `\`\`\`vb\n${procedure.name}(`;
-
-              if (procedure.subItems.length > 0) {
-                markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${parm.keywords.join(` `)}`).join(`,\n  `)}\n`;
-              }
-
-              markdown += `): ${retrunValue.join(` `)}\n\`\`\` \n`;
-
-              // Description
-              if (procedure.description)
-                markdown += `${procedure.description}\n\n`;
-
-              // Params
-              markdown += procedure.subItems.map(parm => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${parm.description}`).join(`\n\n`);
-
-              // Return value
-              if (returnTag) {
-                markdown += `\n\n*@returns* ${returnTag.content}`;
-              }
-
-              if (procedure.position) {
-                markdown += `\n\n*@file* \`${procedure.position.path}:${procedure.position.line+1}\``;
-              }
-
-              return new vscode.Hover(
-                new vscode.MarkdownString(
-                  markdown
-                )
-              );
+            // Deprecated notice
+            if (deprecatedTag) {
+              markdown += `**Deprecated:** ${deprecatedTag.content}\n\n`;
             }
 
-            const linePieces = document.lineAt(position.line).text.trim().split(` `);
-            if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-              const {type, memberPath, finishedPath} = Generic.getPathInfo(document.uri, linePieces[1]);
+            // Formatted code
+            markdown += `\`\`\`vb\n${procedure.name}(`;
 
-              return new vscode.Hover(
-                new vscode.MarkdownString(
-                  `\`'${finishedPath}'\` (${type})`
-                )
+            if (procedure.subItems.length > 0) {
+              markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${parm.keywords.join(` `)}`).join(`,\n  `)}\n`;
+            }
+
+            markdown += `): ${retrunValue.join(` `)}\n\`\`\` \n`;
+
+            // Description
+            if (procedure.description)
+              markdown += `${procedure.description}\n\n`;
+
+            // Params
+            markdown += procedure.subItems.map(parm => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${parm.description}`).join(`\n\n`);
+
+            // Return value
+            if (returnTag) {
+              markdown += `\n\n*@returns* ${returnTag.content}`;
+            }
+
+            if (procedure.position) {
+              markdown += `\n\n*@file* \`${procedure.position.path}:${procedure.position.line+1}\``;
+            }
+
+            return new vscode.Hover(
+              new vscode.MarkdownString(
+                markdown
               )
-            }
+            );
+          }
+
+          const linePieces = document.lineAt(position.line).text.trim().split(` `);
+          if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
+            const {type, memberPath, finishedPath} = Generic.getPathInfo(document.uri, linePieces[1]);
+
+            return new vscode.Hover(
+              new vscode.MarkdownString(
+                `\`'${finishedPath}'\` (${type})`
+              )
+            )
           }
 
           return null;
@@ -245,65 +241,63 @@ module.exports = class Worker {
       vscode.languages.registerDocumentSymbolProvider({ language: `rpgle` }, 
         {
           provideDocumentSymbols: async (document, token) => {
-            if (Configuration.get(`rpgleContentAssistEnabled`)) {
-              const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+            const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
               
-              const text = document.getText();
-              if (isFree) {
-                const doc = await this.parser.getDocs(document.uri, text);
+            const text = document.getText();
+            if (isFree) {
+              const doc = await this.parser.getDocs(document.uri, text);
 
-                const currentPath = document.uri.path;
+              const currentPath = document.uri.path;
 
-                /** @type vscode.SymbolInformation[] */
-                let currentDefs = [];
+              /** @type vscode.SymbolInformation[] */
+              let currentDefs = [];
 
-                currentDefs.push(
-                  ...[
-                    ...doc.procedures.filter(proc => proc.position && proc.position.path === currentPath),
-                    ...doc.subroutines.filter(sub => sub.position && sub.position.path === currentPath),
-                  ].map(def => new vscode.SymbolInformation(
+              currentDefs.push(
+                ...[
+                  ...doc.procedures.filter(proc => proc.position && proc.position.path === currentPath),
+                  ...doc.subroutines.filter(sub => sub.position && sub.position.path === currentPath),
+                ].map(def => new vscode.SymbolInformation(
+                  def.name,
+                  vscode.SymbolKind.Function,
+                  new vscode.Range(def.position.line, 0, def.position.line, 0),
+                  document.uri
+                ))
+              );
+
+              currentDefs.push(
+                ...doc.variables
+                  .filter(variable => variable.position && variable.position.path === currentPath)
+                  .map(def => new vscode.SymbolInformation(
                     def.name,
-                    vscode.SymbolKind.Function,
+                    vscode.SymbolKind.Variable,
                     new vscode.Range(def.position.line, 0, def.position.line, 0),
                     document.uri
                   ))
-                );
+              );
 
-                currentDefs.push(
-                  ...doc.variables
-                    .filter(variable => variable.position && variable.position.path === currentPath)
-                    .map(def => new vscode.SymbolInformation(
-                      def.name,
-                      vscode.SymbolKind.Variable,
-                      new vscode.Range(def.position.line, 0, def.position.line, 0),
-                      document.uri
-                    ))
-                );
+              currentDefs.push(
+                ...doc.structs
+                  .filter(struct => struct.position && struct.position.path === currentPath)
+                  .map(def => new vscode.SymbolInformation(
+                    def.name,
+                    vscode.SymbolKind.Struct,
+                    new vscode.Range(def.position.line, 0, def.position.line, 0),
+                    document.uri
+                  ))
+              );
 
-                currentDefs.push(
-                  ...doc.structs
-                    .filter(struct => struct.position && struct.position.path === currentPath)
-                    .map(def => new vscode.SymbolInformation(
-                      def.name,
-                      vscode.SymbolKind.Struct,
-                      new vscode.Range(def.position.line, 0, def.position.line, 0),
-                      document.uri
-                    ))
-                );
+              currentDefs.push(
+                ...doc.constants
+                  .filter(constant => constant.position && constant.position.path === currentPath)
+                  .map(def => new vscode.SymbolInformation(
+                    def.name,
+                    vscode.SymbolKind.Constant,
+                    new vscode.Range(def.position.line, 0, def.position.line, 0),
+                    document.uri
+                  ))
+              );
 
-                currentDefs.push(
-                  ...doc.constants
-                    .filter(constant => constant.position && constant.position.path === currentPath)
-                    .map(def => new vscode.SymbolInformation(
-                      def.name,
-                      vscode.SymbolKind.Constant,
-                      new vscode.Range(def.position.line, 0, def.position.line, 0),
-                      document.uri
-                    ))
-                );
-
-                return currentDefs;
-              }
+              return currentDefs;
             }
 
             return [];
@@ -312,28 +306,26 @@ module.exports = class Worker {
 
       vscode.languages.registerDefinitionProvider({ language: `rpgle` }, {
         provideDefinition: async (document, position, token) => {
-          if (Configuration.get(`rpgleContentAssistEnabled`)) {
-            const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-            const doc = await this.parser.getDocs(document.uri);
-            const range = document.getWordRangeAtPosition(position);
-            const word = document.getText(range).toUpperCase();
+          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+          const doc = await this.parser.getDocs(document.uri);
+          const range = document.getWordRangeAtPosition(position);
+          const word = document.getText(range).toUpperCase();
 
-            if (doc) {
-              const types = Object.keys(doc);
-              const type = types.find(type => doc[type].find(def => def.name.toUpperCase() === word));
-              if (doc[type]) {
-                const def = doc[type].find(def => def.name.toUpperCase() === word);
-                if (def) {
-                  let {finishedPath, type} = Generic.getPathInfo(document.uri, def.position.path);
-                  if (type === `member`) {
-                    finishedPath = `${finishedPath}.rpgle`;
-                  }
-
-                  return new vscode.Location(
-                    vscode.Uri.parse(finishedPath).with({scheme: type, path: finishedPath}),
-                    new vscode.Range(def.position.line, 0, def.position.line, 0)
-                  );
+          if (doc) {
+            const types = Object.keys(doc);
+            const type = types.find(type => doc[type].find(def => def.name.toUpperCase() === word));
+            if (doc[type]) {
+              const def = doc[type].find(def => def.name.toUpperCase() === word);
+              if (def) {
+                let {finishedPath, type} = Generic.getPathInfo(document.uri, def.position.path);
+                if (type === `member`) {
+                  finishedPath = `${finishedPath}.rpgle`;
                 }
+
+                return new vscode.Location(
+                  vscode.Uri.parse(finishedPath).with({scheme: type, path: finishedPath}),
+                  new vscode.Range(def.position.line, 0, def.position.line, 0)
+                );
               }
             }
           }
@@ -341,68 +333,66 @@ module.exports = class Worker {
 
       vscode.languages.registerCompletionItemProvider({language: `rpgle`, }, {
         provideCompletionItems: async (document, position) => {
-          if (Configuration.get(`rpgleContentAssistEnabled`)) {
-            const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-            const text = document.getText();
-            if (isFree) {
-              const currentLine = document.getText(new vscode.Range(position.line, 0, position.line, position.character));
-              const doc = await this.parser.getDocs(document.uri, text);
+          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+          const text = document.getText();
+          if (isFree) {
+            const currentLine = document.getText(new vscode.Range(position.line, 0, position.line, position.character));
+            const doc = await this.parser.getDocs(document.uri, text);
 
-              /** @type vscode.CompletionItem[] */
-              let items = [];
-              let item;
+            /** @type vscode.CompletionItem[] */
+            let items = [];
+            let item;
 
-              if (currentLine.startsWith(`//`)) {
-                for (const tag in possibleTags) {
-                  item = new vscode.CompletionItem(`@${tag}`, vscode.CompletionItemKind.Property);
-                  item.insertText = new vscode.SnippetString(`@${tag} $0`);
-                  item.detail = possibleTags[tag];
-                  items.push(item);
-                }
-
-              } else {
-                for (const procedure of doc.procedures) {
-                  item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
-                  item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
-                  item.detail = procedure.keywords.join(` `);
-                  item.documentation = procedure.description;
-                  items.push(item);
-                }
-
-                for (const subroutine of doc.subroutines) {
-                  item = new vscode.CompletionItem(`${subroutine.name}`, vscode.CompletionItemKind.Function);
-                  item.insertText = new vscode.SnippetString(`${subroutine.name}\$0`);
-                  item.documentation = subroutine.description;
-                  items.push(item);
-                }
-
-                for (const variable of doc.variables) {
-                  item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
-                  item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
-                  item.detail = variable.keywords.join(` `);
-                  item.documentation = variable.description;
-                  items.push(item);
-                }
-
-                for (const struct of doc.structs) {
-                  item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
-                  item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
-                  item.detail = struct.keywords.join(` `);
-                  item.documentation = struct.description;
-                  items.push(item);
-                }
-
-                for (const constant of doc.constants) {
-                  item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
-                  item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
-                  item.detail = constant.keywords.join(` `);
-                  item.documentation = constant.description;
-                  items.push(item);
-                }
+            if (currentLine.startsWith(`//`)) {
+              for (const tag in possibleTags) {
+                item = new vscode.CompletionItem(`@${tag}`, vscode.CompletionItemKind.Property);
+                item.insertText = new vscode.SnippetString(`@${tag} $0`);
+                item.detail = possibleTags[tag];
+                items.push(item);
               }
 
-              return items;
+            } else {
+              for (const procedure of doc.procedures) {
+                item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
+                item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
+                item.detail = procedure.keywords.join(` `);
+                item.documentation = procedure.description;
+                items.push(item);
+              }
+
+              for (const subroutine of doc.subroutines) {
+                item = new vscode.CompletionItem(`${subroutine.name}`, vscode.CompletionItemKind.Function);
+                item.insertText = new vscode.SnippetString(`${subroutine.name}\$0`);
+                item.documentation = subroutine.description;
+                items.push(item);
+              }
+
+              for (const variable of doc.variables) {
+                item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
+                item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
+                item.detail = variable.keywords.join(` `);
+                item.documentation = variable.description;
+                items.push(item);
+              }
+
+              for (const struct of doc.structs) {
+                item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
+                item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
+                item.detail = struct.keywords.join(` `);
+                item.documentation = struct.description;
+                items.push(item);
+              }
+
+              for (const constant of doc.constants) {
+                item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
+                item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
+                item.detail = constant.keywords.join(` `);
+                item.documentation = constant.description;
+                items.push(item);
+              }
             }
+
+            return items;
           }
         }
       }),
@@ -426,31 +416,29 @@ module.exports = class Worker {
       }),
 
       vscode.workspace.onDidSaveTextDocument((document) => {
-        if (Configuration.get(`rpgleContentAssistEnabled`)) {
-          const workingUri = document.uri;
-          const {finishedPath} = Generic.getPathInfo(workingUri, path.basename(workingUri.path));
-          const text = document.getText();
-          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+        const workingUri = document.uri;
+        const {finishedPath} = Generic.getPathInfo(workingUri, path.basename(workingUri.path));
+        const text = document.getText();
+        const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
-          if (this.parser.getCopybook(finishedPath)) {
-            //Update stored copy book
-            const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-            this.parser.setCopybook(finishedPath, lines);
+        if (this.parser.getCopybook(finishedPath)) {
+          //Update stored copy book
+          const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+          this.parser.setCopybook(finishedPath, lines);
 
-            // The user usually switches tabs very quickly, so we trigger this event too.
-            if (vscode.window.activeTextEditor) {
-              if (workingUri.path !== vscode.window.activeTextEditor.document.uri.path) {
-                this.parser.getDocs(workingUri).then(docs => {
-                  this.refreshDiagnostics(vscode.window.activeTextEditor.document, docs);
-                });
-              }
+          // The user usually switches tabs very quickly, so we trigger this event too.
+          if (vscode.window.activeTextEditor) {
+            if (workingUri.path !== vscode.window.activeTextEditor.document.uri.path) {
+              this.parser.getDocs(workingUri).then(docs => {
+                this.refreshDiagnostics(vscode.window.activeTextEditor.document, docs);
+              });
             }
           }
-          else if (document.languageId === `rpgle`) {
-            //Else fetch new info from source being edited
-            if (isFree) {
-              this.parser.updateCopybookCache(workingUri, text)
-            }
+        }
+        else if (document.languageId === `rpgle`) {
+          //Else fetch new info from source being edited
+          if (isFree) {
+            this.parser.updateCopybookCache(workingUri, text)
           }
         }
       }),
@@ -461,18 +449,16 @@ module.exports = class Worker {
         case `rpgle`:
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
           text = document.getText();
-          if (Configuration.get(`rpgleContentAssistEnabled`)) {
-            if (isFree) {
-              this.parser.updateCopybookCache(document.uri, text);
-            }
-          }
+          if (isFree) {
+            this.parser.updateCopybookCache(document.uri, text);
   
-          if (Configuration.get(`rpgleLinterSupportEnabled`)) {
-            this.getLinterFile(document).then(file => {
-              this.parser.getDocs(document.uri, text).then(docs => {
-                this.refreshDiagnostics(document, docs);
+            if (Configuration.get(`rpgleLinterSupportEnabled`)) {
+              this.getLinterFile(document).then(file => {
+                this.parser.getDocs(document.uri, text).then(docs => {
+                  this.refreshDiagnostics(document, docs);
+                });
               });
-            });
+            }
           }
 
           break;
