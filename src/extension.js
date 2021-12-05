@@ -6,8 +6,7 @@ const util = require(`util`);
 const Worker = require(`./worker`);
 const defaultConfig = require(`./models/default`);
 
-
-const { instance } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
+const getInstance = require(`./base`);
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -24,13 +23,13 @@ function activate(context) {
   /** @type {Worker} */
   let worker;
 
-  instance.on(`connected`, () => {
-    worker = new Worker(context);
-  });
+  worker = new Worker(context);
 
   context.subscriptions.push(
     vscode.commands.registerCommand(`vscode-rpgle.openLintConfig`, async (filter) => {
-      if (worker) {
+      const instance = getInstance();
+
+      if (instance && instance.getConnection()) {
         /** @type {"member"|"streamfile"} */
         let type = `member`;
         const editor = vscode.window.activeTextEditor;

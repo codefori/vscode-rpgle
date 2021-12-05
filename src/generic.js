@@ -2,8 +2,7 @@
 const vscode = require(`vscode`);
 const path = require(`path`);
 
-const baseExtension = (vscode.extensions ? vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`) : undefined);
-const instance = (baseExtension && baseExtension.exports ? baseExtension.exports.instance : null);
+const getInstance = require(`./base`);
 
 module.exports = class {
 
@@ -52,6 +51,7 @@ module.exports = class {
       } 
 
       else {
+        const instance = getInstance();
         const config = instance.getConfig();
         finishedPath = path.posix.join(config.homeDirectory, getPath);
       };

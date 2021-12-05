@@ -8,8 +8,7 @@ const Declaration = require(`./models/declaration`);
 
 const oneLineTriggers = require(`./models/oneLineTriggers`);
 
-const baseExtension = (vscode.extensions ? vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`) : undefined);
-const instance = (baseExtension && baseExtension.exports ? baseExtension.exports.instance : null);
+const getInstance = require(`./base`);
 
 module.exports = class Parser {
   constructor() {
@@ -50,11 +49,13 @@ module.exports = class Parser {
     let content;
     let lines = undefined;
   
+    let instance;
     let {type, memberPath, finishedPath} = Generic.getPathInfo(workingUri, getPath);
   
     try {
       switch (type) {
       case `member`:
+        instance = getInstance();
         if (!instance) throw new Error(`Connection instance not found`);
         contentApi = instance.getContent();
         
@@ -67,6 +68,7 @@ module.exports = class Parser {
         break;
   
       case `streamfile`:
+        instance = getInstance();
         if (!instance) throw new Error(`Connection instance not found`);
         contentApi = instance.getContent();
 
@@ -82,14 +84,18 @@ module.exports = class Parser {
         lines = this.getCopybook(finishedPath);
         if (!lines) {
           // We have to find the file because of the case insensitivity
-          const possibleFile = await vscode.workspace.findFiles(`${finishedPath}`, null, 1);
+          if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+          if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+          if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
+
+          const possibleFile = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
           if (possibleFile.length > 0) {
             content = await (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
             lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+            this.setCopybook(finishedPath, lines);
           } else {
             lines = [];
           }
-          this.setCopybook(finishedPath, lines);
         }
         break;
       }
