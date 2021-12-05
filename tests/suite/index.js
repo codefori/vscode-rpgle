@@ -172,5 +172,22 @@ module.exports = {
     assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  },
+
+  /**
+   * Constant definition test
+   * */
+  test8: async () => {
+    const lines = [
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-C theConstant 'Hello world';`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
   }
 }
