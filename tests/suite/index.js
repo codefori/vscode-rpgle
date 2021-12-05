@@ -1,5 +1,6 @@
 
 const vscode = require(`vscode`);
+
 const Parser = require(`../../src/parser`);
 const Linter = require(`../../src/linter`);
 
