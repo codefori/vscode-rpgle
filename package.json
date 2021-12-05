@@ -22,9 +22,6 @@
 		"onStartupFinished",
 		"onLanguage:rpgle"
 	],
-	"extensionDependencies": [
-		"HalcyonTechLtd.code-for-ibmi"
-	],
 	"main": "./dist/extension",
 	"contributes": {
 		"snippets": [

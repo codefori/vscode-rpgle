@@ -3,7 +3,7 @@ const vscode = require(`vscode`);
 
 const Configuration = require(`./configuration`);
 
-const { CustomUI, Field } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
+const base = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`);
 
 const currentArea = vscode.window.createTextEditorDecorationType({
   backgroundColor: `rgba(242, 242, 109, 0.3)`,
@@ -67,6 +67,13 @@ const getAreasForLine = (line, index) => {
  * @returns {Promise<string|undefined>} New line
  */
 const promptLine = async (line, index) => {
+  if (!base) {
+    vscode.window.showErrorMessage(`Code for IBMi is not installed. It is required due to required UI tools.`);
+    return undefined;
+  };
+
+  const { CustomUI, Field } = base.exports;
+
   if (line.length < 6) return undefined;
   if (line[6] === `*`) return undefined;
   line = line.padEnd(80);
