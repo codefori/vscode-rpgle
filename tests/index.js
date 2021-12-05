@@ -18,7 +18,8 @@ Module.prototype.require = function(){
   case `vscode`:
     return {
       Uri,
-      Position: require(`../src/models/Position`),
+      Position: require(`./models/Position`),
+      Range: require(`./models/Range`),
       workspace: {
         workspaceFolders: [
           {

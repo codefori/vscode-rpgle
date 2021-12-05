@@ -246,6 +246,9 @@ module.exports = {
     assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+
+    assert.strictEqual(cache.procedures[0].position.path, `'./tests/rpgle/copy1.rpgle'`, `Path is incorrect`);
+    assert.strictEqual(cache.procedures[0].position.line, 2, `Index of 3 expected`);
   },
 
 
@@ -393,5 +396,78 @@ module.exports = {
     assert.strictEqual(indentErrors[2].line, 18, `Index of 18 expected`);
     assert.strictEqual(indentErrors[2].currentIndent, 2, `Value of 2 expected`);
     assert.strictEqual(indentErrors[2].expectedIndent, 0, `Value of 0 expected`);
+  },
+
+  linter4: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = '';`,
+      ``,
+      `If myVariable2 = '';`,
+      `  MyVariable2 = 'Hello world';`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      RequireBlankSpecial: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+
+    assert.strictEqual(errors[0].type, `RequireBlankSpecial`, `Expect RequireBlankSpecial`);
+    assert.strictEqual(errors[0].range.start.line, 6, `Index of 6 expected`);
+    assert.strictEqual(errors[0].offset.position, 14, `Index of 14 expected`);
+    assert.strictEqual(errors[0].offset.length, 16, `Index of 16 expected`);
+    assert.strictEqual(errors[0].newValue, `*BLANK`, `Value of *BLANK expected`);
+
+    assert.strictEqual(errors[1].type, `RequireBlankSpecial`, `Expect RequireBlankSpecial`);
+    assert.strictEqual(errors[1].range.start.line, 8, `Index of 8 expected`);
+    assert.strictEqual(errors[1].offset.position, 17, `Index of 17 expected`);
+    assert.strictEqual(errors[1].offset.length, 19, `Index of 19 expected`);
+    assert.strictEqual(errors[1].newValue, `*BLANK`, `Value of *BLANK expected`);
+  },
+
+  linter5: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = '';`,
+      ``,
+      `If MyVariable2 = '';`,
+      `  If *on = *on;`,
+      `    Myvariable2 = 'Hello world';`,
+      `  Endif;`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      IncorrectVariableCase: true
+    }, cache);
+
+    console.log(errors[0]);
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+    
+    assert.strictEqual(errors[0].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
+    assert.strictEqual(errors[0].range.start.line, 6, `Index of 6 expected`);
+    assert.strictEqual(errors[0].range.start.character, 0, `Index of 0 expected`);
+    assert.strictEqual(errors[0].range.end.line, errors[0].range.start.line, `Should be on same line`);
+    assert.strictEqual(errors[0].offset.position, 0, `Index of 0 expected`);
+    assert.strictEqual(errors[0].offset.length, 11, `Should be index of 11`);
+    assert.strictEqual(errors[0].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
   }
 }
