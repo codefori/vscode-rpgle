@@ -14,7 +14,17 @@ Module.prototype.require = function(){
   }
 };
 
-const Parser = require(`../src/parser`);
-const Linter = require(`../src/linter`);
+const tests = require(`./parser/test1`);
 
 console.log(`Running tests...`);
+
+const run = async () => {
+  const testNames = Object.keys(tests);
+  console.log(`Tests: ${testNames.join(`, `)}`);
+
+  for (const testName of testNames) {
+    const test = tests[testName];
+    console.log(`Running test: ${testName}`);
+    await test();
+  }
+}
