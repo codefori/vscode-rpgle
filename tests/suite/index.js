@@ -125,5 +125,52 @@ module.exports = {
 
     assert.strictEqual(cache.procedures[0].subItems.length, 0, `Expect length of 0`);
     assert.strictEqual(cache.procedures[1].subItems.length, 1, `Expect length of 1`);
+  },
+
+  test6: async () => {
+    const lines = [
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-Pr TheProcedure;`,
+      `  parmA char(20);`,
+      `End-Pr`,
+      ``,
+      `MyVariable2 = 'Hello world';`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+  },
+
+  /**
+   * Test procedure length.
+   * When Procedure is defined, the prototype is overridden.
+   */
+  test7: async () => {
+    const lines = [
+      ``,
+      `Dcl-Pr TheProcedure;`,
+      `  parmA char(20);`,
+      `End-Pr`,
+      ``,
+      `Dcl-S theVar Char(20);`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `  theVar = newValue;`,
+      `End-Proc;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
   }
 }

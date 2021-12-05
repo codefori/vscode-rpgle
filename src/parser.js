@@ -282,7 +282,12 @@ module.exports = class Parser {
         
         case `DCL-PROC`:
           //We can overwrite it.. it might have been a PR before.
-          currentItem = procedures.find(proc => proc.name.toUpperCase() === parts[1]) || new Declaration(`procedure`);
+          const existingProc = procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
+
+          // We found the PR... so we can overwrite it
+          if (existingProc >= 0) procedures.splice(existingProc, 1);
+
+          currentItem = new Declaration(`procedure`);
 
           currentItem.name = partsLower[1];
           currentItem.keywords = parts.slice(2);
