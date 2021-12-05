@@ -1,6 +1,5 @@
 
 const vscode = require(`vscode`);
-const { instance } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
 const Generic = require(`./generic`);
 
@@ -8,6 +7,9 @@ const Cache = require(`./models/cache`);
 const Declaration = require(`./models/declaration`);
 
 const oneLineTriggers = require(`./models/oneLineTriggers`);
+
+const baseExtension = (vscode.extensions ? vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`) : undefined);
+const instance = (baseExtension && baseExtension.exports ? baseExtension.exports.instance : null);
 
 module.exports = class Parser {
   constructor() {
@@ -44,8 +46,7 @@ module.exports = class Parser {
    * @returns {Promise<string[]>}
    */
   async getContent(workingUri, getPath) {
-    const contentApi = instance.getContent();
-  
+    let contentApi;
     let content;
     let lines = undefined;
   
@@ -54,6 +55,9 @@ module.exports = class Parser {
     try {
       switch (type) {
       case `member`:
+        if (!instance) throw new Error(`Connection instance not found`);
+        contentApi = instance.getContent();
+        
         lines = this.getCopybook(finishedPath);
         if (!lines) {  
           content = await contentApi.downloadMemberContent(memberPath[0], memberPath[1], memberPath[2], memberPath[3]);
@@ -63,6 +67,9 @@ module.exports = class Parser {
         break;
   
       case `streamfile`:
+        if (!instance) throw new Error(`Connection instance not found`);
+        contentApi = instance.getContent();
+
         lines = this.getCopybook(finishedPath);
         if (!lines) {
           content = await contentApi.downloadStreamfile(finishedPath);
