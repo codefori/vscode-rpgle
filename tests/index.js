@@ -1,8 +1,5 @@
 
-const fs = require(`fs/promises`);
-const glob = require(`glob`);
-
-const Uri = require(`vscode-uri`).URI;
+const vscode = require(`./models/vscode`);
 
 // Force a polyfill for the test
 
@@ -16,34 +13,7 @@ Module.prototype.require = function(){
   // we have to support 3 file systems (file, member, streamfile)
   switch (arguments[0]) {
   case `vscode`:
-    return {
-      Uri,
-      Position: require(`./models/Position`),
-      Range: require(`./models/Range`),
-      workspace: {
-        workspaceFolders: [
-          {
-            uri: Uri.parse(process.cwd()),
-            name: `workspace`,
-          },
-        ],
-        fs: {
-          readFile: (uri) => {
-            return fs.readFile(uri.fsPath);
-          }
-        },
-        findFiles: async (path) => {
-          // Sync is fine here since it's just in test
-          const files = glob.sync(path, {
-            cwd: process.cwd(),
-            absolute: true,
-            nocase: true,
-          });
-
-          return files.map((file) => Uri.file(file));
-        }
-      }
-    };
+    return vscode;
   default:
     return originalRequire.apply(this, arguments);
   }
