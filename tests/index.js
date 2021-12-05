@@ -25,13 +25,11 @@ async function run() {
   const suite = require(`./suite`);
   const testNames = Object.keys(suite);
 
-  console.log(`Running ${testNames.length} tests: ${testNames.join(`, `)}`);
+  console.log(`Running ${testNames.length} tests:`);
+  console.log(testNames.map(name => `\t${name}`).join(`\n`));
 
-  for (const testName of testNames) {
-    const test = suite[testName];
-    console.log(`Running ${testName}`);
-    await test();
-  }
+  const tests = testNames.map(name => suite[name]);
+  Promise.all(tests);
 };
 
 run();
