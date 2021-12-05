@@ -8,6 +8,9 @@ const Linter = require(`../../src/linter`);
 const URI = vscode.Uri.parse(`source.rpgle`);
 
 module.exports = {
+  /**
+   * Variable definition test
+   */
   test1: async () => {
     const lines = [
       `**FREE`,
@@ -21,6 +24,9 @@ module.exports = {
     assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
   },
 
+  /**
+   * Multiple variable definition test
+   */
   test2: async () => {
     const lines = [
       `**FREE`,
@@ -37,6 +43,9 @@ module.exports = {
     assert.strictEqual(cache.variables[1].position.line, 3, `Index of 3 expected`);
   },
 
+  /**
+   * Variable definition and struct definition test
+   */
   test3: async () => {
     const lines = [
       `Dcl-s MyVariable2 Char(20);`,
@@ -61,6 +70,9 @@ module.exports = {
     assert.strictEqual(cache.structs[0].position.line, 1, `Index of 1 expected`);
   },
 
+  /**
+   * Variable and subroutine definition test
+   * */
   test4: async () => {
     const lines = [
       `Dcl-s MyVariable2 Char(20);`,
@@ -81,6 +93,9 @@ module.exports = {
     assert.strictEqual(cache.subroutines[0].position.line, 3, `Index of 3 expected`);
   },
 
+  /**
+   * Variable and procedure definition test
+   */ 
   test5: async () => {
     const lines = [
       ``,
