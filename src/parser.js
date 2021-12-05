@@ -70,6 +70,14 @@ module.exports = class Parser {
           this.setCopybook(finishedPath, lines);
         }
         break;
+      case `file`:
+        lines = this.getCopybook(finishedPath);
+        if (!lines) {
+          content = (await vscode.workspace.fs.readFile(vscode.Uri.parse(finishedPath))).toString();
+          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+          this.setCopybook(finishedPath, lines);
+        }
+        break;
       }
     } catch (e) {
       lines = [];

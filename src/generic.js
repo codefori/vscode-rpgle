@@ -19,68 +19,88 @@ module.exports = class {
     /** @type {string[]} */
     let memberPath = undefined;
 
-    /** @type {"streamfile"|"member"|undefined} */
+    /** @type {"streamfile"|"member"|"file"|undefined} */
     let type = undefined;
 
-    if (workingUri.scheme === `streamfile`) {
-      type = `streamfile`;
-      //Fetch IFS
+    switch (workingUri.scheme) {
+      case `file`:
+        // Local file
+        type = `file`;
+        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
 
-      if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
-      if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+        if (getPath.startsWith(`/`)) {
+          //Get from root
+          finishedPath = getPath;
+        } 
 
-      if (getPath.startsWith(`/`)) {
-        //Get from root
-        finishedPath = getPath;
-      } 
-
-      else {
-        finishedPath = path.posix.join(config.homeDirectory, getPath);
-      }
-
-    } else {
-      //Fetch member
-      const getLib = getPath.split(`/`);
-      const getMember = getLib[getLib.length-1].split(`,`);
-      const workingPath = workingUri.path.split(`/`);
-      memberPath = [undefined, undefined, `QRPGLEREF`, undefined];
-
-      if (workingPath.length === 4) { //ASP not included
-        memberPath[1] = workingPath[1];
-        memberPath[2] = workingPath[2];
-      } else {
-        memberPath[0] = workingPath[1];
-        memberPath[1] = workingPath[2];
-        memberPath[2] = workingPath[3];
-      }
-
-      switch (getMember.length) {
-      case 1:
-        memberPath[3] = getMember[0];
+        else {
+          finishedPath = path.posix.join(vscode.workspace.workspaceFolders[0].uri.path, getPath);
+        };
         break;
-      case 2:
-        memberPath[2] = getMember[0];
-        memberPath[3] = getMember[1];
-      }
 
-      if (getLib.length === 2) {
-        memberPath[1] = getLib[0];
-      }
+      case `streamfile`:
+        type = `streamfile`;
+        //Fetch IFS
 
-      if (memberPath[3].includes(`.`)) {
-        memberPath[3] = memberPath[3].substr(0, memberPath[3].lastIndexOf(`.`));
-      }
+        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
 
-      finishedPath = memberPath.join(`/`);
+        if (getPath.startsWith(`/`)) {
+          //Get from root
+          finishedPath = getPath;
+        } 
 
-      if (workingPath.length === 5) {
-        finishedPath = `/${finishedPath}`;
-      }
+        else {
+          finishedPath = path.posix.join(config.homeDirectory, getPath);
+        };
+        break
 
-      type = `member`;
+      case `member`:
+        //Fetch member
+        const getLib = getPath.split(`/`);
+        const getMember = getLib[getLib.length-1].split(`,`);
+        const workingPath = workingUri.path.split(`/`);
+        memberPath = [undefined, undefined, `QRPGLEREF`, undefined];
+
+        if (workingPath.length === 4) { //ASP not included
+          memberPath[1] = workingPath[1];
+          memberPath[2] = workingPath[2];
+        } else {
+          memberPath[0] = workingPath[1];
+          memberPath[1] = workingPath[2];
+          memberPath[2] = workingPath[3];
+        }
+
+        switch (getMember.length) {
+        case 1:
+          memberPath[3] = getMember[0];
+          break;
+        case 2:
+          memberPath[2] = getMember[0];
+          memberPath[3] = getMember[1];
+        }
+
+        if (getLib.length === 2) {
+          memberPath[1] = getLib[0];
+        }
+
+        if (memberPath[3].includes(`.`)) {
+          memberPath[3] = memberPath[3].substr(0, memberPath[3].lastIndexOf(`.`));
+        }
+
+        finishedPath = memberPath.join(`/`);
+
+        if (workingPath.length === 5) {
+          finishedPath = `/${finishedPath}`;
+        }
+
+        type = `member`;
+        break;
     }
 
-    finishedPath = finishedPath.toUpperCase();
+    if (finishedPath)
+      finishedPath = finishedPath.toUpperCase();
 
     return {type, memberPath, finishedPath};
   }
