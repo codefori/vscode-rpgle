@@ -8,9 +8,9 @@ Module.prototype.require = function(){
   //do your thing here
   switch (arguments[0]) {
   case `vscode`:
-    const vscode = originalRequire.apply(this, [`vscode-test`]);
-    vscode.Uri = require(`vscode-uri`).URI;
-    return vscode;
+    return {
+      Uri: require(`vscode-uri`).URI
+    };
   default:
     return originalRequire.apply(this, arguments);
   }

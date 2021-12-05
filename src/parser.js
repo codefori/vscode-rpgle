@@ -236,6 +236,8 @@ module.exports = class Parser {
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
                 structs.push(currentItem);
                 resetDefinition = true;
+              } else {
+                currentItem.readParms = true;
               }
 
               currentDescription = [];
@@ -388,7 +390,7 @@ module.exports = class Parser {
             }
 
           } else {
-            if (currentItem && currentItem.type === `procedure`) {
+            if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
               if (currentItem.readParms) {
                 if (parts[0].startsWith(`DCL`))
                   parts.slice(1);
