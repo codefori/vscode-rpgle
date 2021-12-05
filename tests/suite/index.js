@@ -519,5 +519,50 @@ module.exports = {
     assert.strictEqual(errors[1].range.start.character, 8, `Index of 8 expected`);
     assert.strictEqual(errors[1].offset.position, 14, `Index of 19 expected`);
     assert.strictEqual(errors[1].offset.length, 22, `Index of 22 expected`);
+  },
+
+  linter7: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `  Select;`,
+      `    When myVariable2 = *blank;`,
+      `      MyVariable2 = 'Still blank?';`,
+      `    When myVariable2 = 'YOYOYO';`,
+      `        MyVariable2 = 'YOYOYO';`,
+      `  Endsl;`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `if`, expected: `If` },
+        { operation: `endif`, expected: `Endif` },
+        { operation: `select`, expected: `SELECT` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+
+    assert.deepStrictEqual(errors[0], {
+      range: new vscode.Range(
+        new vscode.Position(10, 2),
+        new vscode.Position(10, 8),
+      ),
+      offset: { position: 0, length: 6 },
+      type: `SpecificCasing`,
+      newValue: `SELECT`
+    }, `Error not as expected`);
   }
 }
