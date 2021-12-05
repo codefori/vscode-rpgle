@@ -459,7 +459,6 @@ module.exports = {
       IncorrectVariableCase: true
     }, cache);
 
-    console.log(errors[0]);
     assert.strictEqual(errors.length, 2, `Expect length of 2`);
     
     assert.strictEqual(errors[0].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
@@ -469,5 +468,56 @@ module.exports = {
     assert.strictEqual(errors[0].offset.position, 0, `Index of 0 expected`);
     assert.strictEqual(errors[0].offset.length, 11, `Should be index of 11`);
     assert.strictEqual(errors[0].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
+
+    assert.strictEqual(errors[1].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
+    assert.strictEqual(errors[1].range.start.line, 10, `Index of 10 expected`);
+    assert.strictEqual(errors[1].range.start.character, 4, `Index of 0 expected`);
+    assert.strictEqual(errors[1].range.end.line, errors[1].range.start.line, `Should be on same line`);
+    assert.strictEqual(errors[1].offset.position, 0, `Index of 0 expected`);
+    assert.strictEqual(errors[1].offset.length, 11, `Should be index of 11`);
+    assert.strictEqual(errors[1].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
+  },
+
+  linter6: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `  Select;`,
+      `    When myVariable2 = *blank;`,
+      `      MyVariable2 = 'Still blank?';`,
+      `    When myVariable2 = 'YOYOYO';`,
+      `        MyVariable2 = 'YOYOYO';`,
+      `  Endsl;`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      StringLiteralDupe: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+
+    assert.strictEqual(errors[0].type, `StringLiteralDupe`, `Expect StringLiteralDupe`);
+    assert.strictEqual(errors[0].range.start.line, 13, `Index of 13 expected`);
+    assert.strictEqual(errors[0].range.start.character, 4, `Index of 4 expected`);
+    assert.strictEqual(errors[0].offset.position, 19, `Index of 19 expected`);
+    assert.strictEqual(errors[0].offset.length, 27, `Index of 27 expected`);
+
+    assert.strictEqual(errors[1].type, `StringLiteralDupe`, `Expect StringLiteralDupe`);
+    assert.strictEqual(errors[1].range.start.line, 14, `Index of 14 expected`);
+    assert.strictEqual(errors[1].range.start.character, 8, `Index of 8 expected`);
+    assert.strictEqual(errors[1].offset.position, 14, `Index of 19 expected`);
+    assert.strictEqual(errors[1].offset.length, 22, `Index of 22 expected`);
   }
 }
