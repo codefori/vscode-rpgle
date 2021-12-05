@@ -60,4 +60,55 @@ module.exports = {
     assert.strictEqual(cache.variables[1].position.line, 5, `Index of 5 expected`);
     assert.strictEqual(cache.structs[0].position.line, 1, `Index of 1 expected`);
   },
+
+  test4: async () => {
+    const lines = [
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      ``,
+      `Begsr theSubroutine;`,
+      `  MyVariable2 = 'Hello world';`,
+      `Endsr;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.subroutines.length, 1, `Expect length of 1`);
+
+    assert.strictEqual(cache.variables[0].position.line, 0, `Index of 0 expected`);
+    assert.strictEqual(cache.subroutines[0].position.line, 3, `Index of 3 expected`);
+  },
+
+  test5: async () => {
+    const lines = [
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  MyVariable2 = 'Hello world';`,
+      `End-Proc;`,
+      ``,
+      `Dcl-Proc setValue;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `  MyVariable2 = newValue;`,
+      `End-Proc;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
+
+    assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
+    assert.strictEqual(cache.procedures[0].position.line, 3, `Index of 3 expected`);
+    assert.strictEqual(cache.procedures[1].position.line, 7, `Index of 7 expected`);
+
+    assert.strictEqual(cache.procedures[0].subItems.length, 0, `Expect length of 0`);
+    assert.strictEqual(cache.procedures[1].subItems.length, 1, `Expect length of 1`);
+  }
 }
