@@ -189,5 +189,117 @@ module.exports = {
 
     assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+  },
+
+  linter1_indent: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 1, `Expect length of 1`);
+    assert.strictEqual(indentErrors[0].line, 9, `Index of 9 expected`);
+    assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
+    assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
+  },
+
+  linter2_indent: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `  Select;`,
+      `    When myVariable2 = *blank;`,
+      `      MyVariable2 = 'Still blank?';`,
+      `    When myVariable2 = 'YOYOYO';`,
+      `        MyVariable2 = 'YOYOYO';`,
+      `  Endsl;`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 2, `Expect length of 2`);
+
+    assert.strictEqual(indentErrors[0].line, 9, `Index of 9 expected`);
+    assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
+    assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
+
+    assert.strictEqual(indentErrors[1].line, 14, `Index of 14 expected`);
+    assert.strictEqual(indentErrors[1].currentIndent, 8, `Value of 8 expected`);
+    assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
+  },
+
+  linter3_indent: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `  Select;`,
+      `    When myVariable2 = *blank;`,
+      `      MyVariable2 = 'Still blank?';`,
+      `    When myVariable2 = 'YOYOYO';`,
+      `        MyVariable2 = 'YOYOYO';`,
+      `  Endsl;`,
+      `Endif;`,
+      ``,
+      `  MyVariable2 = 'YOYOYO';`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
+    
+    assert.strictEqual(indentErrors[0].line, 9, `Index of 9 expected`);
+    assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
+    assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
+
+    assert.strictEqual(indentErrors[1].line, 14, `Index of 14 expected`);
+    assert.strictEqual(indentErrors[1].currentIndent, 8, `Value of 8 expected`);
+    assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
+
+    assert.strictEqual(indentErrors[2].line, 18, `Index of 18 expected`);
+    assert.strictEqual(indentErrors[2].currentIndent, 2, `Value of 2 expected`);
+    assert.strictEqual(indentErrors[2].expectedIndent, 0, `Value of 0 expected`);
   }
 }

@@ -9,7 +9,8 @@ Module.prototype.require = function(){
   switch (arguments[0]) {
   case `vscode`:
     return {
-      Uri: require(`vscode-uri`).URI
+      Uri: require(`vscode-uri`).URI,
+      Position: require(`../src/models/Position`),
     };
   default:
     return originalRequire.apply(this, arguments);
