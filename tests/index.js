@@ -26,7 +26,7 @@ async function run() {
 
   for (const testName of testNames) {
     const test = suite[testName];
-    console.log(`Running test ${testName}`);
+    console.log(`Running ${testName}`);
     await test();
   }
 };
