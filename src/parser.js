@@ -77,11 +77,18 @@ module.exports = class Parser {
           this.setCopybook(finishedPath, lines);
         }
         break;
+
       case `file`:
         lines = this.getCopybook(finishedPath);
         if (!lines) {
-          content = (await vscode.workspace.fs.readFile(vscode.Uri.parse(finishedPath))).toString();
-          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+          // We have to find the file because of the case insensitivity
+          const possibleFile = await vscode.workspace.findFiles(`${finishedPath}`, null, 1);
+          if (possibleFile.length > 0) {
+            content = await (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
+            lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+          } else {
+            lines = [];
+          }
           this.setCopybook(finishedPath, lines);
         }
         break;

@@ -191,6 +191,98 @@ module.exports = {
     assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
   },
 
+  /**
+   * Check that local variables are not in global scope
+   */
+  test9: async () => {
+    const lines = [
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-C theConstant 'Hello world';`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `  Dcl-S localVar Char(20);`,
+      `  localVar = newValue;`,
+      `  MyVariable2 = localVar;`,
+      `End-Proc;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  },
+
+  /**
+   * Test copybook
+   * */
+  test10: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DftActGrp(*No);`,
+      ``,
+      `/copy './tests/rpgle/copy1.rpgle'`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-C theConstant 'Hello world';`,
+      ``,
+      `CallP theExtProcedure(myVariable);`,
+      ``,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  },
+
+
+  /**
+   * Test many copybooks
+   * */
+  test11: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DftActGrp(*No);`,
+      ``,
+      `/copy './tests/rpgle/copy1.rpgle'`,
+      `/include './tests/rpgle/copy2.rpgle'`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-C theConstant 'Hello world';`,
+      ``,
+      `CallP theExtProcedure(myVariable);`,
+      ``,
+      `TheStruct.SubItem = theConstant;`,
+      ``,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.constants.length, 2, `Expect length of 2`);
+    assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.structs[0].subItems.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  },
+
   linter1_indent: async () => {
     const lines = [
       `**FREE`,
