@@ -1,6 +1,5 @@
 
 const vscode = require(`vscode`);
-const { instance } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
 
 const Generic = require(`./generic`);
 
@@ -8,6 +7,8 @@ const Cache = require(`./models/cache`);
 const Declaration = require(`./models/declaration`);
 
 const oneLineTriggers = require(`./models/oneLineTriggers`);
+
+const getInstance = require(`./base`);
 
 module.exports = class Parser {
   constructor() {
@@ -44,16 +45,20 @@ module.exports = class Parser {
    * @returns {Promise<string[]>}
    */
   async getContent(workingUri, getPath) {
-    const contentApi = instance.getContent();
-  
+    let contentApi;
     let content;
     let lines = undefined;
   
+    let instance;
     let {type, memberPath, finishedPath} = Generic.getPathInfo(workingUri, getPath);
   
     try {
       switch (type) {
       case `member`:
+        instance = getInstance();
+        if (!instance) throw new Error(`Connection instance not found`);
+        contentApi = instance.getContent();
+        
         lines = this.getCopybook(finishedPath);
         if (!lines) {  
           content = await contentApi.downloadMemberContent(memberPath[0], memberPath[1], memberPath[2], memberPath[3]);
@@ -63,11 +68,34 @@ module.exports = class Parser {
         break;
   
       case `streamfile`:
+        instance = getInstance();
+        if (!instance) throw new Error(`Connection instance not found`);
+        contentApi = instance.getContent();
+
         lines = this.getCopybook(finishedPath);
         if (!lines) {
           content = await contentApi.downloadStreamfile(finishedPath);
           lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
           this.setCopybook(finishedPath, lines);
+        }
+        break;
+
+      case `file`:
+        lines = this.getCopybook(finishedPath);
+        if (!lines) {
+          // We have to find the file because of the case insensitivity
+          if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+          if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+          if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
+
+          const possibleFile = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
+          if (possibleFile.length > 0) {
+            content = await (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
+            lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+            this.setCopybook(finishedPath, lines);
+          } else {
+            lines = [];
+          }
         }
         break;
       }
@@ -221,6 +249,8 @@ module.exports = class Parser {
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
                 structs.push(currentItem);
                 resetDefinition = true;
+              } else {
+                currentItem.readParms = true;
               }
 
               currentDescription = [];
@@ -265,7 +295,12 @@ module.exports = class Parser {
         
         case `DCL-PROC`:
           //We can overwrite it.. it might have been a PR before.
-          currentItem = procedures.find(proc => proc.name.toUpperCase() === parts[1]) || new Declaration(`procedure`);
+          const existingProc = procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
+
+          // We found the PR... so we can overwrite it
+          if (existingProc >= 0) procedures.splice(existingProc, 1);
+
+          currentItem = new Declaration(`procedure`);
 
           currentItem.name = partsLower[1];
           currentItem.keywords = parts.slice(2);
@@ -373,7 +408,7 @@ module.exports = class Parser {
             }
 
           } else {
-            if (currentItem && currentItem.type === `procedure`) {
+            if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
               if (currentItem.readParms) {
                 if (parts[0].startsWith(`DCL`))
                   parts.slice(1);

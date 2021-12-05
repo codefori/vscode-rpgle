@@ -96,6 +96,8 @@ module.exports = class Linter {
     /** @type {{line: number, expectedIndent: number, currentIndent: number}[]} */
     let indentErrors = [];
 
+    // Offset is always the offset within the range
+
     /** @type {{
      *  range: vscode.Range, 
      *  offset?: {position: number, length: number}

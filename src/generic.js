@@ -2,7 +2,7 @@
 const vscode = require(`vscode`);
 const path = require(`path`);
 
-const { instance } = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`).exports;
+const getInstance = require(`./base`);
 
 module.exports = class {
 
@@ -11,7 +11,6 @@ module.exports = class {
    * @param {string} getPath IFS or member path to fetch (in the format of an RPGLE copybook)
    */
   static getPathInfo(workingUri, getPath) {
-    const config = instance.getConfig();
 
     /** @type {string} */
     let finishedPath = undefined;
@@ -19,10 +18,27 @@ module.exports = class {
     /** @type {string[]} */
     let memberPath = undefined;
 
-    /** @type {"streamfile"|"member"|undefined} */
+    /** @type {"streamfile"|"member"|"file"|undefined} */
     let type = undefined;
 
-    if (workingUri.scheme === `streamfile`) {
+    switch (workingUri.scheme) {
+    case `file`:
+      // Local file
+      type = `file`;
+      if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+      if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+
+      if (getPath.startsWith(`/`)) {
+        //Get from root
+        finishedPath = getPath;
+      } 
+
+      else {
+        finishedPath = path.posix.join(vscode.workspace.workspaceFolders[0].uri.path, getPath);
+      };
+      break;
+
+    case `streamfile`:
       type = `streamfile`;
       //Fetch IFS
 
@@ -35,10 +51,13 @@ module.exports = class {
       } 
 
       else {
+        const instance = getInstance();
+        const config = instance.getConfig();
         finishedPath = path.posix.join(config.homeDirectory, getPath);
-      }
+      };
+      break
 
-    } else {
+    case `member`:
       //Fetch member
       const getLib = getPath.split(`/`);
       const getMember = getLib[getLib.length-1].split(`,`);
@@ -78,9 +97,11 @@ module.exports = class {
       }
 
       type = `member`;
+      break;
     }
 
-    finishedPath = finishedPath.toUpperCase();
+    if (finishedPath)
+      finishedPath = finishedPath.toUpperCase();
 
     return {type, memberPath, finishedPath};
   }
