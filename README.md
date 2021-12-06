@@ -16,6 +16,7 @@ Depends on Code for IBM i due to source code living on the remote system.
 1. **Does this only work with free-format?** The content assist and outline view only works with completely free-format (`**FREE`). The column assist is for fixed-format.
 2. **My copybook is not opening or prototypes are not coming from my copybook.** Right now, it is an explicit path to your member or streamfile. For example, if you're editing `YOURLIB/QRPGLESRC/HELLOWORLD.rpgle` and your copybook path is `QRPGLEREF,PRTYPE`, then it will assume the library of `YOURLIB`. For streamfiles, it will be relative to your working directory. For local files, it will be your VS Code workspace.
 3. **Does this work with local projects?** Yes! But, your local RPGLE must be the IFS style path on your `copy` and `include` directives.
+4. **Why am I getting indentation errors?** When the linter is enabled in the settings, you will start to get errors based on the lint configuration. Indentation errors are based on the indentation setting from VS Code (or the assumed indentation from the current file)
 
 ## How to enable
 
