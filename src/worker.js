@@ -30,6 +30,8 @@ module.exports = class Worker {
     /** @type {{[spfPath: string]: object}} */
     this.linterRules = {};
 
+    this.editTimeout = null;
+
     registerColumnAssist(context);
 
     context.subscriptions.push(
@@ -99,13 +101,18 @@ module.exports = class Worker {
         if (editor) {
           const document = editor.document;
           if (document.languageId === `rpgle`) {
-            if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
-              const text = document.getText();
-              this.parser.clearParsedCache(document.uri.path);
-              this.parser.getDocs(document.uri, text).then(docs => {
-                this.refreshDiagnostics(document, docs);
-              });
-            } 
+            clearTimeout(this.editTimeout);
+
+            this.editTimeout = setTimeout(async () => {
+              console.log(`Linting ${document.fileName}`);
+              if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
+                const text = document.getText();
+                this.parser.clearParsedCache(document.uri.path);
+                this.parser.getDocs(document.uri, text).then(docs => {
+                  this.refreshDiagnostics(document, docs);
+                });
+              }
+            }, 2000);
           }
         }
       }),
@@ -435,15 +442,20 @@ module.exports = class Worker {
           if (e.document.languageId === `rpgle`) {
             const document = e.document;
 
-            const text = document.getText();
-            const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-            if (isFree) {
-              this.parser.updateCopybookCache(document.uri, text);
+            clearTimeout(this.editTimeout);
 
-              this.parser.getDocs(document.uri, text).then(doc => {
-                this.refreshDiagnostics(document, doc);
-              });
-            }
+            this.editTimeout = setTimeout(async () => {
+              console.log(`Running linter`);
+              const text = document.getText();
+              const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+              if (isFree) {
+                this.parser.updateCopybookCache(document.uri, text);
+
+                this.parser.getDocs(document.uri, text).then(doc => {
+                  this.refreshDiagnostics(document, doc);
+                });
+              }
+            }, 2000)
           }
         }
       }),
