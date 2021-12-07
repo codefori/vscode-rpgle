@@ -64,6 +64,9 @@ module.exports = class Linter {
 
     const indent = rules.indent || 2;
 
+    // Excluding indent
+    const ruleCount = Object.keys(rules).length - (rules.indent ? 1 : 0);
+
     /** @type {string[]} */
     let definedNames = []
 
@@ -193,7 +196,7 @@ module.exports = class Linter {
         }
 
         // Linter checking
-        if (continuedStatement === false && currentStatement.length > 0) {
+        if (continuedStatement === false && currentStatement.length > 0 && ruleCount > 0) {
           const currentStatementUpper = currentStatement.toUpperCase();
           currentStatement = currentStatement.trim();
 
