@@ -94,13 +94,15 @@ module.exports = class Parser {
             lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
             this.setCopybook(finishedPath, lines);
           } else {
-            lines = [];
+            lines = [`// NOT FOUND: ${getPath}`];
+            this.setCopybook(finishedPath, lines);
           }
         }
         break;
       }
     } catch (e) {
-      lines = [];
+      lines = [`// ERROR: ${getPath}`];
+      this.setCopybook(finishedPath, lines);
     }
   
     return lines;
