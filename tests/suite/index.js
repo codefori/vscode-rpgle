@@ -564,5 +564,39 @@ module.exports = {
       type: `SpecificCasing`,
       newValue: `SELECT`
     }, `Error not as expected`);
+  },
+
+  linter8: async () => {
+    const lines = [
+      `**FREE`,
+      `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
+      `dcl-proc BASE36ADD export ;`,
+      `  dcl-pi BASE36ADD varchar(50);`,
+      `    PI_Value varchar(50) const; // Input value`,
+      `  end-pi BASE36ADD;`,
+      `  dcl-s a char(1);`,
+      `  if a ='/';`,
+      `    a=' ';`,
+      `    a= BASE36ADD;`,
+      `  endif;`,
+      `  return a;`,
+      `end-proc BASE36ADD;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      RequiresParameter: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+    assert.deepStrictEqual(errors[0], {
+      range: new vscode.Range(
+        new vscode.Position(9, 4),
+        new vscode.Position(9, 16),
+      ),
+      offset: { position: 3, length: 12 },
+      type: `RequiresParameter`,
+    }, `Error not as expected`);
   }
 }

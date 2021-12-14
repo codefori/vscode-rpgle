@@ -430,7 +430,7 @@ module.exports = class Linter {
           
           let part;
 
-          if (statement.length > 0 && statement[0].type !== `declare`) {
+          if (statement.length > 0 && [`declare`, `end`].includes(statement[0].type) === false) {
 
             for (let i = 0; i < statement.length; i++) {
               part = statement[i];
