@@ -462,23 +462,20 @@ module.exports = class Worker {
 
       vscode.workspace.onDidSaveTextDocument((document) => {
         const workingUri = document.uri;
+        const basePath = workingUri.path.toUpperCase();
         const {finishedPath} = Generic.getPathInfo(workingUri, path.basename(workingUri.path));
         const text = document.getText();
         const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
-        if (this.parser.getCopybook(finishedPath)) {
+        if (this.parser.getCopybook(basePath)) {
+          //Update stored copy book
+          const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+          this.parser.setCopybook(basePath, lines);
+        }
+        else if (this.parser.getCopybook(finishedPath)) {
           //Update stored copy book
           const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
           this.parser.setCopybook(finishedPath, lines);
-
-          // The user usually switches tabs very quickly, so we trigger this event too.
-          if (vscode.window.activeTextEditor) {
-            if (workingUri.path !== vscode.window.activeTextEditor.document.uri.path) {
-              this.parser.getDocs(workingUri).then(docs => {
-                this.refreshDiagnostics(vscode.window.activeTextEditor.document, docs);
-              });
-            }
-          }
         }
         else if (document.languageId === `rpgle`) {
           //Else fetch new info from source being edited
