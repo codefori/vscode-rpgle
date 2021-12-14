@@ -46,7 +46,7 @@
             "description": "Constants must be in uppercase."
         },
         "IncorrectVariableCase": {
-            "$id": "#/properties/UppercaseConstants",
+            "$id": "#/properties/IncorrectVariableCase",
             "type": "boolean",
             "description": "Variable names must match the case of the definition."
         },
