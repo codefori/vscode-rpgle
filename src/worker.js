@@ -520,8 +520,7 @@ module.exports = class Worker {
             }
 
             if (upperPath.includes(`RPGLINT`)) {
-              if (!this.parser.getCopybook(upperPath))
-                this.parser.setCopybook(upperPath, text);
+              this.parser.setCopybook(upperPath, text);
             }
           }
           break;
