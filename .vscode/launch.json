@@ -6,6 +6,18 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Launch Tests",
+			"program": "${workspaceFolder}/tests/index.js",
+			"request": "launch",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "pwa-node",
+			"args": [
+				"linter1_1"
+			],
+		},
+		{
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
@@ -18,14 +30,6 @@
 			"preLaunchTask": "npm: webpack",
 			"sourceMaps": true
 		},
-		{
-			"name": "Extension Tests",
-			"type": "extensionHost",
-			"request": "launch",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/test/suite/index"
-			]
-		}
+
 	]
 }

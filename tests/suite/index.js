@@ -314,6 +314,38 @@ module.exports = {
     assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
   },
 
+  /**
+   * Testing spaces before the EOL
+   */
+  linter1_1_indent: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-Pr printf Int(10) ExtProc('printf');`,
+      `  format Pointer Value Options(*String); `, //This space at the end was causing an indent error on the next line
+      `END-PR;`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `  MyVariable2 = 'Hello world';`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
+  },
+
   linter2_indent: async () => {
     const lines = [
       `**FREE`,

@@ -135,7 +135,7 @@ module.exports = class Linter {
 
     for (let currentLine of lines) {
       currentIndent = currentLine.search(/\S/);
-      let line = currentLine;
+      let line = currentLine.trimEnd();
 
       lineNumber += 1;
 
@@ -146,7 +146,7 @@ module.exports = class Linter {
 
         if (continuedStatement) {
           skipIndentCheck = true;
-          statementEnd = new vscode.Position(lineNumber, currentLine.length);
+          statementEnd = new vscode.Position(lineNumber, line.length);
 
           if (currentIndent < expectedIndent) {
             indentErrors.push({
@@ -157,11 +157,11 @@ module.exports = class Linter {
           }
         } else {
           statementStart = new vscode.Position(lineNumber, currentIndent);
-          statementEnd = new vscode.Position(lineNumber, currentLine.length);
+          statementEnd = new vscode.Position(lineNumber, line.length);
         }
 
         if (line.endsWith(`;`)) {
-          statementEnd = new vscode.Position(lineNumber, currentLine.length - 1);
+          statementEnd = new vscode.Position(lineNumber, line.length - 1);
           line = line.substr(0, line.length-1);
           currentStatement += line + `  `;
           continuedStatement = false;
@@ -172,7 +172,7 @@ module.exports = class Linter {
           const commentIndex = line.lastIndexOf(`//`);
 
           if (commentIndex > semiIndex && semiIndex >= 0) {
-            statementEnd = new vscode.Position(lineNumber, currentLine.lastIndexOf(`;`));
+            statementEnd = new vscode.Position(lineNumber, line.lastIndexOf(`;`));
             line = line.substr(0, semiIndex);
           } else {
             continuedStatement = true;

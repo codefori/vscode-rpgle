@@ -2,7 +2,6 @@
 const vscode = require(`./models/vscode`);
 
 // Force a polyfill for the test
-
 let Module = require(`module`);
 let originalRequire = Module.prototype.require;
 
@@ -19,11 +18,17 @@ Module.prototype.require = function(){
   }
 };
 
+const specificTests = process.argv[2];
+
 async function run() {
   console.log(`Running tests...`);
 
   const suite = require(`./suite`);
-  const testNames = Object.keys(suite);
+  let testNames = Object.keys(suite);
+
+  if (specificTests) {
+    testNames = testNames.filter(name => name.startsWith(specificTests));
+  }
 
   console.log(`Running ${testNames.length} tests: ${testNames.join(`, `)}`);
 
