@@ -369,6 +369,11 @@ module.exports = class Parser {
             currentItem.name = partsLower[1];
             currentItem.description = currentDescription.join(` `);
 
+            currentItem.position = {
+              path: file,
+              line: lineNumber
+            }
+
             currentItem.range = {
               start: lineNumber,
               end: null
