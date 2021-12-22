@@ -3,9 +3,9 @@ const Declaration = require(`./declaration`);
 module.exports = class Cache {
   /**
    * 
-   * @param {{subroutines: Declaration[], procedures: Declaration[], variables: Declaration[], structs: Declaration[], constants: Declaration[]}} cache 
+   * @param {{subroutines?: Declaration[], procedures?: Declaration[], variables?: Declaration[], structs?: Declaration[], constants?: Declaration[]}} cache 
    */
-  constructor(cache) {
+  constructor(cache = {}) {
     /** @type {Declaration[]} */
     this.subroutines = cache.subroutines || [];
 

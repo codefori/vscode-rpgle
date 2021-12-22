@@ -1,3 +1,4 @@
+const Cache = require(`./cache`);
 
 module.exports = class Declaration {
   /**
@@ -13,20 +14,26 @@ module.exports = class Declaration {
     /** @type {{tag: string, content: string}[]} */
     this.tags = [];
 
+    // Used for everything but procedures and subroutines
     /** @type {{path: string, line: number}} */
     this.position = undefined;
 
-    //Not used in subitem:
+    // Not used in subitem:
     /** @type {Declaration[]} */
     this.subItems = [];
 
-    //Only used in procedure
+    // Only used in procedure
     this.readParms = false;
 
+    // Used for subroutines and procedures
     /** @type {{start?: number, end?: number}} */
     this.range = {
       start: null,
       end: null
     }
+
+    // Only used in procedures
+    /** @type {Cache|undefined} */
+    this.scope = undefined;
   }
 }

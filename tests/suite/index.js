@@ -90,7 +90,7 @@ module.exports = {
     assert.strictEqual(cache.subroutines.length, 1, `Expect length of 1`);
 
     assert.strictEqual(cache.variables[0].position.line, 0, `Index of 0 expected`);
-    assert.strictEqual(cache.subroutines[0].position.line, 3, `Index of 3 expected`);
+    assert.strictEqual(cache.subroutines[0].range.start, 3, `Index of 3 expected`);
   },
 
   /**

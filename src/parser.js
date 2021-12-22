@@ -153,17 +153,17 @@ module.exports = class Parser {
     /** @type {{tag: string, content: string}[]} */
     let currentTags = [];
 
-    let currentItem, currentSub;
+    let currentItem, currentSub, currentProcName;
 
     let resetDefinition = false; //Set to true when you're done defining a new item
     let docs = false; // If section is for ILEDocs
     let lineNumber, parts, partsLower, pieces;
 
-    const constants = [];
-    const variables = [];
-    const structs = [];
-    const procedures = [];
-    const subroutines = [];
+    /** @type {Cache[]} */
+    let scopes = [];
+
+    // Global scope bits
+    scopes.push(new Cache());
 
     files[workingUri.path] = baseLines;
 
@@ -195,6 +195,8 @@ module.exports = class Parser {
         parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
         partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
 
+        const scope = scopes[scopes.length - 1];
+
         switch (parts[0]) {
         case `DCL-C`:
           if (currentItem === undefined) {
@@ -208,7 +210,7 @@ module.exports = class Parser {
               line: lineNumber
             }
 
-            constants.push(currentItem);
+            scope.constants.push(currentItem);
             resetDefinition = true;
           }
           break;
@@ -227,7 +229,7 @@ module.exports = class Parser {
                 line: lineNumber
               }
 
-              variables.push(currentItem);
+              scope.variables.push(currentItem);
               resetDefinition = true;
             }
           }
@@ -249,7 +251,7 @@ module.exports = class Parser {
 
               // Does the keywords include a keyword that makes end-ds useless?
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                structs.push(currentItem);
+                scope.structs.push(currentItem);
                 resetDefinition = true;
               } else {
                 currentItem.readParms = true;
@@ -262,14 +264,14 @@ module.exports = class Parser {
 
         case `END-DS`:
           if (currentItem && currentItem.type === `struct`) {
-            structs.push(currentItem);
+            scope.structs.push(currentItem);
             resetDefinition = true;
           }
           break;
         
         case `DCL-PR`:
           if (currentItem === undefined) {
-            if (!procedures.find(proc => proc.name.toUpperCase() === parts[1])) {
+            if (!scope.procedures.find(proc => proc.name.toUpperCase() === parts[1])) {
               currentItem = new Declaration(`procedure`);
               currentItem.name = partsLower[1];
               currentItem.keywords = parts.slice(2);
@@ -290,21 +292,22 @@ module.exports = class Parser {
 
         case `END-PR`:
           if (currentItem && currentItem.type === `procedure`) {
-            procedures.push(currentItem);
+            scope.procedures.push(currentItem);
             resetDefinition = true;
           }
           break;
         
         case `DCL-PROC`:
           //We can overwrite it.. it might have been a PR before.
-          const existingProc = procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
+          const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
 
           // We found the PR... so we can overwrite it
-          if (existingProc >= 0) procedures.splice(existingProc, 1);
+          if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
 
           currentItem = new Declaration(`procedure`);
 
-          currentItem.name = partsLower[1];
+          currentProcName = partsLower[1];
+          currentItem.name = currentProcName;
           currentItem.keywords = parts.slice(2);
           currentItem.description = currentDescription.join(` `);
           currentItem.tags = currentTags;
@@ -321,10 +324,16 @@ module.exports = class Parser {
             end: null
           };
 
-          currentDescription = [];
+          scope.procedures.push(currentItem);
+          resetDefinition = true;
+
+          scopes.push(new Cache());
           break;
 
         case `DCL-PI`:
+          //Procedures can only exist in the global scope.
+          currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
           if (currentItem) {
             currentItem.keywords = parts.slice(2);
             currentItem.readParms = true;
@@ -334,29 +343,34 @@ module.exports = class Parser {
           break;
 
         case `END-PI`:
+          //Procedures can only exist in the global scope.
+          currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
           if (currentItem && currentItem.type === `procedure`) {
             currentItem.readParms = false;
           }
           break;
 
         case `END-PROC`:
+          //Procedures can only exist in the global scope.
+          currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
           if (currentItem && currentItem.type === `procedure`) {
+            currentItem.scope = scopes.pop();
             currentItem.range.end = lineNumber;
-            procedures.push(currentItem);
-            resetDefinition = true;
           }
           break;
 
         case `BEGSR`:
-          if (!subroutines.find(sub => sub.name.toUpperCase() === parts[1])) {
+          if (!scope.subroutines.find(sub => sub.name.toUpperCase() === parts[1])) {
             currentItem = new Declaration(`subroutine`);
             currentItem.name = partsLower[1];
             currentItem.description = currentDescription.join(` `);
 
-            currentItem.position = {
-              path: file,
-              line: lineNumber
-            }
+            currentItem.range = {
+              start: lineNumber,
+              end: null
+            };
 
             currentDescription = [];
           }
@@ -364,7 +378,8 @@ module.exports = class Parser {
     
         case `ENDSR`:
           if (currentItem && currentItem.type === `subroutine`) {
-            subroutines.push(currentItem);
+            currentItem.range.end = lineNumber;
+            scope.subroutines.push(currentItem);
             resetDefinition = true;
           }
           break;
@@ -444,13 +459,7 @@ module.exports = class Parser {
       }
     }
 
-    const parsedData = new Cache({
-      procedures,
-      structs,
-      subroutines,
-      variables,
-      constants
-    });
+    const parsedData = scopes[0];
 
     this.parsedCache[workingUri.path] = parsedData;
 
