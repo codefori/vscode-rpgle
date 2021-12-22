@@ -810,8 +810,8 @@ module.exports = {
 
     assert.deepStrictEqual(errors[0], {
       range: new vscode.Range(
-        new vscode.Position(9, 2),
-        new vscode.Position(9, 21),
+        new vscode.Position(13, 2),
+        new vscode.Position(13, 21),
       ),
       offset: { position: 0, length: 8 },
       type: `IncorrectVariableCase`,
@@ -820,8 +820,8 @@ module.exports = {
 
     assert.deepStrictEqual(errors[1], {
       range: new vscode.Range(
-        new vscode.Position(10, 2),
-        new vscode.Position(10, 24),
+        new vscode.Position(14, 2),
+        new vscode.Position(14, 24),
       ),
       offset: { position: 0, length: 11 },
       type: `IncorrectVariableCase`,
@@ -830,8 +830,8 @@ module.exports = {
 
     assert.deepStrictEqual(errors[2], {
       range: new vscode.Range(
-        new vscode.Position(10, 2),
-        new vscode.Position(10, 24),
+        new vscode.Position(14, 2),
+        new vscode.Position(14, 24),
       ),
       offset: { position: 14, length: 22 },
       type: `IncorrectVariableCase`,
