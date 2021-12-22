@@ -90,7 +90,7 @@ module.exports = {
     assert.strictEqual(cache.subroutines.length, 1, `Expect length of 1`);
 
     assert.strictEqual(cache.variables[0].position.line, 0, `Index of 0 expected`);
-    assert.strictEqual(cache.subroutines[0].position.line, 3, `Index of 3 expected`);
+    assert.strictEqual(cache.subroutines[0].range.start, 3, `Index of 3 expected`);
   },
 
   /**
@@ -284,6 +284,58 @@ module.exports = {
     assert.strictEqual(cache.structs[0].subItems.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  },
+
+  test12: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DftActGrp(*No);`,
+      ``,
+      `/copy './tests/rpgle/copy1.rpgle'`,
+      ``,
+      `Dcl-S globalVar Char(20);`,
+      ``,
+      `Dcl-C theConstant 'Hello world';`,
+      ``,
+      `globalVar = theConstant;`,
+      ``,
+      `theLocalProc(globalVar);`,
+      ``,
+      `Return;`,
+      ``,
+      `Dcl-Proc theLocalProc;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `  Dcl-S localVar Char(20);`,
+      `  localVar = %trimr(newValue) + '!';`,
+      `  globalVar = localVar;`,
+      `End-Proc;`,
+      ``
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+
+    // One prototype and one declared
+    assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
+
+    // Valid names
+    assert.strictEqual(cache.procedures[0].name, `theLocalProc`, `Expect valid name`);
+    assert.strictEqual(cache.procedures[1].name, `theExtProcedure`, `Expect valid name`);
+
+    // Has a parameter
+    assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+
+    // Has a local scope
+    assert.strictEqual(cache.procedures[0].scope !== undefined, true, `Should have a scope`);
+
+    // Should have a local variable
+    assert.strictEqual(cache.procedures[0].scope.variables.length, 1, `Expect length of 1`);
   },
 
   linter1_indent: async () => {
@@ -718,5 +770,72 @@ module.exports = {
       offset: { position: 3, length: 12 },
       type: `RequiresParameter`,
     }, `Error not as expected`);
-  }
+  },
+
+  /**
+   * Check that local variables are not in global scope
+   */
+  linter9: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-C theConstant 'Hello world';`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `  Dcl-S localVar Char(20);`,
+      `  localvar = newValue;`,
+      `  Myvariable2 = localvar;`,
+      `End-Proc;`,
+    ].join(`\n`);
+  
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      IncorrectVariableCase: true
+    }, cache);
+  
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+
+    assert.strictEqual(errors.length, 3, `Expect length of 3`);
+
+    assert.deepStrictEqual(errors[0], {
+      range: new vscode.Range(
+        new vscode.Position(13, 2),
+        new vscode.Position(13, 21),
+      ),
+      offset: { position: 0, length: 8 },
+      type: `IncorrectVariableCase`,
+      newValue: `localVar`
+    }, `Error not as expected`);
+
+    assert.deepStrictEqual(errors[1], {
+      range: new vscode.Range(
+        new vscode.Position(14, 2),
+        new vscode.Position(14, 24),
+      ),
+      offset: { position: 0, length: 11 },
+      type: `IncorrectVariableCase`,
+      newValue: `MyVariable2`
+    }, `Error not as expected`);
+
+    assert.deepStrictEqual(errors[2], {
+      range: new vscode.Range(
+        new vscode.Position(14, 2),
+        new vscode.Position(14, 24),
+      ),
+      offset: { position: 14, length: 22 },
+      type: `IncorrectVariableCase`,
+      newValue: `localVar`
+    }, `Error not as expected`);
+  },
 }

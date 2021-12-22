@@ -56,9 +56,9 @@ module.exports = class Linter {
    *  NoGlobalsInProcedures?: boolean,
    *  SpecificCasing?: {operation: string, expected: string}[],
    * }} rules 
-   * @param {Cache|null} [definitions]
+   * @param {Cache|null} [globalScope]
    */
-  static getErrors(content, rules, definitions) {
+  static getErrors(content, rules, globalScope) {
     const newLineLength = (content.indexOf(`\r\n`) !== -1) ? 2 : 1;
 
     /** @type {string[]} */
@@ -70,27 +70,15 @@ module.exports = class Linter {
     const ruleCount = Object.keys(rules).length - (rules.indent ? 1 : 0);
 
     /** @type {string[]} */
-    let definedNames = []
+    let scopeNames = []
 
     /** @type {Declaration[]} */
-    let globalVariables = [];
+    let scopeVariables = [];
 
     let globalProcs = [];
 
-    if (definitions) {
-      globalVariables = [
-        ...definitions.variables,
-        ...definitions.structs
-      ];
-
-      globalProcs = definitions.procedures;
-
-      definedNames = [
-        ...definitions.constants.map(def => def.name), 
-        ...definitions.procedures.map(def => def.name), 
-        ...definitions.subroutines.map(def => def.name), 
-        ...globalVariables.map(def => def.name),
-      ];
+    if (globalScope) {
+      globalProcs = globalScope.procedures;
     }
 
     let inProcedure = false;
@@ -201,6 +189,9 @@ module.exports = class Linter {
         if (continuedStatement === false && currentStatement.length > 0 && ruleCount > 0) {
           const currentStatementUpper = currentStatement.toUpperCase();
           currentStatement = currentStatement.trim();
+
+          const currentProcedure = globalScope.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+          const currentScope = globalScope.merge(inProcedure ? currentProcedure.scope : undefined);
 
           const statement = Statement.parseStatement(currentStatement);
           let value;
@@ -442,7 +433,7 @@ module.exports = class Linter {
 
                 if (rules.NoGlobalsInProcedures) {
                   if (inProcedure && !inPrototype) {
-                    const existingVariable = globalVariables.find(variable => variable.name.toUpperCase() === upperName);
+                    const existingVariable = globalScope.variables.find(variable => variable.name.toUpperCase() === upperName);
                     if (existingVariable) {
                       errors.push({
                         range: new vscode.Range(
@@ -458,6 +449,7 @@ module.exports = class Linter {
               
                 if (rules.IncorrectVariableCase) {
                   // Check the casing of the reference matches the definition
+                  const definedNames = currentScope.getNames();
                   const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
                   if (definedName && definedName !== part.value) {
                     errors.push({

@@ -12,10 +12,10 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"type": "pwa-node",
 			"args": [
-				"linter1_1"
+				"linter9"
 			],
+			"type": "pwa-node",
 		},
 		{
 			"name": "Run Extension",
