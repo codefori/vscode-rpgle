@@ -553,6 +553,94 @@ module.exports = {
     assert.strictEqual(errors[1].offset.length, 22, `Index of 22 expected`);
   },
 
+  linter6_lf: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Dcl-S Myotherthing char(10);`,
+      ``,
+      `dsply 'hello friends'`,
+      `      + 'hello friends' + ''`,
+      `    + myotherthing;`,
+      `    `
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      StringLiteralDupe: true,
+      IncorrectVariableCase: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 3, `Expect length of 3`);
+
+    const line = new vscode.Range(new vscode.Position(4, 0), new vscode.Position(6, 18));
+
+    assert.deepStrictEqual(errors[0], {
+      range: line,
+      offset: { position: 57, length: 69 },
+      type: `IncorrectVariableCase`,
+      newValue: `Myotherthing`,
+    }, `Error not as expected`);
+
+    assert.deepStrictEqual(errors[1], {
+      range: line,
+      offset: { position: 6, length: 21 },
+      type: `StringLiteralDupe`,
+    }, `Error not as expected`);
+
+    assert.deepStrictEqual(errors[2], {
+      range: line,
+      offset: { position: 30, length: 45 },
+      type: `StringLiteralDupe`,
+    }, `Error not as expected`);
+  },
+
+  linter6_crlf: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Dcl-S Myotherthing char(10);`,
+      ``,
+      `dsply 'hello friends'`,
+      `      + 'hello friends' + ''`,
+      `    + myotherthing;`,
+      `    `
+    ].join(`\r\n`);
+
+    //const lines = `**FREE\r\n\r\nDcl-S Myotherthing char(10);\r\n\r\ndsply 'hello friends'\r\n      + 'hello friends' + ''\r\n    + myotherthing;`;
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      StringLiteralDupe: true,
+      IncorrectVariableCase: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 3, `Expect length of 3`);
+
+    const line = new vscode.Range(new vscode.Position(4, 0), new vscode.Position(6, 18));
+
+    assert.deepStrictEqual(errors[0], {
+      range: line,
+      offset: { position: 59, length: 71 },
+      type: `IncorrectVariableCase`,
+      newValue: `Myotherthing`,
+    }, `Error not as expected`);
+
+    assert.deepStrictEqual(errors[1], {
+      range: line,
+      offset: { position: 6, length: 21 },
+      type: `StringLiteralDupe`,
+    }, `Error not as expected`);
+
+    assert.deepStrictEqual(errors[2], {
+      range: line,
+      offset: { position: 31, length: 46 },
+      type: `StringLiteralDupe`,
+    }, `Error not as expected`);
+  },
+
   linter7: async () => {
     const lines = [
       `**FREE`,

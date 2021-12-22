@@ -59,6 +59,8 @@ module.exports = class Linter {
    * @param {Cache|null} [definitions]
    */
   static getErrors(content, rules, definitions) {
+    const newLineLength = (content.indexOf(`\r\n`) !== -1) ? 2 : 1;
+
     /** @type {string[]} */
     const lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
 
@@ -163,7 +165,7 @@ module.exports = class Linter {
         if (line.endsWith(`;`)) {
           statementEnd = new vscode.Position(lineNumber, line.length - 1);
           line = line.substr(0, line.length-1);
-          currentStatement += line + `  `;
+          currentStatement += line;
           continuedStatement = false;
 
         } else {
@@ -177,7 +179,7 @@ module.exports = class Linter {
           } else {
             continuedStatement = true;
           }
-          currentStatement += line + `  `;
+          currentStatement += line + ``.padEnd(newLineLength, ` `);
         }
 
         const upperLine = line.trim().toUpperCase();
