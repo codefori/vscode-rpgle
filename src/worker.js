@@ -12,6 +12,7 @@ const possibleTags = require(`./models/tags`);
 const Linter = require(`./linter`);
 const Parser = require(`./parser`);
 const Generic = require(`./generic`);
+const { workspace } = require(`../tests/models/vscode`);
 
 const lintFile = {
   member: `vscode,rpglint`,
@@ -56,6 +57,62 @@ module.exports = class Worker {
               case `streamfile`:
                 vscode.commands.executeCommand(`code-for-ibmi.openEditable`, finishedPath);
                 break;
+              }
+            }
+          }
+        }
+      }),
+
+      vscode.commands.registerCommand(`vscode-rpgle.fixAllErrors`, async () => {
+        const editor = vscode.window.activeTextEditor;
+          
+        if (editor) {
+          const document = editor.document;
+          if (document.languageId === `rpgle`) {
+            if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
+              const options = this.getLinterOptions(document.uri);
+              const docs = await this.parser.getDocs(document.uri);
+
+              // First we do all the indentation fixes.
+              const { indentErrors } = Linter.getErrors(document.getText(), {
+                indent: Number(vscode.window.activeTextEditor.options.tabSize),
+                ...options
+              }, docs);
+
+              if (indentErrors.length > 0) {
+                const fixes = indentErrors.map(error => {
+                  const range = Worker.calculateOffset(document, {range: new vscode.Range(error.line, 0, error.line, error.currentIndent)});
+                  return new vscode.TextEdit(range, ``.padEnd(error.expectedIndent, ` `));
+                });
+
+                editor.edit(editBuilder => {
+                  fixes.forEach(fix => editBuilder.replace(fix.range, fix.newText));
+                });
+              }
+              
+              while (true) {
+              // Next up, let's fix all the other things!
+                const {errors} = Linter.getErrors(document.getText(), {
+                  indent: Number(vscode.window.activeTextEditor.options.tabSize),
+                  ...options
+                }, docs);
+
+                const actions = Worker.getActions(document, errors);
+                let edits = [];
+
+                if (actions.length > 0) {
+                  // We only ever do the first one over and over.
+                  const action = actions[0];
+                  const entries = action.edit.entries();
+                  for (const entry of entries) {
+                    const [uri, actionEdits] = entry;
+                    const workEdits = new vscode.WorkspaceEdit();
+                    workEdits.set(document.uri, actionEdits); // give the edits
+                    await vscode.workspace.applyEdit(workEdits);
+                  }
+                } else {
+                  break;
+                }
               }
             }
           }
@@ -141,64 +198,7 @@ module.exports = class Worker {
               const fixErrors = detail.errors.filter(error => error.range.intersection(range) );
 
               if (fixErrors.length > 0) {
-                let errorRange;
-                fixErrors.forEach(error => {
-                  errorRange = this.calculateOffset(document, error);
-
-                  switch (error.type) {
-                  case `UppercaseConstants`:
-                    action = new vscode.CodeAction(`Convert constant name to uppercase`, vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, errorRange, error.newValue);
-                    actions.push(action);
-                    break;
-  
-                  case `ForceOptionalParens`:
-                    action = new vscode.CodeAction(`Add brackets around expression`, vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.insert(document.uri, errorRange.end, `)`);
-                    action.edit.insert(document.uri, errorRange.start, `(`);
-                    actions.push(action);
-                    break;
-  
-                  case `UselessOperationCheck`:
-                    action = new vscode.CodeAction(`Remove operation code`, vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.delete(document.uri, errorRange);
-                    actions.push(action);
-                    break;
-  
-                  case `SpecificCasing`:
-                  case `IncorrectVariableCase`:
-                  case `UppercaseDirectives`:
-                    action = new vscode.CodeAction(`Correct casing to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, errorRange, error.newValue);
-                    actions.push(action);
-                    break;
-
-                  case `RequiresProcedureDescription`:
-                    action = new vscode.CodeAction(`Add title and description`, vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.insert(document.uri, errorRange.start, `///\n// Title\n// Description\n///\n`);
-                    actions.push(action);
-                    break;
-
-                  case `RequireBlankSpecial`:
-                    action = new vscode.CodeAction(`Convert constant name to uppercase`, vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, errorRange, error.newValue);
-                    actions.push(action);
-                    break;
-
-                  case `CopybookDirective`:
-                    action = new vscode.CodeAction(`Switch to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, errorRange, error.newValue);
-                    actions.push(action);
-                    break;
-                  }
-                });
+                actions = Worker.getActions(document, fixErrors);
               }
 
               console.log(actions);
@@ -626,7 +626,7 @@ module.exports = class Worker {
 
         if (errors.length > 0) {
           errors.forEach(error => {
-            const range = this.calculateOffset(document, error);
+            const range = Worker.calculateOffset(document, error);
 
             const diagnostic = new vscode.Diagnostic(
               range, 
@@ -647,7 +647,7 @@ module.exports = class Worker {
    * @param {vscode.TextDocument} document
    * @param {{range: vscode.Range, offset?: {position: number, length: number}}} error 
    */
-  calculateOffset(document, error) {
+  static calculateOffset(document, error) {
     const offset = error.offset;
     let range;
 
@@ -663,5 +663,75 @@ module.exports = class Worker {
     }
     
     return range;
+  }
+
+  /**
+   * @param {vscode.TextDocument} document 
+   * @param {*} errors 
+   */
+  static getActions(document, errors) {
+    /** @type {vscode.CodeAction[]} */
+    let actions = [];
+
+    errors.forEach(error => {
+      let action;
+      let errorRange = this.calculateOffset(document, error);
+
+      switch (error.type) {
+      case `UppercaseConstants`:
+        action = new vscode.CodeAction(`Convert constant name to uppercase`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.replace(document.uri, errorRange, error.newValue);
+        actions.push(action);
+        break;
+
+      case `ForceOptionalParens`:
+        action = new vscode.CodeAction(`Add brackets around expression`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.insert(document.uri, errorRange.end, `)`);
+        action.edit.insert(document.uri, errorRange.start, `(`);
+        actions.push(action);
+        break;
+
+      case `UselessOperationCheck`:
+        action = new vscode.CodeAction(`Remove operation code`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.delete(document.uri, errorRange);
+        actions.push(action);
+        break;
+
+      case `SpecificCasing`:
+      case `IncorrectVariableCase`:
+      case `UppercaseDirectives`:
+        action = new vscode.CodeAction(`Correct casing to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.replace(document.uri, errorRange, error.newValue);
+        actions.push(action);
+        break;
+
+      case `RequiresProcedureDescription`:
+        action = new vscode.CodeAction(`Add title and description`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.insert(document.uri, errorRange.start, `///\n// Title\n// Description\n///\n`);
+        actions.push(action);
+        break;
+
+      case `RequireBlankSpecial`:
+        action = new vscode.CodeAction(`Convert constant name to uppercase`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.replace(document.uri, errorRange, error.newValue);
+        actions.push(action);
+        break;
+
+      case `CopybookDirective`:
+        action = new vscode.CodeAction(`Switch to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.replace(document.uri, errorRange, error.newValue);
+        actions.push(action);
+        break;
+      }
+    });
+
+    return actions;
   }
 }

@@ -59,6 +59,11 @@
 				"command": "vscode-rpgle.rpgleGetPrototype",
 				"title": "Copy prototype for procedure.",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.fixAllErrors",
+				"title": "Fix all auto-fixable Problems",
+				"category": "RPGLE"
 			}
 		],
 		"menus": {
