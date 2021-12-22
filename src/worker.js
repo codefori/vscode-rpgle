@@ -377,7 +377,8 @@ module.exports = class Worker {
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
           const text = document.getText();
           if (isFree) {
-            const currentLine = document.getText(new vscode.Range(position.line, 0, position.line, position.character));
+            const lineNumber = position.line;
+            const currentLine = document.getText(new vscode.Range(lineNumber, 0, lineNumber, position.character));
             const doc = await this.parser.getDocs(document.uri, text);
 
             /** @type vscode.CompletionItem[] */
@@ -430,6 +431,46 @@ module.exports = class Worker {
                 item.detail = constant.keywords.join(` `);
                 item.documentation = constant.description;
                 items.push(item);
+              }
+
+              // If they're typing inside of a procedure, let's get the stuff from there too
+              const currentProcedure = doc.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+
+              if (currentProcedure) {
+                for (const subItem of currentProcedure.subItems) {
+                  item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Variable);
+                  item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
+                  item.detail = [`parameter`, ...subItem.keywords].join(` `);
+                  item.documentation = subItem.description;
+                  items.push(item);
+                }
+
+                if (currentProcedure.scope) {
+                  const scope = currentProcedure.scope;
+                  for (const variable of scope.variables) {
+                    item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
+                    item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
+                    item.detail = variable.keywords.join(` `);
+                    item.documentation = variable.description;
+                    items.push(item);
+                  }
+  
+                  for (const struct of scope.structs) {
+                    item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
+                    item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
+                    item.detail = struct.keywords.join(` `);
+                    item.documentation = struct.description;
+                    items.push(item);
+                  }
+  
+                  for (const constant of scope.constants) {
+                    item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
+                    item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
+                    item.detail = constant.keywords.join(` `);
+                    item.documentation = constant.description;
+                    items.push(item);
+                  }
+                }
               }
             }
 
