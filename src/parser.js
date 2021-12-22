@@ -348,6 +348,7 @@ module.exports = class Parser {
 
           if (currentItem && currentItem.type === `procedure`) {
             currentItem.readParms = false;
+            resetDefinition = true;
           }
           break;
 
@@ -358,6 +359,7 @@ module.exports = class Parser {
           if (currentItem && currentItem.type === `procedure`) {
             currentItem.scope = scopes.pop();
             currentItem.range.end = lineNumber;
+            resetDefinition = true;
           }
           break;
 

@@ -13,9 +13,6 @@
 				"<node_internals>/**"
 			],
 			"type": "pwa-node",
-			"args": [
-				"linter1_1"
-			],
 		},
 		{
 			"name": "Run Extension",
