@@ -21,4 +21,35 @@ module.exports = class Cache {
     /** @type {Declaration[]} */
     this.constants = cache.constants || [];
   }
+
+  /**
+   * @param {Cache} [second] 
+   * @returns {Cache} merged caches
+   */
+  merge(second) {
+    if (second) {
+      return new Cache({
+        subroutines: [...this.subroutines, ...second.subroutines],
+        procedures: [...this.procedures, ...second.procedures],
+        variables: [...this.variables, ...second.variables],
+        structs: [...this.structs, ...second.structs],
+        constants: [...this.constants, ...second.constants]
+      });
+    } else {
+      return this;
+    }
+  }
+
+  /**
+   * @returns {String[]}
+   */
+  getNames() {
+    return [
+      ...this.constants.map(def => def.name), 
+      ...this.procedures.map(def => def.name), 
+      ...this.subroutines.map(def => def.name), 
+      ...this.variables.map(def => def.name),
+      ...this.structs.map(def => def.name),
+    ]
+  }
 }
