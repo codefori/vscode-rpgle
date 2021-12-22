@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require(`vscode`);
-const util = require(`util`);
+const path = require(`path`);
 
 const Worker = require(`./worker`);
 const defaultConfig = require(`./models/default`);
@@ -28,19 +28,41 @@ function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand(`vscode-rpgle.openLintConfig`, async (filter) => {
       const instance = getInstance();
+      const editor = vscode.window.activeTextEditor;
 
-      if (instance && instance.getConnection()) {
+      if (editor && editor.document.uri.scheme === `file`) {
+        const workspaces = vscode.workspace.workspaceFolders;
+        if (workspaces && workspaces.length > 0) {
+          const linter = await vscode.workspace.findFiles(`**/.vscode/rpglint.json`, null, 1);
+          let uri;
+          if (linter && linter.length > 0) {
+            uri = linter[0];
+          } else {
+            uri = vscode.Uri.parse(path.join(workspaces[0].uri.path, `.vscode`, `rpglint.json`));
+            await vscode.workspace.fs.writeFile(
+              uri, 
+              Buffer.from(JSON.stringify(defaultConfig, null, 2), `utf8`)
+            );
+          }
+
+          vscode.workspace.openTextDocument(uri).then(doc => {
+            vscode.window.showTextDocument(doc, {
+              viewColumn: vscode.ViewColumn.One
+            });
+          });
+        }
+
+      } else if (instance && instance.getConnection()) {
         /** @type {"member"|"streamfile"} */
         let type = `member`;
-        const editor = vscode.window.activeTextEditor;
         let path;
 
         if (filter && filter.description) {
           // Bad way to get the library for the filter ..
           const library = filter.description.split(`/`)[0];
           path = `${library}/VSCODE/RPGLINT.JSON`;
-        }
-        else if (editor) {
+
+        } else if (editor) {
           //@ts-ignore
           type = editor.document.uri.scheme;
           

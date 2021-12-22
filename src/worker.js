@@ -16,7 +16,8 @@ const { workspace } = require(`../tests/models/vscode`);
 
 const lintFile = {
   member: `vscode,rpglint`,
-  streamfile: `.vscode/rpglint.json`
+  streamfile: `.vscode/rpglint.json`,
+  file: `.vscode/rpglint.json`
 };
 
 module.exports = class Worker {
@@ -515,6 +516,9 @@ module.exports = class Worker {
               upperPath = document.uri.path.toUpperCase().substring(0, document.uri.path.length - 5); //without the extension
               break;
             case `streamfile`:
+              upperPath = document.uri.path.toUpperCase();
+              break;
+            case `file`:
               upperPath = document.uri.path.toUpperCase();
               break;
             }
