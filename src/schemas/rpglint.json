@@ -107,6 +107,11 @@
                 }
             },
             "description": "Specific casing for operation codes."
+        },
+        "NoCTDATA": {
+            "$id": "#/properties/NoCTDATA",
+            "type": "boolean",
+            "description": "CTDATA is not allowed."
         }
     },
     "additionalProperties": true

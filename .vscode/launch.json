@@ -12,9 +12,6 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"args": [
-				"linter9"
-			],
 			"type": "pwa-node",
 		},
 		{

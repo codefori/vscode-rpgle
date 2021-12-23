@@ -9,5 +9,6 @@ module.exports = {
   IncorrectVariableCase: true,
   RequiresParameter: true,
   StringLiteralDupe: true,
-  NoSQLJoins: true
+  NoSQLJoins: true,
+  NoCTDATA: true,
 }

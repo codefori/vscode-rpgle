@@ -26,6 +26,7 @@ const errorText = {
   'UppercaseDirectives': `Directives must be in uppercase.`,
   'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
   'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
+  'NoCTDATA': `\`CTDATA\` is not allowed.`,
 }
 
 module.exports = class Linter {
@@ -55,6 +56,7 @@ module.exports = class Linter {
    *  NoSQLJoins?: boolean,
    *  NoGlobalsInProcedures?: boolean,
    *  SpecificCasing?: {operation: string, expected: string}[],
+   *  NoCTDATA?: boolean
    * }} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -99,7 +101,8 @@ module.exports = class Linter {
      *      "NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|
      *      "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
      *      "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
-     *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures", 
+     *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"
+     *      |"NoCTDATA", 
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -181,7 +184,7 @@ module.exports = class Linter {
         }
 
         // Ignore free directive.
-        if (upperLine === `**FREE`) {
+        if (upperLine.startsWith(`**`)) {
           continuedStatement = false;
         }
 
@@ -198,6 +201,21 @@ module.exports = class Linter {
 
           if (statement.length >= 1) {
             switch (statement[0].type) {
+            case `format`:
+              if (statement[0].value.toUpperCase() === `**CTDATA`) {
+                if (rules.NoCTDATA) {
+                  errors.push({
+                    range: new vscode.Range(
+                      statementStart,
+                      statementEnd
+                    ),
+                    offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
+                    type: `NoCTDATA`
+                  });
+                }
+              }
+              break;
+
             case `directive`:
               value = statement[0].value;
               if (rules.UppercaseDirectives) {
@@ -321,10 +339,19 @@ module.exports = class Linter {
                 }
     
                 if (rules.BlankStructNamesCheck) {
-                  if (statement.some(part => part.type === `special`)) {
+                  if (statement.some(part => part.type === `special` && part.value.toUpperCase() === `*N`)) {
                     errors.push({
                       range: new vscode.Range(statementStart, statementEnd),
                       type: `BlankStructNamesCheck`
+                    });
+                  }
+                }
+
+                if (rules.NoCTDATA) {
+                  if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value.toUpperCase()))) {
+                    errors.push({
+                      range: new vscode.Range(statementStart, statementEnd),
+                      type: `NoCTDATA`
                     });
                   }
                 }
@@ -428,100 +455,104 @@ module.exports = class Linter {
             for (let i = 0; i < statement.length; i++) {
               part = statement[i];
 
-              if (part.type === `word` && part.value) {
-                const upperName = part.value.toUpperCase();
+              if (part.value) {
+                switch (part.type) {
+                case `word`:
+                  const upperName = part.value.toUpperCase();
 
-                if (rules.NoGlobalsInProcedures) {
-                  if (inProcedure && !inPrototype) {
-                    const existingVariable = globalScope.variables.find(variable => variable.name.toUpperCase() === upperName);
-                    if (existingVariable) {
+                  if (rules.NoGlobalsInProcedures) {
+                    if (inProcedure && !inPrototype) {
+                      const existingVariable = globalScope.variables.find(variable => variable.name.toUpperCase() === upperName);
+                      if (existingVariable) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          offset: {position: part.position, length: part.position + part.value.length},
+                          type: `NoGlobalsInProcedures`
+                        });
+                      }
+                    }
+                  }
+                
+                  if (rules.IncorrectVariableCase) {
+                    // Check the casing of the reference matches the definition
+                    const definedNames = currentScope.getNames();
+                    const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
+                    if (definedName && definedName !== part.value) {
                       errors.push({
                         range: new vscode.Range(
                           statementStart,
                           statementEnd
                         ),
                         offset: {position: part.position, length: part.position + part.value.length},
-                        type: `NoGlobalsInProcedures`
+                        type: `IncorrectVariableCase`,
+                        newValue: definedName
                       });
                     }
                   }
-                }
-              
-                if (rules.IncorrectVariableCase) {
-                  // Check the casing of the reference matches the definition
-                  const definedNames = currentScope.getNames();
-                  const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
-                  if (definedName && definedName !== part.value) {
+  
+                  if (rules.RequiresParameter) {
+                    // Check the procedure reference has a block following it
+                    const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
+                    if (definedProcedure) {
+                      let requiresBlock = false;
+                      if (statement.length <= i+1) {
+                        requiresBlock = true;
+                      } else if (statement[i+1].type !== `openbracket`) {
+                        requiresBlock = true;
+                      }
+  
+                      if (requiresBlock) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          offset: {position: part.position, length: part.position + part.value.length},
+                          type: `RequiresParameter`,
+                        });
+                      }
+                    }
+                  }
+                  break;
+
+                case `string`:
+                  if (part.value.substring(1, part.value.length-1).trim() === `` && rules.RequireBlankSpecial) {
                     errors.push({
                       range: new vscode.Range(
                         statementStart,
                         statementEnd
                       ),
                       offset: {position: part.position, length: part.position + part.value.length},
-                      type: `IncorrectVariableCase`,
-                      newValue: definedName
+                      type: `RequireBlankSpecial`,
+                      newValue: `*BLANK`
+                    });
+  
+                  } else if (rules.StringLiteralDupe) {
+                    let foundBefore = stringLiterals.find(literal => literal.value === part.value);
+  
+                    // If it does not exist on our list, we can add it
+                    if (!foundBefore) {
+                      foundBefore = {
+                        value: part.value,
+                        list: []
+                      };
+  
+                      stringLiterals.push(foundBefore);
+                    }
+  
+                    // Then add our new found literal location to the list
+                    foundBefore.list.push({
+                      range: new vscode.Range(
+                        statementStart,
+                        statementEnd
+                      ),
+                      offset: {position: part.position, length: part.position + part.value.length}
                     });
                   }
-                }
-
-                if (rules.RequiresParameter) {
-                  // Check the procedure reference has a block following it
-                  const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
-                  if (definedProcedure) {
-                    let requiresBlock = false;
-                    if (statement.length <= i+1) {
-                      requiresBlock = true;
-                    } else if (statement[i+1].type !== `openbracket`) {
-                      requiresBlock = true;
-                    }
-
-                    if (requiresBlock) {
-                      errors.push({
-                        range: new vscode.Range(
-                          statementStart,
-                          statementEnd
-                        ),
-                        offset: {position: part.position, length: part.position + part.value.length},
-                        type: `RequiresParameter`,
-                      });
-                    }
-                  }
-                }
-              }
-
-              if (part.type === `string`) {
-                if (part.value.substring(1, part.value.length-1).trim() === `` && rules.RequireBlankSpecial) {
-                  errors.push({
-                    range: new vscode.Range(
-                      statementStart,
-                      statementEnd
-                    ),
-                    offset: {position: part.position, length: part.position + part.value.length},
-                    type: `RequireBlankSpecial`,
-                    newValue: `*BLANK`
-                  });
-
-                } else if (rules.StringLiteralDupe) {
-                  let foundBefore = stringLiterals.find(literal => literal.value === part.value);
-
-                  // If it does not exist on our list, we can add it
-                  if (!foundBefore) {
-                    foundBefore = {
-                      value: part.value,
-                      list: []
-                    };
-
-                    stringLiterals.push(foundBefore);
-                  }
-
-                  // Then add our new found literal location to the list
-                  foundBefore.list.push({
-                    range: new vscode.Range(
-                      statementStart,
-                      statementEnd
-                    ),
-                    offset: {position: part.position, length: part.position + part.value.length}
-                  });
+                  break;
                 }
               }
             }

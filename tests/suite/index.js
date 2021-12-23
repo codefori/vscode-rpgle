@@ -838,4 +838,52 @@ module.exports = {
       newValue: `localVar`
     }, `Error not as expected`);
   },
+
+  linter10: async () => {
+    const lines = [
+      `**FREE`,
+      `ctl-opt debug option(*nodebugio: *srcstmt);`,
+      `dcl-ds mything DIM(8) PERRCD(3) CTDATA;`,
+      `end-ds;`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `Endif;`,
+      `Return;`,
+      ``,
+      `**CTDATA ARC`,
+      `Toronto        12:15:00Winnipeg       13:23:00Calgary        15:44:00`,
+      `Sydney         17:24:30Edmonton       21:33:00Saskatoon      08:40:00`,
+      `Regina         12:33:00Vancouver      13:20:00`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      NoCTDATA: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+
+    assert.deepStrictEqual(errors[0], {
+      range: new vscode.Range(
+        new vscode.Position(2, 0),
+        new vscode.Position(2, 38),
+      ),
+      type: `NoCTDATA`,
+    }, `Error not as expected`);
+
+    assert.deepStrictEqual(errors[1], {
+      range: new vscode.Range(
+        new vscode.Position(14, 0),
+        new vscode.Position(14, 12),
+      ),
+      offset: { position: 0, length: 8 },
+      type: `NoCTDATA`,
+    }, `Error not as expected`);
+  },
 }

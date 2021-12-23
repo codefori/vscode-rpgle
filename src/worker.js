@@ -12,7 +12,6 @@ const possibleTags = require(`./models/tags`);
 const Linter = require(`./linter`);
 const Parser = require(`./parser`);
 const Generic = require(`./generic`);
-const { workspace } = require(`../tests/models/vscode`);
 
 const lintFile = {
   member: `vscode,rpglint`,

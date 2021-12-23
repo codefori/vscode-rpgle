@@ -2,14 +2,14 @@
 /** @type {{name: string, match: {type: string, match?: function}[], becomes: {type: string}}[]} */
 const commonMatchers = [
   {
-    name: `IS_FREE`,
+    name: `FORMAT_STATEMEMT`,
     match: [
       { type: `asterisk` },
       { type: `asterisk` },
       { type: `word` },
     ],
     becomes: {
-      type: `isfree`
+      type: `format`,
     }
   },
   {
@@ -41,7 +41,7 @@ const commonMatchers = [
     match: [
       { type: `asterisk` },
       { type: `word`, match: (word) => 
-        [ `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`].includes(word.toUpperCase())
+        [ `CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`].includes(word.toUpperCase())
       }
     ],
     becomes: {
