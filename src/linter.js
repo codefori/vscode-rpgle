@@ -50,6 +50,7 @@ module.exports = class Linter {
    *  RequiresParameter?: boolean,
    *  RequiresProcedureDescription?: boolean,
    *  StringLiteralDupe?: boolean,
+   *  literalMinimum?: number,
    *  RequireBlankSpecial?: boolean,
    *  CopybookDirective?: "copy"|"include"
    *  UppercaseDirectives?: boolean,
@@ -123,7 +124,7 @@ module.exports = class Linter {
     /** @type {vscode.Position} */
     let statementEnd;
 
-    /** @type {{value: string, list: {range: vscode.Range, offset: {position: number, length: number}}[]}[]} */
+    /** @type {{value: string, definition?: string list: {range: vscode.Range, offset: {position: number, length: number}}[]}[]} */
     let stringLiterals = [];
 
     for (let currentLine of lines) {
@@ -299,6 +300,23 @@ module.exports = class Linter {
                     });
                   }
                 }
+
+                if (rules.StringLiteralDupe) {
+                  if (statement[2].type === `string`) {
+                    let foundBefore = stringLiterals.find(literal => literal.value === part.value);
+  
+                    // If it does not exist on our list, we can add it
+                    if (!foundBefore) {
+                      foundBefore = {
+                        definition: value,
+                        value: statement[2].value,
+                        list: []
+                      };
+  
+                      stringLiterals.push(foundBefore);
+                    }
+                  }
+                }
                 break;
 
               case `DCL-PI`:
@@ -308,6 +326,7 @@ module.exports = class Linter {
                 break;
 
               case `DCL-PR`:
+                inPrototype = true;
                 if (rules.PrototypeCheck) {
                   // Unneeded PR
                   if (!statement.some(part => part.value && part.value.toUpperCase().startsWith(`EXT`))) {
@@ -365,6 +384,7 @@ module.exports = class Linter {
               case `END-PROC`:
                 inProcedure = false;
                 break;
+              case `END-PR`:
               case `END-PI`:
                 inPrototype = false;
                 break;
@@ -493,7 +513,7 @@ module.exports = class Linter {
                     }
                   }
   
-                  if (rules.RequiresParameter) {
+                  if (rules.RequiresParameter && !inPrototype) {
                     // Check the procedure reference has a block following it
                     const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
                     if (definedProcedure) {
@@ -607,12 +627,14 @@ module.exports = class Linter {
     }
 
     if (stringLiterals.length > 0) {
+      const literalMinimum = rules.literalMinimum || 2;
       stringLiterals.forEach(literal => {
-        if (literal.list.length > 1) {
+        if (literal.list.length >= literalMinimum) {
           literal.list.forEach(location => {
             errors.push({
               ...location,
-              type: `StringLiteralDupe`
+              type: `StringLiteralDupe`,
+              newValue: literal.definition
             })
           });
         }

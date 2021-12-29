@@ -639,12 +639,14 @@ module.exports = {
       range: line,
       offset: { position: 6, length: 21 },
       type: `StringLiteralDupe`,
+      newValue: undefined,
     }, `Error not as expected`);
 
     assert.deepStrictEqual(errors[2], {
       range: line,
       offset: { position: 30, length: 45 },
       type: `StringLiteralDupe`,
+      newValue: undefined,
     }, `Error not as expected`);
   },
 
@@ -683,13 +685,15 @@ module.exports = {
     assert.deepStrictEqual(errors[1], {
       range: line,
       offset: { position: 6, length: 21 },
-      type: `StringLiteralDupe`,
+      type: `StringLiteralDupe`, 
+      newValue: undefined,
     }, `Error not as expected`);
 
     assert.deepStrictEqual(errors[2], {
       range: line,
       offset: { position: 31, length: 46 },
       type: `StringLiteralDupe`,
+      newValue: undefined,
     }, `Error not as expected`);
   },
 
@@ -884,6 +888,44 @@ module.exports = {
       ),
       offset: { position: 0, length: 8 },
       type: `NoCTDATA`,
+    }, `Error not as expected`);
+  },
+
+  linter11: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Dcl-c HELLO 'hello friends';`,
+      `Dcl-S Myotherthing char(10);`,
+      ``,
+      `dsply 'hello friends'`,
+      `      + 'hello friends' + ''`,
+      `    + 'oioi';`,
+      `    `
+    ].join(`\n`);
+  
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      StringLiteralDupe: true
+    }, cache);
+  
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+  
+    const line = new vscode.Range(new vscode.Position(5, 0), new vscode.Position(7, 12));
+  
+    assert.deepStrictEqual(errors[0], {
+      range: line,
+      offset: { position: 6, length: 21 },
+      type: `StringLiteralDupe`,
+      newValue: `HELLO`,
+    }, `Error not as expected`);
+  
+    assert.deepStrictEqual(errors[1], {
+      range: line,
+      offset: { position: 30, length: 45 },
+      type: `StringLiteralDupe`,
+      newValue: `HELLO`,
     }, `Error not as expected`);
   },
 }

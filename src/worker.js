@@ -73,11 +73,15 @@ module.exports = class Worker {
               const options = this.getLinterOptions(document.uri);
               const docs = await this.parser.getDocs(document.uri);
 
-              // First we do all the indentation fixes.
-              const { indentErrors } = Linter.getErrors(document.getText(), {
+              // Define the rules 
+              const rules = {
                 indent: Number(vscode.window.activeTextEditor.options.tabSize),
+                literalMinimum: 1,
                 ...options
-              }, docs);
+              };
+
+              // First we do all the indentation fixes.
+              const { indentErrors } = Linter.getErrors(document.getText(), rules, docs);
 
               if (indentErrors.length > 0) {
                 const fixes = indentErrors.map(error => {
@@ -92,10 +96,7 @@ module.exports = class Worker {
               
               while (true) {
               // Next up, let's fix all the other things!
-                const {errors} = Linter.getErrors(document.getText(), {
-                  indent: Number(vscode.window.activeTextEditor.options.tabSize),
-                  ...options
-                }, docs);
+                const {errors} = Linter.getErrors(document.getText(), rules, docs);
 
                 const actions = Worker.getActions(document, errors);
                 let edits = [];
@@ -773,6 +774,15 @@ module.exports = class Worker {
         action.edit.replace(document.uri, errorRange, error.newValue);
         actions.push(action);
         break;
+
+      case `StringLiteralDupe`:
+        if (error.newValue) {
+          action = new vscode.CodeAction(`Switch to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
+          action.edit = new vscode.WorkspaceEdit();
+          action.edit.replace(document.uri, errorRange, error.newValue);
+          actions.push(action);
+          break;
+        }
       }
     });
 
