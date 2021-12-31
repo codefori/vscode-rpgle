@@ -928,4 +928,25 @@ module.exports = {
       newValue: `HELLO`,
     }, `Error not as expected`);
   },
+
+  linter12: async () => {
+    const lines = [
+      `**free`,
+      `If 2 = 2;`,
+      `  localvar = 'Hello' + `,
+      `    'World';`,
+      `Else;`,
+      `  buyralg_setbu_aprordr(buyralg_getbu_aprordr + `,
+      `    arrayapr(wkind));  // 10-26-2016`,
+      `Endif;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
+  },
 }
