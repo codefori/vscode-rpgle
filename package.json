@@ -22,7 +22,7 @@
 		"onStartupFinished",
 		"onLanguage:rpgle"
 	],
-	"main": "./dist/extension",
+	"main": "./dist/extension.js",
 	"contributes": {
 		"snippets": [
 			{
