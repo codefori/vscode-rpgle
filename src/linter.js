@@ -586,47 +586,50 @@ module.exports = class Linter {
 
         // Next, check for indentation errors
 
-        pieces = upperLine.split(` `).filter(piece => piece !== ``);
-        opcode = pieces[0];
+        if (!skipIndentCheck) {
 
-        if ([
-          `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`
-        ].includes(opcode)) {
-          expectedIndent -= indent; 
-        }
+          pieces = upperLine.split(` `).filter(piece => piece !== ``);
+          opcode = pieces[0];
 
-        //Special case for `ENDSL`
-        if ([
-          `ENDSL`
-        ].includes(opcode)) {
-          expectedIndent -= (indent*2); 
-        }
+          if ([
+            `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`
+          ].includes(opcode)) {
+            expectedIndent -= indent; 
+          }
+
+          //Special case for `ENDSL`
+          if ([
+            `ENDSL`
+          ].includes(opcode)) {
+            expectedIndent -= (indent*2); 
+          }
           
-        if (currentIndent !== expectedIndent && !skipIndentCheck) {
-          indentErrors.push({
-            line: lineNumber,
-            expectedIndent,
-            currentIndent
-          });
-        }
+          if (currentIndent !== expectedIndent) {
+            indentErrors.push({
+              line: lineNumber,
+              expectedIndent,
+              currentIndent
+            });
+          }
 
-        if ([
-          `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
-        ].includes(opcode)) {
-          if (opcode == `DCL-DS` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
+          if ([
+            `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
+          ].includes(opcode)) {
+            if (opcode == `DCL-DS` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
             //No change
-          } 
-          else if (opcode == `DCL-PI` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
+            } 
+            else if (opcode == `DCL-PI` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
             //No change
+            }
+            else if (opcode == `SELECT`) {
+              if (skipIndentCheck === false) expectedIndent += (indent*2); 
+            }
+            else {
+              expectedIndent += indent; 
+            }
           }
-          else if (opcode == `SELECT`) {
-            if (skipIndentCheck === false) expectedIndent += (indent*2); 
-          }
-          else {
-            expectedIndent += indent; 
-          }
-        }
           
+        }
       }
     }
 
