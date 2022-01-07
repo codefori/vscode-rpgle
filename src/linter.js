@@ -305,7 +305,7 @@ module.exports = class Linter {
 
                   if (rules.StringLiteralDupe) {
                     if (statement[2].type === `string`) {
-                      let foundBefore = stringLiterals.find(literal => literal.value === part.value);
+                      let foundBefore = stringLiterals.find(literal => literal.value === statement[2].value);
   
                       // If it does not exist on our list, we can add it
                       if (!foundBefore) {
