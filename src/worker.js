@@ -214,6 +214,7 @@ module.exports = class Worker {
           const range = document.getWordRangeAtPosition(position);
           const word = document.getText(range).toUpperCase();
 
+          const linePieces = document.lineAt(position.line).text.trim().split(` `);
           const procedure = doc.procedures.find(proc => proc.name.toUpperCase() === word);
 
           if (procedure) {
@@ -259,17 +260,38 @@ module.exports = class Worker {
                 markdown
               )
             );
-          }
+          } else {
+            // If they're typing inside of a procedure, let's get the stuff from there too
+            const currentProcedure = doc.procedures.find(proc => range.start.line >= proc.range.start && range.start.line <= proc.range.end);
+            let theVariable;
 
-          const linePieces = document.lineAt(position.line).text.trim().split(` `);
-          if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-            const {type, memberPath, finishedPath} = Generic.getPathInfo(document.uri, linePieces[1]);
+            if (currentProcedure) {
+              theVariable = currentProcedure.scope.find(word);
+            }
 
-            return new vscode.Hover(
-              new vscode.MarkdownString(
-                `\`'${finishedPath}'\` (${type})`
+            if (!theVariable) {
+              theVariable = doc.find(word);
+            }
+
+            if (theVariable) {
+              // Variable definition found
+              return new vscode.Hover(
+                new vscode.MarkdownString(
+                  `\`${theVariable.name}\`: \`${theVariable.keywords.join(` `)}\``
+                )
               )
-            )
+
+            } else {
+              if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
+                const {type, memberPath, finishedPath} = Generic.getPathInfo(document.uri, linePieces[1]);
+    
+                return new vscode.Hover(
+                  new vscode.MarkdownString(
+                    `\`'${finishedPath}'\` (${type})`
+                  )
+                )
+              }
+            }
           }
 
           return null;

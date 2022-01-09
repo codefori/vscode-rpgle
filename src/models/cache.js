@@ -52,4 +52,26 @@ module.exports = class Cache {
       ...this.structs.map(def => def.name),
     ]
   }
+
+  /**
+   * 
+   * @param {string} name 
+   * @returns {Declaration}
+   */
+  find(name) {
+    name = name.toUpperCase();
+    const possibles = [
+      ...this.constants.filter(def => def.name.toUpperCase() === name), 
+      ...this.procedures.filter(def => def.name.toUpperCase() === name), 
+      ...this.subroutines.filter(def => def.name.toUpperCase() === name), 
+      ...this.variables.filter(def => def.name.toUpperCase() === name),
+      ...this.structs.filter(def => def.name.toUpperCase() === name),
+    ];
+
+    if (possibles.length > 0) {
+      return possibles[0]
+    } else {
+      return null;
+    }
+  }
 }
