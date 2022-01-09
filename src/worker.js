@@ -162,7 +162,6 @@ module.exports = class Worker {
             clearTimeout(this.editTimeout);
 
             this.editTimeout = setTimeout(async () => {
-              console.log(`Linting ${document.fileName}`);
               if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
                 const text = document.getText();
                 this.parser.clearParsedCache(document.uri.path);
@@ -201,8 +200,6 @@ module.exports = class Worker {
               if (fixErrors.length > 0) {
                 actions = Worker.getActions(document, fixErrors);
               }
-
-              console.log(actions);
             }
           
             return actions;
@@ -487,7 +484,6 @@ module.exports = class Worker {
             clearTimeout(this.editTimeout);
 
             this.editTimeout = setTimeout(async () => {
-              console.log(`Running linter`);
               const text = document.getText();
               const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
               if (isFree) {
