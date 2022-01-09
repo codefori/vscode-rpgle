@@ -48,6 +48,7 @@ module.exports = {
    */
   test3: async () => {
     const lines = [
+      `**FREE`,
       `Dcl-s MyVariable2 Char(20);`,
       `Dcl-Ds astructure qualified;`,
       `  Subitem1 Char(20);`,
@@ -65,9 +66,9 @@ module.exports = {
     
     assert.strictEqual(cache.structs[0].subItems.length, 2, `Expect length of 2 subitems`);
 
-    assert.strictEqual(cache.variables[0].position.line, 0, `Index of 0 expected`);
-    assert.strictEqual(cache.variables[1].position.line, 5, `Index of 5 expected`);
-    assert.strictEqual(cache.structs[0].position.line, 1, `Index of 1 expected`);
+    assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
+    assert.strictEqual(cache.variables[1].position.line, 6, `Index of 6 expected`);
+    assert.strictEqual(cache.structs[0].position.line, 2, `Index of 2 expected`);
   },
 
   /**
@@ -75,6 +76,7 @@ module.exports = {
    * */
   test4: async () => {
     const lines = [
+      `**FREE`,
       `Dcl-s MyVariable2 Char(20);`,
       ``,
       ``,
@@ -89,8 +91,8 @@ module.exports = {
     assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.subroutines.length, 1, `Expect length of 1`);
 
-    assert.strictEqual(cache.variables[0].position.line, 0, `Index of 0 expected`);
-    assert.strictEqual(cache.subroutines[0].range.start, 3, `Index of 3 expected`);
+    assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
+    assert.strictEqual(cache.subroutines[0].range.start, 4, `Index of 4 expected`);
   },
 
   /**
@@ -98,6 +100,7 @@ module.exports = {
    */ 
   test5: async () => {
     const lines = [
+      `**FREE`,
       ``,
       `Dcl-s MyVariable2 Char(20);`,
       ``,
@@ -119,9 +122,9 @@ module.exports = {
     assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
 
-    assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
-    assert.strictEqual(cache.procedures[0].position.line, 3, `Index of 3 expected`);
-    assert.strictEqual(cache.procedures[1].position.line, 7, `Index of 7 expected`);
+    assert.strictEqual(cache.variables[0].position.line, 2, `Index of 2 expected`);
+    assert.strictEqual(cache.procedures[0].position.line, 4, `Index of 4 expected`);
+    assert.strictEqual(cache.procedures[1].position.line, 8, `Index of 8 expected`);
 
     assert.strictEqual(cache.procedures[0].subItems.length, 0, `Expect length of 0`);
     assert.strictEqual(cache.procedures[1].subItems.length, 1, `Expect length of 1`);
@@ -129,6 +132,7 @@ module.exports = {
 
   test6: async () => {
     const lines = [
+      `**FREE`,
       `Dcl-s MyVariable2 Char(20);`,
       ``,
       `Dcl-Pr TheProcedure;`,
@@ -151,6 +155,7 @@ module.exports = {
    */
   test7: async () => {
     const lines = [
+      `**FREE`,
       ``,
       `Dcl-Pr TheProcedure;`,
       `  parmA char(20);`,
@@ -179,6 +184,7 @@ module.exports = {
    * */
   test8: async () => {
     const lines = [
+      `**FREE`,
       `Dcl-s MyVariable2 Char(20);`,
       ``,
       `Dcl-C theConstant 'Hello world';`,
@@ -196,6 +202,7 @@ module.exports = {
    */
   test9: async () => {
     const lines = [
+      `**FREE`,
       `Dcl-s MyVariable2 Char(20);`,
       ``,
       `Dcl-C theConstant 'Hello world';`,
@@ -1013,6 +1020,7 @@ module.exports = {
 
   linter14: async () => {
     const lines = [
+      `**FREE`,
       `//--------------------------------------------------------------------------------------------------`,
       `// Append a single quote. This procedure exists to make other code more readable.`,
       `//--------------------------------------------------------------------------------------------------`,
