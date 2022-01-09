@@ -1009,5 +1009,57 @@ module.exports = {
       expectedIndent: 2,
       line: 20
     });
+  },
+
+  linter14: async () => {
+    const lines = [
+      `//--------------------------------------------------------------------------------------------------`,
+      `// Append a single quote. This procedure exists to make other code more readable.`,
+      `//--------------------------------------------------------------------------------------------------`,
+      `DCL-PROC Q;`,
+      `  DCL-PI Q VARCHAR(2048);`,
+      `    in_str VARCHAR(2048) CONST OPTIONS(*TRIM);`,
+      `  END-PI;`,
+      `  `,
+      `  DCL-C C_QUOTE '''';`,
+      `  DCL-S is_abend IND INZ(*OFF);`,
+      `  DCL-S return_str LIKE(in_str);`,
+      `  `,
+      `  return_str = %TRIM(C_QUOTE + in_str + C_QUOTE);`,
+      `  RETURN return_str;`,
+      `  // End of procedure`,
+      `  `,
+      `  ON-EXIT is_abend;`,
+      `    // Exit handler`,
+      `    IF is_abend;`,
+      `      return_str = 'This is a string';`,
+      `    ENDIF;`,
+      `END-PROC Q;`,
+      ``,
+      `// New procedure`,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `  // comment with right indent`,
+      `  Dcl-S localVar Char(20);`,
+      `  localvar = newValue;`,
+      `  // but valid indent`,
+      `  // with another line`,
+      `  Myvariable2 = localvar;`,
+      `End-Proc;`,
+    ].join(`\n`);
+
+
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
+
+
   }
 }

@@ -86,6 +86,7 @@ module.exports = class Linter {
 
     let inProcedure = false;
     let inPrototype = false;
+    let inOnExit = false;
 
     let lineNumber = -1;
 
@@ -598,18 +599,24 @@ module.exports = class Linter {
           opcode = pieces[0];
 
           if ([
-            `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`
+            `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `ENDSL`
           ].includes(opcode)) {
             expectedIndent -= indent; 
+
+            //Special case for `ENDSL` and `END-PROC
+            if ([
+              `ENDSL`
+            ].includes(opcode)) {
+              expectedIndent -= indent; 
+            }
+
+            // Support for on-exit
+            if (opcode === `END-PROC` && inOnExit) {
+              inOnExit = false;
+              expectedIndent -= indent;
+            }
           }
 
-          //Special case for `ENDSL`
-          if ([
-            `ENDSL`
-          ].includes(opcode)) {
-            expectedIndent -= (indent*2); 
-          }
-          
           if (currentIndent !== expectedIndent) {
             indentErrors.push({
               line: lineNumber,
@@ -619,18 +626,21 @@ module.exports = class Linter {
           }
 
           if ([
-            `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
+            `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
           ].includes(opcode)) {
-            if (opcode == `DCL-DS` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
+            if (opcode === `DCL-DS` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
             //No change
             } 
-            else if (opcode == `DCL-PI` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
+            else if (opcode === `DCL-PI` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
             //No change
             }
-            else if (opcode == `SELECT`) {
+            else if (opcode === `SELECT`) {
               if (skipIndentCheck === false) expectedIndent += (indent*2); 
             }
-            else {
+            else if (opcode === `ON-EXIT`) {
+              expectedIndent += indent; 
+              inOnExit = true;
+            } else {
               expectedIndent += indent; 
             }
           }
