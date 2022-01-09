@@ -344,11 +344,13 @@ module.exports = {
       ``,
       `Ctl-Opt DFTACTGRP(*No);`,
       ``,
+      `// My variable`,
       `Dcl-s MyVariable2 Char(20);`,
       ``,
       `myVariable2 = *blank;`,
       ``,
       `If myVariable2 = *blank;`,
+      `  // Inside if`,
       `MyVariable2 = 'Hello world';`,
       `Endif;`,
       `Return;`
@@ -361,7 +363,7 @@ module.exports = {
     }, cache);
 
     assert.strictEqual(indentErrors.length, 1, `Expect length of 1`);
-    assert.strictEqual(indentErrors[0].line, 9, `Index of 9 expected`);
+    assert.strictEqual(indentErrors[0].line, 11, `Index of 9 expected`);
     assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
     assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
   },
@@ -375,6 +377,7 @@ module.exports = {
       ``,
       `Ctl-Opt DFTACTGRP(*No);`,
       ``,
+      `// Prototype`,
       `Dcl-Pr printf Int(10) ExtProc('printf');`,
       `  format Pointer Value Options(*String); `, //This space at the end was causing an indent error on the next line
       `END-PR;`,
@@ -384,6 +387,7 @@ module.exports = {
       `myVariable2 = *blank;`,
       ``,
       `If myVariable2 = *blank;`,
+      `  // Inside if`,
       `  MyVariable2 = 'Hello world';`,
       `Endif;`,
       `Return;`
@@ -409,11 +413,14 @@ module.exports = {
       `myVariable2 = *blank;`,
       ``,
       `If myVariable2 = *blank;`,
+      `  // Inside if`,
       `MyVariable2 = 'Hello world';`,
       `  Select;`,
       `    When myVariable2 = *blank;`,
+      `      // First when`,
       `      MyVariable2 = 'Still blank?';`,
       `    When myVariable2 = 'YOYOYO';`,
+      `      // Second when`,
       `        MyVariable2 = 'YOYOYO';`,
       `  Endsl;`,
       `Endif;`,
@@ -428,11 +435,11 @@ module.exports = {
 
     assert.strictEqual(indentErrors.length, 2, `Expect length of 2`);
 
-    assert.strictEqual(indentErrors[0].line, 9, `Index of 9 expected`);
+    assert.strictEqual(indentErrors[0].line, 10, `Index of 9 expected`);
     assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
     assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
 
-    assert.strictEqual(indentErrors[1].line, 14, `Index of 14 expected`);
+    assert.strictEqual(indentErrors[1].line, 17, `Index of 14 expected`);
     assert.strictEqual(indentErrors[1].currentIndent, 8, `Value of 8 expected`);
     assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
   },
@@ -949,4 +956,58 @@ module.exports = {
 
     assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
   },
+
+  linter13: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `// my constant`,
+      `// second line`,
+      `Dcl-C theConstant 'Hello world';`,
+      `  // comment with bad indent`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `// comment with wrong indent`,
+      `  Dcl-S localVar Char(20);`,
+      `  localvar = newValue;`,
+      `  // but valid indent`,
+      `  // with another line`,
+      `      // too many spaces`,
+      `  Myvariable2 = localvar;`,
+      `End-Proc;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
+
+    assert.deepStrictEqual(indentErrors[0], {
+      currentIndent: 2,
+      expectedIndent: 0,
+      line: 9
+    });
+
+    assert.deepStrictEqual(indentErrors[1], {
+      currentIndent: 0,
+      expectedIndent: 2,
+      line: 15
+    });
+
+    assert.deepStrictEqual(indentErrors[2], {
+      currentIndent: 6,
+      expectedIndent: 2,
+      line: 20
+    });
+  }
 }
