@@ -112,6 +112,11 @@
             "$id": "#/properties/NoCTDATA",
             "type": "boolean",
             "description": "CTDATA is not allowed."
+        },
+        "PrettyComments": {
+            "$id": "#/properties/PrettyComments",
+            "type": "boolean",
+            "description": "Comments cannot be blank and must start with a space."
         }
     },
     "additionalProperties": true

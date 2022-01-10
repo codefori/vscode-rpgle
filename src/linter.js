@@ -27,6 +27,7 @@ const errorText = {
   'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
   'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
   'NoCTDATA': `\`CTDATA\` is not allowed.`,
+  'PrettyComments': `Comments must be correctly formatted.`,
 }
 
 module.exports = class Linter {
@@ -57,7 +58,8 @@ module.exports = class Linter {
    *  NoSQLJoins?: boolean,
    *  NoGlobalsInProcedures?: boolean,
    *  SpecificCasing?: {operation: string, expected: string}[],
-   *  NoCTDATA?: boolean
+   *  NoCTDATA?: boolean,
+   *  PrettyComments?: boolean,
    * }} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -104,7 +106,7 @@ module.exports = class Linter {
      *      "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
      *      "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
      *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"
-     *      |"NoCTDATA", 
+     *      |"NoCTDATA"|"PrettyComments", 
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -155,6 +157,35 @@ module.exports = class Linter {
         } else {
           statementStart = new vscode.Position(lineNumber, currentIndent);
           statementEnd = new vscode.Position(lineNumber, line.length);
+        }
+
+        if (isLineComment) {
+          if (rules.PrettyComments) {
+            const comment = line.substring(currentIndent + 2).trimEnd();
+            if (comment === ``) {
+              errors.push({
+                range: new vscode.Range(
+                  new vscode.Position(lineNumber, currentIndent),
+                  new vscode.Position(lineNumber, currentIndent + 2)
+                ),
+                type: `PrettyComments`,
+                newValue: ``
+              });
+            } else {
+              const startSpaces = comment.search(/\S/);
+
+              if (startSpaces === 0) {
+                errors.push({
+                  range: new vscode.Range(
+                    new vscode.Position(lineNumber, currentIndent),
+                    new vscode.Position(lineNumber, currentIndent + 2)
+                  ),
+                  type: `PrettyComments`,
+                  newValue: `// `
+                });
+              }
+            }
+          }
         }
 
         if (!isLineComment) {
@@ -590,7 +621,6 @@ module.exports = class Linter {
           }
         }
         
-
         // Next, check for indentation errors
 
         if (!skipIndentCheck) {

@@ -11,4 +11,5 @@ module.exports = {
   StringLiteralDupe: true,
   NoSQLJoins: true,
   NoCTDATA: true,
+  PrettyComments: true,
 }

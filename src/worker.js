@@ -799,8 +799,15 @@ module.exports = class Worker {
           action.edit = new vscode.WorkspaceEdit();
           action.edit.replace(document.uri, errorRange, error.newValue);
           actions.push(action);
-          break;
         }
+        break;
+      
+      case `PrettyComments`:
+        action = new vscode.CodeAction(`Fix comment formatting`, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.replace(document.uri, errorRange, error.newValue);
+        actions.push(action);
+        break;
       }
     });
 

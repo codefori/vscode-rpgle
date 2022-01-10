@@ -1058,8 +1058,6 @@ module.exports = {
       `End-Proc;`,
     ].join(`\n`);
 
-
-
     const parser = new Parser();
     const cache = await parser.getDocs(URI, lines);
     const { indentErrors } = Linter.getErrors(lines, {
@@ -1067,7 +1065,85 @@ module.exports = {
     }, cache);
 
     assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
+  },
 
+  linter15: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `//`,
+      `//Append a single quote. This procedure exists to make other code more readable.`,
+      `//`,
+      ``,
+      `// my variable`,
+      `Dcl-S MyVariable2 Char(20);`,
+      ``,
+      `MyVariable2 = 'Hello world';`,
+      ``,
+      `If 2 = 2;`,
+      `  //Change thw value of my variable`,
+      `  MyVariable2 = 'Hello friends';`,
+      `  //`,
+      `Endif;`,
+      ``,
+      `Dsply MyVariable2;`,
+      ``,
+      `return;`
+    ].join(`\n`);
 
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      PrettyComments: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 5, `Expect length of 5`);
+
+    assert.deepStrictEqual(errors[0], {
+      type: `PrettyComments`,
+      newValue: ``,
+      range: new vscode.Range(
+        new vscode.Position(4, 0),
+        new vscode.Position(4, 2),
+      )
+    });
+
+    assert.deepStrictEqual(errors[1], {
+      type: `PrettyComments`,
+      newValue: `// `,
+      range: new vscode.Range(
+        new vscode.Position(5, 0),
+        new vscode.Position(5, 2),
+      )
+    });
+
+    assert.deepStrictEqual(errors[2], {
+      type: `PrettyComments`,
+      newValue: ``,
+      range: new vscode.Range(
+        new vscode.Position(6, 0),
+        new vscode.Position(6, 2),
+      )
+    });
+
+    assert.deepStrictEqual(errors[3], {
+      type: `PrettyComments`,
+      newValue: `// `,
+      range: new vscode.Range(
+        new vscode.Position(14, 2),
+        new vscode.Position(14, 4),
+      )
+    });
+
+    assert.deepStrictEqual(errors[4], {
+      type: `PrettyComments`,
+      newValue: ``,
+      range: new vscode.Range(
+        new vscode.Position(16, 2),
+        new vscode.Position(16, 4),
+      )
+    });
   }
 }
