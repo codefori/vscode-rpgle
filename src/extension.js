@@ -46,7 +46,10 @@ function activate(context) {
           } else {
             Output.write(`String path: ${path.join(workspaces[0].uri.fsPath, `.vscode`, `rpglint.json`)}`);
 
-            uri = vscode.Uri.parse(path.join(workspaces[0].uri.fsPath, `.vscode`, `rpglint.json`));
+            uri = vscode.Uri.from({
+              scheme: `file`,
+              path: path.join(workspaces[0].uri.fsPath, `.vscode`, `rpglint.json`)
+            });
 
             Output.write(`Creating Uri path: ${JSON.stringify(uri)}`);
 
