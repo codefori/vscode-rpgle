@@ -7,6 +7,7 @@ const Worker = require(`./worker`);
 const defaultConfig = require(`./models/default`);
 
 const getInstance = require(`./base`);
+const Output = require(`./output`);
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -25,6 +26,8 @@ function activate(context) {
 
   worker = new Worker(context);
 
+  Output.init();
+
   context.subscriptions.push(
     vscode.commands.registerCommand(`vscode-rpgle.openLintConfig`, async (filter) => {
       const instance = getInstance();
@@ -37,8 +40,16 @@ function activate(context) {
           let uri;
           if (linter && linter.length > 0) {
             uri = linter[0];
+
+            Output.write(`Uri path: ${JSON.stringify(uri)}`);
+
           } else {
+            Output.write(`String path: ${path.join(workspaces[0].uri.path, `.vscode`, `rpglint.json`)}`);
+
             uri = vscode.Uri.parse(path.join(workspaces[0].uri.path, `.vscode`, `rpglint.json`));
+
+            Output.write(`Creating Uri path: ${JSON.stringify(uri)}`);
+
             await vscode.workspace.fs.writeFile(
               uri, 
               Buffer.from(JSON.stringify(defaultConfig, null, 2), `utf8`)
@@ -66,6 +77,7 @@ function activate(context) {
           //@ts-ignore
           type = editor.document.uri.scheme;
           
+          Output.write(`Uri remote path: ${JSON.stringify(editor.document.uri)}`);
           const lintInfo = worker.getLintConfigPath(editor.document.uri);
 
           if (lintInfo) {
@@ -78,6 +90,8 @@ function activate(context) {
         }
 
         if (path) {
+          Output.write(`Current path: ${path}`);
+
           const exists = await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path);
 
           if (!exists) {
@@ -99,7 +113,7 @@ function activate(context) {
                       }
                     )
                   } catch (e) {
-                    console.log(e);
+                    Output.write(e);
                   }
 
                   try {
@@ -110,18 +124,22 @@ function activate(context) {
                       }
                     );
                   } catch (e) {
-                    console.log(e);
+                    Output.write(e);
                   }
 
                   try {
+                    Output.write(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);
+
                     await content.uploadMemberContent(null, memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
                     await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path);
                   } catch (e) {
-                    console.log(e);
+                    Output.write(e);
                   }
                   break;
 
                 case `streamfile`:
+                  Output.write(`IFS path: ${path}`);
+
                   await content.writeStreamfile(path, jsonString);
                   await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path);
                   break;
