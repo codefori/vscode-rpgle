@@ -4,7 +4,7 @@ const vscode = require(`vscode`);
 const path = require(`path`);
 
 const Worker = require(`./worker`);
-const defaultConfig = require(`./models/default`);
+const defaultConfig = require(`./schemas/default`);
 
 const getInstance = require(`./base`);
 const Output = require(`./output`);

@@ -15,7 +15,7 @@ const notCurrentArea = vscode.window.createTextEditorDecorationType({
   border: `1px solid grey`,
 });
 
-const specs = require(`./models/specs.js`);
+const specs = require(`./language/models/specs.js`);
 
 /**
  * @param {string} line 

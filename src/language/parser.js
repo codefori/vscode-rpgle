@@ -8,7 +8,7 @@ const Declaration = require(`./models/declaration`);
 
 const oneLineTriggers = require(`./models/oneLineTriggers`);
 
-const getInstance = require(`./base`);
+const getInstance = require(`../base`);
 
 module.exports = class Parser {
   constructor() {

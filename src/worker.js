@@ -6,12 +6,12 @@ const Configuration = require(`./configuration`);
 
 const { registerColumnAssist } = require(`./columnAssist`);
 
-const Cache = require(`./models/cache`);
-const possibleTags = require(`./models/tags`);
+const Cache = require(`./language/models/cache`);
+const possibleTags = require(`./language/models/tags`);
 
-const Linter = require(`./linter`);
-const Parser = require(`./parser`);
-const Generic = require(`./generic`);
+const Linter = require(`./language/linter`);
+const Parser = require(`./language/parser`);
+const Generic = require(`./language/generic`);
 
 const lintFile = {
   member: `vscode,rpglint`,

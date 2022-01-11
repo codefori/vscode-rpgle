@@ -2,7 +2,7 @@
 const vscode = require(`vscode`);
 const path = require(`path`);
 
-const getInstance = require(`./base`);
+const getInstance = require(`../base`);
 
 module.exports = class {
 
