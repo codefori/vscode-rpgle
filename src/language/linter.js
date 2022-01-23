@@ -178,17 +178,20 @@ module.exports = class Linter {
                 newValue: ``
               });
             } else {
-              const startSpaces = comment.search(/\S/);
+              // We check for the slash because the documentation requires ///.
+              if (comment !== `/`) {
+                const startSpaces = comment.search(/\S/);
 
-              if (startSpaces === 0) {
-                errors.push({
-                  range: new vscode.Range(
-                    new vscode.Position(lineNumber, currentIndent),
-                    new vscode.Position(lineNumber, currentIndent + 2)
-                  ),
-                  type: `PrettyComments`,
-                  newValue: `// `
-                });
+                if (startSpaces === 0) {
+                  errors.push({
+                    range: new vscode.Range(
+                      new vscode.Position(lineNumber, currentIndent),
+                      new vscode.Position(lineNumber, currentIndent + 2)
+                    ),
+                    type: `PrettyComments`,
+                    newValue: `// `
+                  });
+                }
               }
             }
           } else {
