@@ -7,9 +7,11 @@ module.exports = {
   NoSELECTAll: true,
   UppercaseConstants: true,
   IncorrectVariableCase: true,
-  RequiresParameter: true,
   StringLiteralDupe: true,
   NoSQLJoins: true,
   NoCTDATA: true,
   PrettyComments: true,
+  NoGlobalSubroutines: true,
+  NoLocalSubroutines: true,
+  UppercaseDirectives: true,
 }

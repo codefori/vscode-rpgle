@@ -5,6 +5,11 @@
     "description": "Available lint configuration for RPGLE",
     "required": [],
     "properties": {
+        "indent": {
+            "$id": "#/properties/indent",
+            "type": "number",
+            "description": "Indent for RPGLE. This will override the VS Code default."
+        },
         "BlankStructNamesCheck": {
             "$id": "#/properties/BlankStructNamesCheck",
             "type": "boolean",
