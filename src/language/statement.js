@@ -101,6 +101,24 @@ const commonMatchers = [
     }
   },
   {
+    name: `DECLARE_SUB`,
+    match: [
+      { type: `word`, match: (word) => word.toUpperCase() === `BEGSR` },
+    ],
+    becomes: {
+      type: `declare`
+    }
+  },
+  {
+    name: `END_SUB`,
+    match: [
+      { type: `word`, match: (word) => word.toUpperCase() === `ENDSR` },
+    ],
+    becomes: {
+      type: `end`
+    }
+  },
+  {
     name: `FOR-EACH`,
     match: [
       { type: `word`, match: (word) => word.toUpperCase() === `FOR` },

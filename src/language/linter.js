@@ -28,6 +28,7 @@ const errorText = {
   'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
   'NoCTDATA': `\`CTDATA\` is not allowed.`,
   'PrettyComments': `Comments must be correctly formatted.`,
+  'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
 }
 
 module.exports = class Linter {
@@ -60,6 +61,7 @@ module.exports = class Linter {
    *  SpecificCasing?: {operation: string, expected: string}[],
    *  NoCTDATA?: boolean,
    *  PrettyComments?: boolean,
+   *  NoGlobalSubroutines?: boolean,
    * }} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -84,6 +86,8 @@ module.exports = class Linter {
 
     if (globalScope) {
       globalProcs = globalScope.procedures;
+    } else {
+      return null;
     }
 
     let inProcedure = false;
@@ -106,7 +110,7 @@ module.exports = class Linter {
      *      "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
      *      "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
      *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"
-     *      |"NoCTDATA"|"PrettyComments", 
+     *      |"NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines",
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -235,7 +239,13 @@ module.exports = class Linter {
               currentStatement = currentStatement.trim();
 
               const currentProcedure = globalScope.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
-              const currentScope = globalScope.merge(inProcedure ? currentProcedure.scope : undefined);
+              let currentScope;
+
+              try {
+                currentScope = globalScope.merge(inProcedure && currentProcedure ? currentProcedure.scope : undefined);
+              } catch (e) {
+                console.log(e);
+              }
 
               const statement = Statement.parseStatement(currentStatement);
               let value;
@@ -307,6 +317,21 @@ module.exports = class Linter {
                   }
 
                   switch (statement[0].value.toUpperCase()) {
+                  case `BEGSR`:
+                    if (inProcedure === false) {
+                      if (rules.NoGlobalSubroutines) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
+                          type: `NoGlobalSubroutines`,
+                          newValue: `Dcl-Proc`
+                        });
+                      }
+                    }
+                    break;
                   case `DCL-PROC`:
                     inProcedure = true;
                     if (statement.length < 2) break;
@@ -421,6 +446,21 @@ module.exports = class Linter {
 
                 case `end`:
                   switch (statement[0].value.toUpperCase()) {
+                  case `ENDSR`:
+                    if (inProcedure === false) {
+                      if (rules.NoGlobalSubroutines) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
+                          type: `NoGlobalSubroutines`,
+                          newValue: `End-Proc`
+                        });
+                      }
+                    }
+                    break;
                   case `END-PROC`:
                     inProcedure = false;
                     break;
@@ -463,6 +503,22 @@ module.exports = class Linter {
                         offset: {position: statement[0].position, length: statement[0].position + value.length + 1},
                         type: `UselessOperationCheck`
                       });
+                    }
+                    break;
+                  case `EXSR`:
+                    if (rules.NoGlobalSubroutines) {
+                      if (statement.length === 2) {
+                        if (globalScope.subroutines.find(sub => sub.name.toUpperCase() === statement[1].value.toUpperCase())) {
+                          errors.push({
+                            range: new vscode.Range(
+                              statementStart,
+                              statementEnd
+                            ),
+                            type: `NoGlobalSubroutines`,
+                            newValue: `${statement[1].value}()`
+                          });
+                        }
+                      }
                     }
                     break;
                   case `EXEC`:

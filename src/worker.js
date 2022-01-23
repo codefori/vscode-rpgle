@@ -730,11 +730,21 @@ module.exports = class Worker {
 
   /**
    * @param {vscode.TextDocument} document 
-   * @param {*} errors 
+   * @param {object[]} errors 
    */
   static getActions(document, errors) {
     /** @type {vscode.CodeAction[]} */
     let actions = [];
+
+    // We need to move subroutine to the end and reverse the contents
+    const NoGlobalSubroutines = errors.filter(e => e.type === `NoGlobalSubroutines`);
+
+    // Then remove them from the error list
+    errors = errors.filter(e => e.type !== `NoGlobalSubroutines`);
+
+    // Before reversing an adding them back
+    NoGlobalSubroutines.reverse();
+    errors.push(...NoGlobalSubroutines);
 
     errors.forEach(error => {
       let action;
@@ -787,13 +797,8 @@ module.exports = class Worker {
         break;
 
       case `CopybookDirective`:
-        action = new vscode.CodeAction(`Switch to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
-        action.edit = new vscode.WorkspaceEdit();
-        action.edit.replace(document.uri, errorRange, error.newValue);
-        actions.push(action);
-        break;
-
       case `StringLiteralDupe`:
+      case `NoGlobalSubroutines`:
         if (error.newValue) {
           action = new vscode.CodeAction(`Switch to '${error.newValue}'`, vscode.CodeActionKind.QuickFix);
           action.edit = new vscode.WorkspaceEdit();

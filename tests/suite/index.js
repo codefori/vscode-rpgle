@@ -1182,5 +1182,65 @@ module.exports = {
         new vscode.Position(16, 4),
       )
     });
-  }
+  },
+
+  /**
+   * Subroutine check test
+   * */
+  linter16: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Exsr theSubroutine;`,
+      `Dsply MyVariable2;`,
+      ``,
+      `Begsr theSubroutine;`,
+      `  MyVariable2 = 'Hello world';`,
+      `Endsr;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      NoGlobalSubroutines: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 3, `Expect length of 3`);
+
+    assert.deepStrictEqual(errors[0], {
+      type: `NoGlobalSubroutines`,
+      newValue: `theSubroutine()`,
+      range: new vscode.Range(
+        new vscode.Position(3, 0),
+        new vscode.Position(3, 18),
+      )
+    });
+
+    assert.deepStrictEqual(errors[1], {
+      type: `NoGlobalSubroutines`,
+      newValue: `Dcl-Proc`,
+      range: new vscode.Range(
+        new vscode.Position(6, 0),
+        new vscode.Position(6, 19),
+      ),
+      offset: {
+        position: 0,
+        length: 5
+      }
+    });
+
+    assert.deepStrictEqual(errors[2], {
+      type: `NoGlobalSubroutines`,
+      newValue: `End-Proc`,
+      range: new vscode.Range(
+        new vscode.Position(8, 0),
+        new vscode.Position(8, 5),
+      ),
+      offset: {
+        position: 0,
+        length: 5
+      }
+    });
+  },
 }
