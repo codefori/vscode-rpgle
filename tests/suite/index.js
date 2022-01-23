@@ -1279,4 +1279,52 @@ module.exports = {
       )
     });
   },
+
+  linter18: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `theProcedure();`,
+      `Dsply MyVariable2;`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-S mylocal char(20);`,
+      `  MyVariable2 = 'Hello world';`,
+      `  mylocal = Myvariable2;`,
+      `End-Proc;`,
+    ].join(`\n`);
+  
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      NoGlobalsInProcedures: true
+    }, cache);
+  
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+
+    assert.deepStrictEqual(errors[0], {
+      type: `NoGlobalsInProcedures`,
+      range: new vscode.Range(
+        new vscode.Position(8, 2),
+        new vscode.Position(8, 29),
+      ),
+      offset: {
+        position: 0,
+        length: 11
+      }
+    });
+
+    assert.deepStrictEqual(errors[1], {
+      type: `NoGlobalsInProcedures`,
+      range: new vscode.Range(
+        new vscode.Position(9, 2),
+        new vscode.Position(9, 23),
+      ),
+      offset: {
+        position: 10,
+        length: 21
+      }
+    });
+  }
 }
