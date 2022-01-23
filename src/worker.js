@@ -71,7 +71,7 @@ module.exports = class Worker {
           if (document.languageId === `rpgle`) {
             if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
               const options = this.getLinterOptions(document.uri);
-              const docs = await this.parser.getDocs(document.uri);
+              const docs = await this.parser.getDocs(document.uri, document.getText());
 
               // Define the rules 
               const rules = {
