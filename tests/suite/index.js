@@ -1243,4 +1243,40 @@ module.exports = {
       }
     });
   },
+  
+  /**
+   * Subroutine in procedure check test
+   * */
+  linter17: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `theProcedure();`,
+      `Dsply MyVariable2;`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Exsr theSubroutine;`,
+      `  Begsr theSubroutine;`,
+      `    MyVariable2 = 'Hello world';`,
+      `  Endsr;`,
+      `End-Proc;`,
+    ].join(`\n`);
+  
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      NoLocalSubroutines: true
+    }, cache);
+  
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+  
+    assert.deepStrictEqual(errors[0], {
+      type: `NoLocalSubroutines`,
+      range: new vscode.Range(
+        new vscode.Position(8, 2),
+        new vscode.Position(8, 21),
+      )
+    });
+  },
 }

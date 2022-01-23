@@ -29,6 +29,7 @@ const errorText = {
   'NoCTDATA': `\`CTDATA\` is not allowed.`,
   'PrettyComments': `Comments must be correctly formatted.`,
   'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
+  'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
 }
 
 module.exports = class Linter {
@@ -62,6 +63,7 @@ module.exports = class Linter {
    *  NoCTDATA?: boolean,
    *  PrettyComments?: boolean,
    *  NoGlobalSubroutines?: boolean,
+   *  NoLocalSubroutines?: boolean,
    * }} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -110,7 +112,7 @@ module.exports = class Linter {
      *      "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
      *      "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
      *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"
-     *      |"NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines",
+     *      |"NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines",
      *  newValue?: string}[]
      * } */
     let errors = [];
@@ -318,7 +320,17 @@ module.exports = class Linter {
 
                   switch (statement[0].value.toUpperCase()) {
                   case `BEGSR`:
-                    if (inProcedure === false) {
+                    if (inProcedure) {
+                      if (rules.NoLocalSubroutines) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          type: `NoLocalSubroutines`
+                        });
+                      }
+                    } else {
                       if (rules.NoGlobalSubroutines) {
                         errors.push({
                           range: new vscode.Range(

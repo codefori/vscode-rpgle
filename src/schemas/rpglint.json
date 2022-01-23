@@ -122,6 +122,11 @@
             "$id": "#/properties/NoGlobalSubroutines",
             "type": "boolean",
             "description": "Global subroutines are not allowed."
+        },
+        "NoLocalSubroutines": {
+            "$id": "#/properties/NoLocalSubroutines",
+            "type": "boolean",
+            "description": "Subroutines in procedures are not allowed."
         }
     },
     "additionalProperties": true
