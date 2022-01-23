@@ -997,6 +997,43 @@ module.exports = {
       indent: 2
     }, cache);
 
+    assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
+  },
+
+  linter13_commentIndent: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `// my constant`,
+      `// second line`,
+      `Dcl-C theConstant 'Hello world';`,
+      `  // comment with bad indent`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-Pi *N;`,
+      `    newValue Char(20);`,
+      `  End-Pi;`,
+      `// comment with wrong indent`,
+      `  Dcl-S localVar Char(20);`,
+      `  localvar = newValue;`,
+      `  // but valid indent`,
+      `  // with another line`,
+      `      // too many spaces`,
+      `  Myvariable2 = localvar;`,
+      `End-Proc;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      PrettyComments: true,
+      indent: 2
+    }, cache);
+
     assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
 
     assert.deepStrictEqual(indentErrors[0], {

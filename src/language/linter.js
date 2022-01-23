@@ -185,6 +185,8 @@ module.exports = class Linter {
                 });
               }
             }
+          } else {
+            skipIndentCheck = true;
           }
         }
 
@@ -624,7 +626,6 @@ module.exports = class Linter {
         // Next, check for indentation errors
 
         if (!skipIndentCheck) {
-
           pieces = upperLine.split(` `).filter(piece => piece !== ``);
           opcode = pieces[0];
 
