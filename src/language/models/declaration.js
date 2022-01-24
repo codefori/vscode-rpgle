@@ -1,3 +1,4 @@
+const vscode = require(`vscode`);
 const Cache = require(`./cache`);
 
 module.exports = class Declaration {
@@ -17,6 +18,9 @@ module.exports = class Declaration {
     // Used for everything but procedures and subroutines
     /** @type {{path: string, line: number}} */
     this.position = undefined;
+
+    /** @type {{range: vscode.Range, offset: {position: number, length: number}}[]} */
+    this.references = [];
 
     // Not used in subitem:
     /** @type {Declaration[]} */

@@ -64,6 +64,7 @@ module.exports = class Linter {
    *  PrettyComments?: boolean,
    *  NoGlobalSubroutines?: boolean,
    *  NoLocalSubroutines?: boolean,
+   *  CollectReferences?: boolean,
    * }} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -244,13 +245,7 @@ module.exports = class Linter {
               currentStatement = currentStatement.trim();
 
               const currentProcedure = globalScope.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
-              let currentScope;
-
-              try {
-                currentScope = globalScope.merge(inProcedure && currentProcedure ? currentProcedure.scope : undefined);
-              } catch (e) {
-                console.log(e);
-              }
+              const currentScope = globalScope.merge(inProcedure && currentProcedure ? currentProcedure.scope : undefined);
 
               const statement = Statement.parseStatement(currentStatement);
               let value;
@@ -645,6 +640,27 @@ module.exports = class Linter {
                               type: `RequiresParameter`,
                             });
                           }
+                        }
+                      }
+
+                      if (rules.CollectReferences) {
+                        let defRef;
+                        if (currentProcedure) {
+                          defRef = currentProcedure.scope.find(upperName);
+                        }
+
+                        if (!defRef) {
+                          defRef = globalScope.find(upperName);
+                        }
+
+                        if (defRef) {
+                          defRef.references.push({
+                            range: new vscode.Range(
+                              statementStart,
+                              statementEnd
+                            ),
+                            offset: {position: part.position, length: part.position + part.value.length},
+                          })
                         }
                       }
                       break;

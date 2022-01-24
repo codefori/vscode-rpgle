@@ -181,9 +181,6 @@ module.exports = class Worker {
             /** @type {vscode.CodeAction[]} */
             let actions = [];
 
-            /** @type {vscode.CodeAction} */
-            let action;
-
             const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
             const text = document.getText();
             if (isFree) {
@@ -366,7 +363,6 @@ module.exports = class Worker {
 
       vscode.languages.registerDefinitionProvider({ language: `rpgle` }, {
         provideDefinition: async (document, position, token) => {
-          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
           const doc = await this.parser.getDocs(document.uri);
           const range = document.getWordRangeAtPosition(position);
           const word = document.getText(range).toUpperCase();
@@ -378,18 +374,87 @@ module.exports = class Worker {
               const def = doc[type].find(def => def.name.toUpperCase() === word);
               if (def) {
                 let {finishedPath, type} = Generic.getPathInfo(document.uri, def.position.path);
-                if (type === `member`) {
-                  finishedPath = `${finishedPath}.rpgle`;
+                if (document.uri.path.startsWith(finishedPath)) {
+                  return new vscode.Location(
+                    document.uri,
+                    new vscode.Range(def.position.line, 0, def.position.line, 0)
+                  );
+
+                } else {
+                  if (type === `member`) {
+                    finishedPath = `${finishedPath}.rpgle`;
+                  }
+  
+                  return new vscode.Location(
+                    vscode.Uri.parse(finishedPath).with({scheme: type, path: finishedPath}),
+                    new vscode.Range(def.position.line, 0, def.position.line, 0)
+                  );
                 }
 
-                return new vscode.Location(
-                  vscode.Uri.parse(finishedPath).with({scheme: type, path: finishedPath}),
-                  new vscode.Range(def.position.line, 0, def.position.line, 0)
-                );
               }
             }
           }
-        }}),
+        }}
+      ),
+
+      vscode.languages.registerReferenceProvider({ language: `rpgle` }, {
+        provideReferences: async (document, position, context, token) => {
+          if (Configuration.get(`rpgleLinterSupportEnabled`)) {
+
+            /** @type {vscode.Location[]} */
+            let refs = [];
+
+            const range = document.getWordRangeAtPosition(position);
+            const word = document.getText(range).toUpperCase();
+            
+            const lineNumber = position.line;
+            const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+            const text = document.getText();
+            if (isFree) {
+              const docs = await this.parser.getDocs(document.uri);
+
+              // Updates docs
+              Linter.getErrors(text, {
+                CollectReferences: true,
+              }, docs);
+
+              // If they're typing inside of a procedure, let's get the stuff from there too
+              const currentProcedure = docs.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+
+              if (currentProcedure) {
+                const localDef = currentProcedure.scope.find(word);
+
+                if (localDef) {
+                  localDef.references.forEach(ref => {
+                    refs.push(new vscode.Location(
+                      document.uri, 
+                      Worker.calculateOffset(document, ref)
+                    ))
+                  });
+                }
+              }
+
+              // Otherwise, maybe it's a global variable
+              if (refs.length === 0) {
+                const globalDef = docs.find(word);
+
+                if (globalDef) {
+                  globalDef.references.forEach(ref => {
+                    refs.push(new vscode.Location(
+                      document.uri, 
+                      Worker.calculateOffset(document, ref)
+                    ))
+                  });
+                }
+              }
+            }
+          
+            return refs;
+          }
+
+          return [];
+        }
+      }),
 
       vscode.languages.registerCompletionItemProvider({language: `rpgle`, }, {
         provideCompletionItems: async (document, position) => {
