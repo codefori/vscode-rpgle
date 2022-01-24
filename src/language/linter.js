@@ -75,16 +75,11 @@ module.exports = class Linter {
     /** @type {string[]} */
     const lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
 
+    const indentEnabled = rules.indent !== undefined;
     const indent = rules.indent || 2;
 
     // Excluding indent
     const ruleCount = Object.keys(rules).length - (rules.indent ? 1 : 0);
-
-    /** @type {string[]} */
-    let scopeNames = []
-
-    /** @type {Declaration[]} */
-    let scopeVariables = [];
 
     let globalProcs = [];
 
@@ -101,12 +96,12 @@ module.exports = class Linter {
     let lineNumber = -1;
 
     /** @type {{line: number, expectedIndent: number, currentIndent: number}[]} */
-    let indentErrors = [];
+    const indentErrors = [];
 
     // Offset is always the offset within the range
 
     /** @type {IssueRange[]} */
-    let errors = [];
+    const errors = [];
 
     /** @type {Number} */
     let expectedIndent = 0;
@@ -115,9 +110,12 @@ module.exports = class Linter {
     /** @type {string[]} */
     let pieces;
 
-    let continuedStatement = false, isLineComment = false, skipIndentCheck = false;
+    let continuedStatement = false;
+    let isLineComment = false;
+    let skipIndentCheck = false;
 
-    let currentStatement = ``, opcode;
+    let currentStatement = ``;
+    let opcode;
 
     /** @type {vscode.Position} */
     let statementStart;
@@ -125,9 +123,9 @@ module.exports = class Linter {
     let statementEnd;
 
     /** @type {{value: string, definition?: string, list: {range: vscode.Range, offset: {position: number, length: number}}[]}[]} */
-    let stringLiterals = [];
+    const stringLiterals = [];
 
-    for (let currentLine of lines) {
+    for (const currentLine of lines) {
       currentIndent = currentLine.search(/\S/);
       let line = currentLine.trimEnd();
 
@@ -732,7 +730,7 @@ module.exports = class Linter {
         
         // Next, check for indentation errors
 
-        if (!skipIndentCheck) {
+        if (indentEnabled && skipIndentCheck === false) {
           pieces = upperLine.split(` `).filter(piece => piece !== ``);
           opcode = pieces[0];
 
