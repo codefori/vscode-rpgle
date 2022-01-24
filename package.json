@@ -104,10 +104,15 @@
 		"configuration": {
 			"title": "RPGLE language tools",
 			"properties": {
+				"vscode-rpgle.rpgleLanguageToolsEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Will provide VS Code language assistance for RPGLE sources. Supports total free RPG only."
+				},
 				"vscode-rpgle.rpgleLinterSupportEnabled": {
 					"type": "boolean",
 					"default": false,
-					"description": "Will provide warnings for RPGLE sources. Supports total free RPG only."
+					"description": "Will provide warnings for RPGLE sources based on linter configuration. Supports total free RPG only."
 				},
 				"vscode-rpgle.showFixedFormatOutline": {
 					"type": "boolean",

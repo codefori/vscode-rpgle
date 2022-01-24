@@ -5,6 +5,7 @@ const Cache = require(`./models/cache`);
 const Declaration = require(`./models/declaration`);
 const Statement = require(`./statement`);
 const oneLineTriggers = require(`./models/oneLineTriggers`);
+const IssueRange = require(`./models/ContentRange`);
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -104,18 +105,7 @@ module.exports = class Linter {
 
     // Offset is always the offset within the range
 
-    /** @type {{
-     *  range: vscode.Range, 
-     *  offset?: {position: number, length: number}
-     *  type: 
-     *      "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|
-     *      "NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|
-     *      "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
-     *      "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
-     *      "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"
-     *      |"NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines",
-     *  newValue?: string}[]
-     * } */
+    /** @type {IssueRange[]} */
     let errors = [];
 
     /** @type {Number} */
@@ -175,6 +165,7 @@ module.exports = class Linter {
                   new vscode.Position(lineNumber, currentIndent),
                   new vscode.Position(lineNumber, currentIndent + 2)
                 ),
+                offset: undefined,
                 type: `PrettyComments`,
                 newValue: ``
               });
@@ -189,8 +180,9 @@ module.exports = class Linter {
                       new vscode.Position(lineNumber, currentIndent),
                       new vscode.Position(lineNumber, currentIndent + 2)
                     ),
+                    offset: undefined,
                     type: `PrettyComments`,
-                    newValue: `// `
+                    newValue: `// `,
                   });
                 }
               }
@@ -261,7 +253,8 @@ module.exports = class Linter {
                           statementEnd
                         ),
                         offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
-                        type: `NoCTDATA`
+                        type: `NoCTDATA`,
+                        newValue: undefined,
                       });
                     }
                   }
@@ -312,7 +305,8 @@ module.exports = class Linter {
                         statementEnd
                       ),
                       offset: {position: statement[1].position, length: statement[1].position + value.length},
-                      type: `InvalidDeclareNumber`
+                      type: `InvalidDeclareNumber`,
+                      newValue: undefined
                     });
                   }
 
@@ -325,7 +319,9 @@ module.exports = class Linter {
                             statementStart,
                             statementEnd
                           ),
-                          type: `NoLocalSubroutines`
+                          offset: undefined,
+                          type: `NoLocalSubroutines`,
+                          newValue: undefined,
                         });
                       }
                     } else {
@@ -355,7 +351,9 @@ module.exports = class Linter {
                               statementStart,
                               statementEnd
                             ),
-                            type: `RequiresProcedureDescription`
+                            offset: undefined,
+                            type: `RequiresProcedureDescription`,
+                            newValue: undefined,
                           });
                         }
                       }
@@ -407,7 +405,9 @@ module.exports = class Linter {
                       if (!statement.some(part => part.value && part.value.toUpperCase().startsWith(`EXT`))) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          type: `PrototypeCheck`
+                          offset: undefined,
+                          type: `PrototypeCheck`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -418,7 +418,9 @@ module.exports = class Linter {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          type: `NoOCCURS`
+                          offset: undefined,
+                          type: `NoOCCURS`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -427,7 +429,9 @@ module.exports = class Linter {
                       if (!statement.some(part => part.value && [`LIKEDS`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          type: `QualifiedCheck`
+                          offset: undefined,
+                          type: `QualifiedCheck`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -436,7 +440,9 @@ module.exports = class Linter {
                       if (statement.some(part => part.type === `special` && part.value.toUpperCase() === `*N`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          type: `BlankStructNamesCheck`
+                          offset: undefined,
+                          type: `BlankStructNamesCheck`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -445,7 +451,9 @@ module.exports = class Linter {
                       if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value.toUpperCase()))) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          type: `NoCTDATA`
+                          offset: undefined,
+                          type: `NoCTDATA`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -511,7 +519,8 @@ module.exports = class Linter {
                           statementEnd
                         ),
                         offset: {position: statement[0].position, length: statement[0].position + value.length + 1},
-                        type: `UselessOperationCheck`
+                        type: `UselessOperationCheck`,
+                        newValue: undefined,
                       });
                     }
                     break;
@@ -524,6 +533,7 @@ module.exports = class Linter {
                               statementStart,
                               statementEnd
                             ),
+                            offset: undefined,
                             type: `NoGlobalSubroutines`,
                             newValue: `${statement[1].value}()`
                           });
@@ -536,7 +546,9 @@ module.exports = class Linter {
                       if (currentStatementUpper.includes(`SELECT *`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          type: `NoSELECTAll`
+                          offset: undefined,
+                          type: `NoSELECTAll`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -545,7 +557,9 @@ module.exports = class Linter {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          type: `NoSQLJoins`
+                          offset: undefined,
+                          type: `NoSQLJoins`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -564,7 +578,9 @@ module.exports = class Linter {
                             new vscode.Position(statementStart.line, statementStart.character + statement[0].value.length + 1),
                             statementEnd
                           ),
-                          type: `ForceOptionalParens`
+                          offset: undefined,
+                          type: `ForceOptionalParens`,
+                          newValue: undefined,
                         });
                       }
                     }
@@ -596,7 +612,8 @@ module.exports = class Linter {
                                 statementEnd
                               ),
                               offset: {position: part.position, length: part.position + part.value.length},
-                              type: `NoGlobalsInProcedures`
+                              type: `NoGlobalsInProcedures`,
+                              newValue: undefined,
                             });
                           }
                         }
@@ -638,6 +655,7 @@ module.exports = class Linter {
                               ),
                               offset: {position: part.position, length: part.position + part.value.length},
                               type: `RequiresParameter`,
+                              newValue: undefined,
                             });
                           }
                         }
@@ -660,6 +678,8 @@ module.exports = class Linter {
                               statementEnd
                             ),
                             offset: {position: part.position, length: part.position + part.value.length},
+                            type: null,
+                            newValue: undefined,
                           })
                         }
                       }

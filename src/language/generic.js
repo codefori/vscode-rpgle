@@ -4,6 +4,8 @@ const path = require(`path`);
 
 const getInstance = require(`../base`);
 
+const ContentRange = require(`./models/ContentRange`);
+
 module.exports = class {
 
   /**
@@ -104,5 +106,24 @@ module.exports = class {
       finishedPath = finishedPath.toUpperCase();
 
     return {type, memberPath, finishedPath};
+  }
+
+  /**
+   * @param {vscode.TextDocument} document
+   * @param {ContentRange} error 
+   */
+  static calculateOffset(document, error) {
+    const offset = error.offset;
+
+    if (offset) {
+      const docOffsetStart = document.offsetAt(error.range.start) + offset.position;
+      const docOffsetEnd = document.offsetAt(error.range.start) + offset.length;
+      return new vscode.Range(
+        document.positionAt(docOffsetStart),
+        document.positionAt(docOffsetEnd)
+      );
+    } else {
+      return error.range;
+    }
   }
 }

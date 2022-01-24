@@ -787,6 +787,7 @@ module.exports = {
       ),
       offset: { position: 3, length: 12 },
       type: `RequiresParameter`,
+      newValue: undefined
     }, `Error not as expected`);
   },
 
@@ -892,7 +893,9 @@ module.exports = {
         new vscode.Position(2, 0),
         new vscode.Position(2, 38),
       ),
+      offset: undefined,
       type: `NoCTDATA`,
+      newValue: undefined
     }, `Error not as expected`);
 
     assert.deepStrictEqual(errors[1], {
@@ -902,6 +905,7 @@ module.exports = {
       ),
       offset: { position: 0, length: 8 },
       type: `NoCTDATA`,
+      newValue: undefined
     }, `Error not as expected`);
   },
 
@@ -1144,7 +1148,8 @@ module.exports = {
       range: new vscode.Range(
         new vscode.Position(4, 0),
         new vscode.Position(4, 2),
-      )
+      ),
+      offset: undefined,
     });
 
     assert.deepStrictEqual(errors[1], {
@@ -1153,7 +1158,8 @@ module.exports = {
       range: new vscode.Range(
         new vscode.Position(5, 0),
         new vscode.Position(5, 2),
-      )
+      ),
+      offset: undefined,
     });
 
     assert.deepStrictEqual(errors[2], {
@@ -1162,7 +1168,8 @@ module.exports = {
       range: new vscode.Range(
         new vscode.Position(6, 0),
         new vscode.Position(6, 2),
-      )
+      ),
+      offset: undefined,
     });
 
     assert.deepStrictEqual(errors[3], {
@@ -1171,7 +1178,8 @@ module.exports = {
       range: new vscode.Range(
         new vscode.Position(14, 2),
         new vscode.Position(14, 4),
-      )
+      ),
+      offset: undefined,
     });
 
     assert.deepStrictEqual(errors[4], {
@@ -1180,7 +1188,8 @@ module.exports = {
       range: new vscode.Range(
         new vscode.Position(16, 2),
         new vscode.Position(16, 4),
-      )
+      ),
+      offset: undefined,
     });
   },
 
@@ -1214,7 +1223,8 @@ module.exports = {
       range: new vscode.Range(
         new vscode.Position(3, 0),
         new vscode.Position(3, 18),
-      )
+      ),
+      offset: undefined,
     });
 
     assert.deepStrictEqual(errors[1], {
@@ -1276,7 +1286,9 @@ module.exports = {
       range: new vscode.Range(
         new vscode.Position(8, 2),
         new vscode.Position(8, 21),
-      )
+      ),
+      offset: undefined,
+      newValue: undefined,
     });
   },
 
@@ -1312,7 +1324,8 @@ module.exports = {
       offset: {
         position: 0,
         length: 11
-      }
+      },
+      newValue: undefined,
     });
 
     assert.deepStrictEqual(errors[1], {
@@ -1324,7 +1337,8 @@ module.exports = {
       offset: {
         position: 10,
         length: 21
-      }
+      },
+      newValue: undefined,
     });
   }
 }

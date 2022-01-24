@@ -1,5 +1,6 @@
-const vscode = require(`vscode`);
+
 const Cache = require(`./cache`);
+const ContentRange = require(`./ContentRange`);
 
 module.exports = class Declaration {
   /**
@@ -19,7 +20,7 @@ module.exports = class Declaration {
     /** @type {{path: string, line: number}} */
     this.position = undefined;
 
-    /** @type {{range: vscode.Range, offset: {position: number, length: number}}[]} */
+    /** @type {ContentRange[]} */
     this.references = [];
 
     // Not used in subitem:
