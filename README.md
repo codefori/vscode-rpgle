@@ -22,12 +22,12 @@ Depends on Code for IBM i due to source code living on the remote system.
 
 Enable these options in VS Code settings.
 
-* Column assist always enabled. Following commands available:
-   * `vscode-rpgle.rpgleOpenInclude` / Shift+F12 when on copy or include statement
+* `vscode-rpgle.rpgleLanguageToolsEnabled` - enabled by default
+   * Gives outline view, go to defintion and find references
+* `vscode-rpgle.rpgleLinterSupportEnabled` - disabled by default
+   * `vscode-rpgle.openLintConfig` to open or create linter file. Creates / opens relative to source that is currently open. Read more below on linting.
 * `vscode-rpgle.showFixedFormatOutline` - column assist for RPGLE fixed-format.
    * `vscode-rpgle.rpgleColumnAssistant` / Shift+F4 to launch it when on fixed-format line
-* `vscode-rpgle.rpgleLinterSupportEnabled` - enables linter
-   * `vscode-rpgle.openLintConfig` to open or create linter file. Creates / opens relative to source that is currently open. Read more below on linting.
 
 ## Developing
 
