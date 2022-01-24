@@ -184,7 +184,12 @@ module.exports = class LinterWorker {
 
               if (indentErrors.length > 0) {
                 const fixes = indentErrors.map(error => {
-                  const range = Generic.calculateOffset(document, {range: new vscode.Range(error.line, 0, error.line, error.currentIndent)});
+                  const range = Generic.calculateOffset(document, {
+                    range: new vscode.Range(error.line, 0, error.line, error.currentIndent), 
+                    offset: undefined,
+                    type: undefined,
+                    newValue: undefined,
+                  });
                   return new vscode.TextEdit(range, ``.padEnd(error.expectedIndent, ` `));
                 });
 
