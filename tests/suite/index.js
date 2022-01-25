@@ -1340,5 +1340,24 @@ module.exports = {
       },
       newValue: undefined,
     });
+  },
+
+  fixed1: async () => {
+    const lines = [
+      ``,
+      `     FINVMST    IF   E           K DISK`,
+      `   `,
+      `     D wkCorp          S                   like(CORPNO) inz('100')`,
+      `     D wkInvoice       S             10`,
+      `   `,
+      `     C                   eval      wkInvoice = 'I035552120'`,
+      `   `,
+      `     C                   eval      *inlr = *on`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 2, `Expect length of 1`);
   }
 }

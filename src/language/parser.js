@@ -206,7 +206,7 @@ module.exports = class Parser {
           const comment = line[6];
           spec = line[5].toUpperCase();
 
-          if (comment !== ` `) {
+          if (comment === `*` || comment === `/`) {
             continue;
           }
 
