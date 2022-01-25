@@ -181,288 +181,317 @@ module.exports = class Parser {
       }
     }
 
+    let isFullyFree = false;
+
     //Now the real work
     for (const file in files) {
       lineNumber = -1;
+
+      isFullyFree = files[file][0].toUpperCase().startsWith(`**FREE`);
+      let lineIsFree = false;
+
       for (let line of files[file]) {
-        lineNumber += 1;
-
-        line = line.trim();
-
-        if (line === ``) continue;
-
-        pieces = line.split(`;`);
-        parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
-        partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
-
         const scope = scopes[scopes.length - 1];
 
-        switch (parts[0]) {
-        case `DCL-C`:
-          if (currentItem === undefined) {
-            currentItem = new Declaration(`constant`);
-            currentItem.name = partsLower[1];
-            currentItem.keywords = parts.slice(2);
-            currentItem.description = currentDescription.join(` `);
+        lineNumber += 1;
 
-            currentItem.position = {
-              path: file,
-              line: lineNumber
-            }
+        if (isFullyFree === false && line.length > 6) {
 
-            scope.constants.push(currentItem);
-            resetDefinition = true;
+          const spec = line[5].toUpperCase();
+          const comment = line[6];
+
+          if (comment !== ` `) {
+            continue;
           }
-          break;
 
-        case `DCL-S`:
-          if (currentItem === undefined) {
-            if (!parts.includes(`TEMPLATE`)) {
-              currentItem = new Declaration(`variable`);
+          if (spec === ` `) {
+            //Clear out stupid comments
+            line = ``.padEnd(4) + line.substring(4);
+
+            lineIsFree = true;
+          } else if (spec !== `D`) {
+            continue;
+          }
+        }
+
+        if (isFullyFree || lineIsFree) {
+          // Free format!
+          line = line.trim();
+
+          if (line === ``) continue;
+
+          pieces = line.split(`;`);
+          parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
+          partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
+
+          switch (parts[0]) {
+          case `DCL-C`:
+            if (currentItem === undefined) {
+              currentItem = new Declaration(`constant`);
               currentItem.name = partsLower[1];
               currentItem.keywords = parts.slice(2);
               currentItem.description = currentDescription.join(` `);
-              currentItem.tags = currentTags;
 
               currentItem.position = {
                 path: file,
                 line: lineNumber
               }
 
-              scope.variables.push(currentItem);
+              scope.constants.push(currentItem);
               resetDefinition = true;
             }
-          }
-          break;
+            break;
 
-        case `DCL-DS`:
-          if (currentItem === undefined) {
-            if (!parts.includes(`TEMPLATE`)) {
-              currentItem = new Declaration(`struct`);
-              currentItem.name = partsLower[1];
-              currentItem.keywords = parts.slice(2);
-              currentItem.description = currentDescription.join(` `);
-              currentItem.tags = currentTags;
+          case `DCL-S`:
+            if (currentItem === undefined) {
+              if (!parts.includes(`TEMPLATE`)) {
+                currentItem = new Declaration(`variable`);
+                currentItem.name = partsLower[1];
+                currentItem.keywords = parts.slice(2);
+                currentItem.description = currentDescription.join(` `);
+                currentItem.tags = currentTags;
 
-              currentItem.position = {
-                path: file,
-                line: lineNumber
-              }
+                currentItem.position = {
+                  path: file,
+                  line: lineNumber
+                }
 
-              // Does the keywords include a keyword that makes end-ds useless?
-              if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                scope.structs.push(currentItem);
+                scope.variables.push(currentItem);
                 resetDefinition = true;
-              } else {
+              }
+            }
+            break;
+
+          case `DCL-DS`:
+            if (currentItem === undefined) {
+              if (!parts.includes(`TEMPLATE`)) {
+                currentItem = new Declaration(`struct`);
+                currentItem.name = partsLower[1];
+                currentItem.keywords = parts.slice(2);
+                currentItem.description = currentDescription.join(` `);
+                currentItem.tags = currentTags;
+
+                currentItem.position = {
+                  path: file,
+                  line: lineNumber
+                }
+
+                // Does the keywords include a keyword that makes end-ds useless?
+                if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
+                  scope.structs.push(currentItem);
+                  resetDefinition = true;
+                } else {
+                  currentItem.readParms = true;
+                }
+
+                currentDescription = [];
+              }
+            }
+            break;
+
+          case `END-DS`:
+            if (currentItem && currentItem.type === `struct`) {
+              scope.structs.push(currentItem);
+              resetDefinition = true;
+            }
+            break;
+        
+          case `DCL-PR`:
+            if (currentItem === undefined) {
+              if (!scope.procedures.find(proc => proc.name.toUpperCase() === parts[1])) {
+                currentItem = new Declaration(`procedure`);
+                currentItem.name = partsLower[1];
+                currentItem.keywords = parts.slice(2);
+                currentItem.description = currentDescription.join(` `);
+                currentItem.tags = currentTags;
+
+                currentItem.position = {
+                  path: file,
+                  line: lineNumber
+                }
+
                 currentItem.readParms = true;
+
+                currentDescription = [];
               }
-
-              currentDescription = [];
             }
-          }
-          break;
+            break;
 
-        case `END-DS`:
-          if (currentItem && currentItem.type === `struct`) {
-            scope.structs.push(currentItem);
-            resetDefinition = true;
-          }
-          break;
-        
-        case `DCL-PR`:
-          if (currentItem === undefined) {
-            if (!scope.procedures.find(proc => proc.name.toUpperCase() === parts[1])) {
-              currentItem = new Declaration(`procedure`);
-              currentItem.name = partsLower[1];
-              currentItem.keywords = parts.slice(2);
-              currentItem.description = currentDescription.join(` `);
-              currentItem.tags = currentTags;
-
-              currentItem.position = {
-                path: file,
-                line: lineNumber
-              }
-
-              currentItem.readParms = true;
-
-              currentDescription = [];
+          case `END-PR`:
+            if (currentItem && currentItem.type === `procedure`) {
+              scope.procedures.push(currentItem);
+              resetDefinition = true;
             }
-          }
-          break;
-
-        case `END-PR`:
-          if (currentItem && currentItem.type === `procedure`) {
-            scope.procedures.push(currentItem);
-            resetDefinition = true;
-          }
-          break;
+            break;
         
-        case `DCL-PROC`:
+          case `DCL-PROC`:
           //We can overwrite it.. it might have been a PR before.
-          const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
+            const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
 
-          // We found the PR... so we can overwrite it
-          if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
+            // We found the PR... so we can overwrite it
+            if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
 
-          currentItem = new Declaration(`procedure`);
+            currentItem = new Declaration(`procedure`);
 
-          currentProcName = partsLower[1];
-          currentItem.name = currentProcName;
-          currentItem.keywords = parts.slice(2);
-          currentItem.description = currentDescription.join(` `);
-          currentItem.tags = currentTags;
-
-          currentItem.position = {
-            path: file,
-            line: lineNumber
-          }
-
-          currentItem.readParms = false;
-
-          currentItem.range = {
-            start: lineNumber,
-            end: null
-          };
-
-          scope.procedures.push(currentItem);
-          resetDefinition = true;
-
-          scopes.push(new Cache());
-          break;
-
-        case `DCL-PI`:
-          //Procedures can only exist in the global scope.
-          currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
-
-          if (currentItem) {
+            currentProcName = partsLower[1];
+            currentItem.name = currentProcName;
             currentItem.keywords = parts.slice(2);
-            currentItem.readParms = true;
-
-            currentDescription = [];
-          }
-          break;
-
-        case `END-PI`:
-          //Procedures can only exist in the global scope.
-          currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
-
-          if (currentItem && currentItem.type === `procedure`) {
-            currentItem.readParms = false;
-            resetDefinition = true;
-          }
-          break;
-
-        case `END-PROC`:
-          //Procedures can only exist in the global scope.
-          currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
-
-          if (currentItem && currentItem.type === `procedure`) {
-            currentItem.scope = scopes.pop();
-            currentItem.range.end = lineNumber;
-            resetDefinition = true;
-          }
-          break;
-
-        case `BEGSR`:
-          if (!scope.subroutines.find(sub => sub.name.toUpperCase() === parts[1])) {
-            currentItem = new Declaration(`subroutine`);
-            currentItem.name = partsLower[1];
             currentItem.description = currentDescription.join(` `);
+            currentItem.tags = currentTags;
 
             currentItem.position = {
               path: file,
               line: lineNumber
             }
+
+            currentItem.readParms = false;
 
             currentItem.range = {
               start: lineNumber,
               end: null
             };
 
-            currentDescription = [];
-          }
-          break;
-    
-        case `ENDSR`:
-          if (currentItem && currentItem.type === `subroutine`) {
-            currentItem.range.end = lineNumber;
-            scope.subroutines.push(currentItem);
+            scope.procedures.push(currentItem);
             resetDefinition = true;
-          }
-          break;
 
-        case `///`:
-          docs = !docs;
+            scopes.push(new Cache());
+            break;
+
+          case `DCL-PI`:
+          //Procedures can only exist in the global scope.
+            currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
+            if (currentItem) {
+              currentItem.keywords = parts.slice(2);
+              currentItem.readParms = true;
+
+              currentDescription = [];
+            }
+            break;
+
+          case `END-PI`:
+          //Procedures can only exist in the global scope.
+            currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
+            if (currentItem && currentItem.type === `procedure`) {
+              currentItem.readParms = false;
+              resetDefinition = true;
+            }
+            break;
+
+          case `END-PROC`:
+          //Procedures can only exist in the global scope.
+            currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
+            if (currentItem && currentItem.type === `procedure`) {
+              currentItem.scope = scopes.pop();
+              currentItem.range.end = lineNumber;
+              resetDefinition = true;
+            }
+            break;
+
+          case `BEGSR`:
+            if (!scope.subroutines.find(sub => sub.name.toUpperCase() === parts[1])) {
+              currentItem = new Declaration(`subroutine`);
+              currentItem.name = partsLower[1];
+              currentItem.description = currentDescription.join(` `);
+
+              currentItem.position = {
+                path: file,
+                line: lineNumber
+              }
+
+              currentItem.range = {
+                start: lineNumber,
+                end: null
+              };
+
+              currentDescription = [];
+            }
+            break;
+    
+          case `ENDSR`:
+            if (currentItem && currentItem.type === `subroutine`) {
+              currentItem.range.end = lineNumber;
+              scope.subroutines.push(currentItem);
+              resetDefinition = true;
+            }
+            break;
+
+          case `///`:
+            docs = !docs;
           
-          // When enabled
-          if (docs === true) {
-            currentTitle = undefined;
-            currentDescription = [];
-            currentTags = [];
-          }
-          break;
+            // When enabled
+            if (docs === true) {
+              currentTitle = undefined;
+              currentDescription = [];
+              currentTags = [];
+            }
+            break;
 
-        default:
-          if (line.startsWith(`//`)) {
-            if (docs) {
-              const content = line.substring(2).trim();
-              if (content.length > 0) {
-                if (content.startsWith(`@`)) {
-                  const lineData = content.substring(1).split(` `);
-                  currentTags.push({
-                    tag: lineData[0],
-                    content: lineData.slice(1).join(` `)
-                  });
-                } else {
-                  if (currentTags.length > 0) {
-                    currentTags[currentTags.length - 1].content += ` ${content}`;
-
+          default:
+            if (line.startsWith(`//`)) {
+              if (docs) {
+                const content = line.substring(2).trim();
+                if (content.length > 0) {
+                  if (content.startsWith(`@`)) {
+                    const lineData = content.substring(1).split(` `);
+                    currentTags.push({
+                      tag: lineData[0],
+                      content: lineData.slice(1).join(` `)
+                    });
                   } else {
-                    if (currentTitle === undefined) {
-                      currentTitle = content;
+                    if (currentTags.length > 0) {
+                      currentTags[currentTags.length - 1].content += ` ${content}`;
+
                     } else {
-                      currentDescription.push(content);
+                      if (currentTitle === undefined) {
+                        currentTitle = content;
+                      } else {
+                        currentDescription.push(content);
+                      }
                     }
                   }
                 }
+
+              } else {
+              //Do nothing because it's a regular comment
               }
 
             } else {
-              //Do nothing because it's a regular comment
-            }
+              if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
+                if (currentItem.readParms) {
+                  if (parts[0].startsWith(`DCL`))
+                    parts.slice(1);
 
-          } else {
-            if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
-              if (currentItem.readParms) {
-                if (parts[0].startsWith(`DCL`))
-                  parts.slice(1);
+                  currentSub = new Declaration(`subitem`);
+                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;
+                  currentSub.keywords = parts.slice(1);
 
-                currentSub = new Declaration(`subitem`);
-                currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;
-                currentSub.keywords = parts.slice(1);
+                  const paramTags = currentTags.filter(tag => tag.tag === `param`);
+                  const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
+                  if (paramTag) {
+                    currentSub.description = paramTag.content;
+                  }
 
-                const paramTags = currentTags.filter(tag => tag.tag === `param`);
-                const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
-                if (paramTag) {
-                  currentSub.description = paramTag.content;
+                  currentItem.subItems.push(currentSub);
+                  currentSub = undefined;
                 }
-
-                currentItem.subItems.push(currentSub);
-                currentSub = undefined;
               }
             }
+            break;
           }
-          break;
-        }
 
-        if (resetDefinition) {
-          currentItem = undefined;
-          currentTitle = undefined;
-          currentDescription = [];
-          currentTags = [];
-          resetDefinition = false;
+          if (resetDefinition) {
+            currentItem = undefined;
+            currentTitle = undefined;
+            currentDescription = [];
+            currentTags = [];
+            resetDefinition = false;
+          }
+        } else {
+          // Fixed format!
         }
-      
       }
     }
 
