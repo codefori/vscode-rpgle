@@ -7,6 +7,7 @@ const Cache = require(`./models/cache`);
 const Declaration = require(`./models/declaration`);
 
 const oneLineTriggers = require(`./models/oneLineTriggers`);
+const Fixed = require(`./models/fixed`);
 
 const getInstance = require(`../base`);
 
@@ -146,7 +147,9 @@ module.exports = class Parser {
 
     if (!content) return null;
 
+    /** @type {{[path: string]: string[]}} */
     let files = {};
+
     let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
 
     let currentTitle = undefined, currentDescription = [];
@@ -181,6 +184,9 @@ module.exports = class Parser {
       }
     }
 
+    let potentialName;
+    /** @type {"structs"|"procedures"} */
+    let currentGroup;
     let isFullyFree = false;
 
     //Now the real work
@@ -192,13 +198,13 @@ module.exports = class Parser {
 
       for (let line of files[file]) {
         const scope = scopes[scopes.length - 1];
+        let spec;
 
         lineNumber += 1;
 
         if (isFullyFree === false && line.length > 6) {
-
-          const spec = line[5].toUpperCase();
           const comment = line[6];
+          spec = line[5].toUpperCase();
 
           if (comment !== ` `) {
             continue;
@@ -209,8 +215,13 @@ module.exports = class Parser {
             line = ``.padEnd(4) + line.substring(4);
 
             lineIsFree = true;
-          } else if (spec !== `D`) {
+          } else if (![`D`, `P`].includes(spec)) {
             continue;
+          }
+
+          if (line.length > 80) {
+            // Remove ending comments
+            line = line.substring(0, 80);
           }
         }
 
@@ -482,15 +493,107 @@ module.exports = class Parser {
             break;
           }
 
-          if (resetDefinition) {
-            currentItem = undefined;
-            currentTitle = undefined;
-            currentDescription = [];
-            currentTags = [];
-            resetDefinition = false;
-          }
         } else {
           // Fixed format!
+
+          switch (spec) {
+          case `D`:
+            let dSpec = Fixed.parseLine(line);
+
+            if (dSpec.potentialName === ``) continue;
+
+            if (dSpec.potentialName.endsWith(`...`)) {
+              potentialName = dSpec.potentialName.substring(0, dSpec.potentialName.length - 3);
+              continue;
+            } else {
+              potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName;
+
+              switch (dSpec.field) {
+              case `C`:
+                currentItem = new Declaration(`constant`);
+                currentItem.name = potentialName;
+                currentItem.keywords = [dSpec.keywords];
+                  
+                // TODO: line number might be different with ...?
+                currentItem.position = {
+                  path: file,
+                  line: lineNumber
+                }
+    
+                scope.constants.push(currentItem);
+                resetDefinition = true;
+                break;
+              case `S`:
+                if (!dSpec.keywords.toUpperCase().includes(`TEMPLATE`)) {
+                  currentItem = new Declaration(`variable`);
+                  currentItem.name = potentialName;
+                  currentItem.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+  
+                  // TODO: line number might be different with ...?
+                  currentItem.position = {
+                    path: file,
+                    line: lineNumber
+                  }
+  
+                  scope.variables.push(currentItem);
+                  resetDefinition = true;
+                }
+                break;
+
+              case `DS`:
+                if (!dSpec.keywords.toUpperCase().includes(`TEMPLATE`)) {
+                  currentItem = new Declaration(`struct`);
+                  currentItem.name = potentialName;
+                  currentItem.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+  
+                  currentItem.position = {
+                    path: file,
+                    line: lineNumber
+                  }
+  
+                  scope.structs.push(currentItem);
+                }
+                break;
+
+              case `PI`:
+              case `PR`:
+                if (!scope.procedures.find(proc => proc.name.toUpperCase() === potentialName.toUpperCase())) {
+                  currentItem = new Declaration(`procedure`);
+                  currentItem.name = potentialName;
+                  currentItem.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+  
+                  currentItem.position = {
+                    path: file,
+                    line: lineNumber
+                  }
+  
+                  currentDescription = [];
+                }
+                break;
+
+              default:
+                if (currentItem) {
+                  currentSub = new Declaration(`subitem`);
+                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : potentialName) ;
+                  currentSub.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+
+                  currentItem.subItems.push(currentSub);
+                  currentSub = undefined;
+                }
+                break;
+              }
+            
+            }
+            break;
+          }
+        }
+
+        if (resetDefinition) {
+          currentItem = undefined;
+          currentTitle = undefined;
+          currentDescription = [];
+          currentTags = [];
+          resetDefinition = false;
         }
       }
     }
