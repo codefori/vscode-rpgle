@@ -68,6 +68,12 @@ module.exports = class Cache {
       ...this.structs.filter(def => def.name.toUpperCase() === name),
     ];
 
+    if (this.structs.length > 0) {
+      this.structs.filter(def => !def.keywords.includes(`QUALIFIED`)).forEach(def => {
+        possibles.push(...def.subItems.filter(sub => sub.name.toUpperCase() === name));
+      });
+    }
+
     if (possibles.length > 0) {
       return possibles[0]
     } else {

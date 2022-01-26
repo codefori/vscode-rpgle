@@ -45,30 +45,27 @@ module.exports = class LanguageWorker {
         const document = editor.document;
         const position = editor.selection.active.line;
         if (document.languageId === `rpgle`) {
-          if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
-            const text = document.getText();
-            Parser.getDocs(document.uri).then(docs => {
-              const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
+          Parser.getDocs(document.uri).then(docs => {
+            const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
 
-              if (currentProcedure) {
-                let prototype = [
-                  `Dcl-Pr ${currentProcedure.name} ${currentProcedure.keywords.join(` `)};`,
-                  ...currentProcedure.subItems.map(subItem => 
-                    `  ${subItem.name} ${subItem.keywords.join(` `)};`
-                  ),
-                  `End-Pr;`
-                ].join(`\n`);
+            if (currentProcedure) {
+              let prototype = [
+                `Dcl-Pr ${currentProcedure.name} ${currentProcedure.keywords.join(` `)};`,
+                ...currentProcedure.subItems.map(subItem => 
+                  `  ${subItem.name} ${subItem.keywords.join(` `)};`
+                ),
+                `End-Pr;`
+              ].join(`\n`);
 
-                vscode.env.clipboard.writeText(prototype);
-                vscode.window.showInformationMessage(`Prototype copied to clipboard.`);
+              vscode.env.clipboard.writeText(prototype);
+              vscode.window.showInformationMessage(`Prototype copied to clipboard.`);
 
-              } else {
-                vscode.window.showErrorMessage(`No procedure block at line ${position}.`);
-              }
-            });
-          } else {
-            vscode.window.showErrorMessage(`You can only get the prototype of a **FREE source.`);
-          }
+            } else {
+              vscode.window.showErrorMessage(`No procedure block at line ${position}.`);
+            }
+          });
+        } else {
+          vscode.window.showErrorMessage(`You can only get the prototype of RPGLE source.`);
         }
       }
     }),
@@ -168,66 +165,74 @@ module.exports = class LanguageWorker {
       vscode.languages.registerDocumentSymbolProvider({ language: `rpgle` }, 
         {
           provideDocumentSymbols: async (document, token) => {
-            const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-              
             const text = document.getText();
-            if (isFree) {
-              const doc = await Parser.getDocs(document.uri, text);
+            const doc = await Parser.getDocs(document.uri, text);
 
-              const currentPath = document.uri.path;
+            const currentPath = document.uri.path;
 
-              /** @type vscode.SymbolInformation[] */
-              let currentDefs = [];
+            /** @type vscode.SymbolInformation[] */
+            let currentDefs = [];
 
-              currentDefs.push(
-                ...[
-                  ...doc.procedures.filter(proc => proc.position && proc.position.path === currentPath),
-                  ...doc.subroutines.filter(sub => sub.position && sub.position.path === currentPath),
-                ].map(def => new vscode.SymbolInformation(
+            currentDefs.push(
+              ...[
+                ...doc.procedures.filter(proc => proc.position && proc.position.path === currentPath),
+                ...doc.subroutines.filter(sub => sub.position && sub.position.path === currentPath),
+              ].map(def => new vscode.SymbolInformation(
+                def.name,
+                vscode.SymbolKind.Function,
+                new vscode.Range(def.position.line, 0, def.position.line, 0),
+                document.uri
+              ))
+            );
+
+            currentDefs.push(
+              ...doc.variables
+                .filter(variable => variable.position && variable.position.path === currentPath)
+                .map(def => new vscode.SymbolInformation(
                   def.name,
-                  vscode.SymbolKind.Function,
+                  vscode.SymbolKind.Variable,
                   new vscode.Range(def.position.line, 0, def.position.line, 0),
                   document.uri
                 ))
-              );
+            );
 
+            currentDefs.push(
+              ...doc.structs
+                .filter(struct => struct.position && struct.position.path === currentPath)
+                .map(def => new vscode.SymbolInformation(
+                  def.name,
+                  vscode.SymbolKind.Struct,
+                  new vscode.Range(def.position.line, 0, def.position.line, 0),
+                  document.uri
+                ))
+            );
+
+            // Also add any subfields of non-qualified structs
+            doc.structs.filter(struct => !struct.keywords.includes(`QUALIFIED`)).forEach(struct => {
               currentDefs.push(
-                ...doc.variables
-                  .filter(variable => variable.position && variable.position.path === currentPath)
+                ...struct.subItems
+                  .filter(cStruct => cStruct.position && cStruct.position.path === currentPath)
                   .map(def => new vscode.SymbolInformation(
                     def.name,
-                    vscode.SymbolKind.Variable,
+                    vscode.SymbolKind.Property,
                     new vscode.Range(def.position.line, 0, def.position.line, 0),
                     document.uri
                   ))
-              );
+              )
+            })
 
-              currentDefs.push(
-                ...doc.structs
-                  .filter(struct => struct.position && struct.position.path === currentPath)
-                  .map(def => new vscode.SymbolInformation(
-                    def.name,
-                    vscode.SymbolKind.Struct,
-                    new vscode.Range(def.position.line, 0, def.position.line, 0),
-                    document.uri
-                  ))
-              );
+            currentDefs.push(
+              ...doc.constants
+                .filter(constant => constant.position && constant.position.path === currentPath)
+                .map(def => new vscode.SymbolInformation(
+                  def.name,
+                  vscode.SymbolKind.Constant,
+                  new vscode.Range(def.position.line, 0, def.position.line, 0),
+                  document.uri
+                ))
+            );
 
-              currentDefs.push(
-                ...doc.constants
-                  .filter(constant => constant.position && constant.position.path === currentPath)
-                  .map(def => new vscode.SymbolInformation(
-                    def.name,
-                    vscode.SymbolKind.Constant,
-                    new vscode.Range(def.position.line, 0, def.position.line, 0),
-                    document.uri
-                  ))
-              );
-
-              return currentDefs;
-            }
-
-            return [];
+            return currentDefs;
           }
         }),
 
@@ -235,32 +240,39 @@ module.exports = class LanguageWorker {
         provideDefinition: async (document, position, token) => {
           const doc = await Parser.getDocs(document.uri);
           const range = document.getWordRangeAtPosition(position);
+          const line = position.line;
           const word = document.getText(range).toUpperCase();
 
           if (doc) {
-            const types = Object.keys(doc);
-            const type = types.find(type => doc[type].find(def => def.name.toUpperCase() === word));
-            if (doc[type]) {
-              const def = doc[type].find(def => def.name.toUpperCase() === word);
-              if (def) {
-                let {finishedPath, type} = Generic.getPathInfo(document.uri, def.position.path);
-                if (document.uri.path.startsWith(finishedPath)) {
-                  return new vscode.Location(
-                    document.uri,
-                    new vscode.Range(def.position.line, 0, def.position.line, 0)
-                  );
+            // If they're typing inside of a procedure, let's get the stuff from there too
+            const currentProcedure = doc.procedures.find(proc => range.start.line >= proc.range.start && range.start.line <= proc.range.end);
+            let def;
+            
+            if (currentProcedure) {
+              def = currentProcedure.scope.find(word);
+            }
+            
+            if (!def) {
+              def = doc.find(word);
+            }
+            
+            if (def) {
+              let {finishedPath, type} = Generic.getPathInfo(document.uri, def.position.path);
+              if (document.uri.path.startsWith(finishedPath)) {
+                return new vscode.Location(
+                  document.uri,
+                  new vscode.Range(def.position.line, 0, def.position.line, 0)
+                );
 
-                } else {
-                  if (type === `member`) {
-                    finishedPath = `${finishedPath}.rpgle`;
-                  }
-  
-                  return new vscode.Location(
-                    vscode.Uri.parse(finishedPath).with({scheme: type, path: finishedPath}),
-                    new vscode.Range(def.position.line, 0, def.position.line, 0)
-                  );
+              } else {
+                if (type === `member`) {
+                  finishedPath = `${finishedPath}.rpgle`;
                 }
-
+  
+                return new vscode.Location(
+                  vscode.Uri.parse(finishedPath).with({scheme: type, path: finishedPath}),
+                  new vscode.Range(def.position.line, 0, def.position.line, 0)
+                );
               }
             }
           }
@@ -324,108 +336,105 @@ module.exports = class LanguageWorker {
 
       vscode.languages.registerCompletionItemProvider({language: `rpgle`, }, {
         provideCompletionItems: async (document, position) => {
-          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
           const text = document.getText();
-          if (isFree) {
-            const lineNumber = position.line;
-            const currentLine = document.getText(new vscode.Range(lineNumber, 0, lineNumber, position.character));
-            const doc = await Parser.getDocs(document.uri, text);
+          const lineNumber = position.line;
+          const currentLine = document.getText(new vscode.Range(lineNumber, 0, lineNumber, position.character));
+          const doc = await Parser.getDocs(document.uri, text);
 
-            /** @type vscode.CompletionItem[] */
-            let items = [];
-            let item;
+          /** @type vscode.CompletionItem[] */
+          let items = [];
+          let item;
 
-            if (currentLine.startsWith(`//`)) {
-              for (const tag in possibleTags) {
-                item = new vscode.CompletionItem(`@${tag}`, vscode.CompletionItemKind.Property);
-                item.insertText = new vscode.SnippetString(`@${tag} $0`);
-                item.detail = possibleTags[tag];
+          if (currentLine.startsWith(`//`)) {
+            for (const tag in possibleTags) {
+              item = new vscode.CompletionItem(`@${tag}`, vscode.CompletionItemKind.Property);
+              item.insertText = new vscode.SnippetString(`@${tag} $0`);
+              item.detail = possibleTags[tag];
+              items.push(item);
+            }
+
+          } else {
+            for (const procedure of doc.procedures) {
+              item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
+              item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
+              item.detail = procedure.keywords.join(` `);
+              item.documentation = procedure.description;
+              items.push(item);
+            }
+
+            for (const subroutine of doc.subroutines) {
+              item = new vscode.CompletionItem(`${subroutine.name}`, vscode.CompletionItemKind.Function);
+              item.insertText = new vscode.SnippetString(`${subroutine.name}\$0`);
+              item.documentation = subroutine.description;
+              items.push(item);
+            }
+
+            for (const variable of doc.variables) {
+              item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
+              item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
+              item.detail = variable.keywords.join(` `);
+              item.documentation = variable.description;
+              items.push(item);
+            }
+
+            for (const struct of doc.structs) {
+              item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
+              item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
+              item.detail = struct.keywords.join(` `);
+              item.documentation = struct.description;
+              items.push(item);
+            }
+
+            for (const constant of doc.constants) {
+              item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
+              item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
+              item.detail = constant.keywords.join(` `);
+              item.documentation = constant.description;
+              items.push(item);
+            }
+
+            // If they're typing inside of a procedure, let's get the stuff from there too
+            const currentProcedure = doc.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+
+            if (currentProcedure) {
+              for (const subItem of currentProcedure.subItems) {
+                item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Variable);
+                item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
+                item.detail = [`parameter`, ...subItem.keywords].join(` `);
+                item.documentation = subItem.description;
                 items.push(item);
               }
 
-            } else {
-              for (const procedure of doc.procedures) {
-                item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
-                item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
-                item.detail = procedure.keywords.join(` `);
-                item.documentation = procedure.description;
-                items.push(item);
-              }
-
-              for (const subroutine of doc.subroutines) {
-                item = new vscode.CompletionItem(`${subroutine.name}`, vscode.CompletionItemKind.Function);
-                item.insertText = new vscode.SnippetString(`${subroutine.name}\$0`);
-                item.documentation = subroutine.description;
-                items.push(item);
-              }
-
-              for (const variable of doc.variables) {
-                item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
-                item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
-                item.detail = variable.keywords.join(` `);
-                item.documentation = variable.description;
-                items.push(item);
-              }
-
-              for (const struct of doc.structs) {
-                item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
-                item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
-                item.detail = struct.keywords.join(` `);
-                item.documentation = struct.description;
-                items.push(item);
-              }
-
-              for (const constant of doc.constants) {
-                item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
-                item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
-                item.detail = constant.keywords.join(` `);
-                item.documentation = constant.description;
-                items.push(item);
-              }
-
-              // If they're typing inside of a procedure, let's get the stuff from there too
-              const currentProcedure = doc.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
-
-              if (currentProcedure) {
-                for (const subItem of currentProcedure.subItems) {
-                  item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Variable);
-                  item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
-                  item.detail = [`parameter`, ...subItem.keywords].join(` `);
-                  item.documentation = subItem.description;
+              if (currentProcedure.scope) {
+                const scope = currentProcedure.scope;
+                for (const variable of scope.variables) {
+                  item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
+                  item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
+                  item.detail = variable.keywords.join(` `);
+                  item.documentation = variable.description;
                   items.push(item);
                 }
-
-                if (currentProcedure.scope) {
-                  const scope = currentProcedure.scope;
-                  for (const variable of scope.variables) {
-                    item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
-                    item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
-                    item.detail = variable.keywords.join(` `);
-                    item.documentation = variable.description;
-                    items.push(item);
-                  }
   
-                  for (const struct of scope.structs) {
-                    item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
-                    item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
-                    item.detail = struct.keywords.join(` `);
-                    item.documentation = struct.description;
-                    items.push(item);
-                  }
+                for (const struct of scope.structs) {
+                  item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
+                  item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
+                  item.detail = struct.keywords.join(` `);
+                  item.documentation = struct.description;
+                  items.push(item);
+                }
   
-                  for (const constant of scope.constants) {
-                    item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
-                    item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
-                    item.detail = constant.keywords.join(` `);
-                    item.documentation = constant.description;
-                    items.push(item);
-                  }
+                for (const constant of scope.constants) {
+                  item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
+                  item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
+                  item.detail = constant.keywords.join(` `);
+                  item.documentation = constant.description;
+                  items.push(item);
                 }
               }
             }
-
-            return items;
           }
+
+          return items;
         }
       }),
     )
