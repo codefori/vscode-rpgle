@@ -98,7 +98,7 @@ module.exports = class LanguageWorker {
             markdown += `\`\`\`vb\n${procedure.name}(`;
 
             if (procedure.subItems.length > 0) {
-              markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${parm.keywords.join(` `)}`).join(`,\n  `)}\n`;
+              markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${parm.keywords.join(` `).trim()}`).join(`,\n  `)}\n`;
             }
 
             markdown += `): ${retrunValue.join(` `)}\n\`\`\` \n`;
@@ -141,7 +141,7 @@ module.exports = class LanguageWorker {
               // Variable definition found
               return new vscode.Hover(
                 new vscode.MarkdownString(
-                  `\`${theVariable.name}\`: \`${theVariable.keywords.join(` `)}\``
+                  `\`${theVariable.name}\`: \`${theVariable.keywords.join(` `).trim()}\``
                 )
               )
 
@@ -196,30 +196,30 @@ module.exports = class LanguageWorker {
                 ))
             );
 
-            currentDefs.push(
-              ...doc.structs
-                .filter(struct => struct.position && struct.position.path === currentPath)
-                .map(def => new vscode.SymbolInformation(
-                  def.name,
-                  vscode.SymbolKind.Struct,
-                  new vscode.Range(def.position.line, 0, def.position.line, 0),
-                  document.uri
-                ))
-            );
-
-            // Also add any subfields of non-qualified structs
-            doc.structs.filter(struct => !struct.keywords.includes(`QUALIFIED`)).forEach(struct => {
-              currentDefs.push(
-                ...struct.subItems
-                  .filter(cStruct => cStruct.position && cStruct.position.path === currentPath)
-                  .map(def => new vscode.SymbolInformation(
-                    def.name,
-                    vscode.SymbolKind.Property,
-                    new vscode.Range(def.position.line, 0, def.position.line, 0),
+            doc.structs
+              .filter(struct => struct.position && struct.position.path === currentPath)
+              .forEach(struct => {
+                currentDefs.push(
+                  new vscode.SymbolInformation(
+                    struct.name,
+                    vscode.SymbolKind.Struct,
+                    new vscode.Range(struct.position.line, 0, struct.position.line, 0),
                     document.uri
-                  ))
-              )
-            })
+                  )
+                );
+
+                if (!struct.keywords.includes(`QUALIFIED`)) {
+                  currentDefs.push(
+                    ...struct.subItems
+                      .filter(cStruct => cStruct.position && cStruct.position.path === currentPath)
+                      .map(def => new vscode.SymbolInformation(
+                        def.name,
+                        vscode.SymbolKind.Property,
+                        new vscode.Range(def.position.line, 0, def.position.line, 0),
+                        document.uri
+                      )))
+                }
+              });
 
             currentDefs.push(
               ...doc.constants
@@ -383,6 +383,16 @@ module.exports = class LanguageWorker {
               item.detail = struct.keywords.join(` `);
               item.documentation = struct.description;
               items.push(item);
+
+              if (!struct.keywords.includes(`QUALIFIED`)) {
+                struct.subItems.forEach(subItem => {
+                  item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
+                  item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
+                  item.detail = subItem.keywords.join(` `);
+                  item.documentation = subItem.description + ` (${struct.name})`;
+                  items.push(item);
+                });
+              }
             }
 
             for (const constant of doc.constants) {
@@ -421,6 +431,16 @@ module.exports = class LanguageWorker {
                   item.detail = struct.keywords.join(` `);
                   item.documentation = struct.description;
                   items.push(item);
+
+                  if (!struct.keywords.includes(`QUALIFIED`)) {
+                    struct.subItems.forEach(subItem => {
+                      item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
+                      item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
+                      item.detail = subItem.keywords.join(` `);
+                      item.documentation = subItem.description + ` (${struct.name})`;
+                      items.push(item);
+                    });
+                  }
                 }
   
                 for (const constant of scope.constants) {
