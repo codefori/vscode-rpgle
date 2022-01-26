@@ -1,12 +1,21 @@
 exports.parseLine = (line) => {
-  let potentialName = line.substring(6).trim();
-  let name = line.substr(6, 15).trim();
-  let pos = line.substr(19, 3).trim();
-  let len = line.substr(32, 7).trim();
-  let type = line.substr(39, 1).trim();
-  let decimals = line.substr(40, 3).trim();
-  let field = line.substr(23, 2).trim().toUpperCase();
-  let keywords = line.substr(43).trim();
+  /** @type {string} */
+  const potentialName = line.substring(6).trim();
+  /** @type {string} */
+  const name = line.substr(6, 15).trim();
+  /** @type {string} */
+  const pos = line.substr(19, 3).trim();
+  /** @type {string} */
+  const len = line.substr(32, 7).trim();
+  /** @type {string} */
+  const type = line.substr(39, 1).trim();
+  /** @type {string} */
+  const decimals = line.substr(40, 3).trim();
+  /** @type {string} */
+  const field = line.substr(23, 2).trim().toUpperCase();
+  /** @type {string} */
+  const keywords = line.substr(43).trim().toUpperCase();
+  const splitKeywords = keywords.split(` `).filter(word => word !== ``);
 
   return {
     potentialName,
@@ -16,16 +25,16 @@ exports.parseLine = (line) => {
     type,
     decimals,
     field,
-    keywords
+    keywords: splitKeywords
   }
 }
 
 exports.getPrettyType = (lineData) => {
-  let outType;
+  let outType = ``;
 
   switch (lineData.type.toUpperCase()) {
   case `A`:
-    if (lineData.keywords.toUpperCase().indexOf(`VARYING`) >= 0) {
+    if (lineData.keywords.indexOf(`VARYING`) >= 0) {
       lineData.keywords = lineData.keywords.replace(/varying/ig, ``);
       outType = `Varchar`;
     } else {
@@ -115,8 +124,7 @@ exports.getPrettyType = (lineData) => {
       outType = `lineData.Len(` + lineData.len + `)`;
     } else if (lineData.len != ``) {
       if (lineData.decimals == ``) {
-        if (lineData.keywords.toUpperCase().indexOf(`VARYING`) >= 0) {
-          lineData.keywords = lineData.keywords.replace(/varying/ig, ``);
+        if (lineData.keywords.indexOf(`VARYING`) >= 0) {
           outType = `Varchar`;
         } else {
           outType = `Char`;
@@ -133,5 +141,5 @@ exports.getPrettyType = (lineData) => {
     break;
   }
 
-  return outType;
+  return outType.toUpperCase();
 }

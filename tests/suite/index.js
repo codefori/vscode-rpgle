@@ -14,7 +14,7 @@ module.exports = {
   test1: async () => {
     const lines = [
       `**FREE`,
-      `Dcl-s MyVariable Char(20);`
+      `Dcl-s MyVariable CHAR(20);`
     ].join(`\n`);
 
     const parser = new Parser();
@@ -30,9 +30,9 @@ module.exports = {
   test2: async () => {
     const lines = [
       `**FREE`,
-      `Dcl-s MyVariable Char(20);`,
+      `Dcl-s MyVariable CHAR(20);`,
       ``,
-      `Dcl-s MyVariable2 Char(20);`
+      `Dcl-s MyVariable2 CHAR(20);`
     ].join(`\n`);
 
     const parser = new Parser();
@@ -49,12 +49,12 @@ module.exports = {
   test3: async () => {
     const lines = [
       `**FREE`,
-      `Dcl-s MyVariable2 Char(20);`,
+      `Dcl-s MyVariable2 CHAR(20);`,
       `Dcl-Ds astructure qualified;`,
-      `  Subitem1 Char(20);`,
-      `  Subitem2 Char(20);`,
+      `  Subitem1 CHAR(20);`,
+      `  Subitem2 CHAR(20);`,
       `End-ds;`,
-      `Dcl-s MyVariable Char(20);`,
+      `Dcl-s MyVariable CHAR(20);`,
       `//Yes`
     ].join(`\n`);
 
@@ -77,7 +77,7 @@ module.exports = {
   test4: async () => {
     const lines = [
       `**FREE`,
-      `Dcl-s MyVariable2 Char(20);`,
+      `Dcl-s MyVariable2 CHAR(20);`,
       ``,
       ``,
       `Begsr theSubroutine;`,
@@ -102,7 +102,7 @@ module.exports = {
     const lines = [
       `**FREE`,
       ``,
-      `Dcl-s MyVariable2 Char(20);`,
+      `Dcl-s MyVariable2 CHAR(20);`,
       ``,
       `Dcl-Proc theProcedure;`,
       `  MyVariable2 = 'Hello world';`,
@@ -110,7 +110,7 @@ module.exports = {
       ``,
       `Dcl-Proc setValue;`,
       `  Dcl-Pi *N;`,
-      `    newValue Char(20);`,
+      `    newValue CHAR(20);`,
       `  End-Pi;`,
       `  MyVariable2 = newValue;`,
       `End-Proc;`,
@@ -133,10 +133,10 @@ module.exports = {
   test6: async () => {
     const lines = [
       `**FREE`,
-      `Dcl-s MyVariable2 Char(20);`,
+      `Dcl-s MyVariable2 CHAR(20);`,
       ``,
       `Dcl-Pr TheProcedure;`,
-      `  parmA char(20);`,
+      `  parmA CHAR(20);`,
       `End-Pr`,
       ``,
       `MyVariable2 = 'Hello world';`,
@@ -158,10 +158,10 @@ module.exports = {
       `**FREE`,
       ``,
       `Dcl-Pr TheProcedure;`,
-      `  parmA char(20);`,
+      `  parmA CHAR(20);`,
       `End-Pr`,
       ``,
-      `Dcl-S theVar Char(20);`,
+      `Dcl-S theVar CHAR(20);`,
       ``,
       `Dcl-Proc theProcedure;`,
       `  Dcl-Pi *N;`,
@@ -1363,13 +1363,13 @@ module.exports = {
     const wkCorp = cache.variables[0];
     assert.strictEqual(wkCorp.name, `wkCorp`);
     assert.strictEqual(wkCorp.position.line, 3);
-    assert.strictEqual(wkCorp.keywords[0], `Char(10)`);
-    assert.strictEqual(wkCorp.keywords[1], `inz('100')`);
+    assert.strictEqual(wkCorp.keywords[0], `CHAR(10)`);
+    assert.strictEqual(wkCorp.keywords[1], `INZ('100')`);
 
     const wkInvoice = cache.variables[1];
     assert.strictEqual(wkInvoice.name, `wkInvoice`);
     assert.strictEqual(wkInvoice.position.line, 4);
-    assert.strictEqual(wkInvoice.keywords[0], `Char(15)`);
+    assert.strictEqual(wkInvoice.keywords[0], `CHAR(15)`);
   },
 
   fixed2: async () => {
@@ -1400,16 +1400,16 @@ module.exports = {
 
     assert.strictEqual(cache.variables.length, 13, `Expect length of 13`);
 
-    const charFields = cache.variables.filter(v => v.keywords[0].startsWith(`Char`));
-    assert.strictEqual(charFields.length, 12, `Expect length of 12`);
+    const CHARFields = cache.variables.filter(v => v.keywords[0].startsWith(`CHAR`));
+    assert.strictEqual(CHARFields.length, 12, `Expect length of 12`);
 
     const countVar = cache.variables.find(v => v.name === `Count`);
-    assert.strictEqual(countVar.keywords[0], `Packed(4:0)`);
+    assert.strictEqual(countVar.keywords[0], `PACKED(4:0)`);
   },
 
   fixed3: async () => {
     const lines = [
-      `     d Worktype        s             10    inz('*OUTQ')`,
+      `     d Worktype        s             10    INZ('*OUTQ')`,
       ``,
       `      *`,
       `     d                 DS`,
@@ -1431,14 +1431,14 @@ module.exports = {
     const Worktype = cache.variables[0];
     assert.strictEqual(Worktype.name, `Worktype`);
     assert.strictEqual(Worktype.position.line, 0);
-    assert.strictEqual(Worktype.keywords[0], `Char(10)`);
-    assert.strictEqual(Worktype.keywords[1], `inz('*OUTQ')`);
+    assert.strictEqual(Worktype.keywords[0], `CHAR(10)`);
+    assert.strictEqual(Worktype.keywords[1], `INZ('*OUTQ')`);
 
     const DS = cache.structs[0];
     assert.strictEqual(DS.name, `*N`);
     assert.strictEqual(DS.position.line, 3);
     assert.strictEqual(DS.subItems.length, 7);
-    assert.strictEqual(DS.subItems.find(i => !i.keywords[0].startsWith(`Bindec`)), undefined);
+    assert.strictEqual(DS.subItems.find(i => !i.keywords[0].startsWith(`BINDEC`)), undefined);
   },
 
   fixed4: async () => {
@@ -1531,8 +1531,8 @@ module.exports = {
 
     const RtvObjD = cache.procedures[0];
     assert.strictEqual(RtvObjD.name, `RtvObjD`);
-    assert.strictEqual(RtvObjD.position.line, 17);
-    assert.strictEqual(RtvObjD.keywords[0], `ExtPgm( 'QUSROBJD' )`);
-    assert.strictEqual(RtvObjD.subItems.length, `6`);
+    assert.strictEqual(RtvObjD.position.line, 18);
+    assert.strictEqual(RtvObjD.keywords.join(` `).trim(), `EXTPGM( 'QUSROBJD' )`);
+    assert.strictEqual(RtvObjD.subItems.length, 6);
   }
 }

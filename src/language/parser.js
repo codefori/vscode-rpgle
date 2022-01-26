@@ -524,10 +524,10 @@ module.exports = class Parser {
                 resetDefinition = true;
                 break;
               case `S`:
-                if (!dSpec.keywords.toUpperCase().includes(`TEMPLATE`)) {
+                if (!dSpec.keywords.includes(`TEMPLATE`)) {
                   currentItem = new Declaration(`variable`);
                   currentItem.name = potentialName;
-                  currentItem.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+                  currentItem.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
   
                   // TODO: line number might be different with ...?
                   currentItem.position = {
@@ -541,10 +541,10 @@ module.exports = class Parser {
                 break;
 
               case `DS`:
-                if (!dSpec.keywords.toUpperCase().includes(`TEMPLATE`)) {
+                if (!dSpec.keywords.includes(`TEMPLATE`)) {
                   currentItem = new Declaration(`struct`);
                   currentItem.name = potentialName;
-                  currentItem.keywords = [dSpec.keywords];
+                  currentItem.keywords = dSpec.keywords;
   
                   currentItem.position = {
                     path: file,
@@ -560,7 +560,7 @@ module.exports = class Parser {
                 if (!scope.procedures.find(proc => proc.name.toUpperCase() === potentialName.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = potentialName;
-                  currentItem.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+                  currentItem.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
   
                   currentItem.position = {
                     path: file,
@@ -576,7 +576,7 @@ module.exports = class Parser {
                 if (currentItem) {
                   currentSub = new Declaration(`subitem`);
                   currentSub.name = (potentialName === `*N` ? `parm${currentItem.subItems.length+1}` : potentialName) ;
-                  currentSub.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+                  currentSub.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
