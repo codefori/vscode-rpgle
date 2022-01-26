@@ -1571,5 +1571,37 @@ module.exports = {
     assert.strictEqual(time0Var.position.line, 7);
     assert.strictEqual(time0Var.keywords[0], `TIME`);
     assert.strictEqual(time0Var.keywords[1], `INZ(T'10.12.15')`);
+  },
+
+  fixed7: async () => {
+    const lines = [
+      ``,
+      `       // -----------------------`,
+      ``,
+      `     P Obj_Next        B                   Export`,
+      `     D Obj_Next        PI                  LikeDS(ObjectDs)`,
+      ``,
+      `      /Free`,
+      `          $UserSpace( Userspace : StartPosit : StartLen : ObjectDs);`,
+      `          StartPosit += SizeEntry;`,
+      ``,
+      `          Return ObjectDs;`,
+      `      /End-Free`,
+      ``,
+      `     P                 E`,
+      ``,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+
+    const Obj_Next = cache.find(`Obj_Next`);
+    assert.strictEqual(Obj_Next.name, `Obj_Next`);
+    assert.strictEqual(Obj_Next.position.line, 3);
+    assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
+    assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
+    assert.strictEqual(Obj_Next.subItems.length, 0);
   }
 }

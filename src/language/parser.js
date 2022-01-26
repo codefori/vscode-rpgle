@@ -200,6 +200,7 @@ module.exports = class Parser {
         const scope = scopes[scopes.length - 1];
         let spec;
 
+        lineIsFree = false;
         lineNumber += 1;
 
         if (isFullyFree === false && line.length > 6) {

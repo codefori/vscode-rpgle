@@ -31,7 +31,7 @@ exports.parsePLine = (line) => {
   const name = line.substr(6, 16).trim();
   const potentialName = line.substring(6).trim();
   const start = line[23].toUpperCase() === `B`;
-  const keywords = line.substr(43).trim();
+  const keywords = line.substr(43).trim().toUpperCase();
   const splitKeywords = keywords.split(` `).filter(word => word !== ``);
 
   return {
