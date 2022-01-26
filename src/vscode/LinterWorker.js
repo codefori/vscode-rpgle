@@ -280,9 +280,8 @@ module.exports = class LinterWorker {
             this.editTimeout = setTimeout(async () => {
               const text = document.getText();
               const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+              Parser.updateCopybookCache(document.uri, text);
               if (isFree) {
-                Parser.updateCopybookCache(document.uri, text);
-
                 Parser.getDocs(document.uri, text).then(doc => {
                   this.refreshDiagnostics(document, doc);
                 });
@@ -311,9 +310,7 @@ module.exports = class LinterWorker {
         }
         else if (document.languageId === `rpgle`) {
           //Else fetch new info from source being edited
-          if (isFree) {
-            Parser.updateCopybookCache(workingUri, text)
-          }
+          Parser.updateCopybookCache(workingUri, text)
         }
       }),
 
@@ -323,9 +320,8 @@ module.exports = class LinterWorker {
         case `rpgle`:
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
           text = document.getText();
+          Parser.updateCopybookCache(document.uri, text);
           if (isFree) {
-            Parser.updateCopybookCache(document.uri, text);
-  
             this.getLinterFile(document).then(file => {
               Parser.getDocs(document.uri, text).then(docs => {
                 this.refreshDiagnostics(document, docs);
