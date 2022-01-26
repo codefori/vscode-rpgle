@@ -479,6 +479,11 @@ module.exports = class Parser {
                   currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;
                   currentSub.keywords = parts.slice(1);
 
+                  currentSub.position = {
+                    path: file,
+                    line: lineNumber
+                  }
+
                   const paramTags = currentTags.filter(tag => tag.tag === `param`);
                   const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
                   if (paramTag) {
@@ -577,6 +582,11 @@ module.exports = class Parser {
                   currentSub = new Declaration(`subitem`);
                   currentSub.name = (potentialName === `*N` ? `parm${currentItem.subItems.length+1}` : potentialName) ;
                   currentSub.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
+
+                  currentSub.position = {
+                    path: file,
+                    line: lineNumber
+                  }
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
