@@ -336,7 +336,7 @@ module.exports = class Parser {
             break;
         
           case `DCL-PROC`:
-          //We can overwrite it.. it might have been a PR before.
+            //We can overwrite it.. it might have been a PR before.
             const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
 
             // We found the PR... so we can overwrite it
@@ -369,14 +369,16 @@ module.exports = class Parser {
             break;
 
           case `DCL-PI`:
-          //Procedures can only exist in the global scope.
-            currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+            //Procedures can only exist in the global scope.
+            if (currentProcName) {
+              currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
-            if (currentItem) {
-              currentItem.keywords = parts.slice(2);
-              currentItem.readParms = true;
+              if (currentItem) {
+                currentItem.keywords = parts.slice(2);
+                currentItem.readParms = true;
 
-              currentDescription = [];
+                currentDescription = [];
+              }
             }
             break;
 
@@ -502,8 +504,60 @@ module.exports = class Parser {
           // Fixed format!
 
           switch (spec) {
+          case `P`:
+            let pSpec = Fixed.parsePLine(line);
+
+            if (pSpec.potentialName === ``) continue;
+
+            if (pSpec.potentialName.endsWith(`...`)) {
+              potentialName = pSpec.potentialName.substring(0, pSpec.potentialName.length - 3);
+            } else {
+              if (pSpec.start) {
+                potentialName = pSpec.name.length > 0 ? pSpec.name : potentialName;
+
+                if (potentialName) {
+                  //We can overwrite it.. it might have been a PR before.
+                  const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
+
+                  // We found the PR... so we can overwrite it
+                  if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
+
+                  currentItem = new Declaration(`procedure`);
+
+                  currentProcName = potentialName;
+                  currentItem.name = currentProcName;
+                  currentItem.keywords = pSpec.keywords;
+
+                  currentItem.position = {
+                    path: file,
+                    line: lineNumber
+                  }
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: null
+                  };
+
+                  scope.procedures.push(currentItem);
+                  resetDefinition = true;
+
+                  scopes.push(new Cache());
+                }
+              } else {
+                //Procedures can only exist in the global scope.
+                currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
+                if (currentItem && currentItem.type === `procedure`) {
+                  currentItem.scope = scopes.pop();
+                  currentItem.range.end = lineNumber;
+                  resetDefinition = true;
+                }
+              }
+            }
+            break;
+
           case `D`:
-            let dSpec = Fixed.parseLine(line);
+            let dSpec = Fixed.parseDLine(line);
 
             if (dSpec.potentialName === ``) continue;
 
@@ -560,8 +614,8 @@ module.exports = class Parser {
                 }
                 break;
 
-              case `PI`:
               case `PR`:
+                // Only add a PR if it's not been defined
                 if (!scope.procedures.find(proc => proc.name.toUpperCase() === potentialName.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = potentialName;
@@ -574,6 +628,17 @@ module.exports = class Parser {
   
                   scope.procedures.push(currentItem);
                   currentDescription = [];
+                }
+                break;
+
+              case `PI`:
+                //Procedures can only exist in the global scope.
+                if (currentProcName) {
+                  currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+
+                  if (currentItem) {
+                    currentItem.keywords.push(Fixed.getPrettyType(dSpec), ...dSpec.keywords);
+                  }
                 }
                 break;
 

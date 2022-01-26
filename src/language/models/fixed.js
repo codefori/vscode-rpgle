@@ -1,19 +1,14 @@
-exports.parseLine = (line) => {
-  /** @type {string} */
+/**
+ * @param {string} line
+ */
+exports.parseDLine = (line) => {
   const potentialName = line.substring(6).trim();
-  /** @type {string} */
   const name = line.substr(6, 15).trim();
-  /** @type {string} */
   const pos = line.substr(19, 3).trim();
-  /** @type {string} */
   const len = line.substr(32, 7).trim();
-  /** @type {string} */
   const type = line.substr(39, 1).trim();
-  /** @type {string} */
   const decimals = line.substr(40, 3).trim();
-  /** @type {string} */
   const field = line.substr(23, 2).trim().toUpperCase();
-  /** @type {string} */
   const keywords = line.substr(43).trim().toUpperCase();
   const splitKeywords = keywords.split(` `).filter(word => word !== ``);
 
@@ -26,6 +21,24 @@ exports.parseLine = (line) => {
     decimals,
     field,
     keywords: splitKeywords
+  }
+}
+
+/**
+ * @param {string} line
+ */
+exports.parsePLine = (line) => {
+  const name = line.substr(6, 16).trim();
+  const potentialName = line.substring(6).trim();
+  const start = line[23].toUpperCase() === `B`;
+  const keywords = line.substr(43).trim();
+  const splitKeywords = keywords.split(` `).filter(word => word !== ``);
+
+  return {
+    name,
+    potentialName,
+    keywords: splitKeywords,
+    start
   }
 }
 
