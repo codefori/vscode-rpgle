@@ -121,7 +121,7 @@ exports.getPrettyType = (lineData) => {
         } else {
           outType = `Char`;
         }
-        lineData.type += `(` + lineData.len + `)`;
+        outType += `(` + lineData.len + `)`;
       } else {
         if (lineData.field === `DS`) {
           outType = `Zoned` + `(` + lineData.len + `:` + lineData.decimals + `)`;

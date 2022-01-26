@@ -212,7 +212,7 @@ module.exports = class Parser {
 
           if (spec === ` `) {
             //Clear out stupid comments
-            line = ``.padEnd(4) + line.substring(4);
+            line = line.substring(8);
 
             lineIsFree = true;
           } else if (![`D`, `P`].includes(spec)) {
@@ -506,7 +506,7 @@ module.exports = class Parser {
               potentialName = dSpec.potentialName.substring(0, dSpec.potentialName.length - 3);
               continue;
             } else {
-              potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName;
+              potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName ? potentialName : `*N`;
 
               switch (dSpec.field) {
               case `C`:
@@ -544,7 +544,7 @@ module.exports = class Parser {
                 if (!dSpec.keywords.toUpperCase().includes(`TEMPLATE`)) {
                   currentItem = new Declaration(`struct`);
                   currentItem.name = potentialName;
-                  currentItem.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
+                  currentItem.keywords = [dSpec.keywords];
   
                   currentItem.position = {
                     path: file,
@@ -574,7 +574,7 @@ module.exports = class Parser {
               default:
                 if (currentItem) {
                   currentSub = new Declaration(`subitem`);
-                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : potentialName) ;
+                  currentSub.name = (potentialName === `*N` ? `parm${currentItem.subItems.length+1}` : potentialName) ;
                   currentSub.keywords = [Fixed.getPrettyType(dSpec), dSpec.keywords];
 
                   currentItem.subItems.push(currentSub);
@@ -583,6 +583,7 @@ module.exports = class Parser {
                 break;
               }
             
+              potentialName = undefined;
             }
             break;
           }

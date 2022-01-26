@@ -1347,8 +1347,8 @@ module.exports = {
       ``,
       `     FINVMST    IF   E           K DISK`,
       `   `,
-      `     D wkCorp          S                   like(CORPNO) inz('100')`,
-      `     D wkInvoice       S             10`,
+      `     D wkCorp          S             10    inz('100')`,
+      `     D wkInvoice       S             15`,
       `   `,
       `     C                   eval      wkInvoice = 'I035552120'`,
       `   `,
@@ -1358,6 +1358,86 @@ module.exports = {
     const parser = new Parser();
     const cache = await parser.getDocs(URI, lines);
 
-    assert.strictEqual(cache.variables.length, 2, `Expect length of 1`);
+    assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
+
+    const wkCorp = cache.variables[0];
+    assert.strictEqual(wkCorp.name, `wkCorp`);
+    assert.strictEqual(wkCorp.position.line, 3);
+    assert.strictEqual(wkCorp.keywords[0], `Char(10)`);
+    assert.strictEqual(wkCorp.keywords[1], `inz('100')`);
+
+    const wkInvoice = cache.variables[1];
+    assert.strictEqual(wkInvoice.name, `wkInvoice`);
+    assert.strictEqual(wkInvoice.position.line, 4);
+    assert.strictEqual(wkInvoice.keywords[0], `Char(15)`);
+  },
+
+  fixed2: async () => {
+    const lines = [
+      ``,
+      `      *`,
+      `      *  Field Definitions.`,
+      `      *`,
+      `     d Count           s              4  0`,
+      `     d Format          s              8`,
+      `     d GenLen          s              8`,
+      `     d InLibrary       s             10`,
+      `     d InType          s             10`,
+      `     d ObjectLib       s             20`,
+      `     d SpaceVal        s              1    inz(*BLANKS)`,
+      `     d SpaceAuth       s             10    inz('*CHANGE')`,
+      `     d SpaceText       s             50    inz(*BLANKS)`,
+      `     d SpaceRepl       s             10    inz('*YES')`,
+      `     d SpaceAttr       s             10    inz(*BLANKS)`,
+      `     d UserSpaceOut    s             20`,
+      `     d Worktype        s             10    inz('*OUTQ')`,
+      ``,
+      `     `,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 13, `Expect length of 13`);
+
+    const charFields = cache.variables.filter(v => v.keywords[0].startsWith(`Char`));
+    assert.strictEqual(charFields.length, 12, `Expect length of 12`);
+
+    const countVar = cache.variables.find(v => v.name === `Count`);
+    assert.strictEqual(countVar.keywords[0], `Packed(4:0)`);
+  },
+
+  fixed3: async () => {
+    const lines = [
+      `     d Worktype        s             10    inz('*OUTQ')`,
+      ``,
+      `      *`,
+      `     d                 DS`,
+      `     d  StartPosit             1      4B 0`,
+      `     d  StartLen               5      8B 0`,
+      `     d  SpaceLen               9     12B 0`,
+      `     d  ReceiveLen            13     16B 0`,
+      `     d  MessageKey            17     20B 0`,
+      `     d  MsgDtaLen             21     24B 0`,
+      `     d  MsgQueNbr             25     28B 0`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
+    
+    const Worktype = cache.variables[0];
+    assert.strictEqual(Worktype.name, `Worktype`);
+    assert.strictEqual(Worktype.position.line, 0);
+    assert.strictEqual(Worktype.keywords[0], `Char(10)`);
+    assert.strictEqual(Worktype.keywords[1], `inz('*OUTQ')`);
+
+    const DS = cache.structs[0];
+    assert.strictEqual(DS.name, `*N`);
+    assert.strictEqual(DS.position.line, 3);
+    assert.strictEqual(DS.subItems.length, 7);
+    assert.strictEqual(DS.subItems.find(i => !i.keywords[0].startsWith(`Bindec`)), undefined);
   }
 }
