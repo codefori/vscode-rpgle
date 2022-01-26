@@ -1467,7 +1467,7 @@ module.exports = {
     assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
     assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
 
-    const InType = cache.variables[0];
+    const InType = cache.find(`InType`);
     assert.strictEqual(InType.name, `InType`);
     assert.strictEqual(InType.position.line, 1);
 
@@ -1534,5 +1534,42 @@ module.exports = {
     assert.strictEqual(RtvObjD.position.line, 18);
     assert.strictEqual(RtvObjD.keywords.join(` `).trim(), `EXTPGM( 'QUSROBJD' )`);
     assert.strictEqual(RtvObjD.subItems.length, 6);
+  },
+
+  fixed6: async () => {
+    const lines = [
+      ``,
+      `0.00 DDATE0            S               D                                             130124`,
+      `2.00 DDATE1            S               D                                             130129`,
+      `0.00 DDATE2            S               D   DATFMT(*JIS)                              130129`,
+      `4.00 DDATE3            S               D   INZ(D'2001-01-12')                        130129`,
+      `5.00 DDATE3_CHAR       S             10                                              130129`,
+      `0.00 D len             S              5I 0                                           130130`,
+      `6.00 DTIME0            S               T   INZ(T'10.12.15')                          130129`,
+      `0.00 DTIME0_CHAR       S              8                                              130129`,
+      ``,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 8, `Expect length of 8`);
+
+    const lenVar = cache.find(`len`);
+    assert.strictEqual(lenVar.name, `len`);
+    assert.strictEqual(lenVar.position.line, 6);
+    assert.strictEqual(lenVar.keywords[0], `INT(5)`);
+
+    const date2Var = cache.find(`DATE2`);
+    assert.strictEqual(date2Var.name, `DATE2`);
+    assert.strictEqual(date2Var.position.line, 3);
+    assert.strictEqual(date2Var.keywords[0], `DATE`);
+    assert.strictEqual(date2Var.keywords[1], `DATFMT(*JIS)`);
+
+    const time0Var = cache.find(`TIME0`);
+    assert.strictEqual(time0Var.name, `TIME0`);
+    assert.strictEqual(time0Var.position.line, 7);
+    assert.strictEqual(time0Var.keywords[0], `TIME`);
+    assert.strictEqual(time0Var.keywords[1], `INZ(T'10.12.15')`);
   }
 }
