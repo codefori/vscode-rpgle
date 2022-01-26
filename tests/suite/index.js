@@ -1439,5 +1439,100 @@ module.exports = {
     assert.strictEqual(DS.position.line, 3);
     assert.strictEqual(DS.subItems.length, 7);
     assert.strictEqual(DS.subItems.find(i => !i.keywords[0].startsWith(`Bindec`)), undefined);
+  },
+
+  fixed4: async () => {
+    const lines = [
+      ``,
+      `     d InType          s             10`,
+      ``,
+      `      *`,
+      `      * Date structure for retriving userspace info`,
+      `      *`,
+      `     d InputDs         DS`,
+      `     d  UserSpace              1     20`,
+      `     d  SpaceName              1     10`,
+      `     d  SpaceLib              11     20`,
+      `     d  InpFileLib            29     48`,
+      `     d  InpFFilNam            29     38`,
+      `     d  InpFFilLib            39     48`,
+      `     d  InpRcdFmt             49     58`,
+      `     d Worktype        s             10    inz('*OUTQ')`,
+      ``,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
+    assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
+
+    const InType = cache.variables[0];
+    assert.strictEqual(InType.name, `InType`);
+    assert.strictEqual(InType.position.line, 1);
+
+    const Worktype = cache.variables[1];
+    assert.strictEqual(Worktype.name, `Worktype`);
+    assert.strictEqual(Worktype.position.line, 14);
+
+    const InputDs = cache.structs[0];
+    assert.strictEqual(InputDs.name, `InputDs`);
+    assert.strictEqual(InputDs.position.line, 6);
+    assert.strictEqual(InputDs.subItems.length, 7);
+  },
+
+  fixed5: async () => {
+    const lines = [
+      ``,
+      `      *`,
+      `      *  Field Definitions.`,
+      `      *`,
+      `     d UserSpaceOut    s             20`,
+      `     d Worktype        s             10    inz('*OUTQ')`,
+      ``,
+      `      *`,
+      `     d                 DS`,
+      `     d  StartPosit             1      4B 0`,
+      `     d  StartLen               5      8B 0`,
+      `     d  SpaceLen               9     12B 0`,
+      `     d  ReceiveLen            13     16B 0`,
+      `     d  MessageKey            17     20B 0`,
+      `     d  MsgDtaLen             21     24B 0`,
+      `     d  MsgQueNbr             25     28B 0`,
+      ``,
+      `      *-- Retrieve object description:  -------------------------------`,
+      `     d RtvObjD         Pr                  ExtPgm( 'QUSROBJD' )`,
+      `     d  RoRcvVar                  32767a         Options( *VarSize )`,
+      `     d  RoRcvVarLen                  10i 0 Const`,
+      `     d  RoFmtNam                      8a   Const`,
+      `     d  RoObjNamQ                    20a   Const`,
+      `     d  RoObjTyp                     10a   Const`,
+      `     d  RoError                   32767a         Options( *VarSize )`,
+      ``,
+      `      *`,
+      `      * Date structure for retriving userspace info`,
+      `      *`,
+      `     d InputDs         DS`,
+      `     d  UserSpace              1     20`,
+      `     d  SpaceName              1     10`,
+      `     d  SpaceLib              11     20`,
+      `     d  InpFileLib            29     48`,
+      `     d  InpFFilNam            29     38`,
+      `     d  InpFFilLib            39     48`,
+      `     d  InpRcdFmt             49     58`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
+    assert.strictEqual(cache.structs.length, 2, `Expect length of 2`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+
+    const RtvObjD = cache.procedures[0];
+    assert.strictEqual(RtvObjD.name, `RtvObjD`);
+    assert.strictEqual(RtvObjD.position.line, 17);
+    assert.strictEqual(RtvObjD.keywords[0], `ExtPgm( 'QUSROBJD' )`);
+    assert.strictEqual(RtvObjD.subItems.length, `6`);
   }
 }

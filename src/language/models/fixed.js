@@ -31,7 +31,7 @@ exports.getPrettyType = (lineData) => {
     } else {
       outType = `Char`;
     }
-    lineData.type += `(` + lineData.len + `)`;
+    outType += `(` + lineData.len + `)`;
     break;
   case `B`:
     if (lineData.pos != ``) {
@@ -63,7 +63,7 @@ exports.getPrettyType = (lineData) => {
     } else {
       outType = `Graph`;
     }
-    lineData.type += `(` + lineData.len + `)`;
+    outType += `(` + lineData.len + `)`;
     break;
   case `I`:
     switch (lineData.len) {

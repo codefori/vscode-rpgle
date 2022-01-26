@@ -567,6 +567,7 @@ module.exports = class Parser {
                     line: lineNumber
                   }
   
+                  scope.procedures.push(currentItem);
                   currentDescription = [];
                 }
                 break;
