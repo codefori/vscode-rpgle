@@ -1,7 +1,49 @@
+
+/**
+ * @param {string} line 
+ */
+exports.parseFLine = (line) => {
+  const name = line.substr(6, 10).trim(); //File name
+  // const type = line.substr(16, 1).toUpperCase(); // I, U, O, C
+  // const field = line.substr(33, 1).toUpperCase(); //KEYED
+  // const device = line.substr(35, 7).toUpperCase().trim(); //device: DISK, WORKSTN
+  // const keywords = line.substr(43).trim();
+
+  return {name}
+}
+
+/**
+ * @param {string} line 
+ */
+exports.parseCLine = (line) => {
+  line = line.padEnd(80);
+  const factor1 = line.substr(11, 14).trim();
+  const opcode = line.substr(25, 10).trim().toUpperCase();
+  const factor2 = line.substr(35, 14).trim();
+  const extended = line.substr(35).trim();
+  const result = line.substr(49, 14).trim();
+
+  const ind1 = line.substr(70, 2).trim();
+  const ind2 = line.substr(72, 2).trim();
+  const ind3 = line.substr(74, 2).trim();
+
+  return {
+    opcode,
+    factor1,
+    factor2,
+    result,
+    extended,
+    ind1,
+    ind2,
+    ind3
+  }
+}
+
 /**
  * @param {string} line
  */
 exports.parseDLine = (line) => {
+  line = line.padEnd(80);
   const potentialName = line.substring(6).trim();
   const name = line.substr(6, 15).trim();
   const pos = line.substr(19, 3).trim();
@@ -28,6 +70,7 @@ exports.parseDLine = (line) => {
  * @param {string} line
  */
 exports.parsePLine = (line) => {
+  line = line.padEnd(80);
   const name = line.substr(6, 16).trim();
   const potentialName = line.substring(6).trim();
   const start = line[23].toUpperCase() === `B`;
@@ -42,13 +85,17 @@ exports.parsePLine = (line) => {
   }
 }
 
+/**
+ * 
+ * @param {{type: string, keywords: string[], len: string, pos?: string, decimals?: string, field?: string}} lineData 
+ * @returns {string}
+ */
 exports.getPrettyType = (lineData) => {
   let outType = ``;
 
   switch (lineData.type.toUpperCase()) {
   case `A`:
     if (lineData.keywords.indexOf(`VARYING`) >= 0) {
-      lineData.keywords = lineData.keywords.replace(/varying/ig, ``);
       outType = `Varchar`;
     } else {
       outType = `Char`;
@@ -79,8 +126,7 @@ exports.getPrettyType = (lineData) => {
     outType = `Float` + `(` + lineData.len + `)`;
     break;
   case `G`:
-    if (lineData.keywords.toUpperCase().indexOf(`VARYING`) >= 0) {
-      lineData.keywords = lineData.keywords.replace(/varying/ig, ``);
+    if (lineData.keywords.indexOf(`VARYING`) >= 0) {
       outType = `Vargraph`;
     } else {
       outType = `Graph`;

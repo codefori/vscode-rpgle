@@ -1603,5 +1603,184 @@ module.exports = {
     assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
     assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
     assert.strictEqual(Obj_Next.subItems.length, 0);
+  },
+
+  fixed8: async () => {
+    const lines = [
+      ``,
+      `      **========================================================================`,
+      `      ** $QUSCRTUS - API to create user space`,
+      `      **========================================================================`,
+      `     c     $QUSCRTUS     begsr`,
+      `      **`,
+      `      ** Delete old space`,
+      `      **`,
+      `             system('DLTOBJ OBJ(QTEMP/MEMBERS) OBJTYPE(*USRSPC)');`,
+      `      **`,
+      `      ** Create a user space named ListMember in QTEMP.`,
+      `      **`,
+      `     c                   Eval      BytesPrv = 116`,
+      `     c                   Eval      SpaceName = 'MEMBERS'`,
+      `     c                   Eval      SpaceLib = 'QTEMP'`,
+      `      **`,
+      `      ** Create the user space`,
+      `      **`,
+      `     c                   call(e)   'QUSCRTUS'`,
+      `     c                   parm      UserSpace     UserSpaceOut`,
+      `     c                   parm                    SpaceAttr`,
+      `     c                   parm      4096          SpaceLen`,
+      `     c                   parm                    SpaceVal`,
+      `     c                   parm                    SpaceAuth`,
+      `     c                   parm                    SpaceText`,
+      `     c                   parm                    SpaceRepl`,
+      `     c                   parm                    ErrorDs`,
+      `      **`,
+      `     c                   endsr`,
+      ``,
+      `      **========================================================================`,
+      `      ** $QUSLMBR  - API List all members in a file`,
+      `      **========================================================================`,
+      `     c     $QUSLMBR      begsr`,
+      `      **`,
+      `     c                   eval      nBufLen = %size(MbrD0100)`,
+      `      **`,
+      `     c                   call(e)   'QUSLMBR'`,
+      `     c                   parm                    UserSpaceOut`,
+      `     c                   parm                    Format`,
+      `     c                   parm                    FileLib`,
+      `     c                   parm                    AllMembers`,
+      `     c                   parm                    bOvr`,
+      `     c                   parm                    ErrorDs`,
+      `      *`,
+      `     c                   endsr`,
+      ``,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.subroutines.length, 2);
+    assert.strictEqual(cache.subroutines[0].name, `$QUSCRTUS`);
+    assert.strictEqual(cache.subroutines[1].name, `$QUSLMBR`);
+  },
+
+  fixed9: async () => {
+    const lines = [
+      ``,
+      `       // -----------------------`,
+      `      /copy './tests/rpgle/copy1.rpgle'`,
+      `       // -----------------------`,
+      ``,
+      `     P Obj_Next        B                   Export`,
+      `     D Obj_Next        PI                  LikeDS(ObjectDs)`,
+      ``,
+      `      /Free`,
+      `          $UserSpace( Userspace : StartPosit : StartLen : ObjectDs);`,
+      `          StartPosit += SizeEntry;`,
+      ``,
+      `          Return ObjectDs;`,
+      `      /End-Free`,
+      ``,
+      `     P                 E`,
+      ``,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.procedures.length, 2);
+
+    const Obj_Next = cache.find(`Obj_Next`);
+    assert.strictEqual(Obj_Next.name, `Obj_Next`);
+    assert.strictEqual(Obj_Next.position.line, 5);
+    assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
+    assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
+    assert.strictEqual(Obj_Next.subItems.length, 0);
+
+    const theExtProcedure = cache.find(`theExtProcedure`);
+    assert.strictEqual(theExtProcedure.name, `theExtProcedure`);
+    assert.strictEqual(theExtProcedure.position.line, 2);
+    assert.strictEqual(theExtProcedure.keywords.includes(`EXTPROC`), true);
+    assert.strictEqual(theExtProcedure.subItems.length, 1);
+  },
+
+  fixedfree1: async () => {
+    const lines = [
+      `      *  Field Definitions.`,
+      `      * ~~~~~~~~~~~~~~~~~~~~~~~~`,
+      `     D ObjNam          s             10a`,
+      `     D ObjLib          s             10a`,
+      `     D ObjTyp          s             10a`,
+      ``,
+      `     P Obj_List        B                   Export`,
+      `     D Obj_List        PI`,
+      `     D    pLibrary                   10A   Const`,
+      `     D    pObject                    10A   Const`,
+      `     D    pType                      10A   Const`,
+      `     D Result          s              5i 0`,
+      ``,
+      `      /Free`,
+      ``,
+      `          exsr $QUSCRTUS;`,
+      `          ObjectLib =  pObject + pLibrary;`,
+      `          WorkType = pType;`,
+      ``,
+      `          Format = 'OBJL0200';`,
+      `          $ListObjects( Userspace : Format : ObjectLib : WorkType);`,
+      `          //`,
+      `          // Retrive header entry and process the user space`,
+      `          //`,
+      `          StartPosit = 125;`,
+      `          StartLen   = 16;`,
+      `          $UserSpace( Userspace : StartPosit : StartLen : GENDS);`,
+      ``,
+      `          StartPosit = OffsetHdr + 1;`,
+      `          StartLen = %size(ObjectDS);`,
+      ``,
+      `          Return;`,
+      ``,
+      `          //--------------------------------------------------------`,
+      `          // $QUSCRTUS - create userspace`,
+      `          //--------------------------------------------------------`,
+      `          begsr $QUSCRTUS;`,
+      ``,
+      `             system('DLTOBJ OBJ(QTEMP/LISTOUTQS) OBJTYPE(*USRSPC)');`,
+      ``,
+      `             BytesPrv = 116;`,
+      `             Spacename = 'LISTOUTQS';`,
+      `             SpaceLib = 'QTEMP';`,
+      ``,
+      `             // Create the user space`,
+      `             $CreateSpace( Userspace : SpaceAttr : 4096 :`,
+      `                           SpaceVal : SpaceAuth : SpaceText : SpaceRepl:`,
+      `                           ErrorDs);`,
+      `          endsr;`,
+      `      /End-Free`,
+      `     P                 E`,
+      ``,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 3);
+    assert.strictEqual(cache.variables.find(i => !i.keywords.includes(`CHAR(10)`)), undefined);
+
+    assert.strictEqual(cache.subroutines.length, 0);
+
+    assert.strictEqual(cache.procedures.length, 1);
+    
+    const Obj_List = cache.find(`Obj_List`);
+    assert.strictEqual(Obj_List.name, `Obj_List`);
+    assert.strictEqual(Obj_List.position.line, 6);
+    assert.strictEqual(Obj_List.keywords.includes(`EXPORT`), true);
+    assert.strictEqual(Obj_List.subItems.length, 3);
+
+    assert.strictEqual(Obj_List.subItems.find(i => !i.keywords.includes(`CHAR(10)`)), undefined);
+    assert.strictEqual(Obj_List.subItems.find(i => !i.keywords.includes(`CONST`)), undefined);
+
+    const scope = Obj_List.scope;
+    assert.strictEqual(scope.subroutines.length, 1);
+    assert.strictEqual(scope.variables.length, 1);
   }
 }

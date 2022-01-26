@@ -11,6 +11,13 @@ const Fixed = require(`./models/fixed`);
 
 const getInstance = require(`../base`);
 
+const HALF_HOUR = (30 * 60 * 1000);
+
+/**
+ * @callback tablePromise
+ * @param  {string} name Table name
+ * @returns {Promise<Declaration[]>}
+ */
 module.exports = class Parser {
   constructor() {
     /** @type {{[path: string]: string[]}} */
@@ -18,6 +25,62 @@ module.exports = class Parser {
 
     /** @type {{[path: string]: Cache}} */
     this.parsedCache = {};
+
+    /** @type {{[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}}} */
+    this.tables = {};
+
+    /** @type {tablePromise} */
+    this.tableFetch = undefined;
+  }
+
+  /**
+   * @param {tablePromise} promise 
+   */
+  setTableFetch(promise) {
+    this.tableFetch = promise;
+  }
+
+  /**
+   * @param {string} name 
+   * @returns {Promise<Declaration[]>}
+   */
+  async fetchTable(name) {
+    if (!this.tableFetch) return [];
+    const table = name.toUpperCase();
+    const now = Date.now();
+
+    if (this.tables[table]) {
+      // We use this to make sure we aren't running this all over the place
+      if (this.tables[table].fetching) return [];
+
+      // If we still have a cached version, let's use that
+      if (now <= (this.tables[table].fetched + HALF_HOUR)) {
+        return this.tables[table].recordFormats;
+      }
+    }
+
+    this.tables[table] = {
+      fetching: true,
+      fetched: 0,
+      recordFormats: []
+    }
+
+    let newDefs;
+
+    try {
+      newDefs = await this.tableFetch(table);
+
+      this.tables[table] = {
+        fetched: now,
+        recordFormats: newDefs
+      }
+    } catch (e) {
+      newDefs = [];
+    }
+
+    this.tables[table].fetching = false;
+
+    return newDefs;
   }
 
   clearParsedCache(path) {
@@ -207,17 +270,32 @@ module.exports = class Parser {
           const comment = line[6];
           spec = line[5].toUpperCase();
 
-          if (comment === `*` || comment === `/`) {
+          if (comment === `*`) {
             continue;
           }
 
-          if (spec === ` `) {
-            //Clear out stupid comments
-            line = line.substring(8);
-
+          if (comment === `/`) {
+            // Directives can be parsed by the free format parser
+            line = line.substring(7);
             lineIsFree = true;
-          } else if (![`D`, `P`].includes(spec)) {
-            continue;
+          } else {
+            if (spec === ` `) {
+            //Clear out stupid comments
+              line = line.substring(8);
+
+              lineIsFree = true;
+            } else if (![`D`, `P`, `C`, `F`].includes(spec)) {
+              continue;
+            } else {
+              if (spec === `C`) {
+                // We don't want to waste precious time parsing all C specs, so we make sure it's got
+                // BEGSR or ENDSR in it first.
+                const upperLine = line.toUpperCase();
+                if ([`BEGSR`, `ENDSR`].some(v => upperLine.includes(v)) === false) {
+                  continue;
+                }
+              }
+            }
           }
 
           if (line.length > 80) {
@@ -237,6 +315,34 @@ module.exports = class Parser {
           partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
 
           switch (parts[0]) {
+          case `DCL-F`:
+            const recordFormats = await this.fetchTable(parts[1]);
+
+            if (recordFormats.length > 0) {
+              const qualified = parts.includes(`QUALIFIED`);
+
+              // Got to fix the positions for the defintions to be the declare.
+              recordFormats.forEach(recordFormat => {
+                recordFormat.description = `Table ${parts[1]}`;
+                if (qualified) recordFormat.keywords.push(`QUALIFIED`);
+
+                recordFormat.position = {
+                  path: file,
+                  line: lineNumber
+                };
+
+                recordFormat.subItems.forEach(subItem => {
+                  subItem.position = {
+                    path: file,
+                    line: lineNumber
+                  };
+                });
+              });
+
+              scope.structs.push(...recordFormats);
+            }
+            break;
+
           case `DCL-C`:
             if (currentItem === undefined) {
               currentItem = new Declaration(`constant`);
@@ -505,8 +611,74 @@ module.exports = class Parser {
           // Fixed format!
 
           switch (spec) {
+          case `F`:
+            const fSpec = Fixed.parseFLine(line);
+            potentialName = fSpec.name;
+
+            const recordFormats = await this.fetchTable(potentialName);
+
+            if (recordFormats.length > 0) {
+              const qualified = parts.includes(`QUALIFIED`);
+
+              // Got to fix the positions for the defintions to be the declare.
+              recordFormats.forEach(recordFormat => {
+                recordFormat.description = `Table ${potentialName}`;
+                if (qualified) recordFormat.keywords.push(`QUALIFIED`);
+
+                recordFormat.position = {
+                  path: file,
+                  line: lineNumber
+                };
+
+                recordFormat.subItems.forEach(subItem => {
+                  subItem.position = {
+                    path: file,
+                    line: lineNumber
+                  };
+                });
+              });
+
+              scope.structs.push(...recordFormats);
+            }
+            break;
+
+          case `C`:
+            const cSpec = Fixed.parseCLine(line);
+
+            potentialName = cSpec.factor1;
+
+            switch (cSpec.opcode) {
+            case `BEGSR`:
+              if (!scope.subroutines.find(sub => sub.name.toUpperCase() === potentialName)) {
+                currentItem = new Declaration(`subroutine`);
+                currentItem.name = potentialName;
+                currentItem.keywords = [`Subroutine`];
+  
+                currentItem.position = {
+                  path: file,
+                  line: lineNumber
+                }
+  
+                currentItem.range = {
+                  start: lineNumber,
+                  end: null
+                };
+  
+                currentDescription = [];
+              }
+              break;
+            case `ENDSR`:
+              if (currentItem && currentItem.type === `subroutine`) {
+                currentItem.range.end = lineNumber;
+                scope.subroutines.push(currentItem);
+                resetDefinition = true;
+              }
+              break;
+            }
+
+            break;
           case `P`:
-            let pSpec = Fixed.parsePLine(line);
+            const pSpec = Fixed.parsePLine(line);
 
             if (pSpec.potentialName === ``) continue;
 
@@ -558,7 +730,7 @@ module.exports = class Parser {
             break;
 
           case `D`:
-            let dSpec = Fixed.parseDLine(line);
+            const dSpec = Fixed.parseDLine(line);
 
             if (dSpec.potentialName === ``) continue;
 
