@@ -7,9 +7,13 @@ exports.parseFLine = (line) => {
   // const type = line.substr(16, 1).toUpperCase(); // I, U, O, C
   // const field = line.substr(33, 1).toUpperCase(); //KEYED
   // const device = line.substr(35, 7).toUpperCase().trim(); //device: DISK, WORKSTN
-  // const keywords = line.substr(43).trim();
+  const keywords = line.substr(43).trim();
+  const splitKeywords = keywords.split(` `).filter(word => word !== ``);
 
-  return {name}
+  return {
+    name, 
+    keywords: splitKeywords
+  }
 }
 
 /**

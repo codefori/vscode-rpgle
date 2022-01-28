@@ -588,7 +588,7 @@ module.exports = class Parser {
             const recordFormats = await this.fetchTable(potentialName);
 
             if (recordFormats.length > 0) {
-              const qualified = parts.includes(`QUALIFIED`);
+              const qualified = fSpec.keywords.includes(`QUALIFIED`);
 
               // Got to fix the positions for the defintions to be the declare.
               recordFormats.forEach(recordFormat => {
