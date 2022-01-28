@@ -169,7 +169,7 @@ module.exports = class LinterWorker {
           const document = editor.document;
           if (document.languageId === `rpgle`) {
             if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
-              const options = this.getLinterOptions(document.uri);
+              const options = await this.getLinterOptions(document.uri);
               const docs = await Parser.getDocs(document.uri, document.getText());
 
               // Define the rules 
@@ -251,7 +251,7 @@ module.exports = class LinterWorker {
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
           const text = document.getText();
           if (isFree) {
-            const options = this.getLinterOptions(document.uri);
+            const options = await this.getLinterOptions(document.uri);
             const docs = await Parser.getDocs(document.uri);
 
             const detail = Linter.getErrors(text, {
@@ -298,17 +298,7 @@ module.exports = class LinterWorker {
         const text = document.getText();
         const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
-        if (Parser.getCopybook(basePath)) {
-          //Update stored copy book
-          const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          Parser.setCopybook(basePath, lines);
-        }
-        else if (Parser.getCopybook(finishedPath)) {
-          //Update stored copy book
-          const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          Parser.setCopybook(finishedPath, lines);
-        }
-        else if (document.languageId === `rpgle`) {
+        if (document.languageId === `rpgle`) {
           //Else fetch new info from source being edited
           Parser.updateCopybookCache(workingUri, text)
         }
@@ -322,34 +312,13 @@ module.exports = class LinterWorker {
           text = document.getText();
           Parser.updateCopybookCache(document.uri, text);
           if (isFree) {
-            this.getLinterFile(document).then(file => {
+            this.getLinterFile(document.uri).then(file => {
               Parser.getDocs(document.uri, text).then(docs => {
                 this.refreshDiagnostics(document, docs);
               });
             });
           }
 
-          break;
-        
-        // We need to update our copy of the linter configuration
-        case `json`:
-          text = document.getText();
-          let upperPath;
-          switch (document.uri.scheme) {
-          case `member`:
-            upperPath = document.uri.path.toUpperCase().substring(0, document.uri.path.length - 5); //without the extension
-            break;
-          case `streamfile`:
-            upperPath = document.uri.path.toUpperCase();
-            break;
-          case `file`:
-            upperPath = document.uri.path.toUpperCase();
-            break;
-          }
-
-          if (upperPath.includes(`RPGLINT`)) {
-            Parser.setCopybook(upperPath, text);
-          }
           break;
         }
       })
@@ -378,34 +347,29 @@ module.exports = class LinterWorker {
   }
 
   /**
-   * @param {vscode.TextDocument} document 
+   * @param {vscode.Uri} uri 
    */
-  getLinterFile(document) {
+  getLinterFile(uri) {
     // Used to fetch the linter settings
     // Will only download once.
-    const lintPath = lintFile[document.uri.scheme];
+    const lintPath = lintFile[uri.scheme];
     if (lintPath) {
-      return Parser.getContent(document.uri, lintPath);
+      return Parser.getContent(uri, lintPath);
     }
   }
 
-  getLinterOptions(workingUri) {
+  async getLinterOptions(workingUri) {
     let options = {};
 
-    const localLintPath = lintFile[workingUri.scheme];
-    if (localLintPath) {
-      let {finishedPath} = Generic.getPathInfo(workingUri, localLintPath);
-
-      const possibleJson = Parser.getCopybook(finishedPath);
-      if (possibleJson) {
-        const jsonString = possibleJson.join(``).trim();
-        if (jsonString) {
-          try {
-            options = JSON.parse(jsonString);
-            return options;
-          } catch (e) {
-            //vscode.window.showErrorMessage(`Failed to parse rpglint.json file at ${lintPath}.`);
-          }
+    const possibleJson = await this.getLinterFile(workingUri);
+    if (possibleJson) {
+      const jsonString = possibleJson.join(``).trim();
+      if (jsonString) {
+        try {
+          options = JSON.parse(jsonString);
+          return options;
+        } catch (e) {
+          //vscode.window.showErrorMessage(`Failed to parse rpglint.json file at ${lintPath}.`);
         }
       }
     }
@@ -428,7 +392,7 @@ module.exports = class LinterWorker {
       /** @type {vscode.Diagnostic[]} */
       let generalDiags = [];
 
-      const options = this.getLinterOptions(document.uri);
+      const options = await this.getLinterOptions(document.uri);
 
       const detail = Linter.getErrors(text, {
         indent: Number(vscode.window.activeTextEditor.options.tabSize),
