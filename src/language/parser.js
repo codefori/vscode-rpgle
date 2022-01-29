@@ -294,8 +294,9 @@ module.exports = class Parser {
 
               // Got to fix the positions for the defintions to be the declare.
               recordFormats.forEach(recordFormat => {
-                recordFormat.keywords.push(parts[1]);
                 recordFormat.description = `Table ${parts[1]}`;
+
+                recordFormat.keywords = [parts[1]];
                 if (qualified) recordFormat.keywords.push(`QUALIFIED`);
 
                 recordFormat.position = {
@@ -594,8 +595,9 @@ module.exports = class Parser {
 
               // Got to fix the positions for the defintions to be the declare.
               recordFormats.forEach(recordFormat => {
-                recordFormat.keywords.push(potentialName);
                 recordFormat.description = `Table ${potentialName}`;
+
+                recordFormat.keywords = [potentialName];
                 if (qualified) recordFormat.keywords.push(`QUALIFIED`);
 
                 recordFormat.position = {
