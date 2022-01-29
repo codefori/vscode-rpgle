@@ -32,11 +32,11 @@ function activate(context) {
   let languageWorker;
 
   if (Configuration.get(`rpgleLanguageToolsEnabled`)) {
-    linterWorker = new LinterWorker(context);
+    languageWorker = new LanguageWorker(context);
   }
 
   if (Configuration.get(`rpgleLinterSupportEnabled`)) {
-    languageWorker = new LanguageWorker(context);
+    linterWorker = new LinterWorker(context);
   }
 
   registerColumnAssist(context);

@@ -9,8 +9,6 @@ const Declaration = require(`./models/declaration`);
 const oneLineTriggers = require(`./models/oneLineTriggers`);
 const Fixed = require(`./models/fixed`);
 
-const getInstance = require(`../base`);
-
 const HALF_HOUR = (30 * 60 * 1000);
 
 /**
@@ -20,9 +18,6 @@ const HALF_HOUR = (30 * 60 * 1000);
  */
 module.exports = class Parser {
   constructor() {
-    /** @type {{[path: string]: string[]}} */
-    this.copyBooks = {};
-
     /** @type {{[path: string]: Cache}} */
     this.parsedCache = {};
 
@@ -83,24 +78,18 @@ module.exports = class Parser {
     return newDefs;
   }
 
+  /**
+   * @param {string} path 
+   */
   clearParsedCache(path) {
     this.parsedCache[path] = undefined;
   }
 
+  /**
+   * @param {string} path 
+   */
   getParsedCache(path) {
     return this.parsedCache[path];
-  }
-
-  getCopybook(path) {
-    return this.copyBooks[path];
-  }
-
-  /** 
-   * @param {string} path
-   * @param {string|string[]} content
-   */
-  setCopybook(path, content) {
-    this.copyBooks[path] = (typeof content === `string` ? [content] : content);
   }
 
   /**
@@ -109,91 +98,73 @@ module.exports = class Parser {
    * @returns {Promise<string[]>}
    */
   async getContent(workingUri, getPath) {
-    let contentApi;
+    //const hrstart = process.hrtime();
+
     let content;
     let lines = undefined;
   
-    let instance;
     let {type, memberPath, finishedPath} = Generic.getPathInfo(workingUri, getPath);
   
     try {
+      let doc;
+      let eol;
       switch (type) {
       case `member`:
-        instance = getInstance();
-        if (!instance) throw new Error(`Connection instance not found`);
-        contentApi = instance.getContent();
-        
-        lines = this.getCopybook(finishedPath);
-        if (!lines) {  
-          content = await contentApi.downloadMemberContent(memberPath[0], memberPath[1], memberPath[2], memberPath[3]);
-          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          this.setCopybook(finishedPath, lines);
+
+        // We have to be agnostic for the type. First we check if we opened a copybook before.
+        const openDoc = vscode.workspace.textDocuments.find(doc => 
+          doc.uri.path.startsWith(finishedPath) && !doc.uri.path.endsWith(`.MBR`)
+        );
+
+        if (openDoc) {
+          // If we've opened it before, we can just use the content
+          doc = openDoc;
+        } else {
+          // Otherwise, we go and fetch the correct content
+          doc = await vscode.workspace.openTextDocument(vscode.Uri.from({
+            scheme: type,
+            path: finishedPath + `.MBR`
+          }));
         }
+
+        eol = doc.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+
+        lines = doc.getText().split(eol);
         break;
   
       case `streamfile`:
-        instance = getInstance();
-        if (!instance) throw new Error(`Connection instance not found`);
-        contentApi = instance.getContent();
+        doc = await vscode.workspace.openTextDocument(vscode.Uri.from({
+          scheme: type,
+          path: finishedPath
+        }));
+        eol = doc.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
 
-        lines = this.getCopybook(finishedPath);
-        if (!lines) {
-          content = await contentApi.downloadStreamfile(finishedPath);
-          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          this.setCopybook(finishedPath, lines);
-        }
+        lines = doc.getText().split(eol);
         break;
 
       case `file`:
-        lines = this.getCopybook(finishedPath);
-        if (!lines) {
-          // We have to find the file because of the case insensitivity
-          if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
-          if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
-          if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
+        // We have to find the file because of the case insensitivity
+        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+        if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
 
-          const possibleFile = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
-          if (possibleFile.length > 0) {
-            content = await (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
-            lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-            this.setCopybook(finishedPath, lines);
-          } else {
-            lines = [`// NOT FOUND: ${getPath}`];
-            this.setCopybook(finishedPath, lines);
-          }
+        const possibleFile = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
+        if (possibleFile.length > 0) {
+          content = await (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
+          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+        } else {
+          lines = [`// NOT FOUND: ${getPath}`];
         }
         break;
       }
     } catch (e) {
       lines = [`// ERROR: ${getPath}`];
-      this.setCopybook(finishedPath, lines);
     }
+
+    //const hrend = process.hrtime(hrstart);
+    //console.info(`getContent() took ${hrend[0]}s and ${hrend[1] / 1000000}ms: ${getPath} (${lines.length})`);
   
     return lines;
-  }
-
-  /**
-   * @param {vscode.Uri} workingUri
-   * @param {string} content 
-   */
-  async updateCopybookCache(workingUri, content) {
-    if (this.getParsedCache(workingUri.path)) {
-      this.clearParsedCache(workingUri.path); //Clear parsed data
-
-      let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-
-      //First loop is for copy/include statements
-      for (let i = baseLines.length - 1; i >= 0; i--) {
-        const line = baseLines[i].trim(); //Paths are case insensitive so it's okay
-        if (line === ``) continue;
-
-        const pieces = line.split(` `).filter(piece => piece !== ``);
-
-        if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
-          await this.getContent(workingUri, pieces[1]);
-        }
-      }
-    }
   }
 
   /**

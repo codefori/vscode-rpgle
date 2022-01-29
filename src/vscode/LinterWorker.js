@@ -169,7 +169,7 @@ module.exports = class LinterWorker {
           const document = editor.document;
           if (document.languageId === `rpgle`) {
             if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
-              const options = this.getLinterOptions(document.uri);
+              const options = await this.getLinterOptions(document.uri);
               const docs = await Parser.getDocs(document.uri, document.getText());
 
               // Define the rules 
@@ -224,6 +224,41 @@ module.exports = class LinterWorker {
         }
       }),
 
+      /** 
+       * Provides the quick fixes on errors.
+       */
+      vscode.languages.registerCodeActionsProvider(`rpgle`, {
+        provideCodeActions: async (document, range) => {
+          /** @type {vscode.CodeAction[]} */
+          let actions = [];
+
+          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+          if (isFree) {
+            const docs = await Parser.getDocs(document.uri);
+
+            if (docs) {
+              const options = await this.getLinterOptions(document.uri);
+              const text = document.getText();
+              const detail = Linter.getErrors(text, {
+                indent: Number(vscode.window.activeTextEditor.options.tabSize),
+                ...options
+              }, docs);
+
+              const fixErrors = detail.errors.filter(error => error.range.intersection(range) );
+
+              if (fixErrors.length > 0) {
+                actions = LinterWorker.getActions(document, fixErrors);
+              }
+            }
+          }
+          
+          return actions;
+        }
+      }),
+
+      /**
+       * When the document changes, we want to fetch the updated errors.
+       */
       vscode.workspace.onDidChangeTextDocument(async editor => {
         if (editor) {
           const document = editor.document;
@@ -243,33 +278,9 @@ module.exports = class LinterWorker {
         }
       }),
 
-      vscode.languages.registerCodeActionsProvider(`rpgle`, {
-        provideCodeActions: async (document, range) => {
-          /** @type {vscode.CodeAction[]} */
-          let actions = [];
-
-          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-          const text = document.getText();
-          if (isFree) {
-            const options = this.getLinterOptions(document.uri);
-            const docs = await Parser.getDocs(document.uri);
-
-            const detail = Linter.getErrors(text, {
-              indent: Number(vscode.window.activeTextEditor.options.tabSize),
-              ...options
-            }, docs);
-
-            const fixErrors = detail.errors.filter(error => error.range.intersection(range) );
-
-            if (fixErrors.length > 0) {
-              actions = LinterWorker.getActions(document, fixErrors);
-            }
-          }
-          
-          return actions;
-        }
-      }),
-
+      /**
+       * When the active document changes, we want to fetch the updated errors.
+       */
       vscode.window.onDidChangeActiveTextEditor(async (e) => {
         if (e && e.document) {
           if (e.document.languageId === `rpgle`) {
@@ -278,81 +289,17 @@ module.exports = class LinterWorker {
             clearTimeout(this.editTimeout);
 
             this.editTimeout = setTimeout(async () => {
-              const text = document.getText();
               const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-              Parser.updateCopybookCache(document.uri, text);
               if (isFree) {
+                const text = document.getText();
                 Parser.getDocs(document.uri, text).then(doc => {
                   this.refreshDiagnostics(document, doc);
                 });
               }
-            }, 2000)
+            }, 2000);
           }
         }
       }),
-
-      vscode.workspace.onDidSaveTextDocument((document) => {
-        const workingUri = document.uri;
-        const basePath = workingUri.path.toUpperCase();
-        const {finishedPath} = Generic.getPathInfo(workingUri, path.basename(workingUri.path));
-        const text = document.getText();
-        const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-
-        if (Parser.getCopybook(basePath)) {
-          //Update stored copy book
-          const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          Parser.setCopybook(basePath, lines);
-        }
-        else if (Parser.getCopybook(finishedPath)) {
-          //Update stored copy book
-          const lines = text.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-          Parser.setCopybook(finishedPath, lines);
-        }
-        else if (document.languageId === `rpgle`) {
-          //Else fetch new info from source being edited
-          Parser.updateCopybookCache(workingUri, text)
-        }
-      }),
-
-      vscode.workspace.onDidOpenTextDocument((document) => {
-        let text;
-        switch (document.languageId) {
-        case `rpgle`:
-          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-          text = document.getText();
-          Parser.updateCopybookCache(document.uri, text);
-          if (isFree) {
-            this.getLinterFile(document).then(file => {
-              Parser.getDocs(document.uri, text).then(docs => {
-                this.refreshDiagnostics(document, docs);
-              });
-            });
-          }
-
-          break;
-        
-        // We need to update our copy of the linter configuration
-        case `json`:
-          text = document.getText();
-          let upperPath;
-          switch (document.uri.scheme) {
-          case `member`:
-            upperPath = document.uri.path.toUpperCase().substring(0, document.uri.path.length - 5); //without the extension
-            break;
-          case `streamfile`:
-            upperPath = document.uri.path.toUpperCase();
-            break;
-          case `file`:
-            upperPath = document.uri.path.toUpperCase();
-            break;
-          }
-
-          if (upperPath.includes(`RPGLINT`)) {
-            Parser.setCopybook(upperPath, text);
-          }
-          break;
-        }
-      })
     )
     
   }
@@ -378,34 +325,29 @@ module.exports = class LinterWorker {
   }
 
   /**
-   * @param {vscode.TextDocument} document 
+   * @param {vscode.Uri} uri 
    */
-  getLinterFile(document) {
+  getLinterFile(uri) {
     // Used to fetch the linter settings
     // Will only download once.
-    const lintPath = lintFile[document.uri.scheme];
+    const lintPath = lintFile[uri.scheme];
     if (lintPath) {
-      return Parser.getContent(document.uri, lintPath);
+      return Parser.getContent(uri, lintPath);
     }
   }
 
-  getLinterOptions(workingUri) {
+  async getLinterOptions(workingUri) {
     let options = {};
 
-    const localLintPath = lintFile[workingUri.scheme];
-    if (localLintPath) {
-      let {finishedPath} = Generic.getPathInfo(workingUri, localLintPath);
-
-      const possibleJson = Parser.getCopybook(finishedPath);
-      if (possibleJson) {
-        const jsonString = possibleJson.join(``).trim();
-        if (jsonString) {
-          try {
-            options = JSON.parse(jsonString);
-            return options;
-          } catch (e) {
-            //vscode.window.showErrorMessage(`Failed to parse rpglint.json file at ${lintPath}.`);
-          }
+    const possibleJson = await this.getLinterFile(workingUri);
+    if (possibleJson) {
+      const jsonString = possibleJson.join(``).trim();
+      if (jsonString) {
+        try {
+          options = JSON.parse(jsonString);
+          return options;
+        } catch (e) {
+          //vscode.window.showErrorMessage(`Failed to parse rpglint.json file at ${lintPath}.`);
         }
       }
     }
@@ -428,7 +370,7 @@ module.exports = class LinterWorker {
       /** @type {vscode.Diagnostic[]} */
       let generalDiags = [];
 
-      const options = this.getLinterOptions(document.uri);
+      const options = await this.getLinterOptions(document.uri);
 
       const detail = Linter.getErrors(text, {
         indent: Number(vscode.window.activeTextEditor.options.tabSize),
