@@ -38,7 +38,7 @@ module.exports = class LanguageWorker {
           }
         }
       }), 
-      
+
       vscode.commands.registerCommand(`vscode-rpgle.rpgleGetPrototype`, () => {
         const editor = vscode.window.activeTextEditor;
           
@@ -70,6 +70,22 @@ module.exports = class LanguageWorker {
           }
         }
       }), 
+
+      vscode.window.onDidChangeActiveTextEditor(async (e) => {
+        if (e && e.document) {
+          if (e.document.languageId === `rpgle`) {
+            const document = e.document;
+            Parser.clearParsedCache(document.uri.path);
+          }
+        }
+      }),
+
+      vscode.workspace.onDidSaveTextDocument((document) => {
+        if (document.languageId === `rpgle`) {
+          //Else fetch new info from source being edited
+          Parser.clearParsedCache(document.uri.path);
+        }
+      }),
 
       vscode.languages.registerHoverProvider({language: `rpgle`}, {
         provideHover: async (document, position, token) => {
