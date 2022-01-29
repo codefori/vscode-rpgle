@@ -224,25 +224,6 @@ module.exports = class LinterWorker {
         }
       }),
 
-      vscode.workspace.onDidChangeTextDocument(async editor => {
-        if (editor) {
-          const document = editor.document;
-          if (document.languageId === `rpgle`) {
-            clearTimeout(this.editTimeout);
-
-            this.editTimeout = setTimeout(async () => {
-              if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
-                const text = document.getText();
-                Parser.clearParsedCache(document.uri.path);
-                Parser.getDocs(document.uri, text).then(docs => {
-                  this.refreshDiagnostics(document, docs);
-                });
-              }
-            }, 2000);
-          }
-        }
-      }),
-
       vscode.languages.registerCodeActionsProvider(`rpgle`, {
         provideCodeActions: async (document, range) => {
           /** @type {vscode.CodeAction[]} */
@@ -269,6 +250,25 @@ module.exports = class LinterWorker {
           }
           
           return actions;
+        }
+      }),
+
+      vscode.workspace.onDidChangeTextDocument(async editor => {
+        if (editor) {
+          const document = editor.document;
+          if (document.languageId === `rpgle`) {
+            clearTimeout(this.editTimeout);
+
+            this.editTimeout = setTimeout(async () => {
+              if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
+                const text = document.getText();
+                Parser.clearParsedCache(document.uri.path);
+                Parser.getDocs(document.uri, text).then(docs => {
+                  this.refreshDiagnostics(document, docs);
+                });
+              }
+            }, 2000);
+          }
         }
       }),
 
@@ -300,7 +300,7 @@ module.exports = class LinterWorker {
           //Else fetch new info from source being edited
           Parser.updateCopybookCache(workingUri)
         }
-      }),
+      })
     )
     
   }

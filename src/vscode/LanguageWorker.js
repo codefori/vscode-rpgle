@@ -13,64 +13,64 @@ module.exports = class LanguageWorker {
    * @param {vscode.ExtensionContext} context
    */
   constructor(context) {
-    vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, () => {
-      const editor = vscode.window.activeTextEditor;
-        
-      if (editor) {
-        const document = editor.document;
-        const position = editor.selection.active;
-        if (document.languageId === `rpgle`) {
-          const linePieces = document.lineAt(position.line).text.trim().split(` `);
-          if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-            const {finishedPath, type} = Generic.getPathInfo(document.uri, linePieces[1]);
-
-            switch (type) {
-            case `member`:
-              vscode.commands.executeCommand(`code-for-ibmi.openEditable`, `${finishedPath.substr(1)}.rpgle`);
-              break;
-
-            case `streamfile`:
-              vscode.commands.executeCommand(`code-for-ibmi.openEditable`, finishedPath);
-              break;
+    context.subscriptions.push(
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, () => {
+        const editor = vscode.window.activeTextEditor;
+          
+        if (editor) {
+          const document = editor.document;
+          const position = editor.selection.active;
+          if (document.languageId === `rpgle`) {
+            const linePieces = document.lineAt(position.line).text.trim().split(` `);
+            if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
+              const {finishedPath, type} = Generic.getPathInfo(document.uri, linePieces[1]);
+  
+              switch (type) {
+              case `member`:
+                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, `${finishedPath.substr(1)}.rpgle`);
+                break;
+  
+              case `streamfile`:
+                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, finishedPath);
+                break;
+              }
             }
           }
         }
-      }
-    }),
-
-    vscode.commands.registerCommand(`vscode-rpgle.rpgleGetPrototype`, () => {
-      const editor = vscode.window.activeTextEditor;
-        
-      if (editor) {
-        const document = editor.document;
-        const position = editor.selection.active.line;
-        if (document.languageId === `rpgle`) {
-          Parser.getDocs(document.uri).then(docs => {
-            const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
-
-            if (currentProcedure) {
-              let prototype = [
-                `Dcl-Pr ${currentProcedure.name} ${currentProcedure.keywords.join(` `)};`,
-                ...currentProcedure.subItems.map(subItem => 
-                  `  ${subItem.name} ${subItem.keywords.join(` `)};`
-                ),
-                `End-Pr;`
-              ].join(`\n`);
-
-              vscode.env.clipboard.writeText(prototype);
-              vscode.window.showInformationMessage(`Prototype copied to clipboard.`);
-
-            } else {
-              vscode.window.showErrorMessage(`No procedure block at line ${position}.`);
-            }
-          });
-        } else {
-          vscode.window.showErrorMessage(`You can only get the prototype of RPGLE source.`);
+      }), 
+      
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleGetPrototype`, () => {
+        const editor = vscode.window.activeTextEditor;
+          
+        if (editor) {
+          const document = editor.document;
+          const position = editor.selection.active.line;
+          if (document.languageId === `rpgle`) {
+            Parser.getDocs(document.uri).then(docs => {
+              const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
+  
+              if (currentProcedure) {
+                let prototype = [
+                  `Dcl-Pr ${currentProcedure.name} ${currentProcedure.keywords.join(` `)};`,
+                  ...currentProcedure.subItems.map(subItem => 
+                    `  ${subItem.name} ${subItem.keywords.join(` `)};`
+                  ),
+                  `End-Pr;`
+                ].join(`\n`);
+  
+                vscode.env.clipboard.writeText(prototype);
+                vscode.window.showInformationMessage(`Prototype copied to clipboard.`);
+  
+              } else {
+                vscode.window.showErrorMessage(`No procedure block at line ${position}.`);
+              }
+            });
+          } else {
+            vscode.window.showErrorMessage(`You can only get the prototype of RPGLE source.`);
+          }
         }
-      }
-    }),
+      }), 
 
-    context.subscriptions.push(
       vscode.languages.registerHoverProvider({language: `rpgle`}, {
         provideHover: async (document, position, token) => {
           const text = document.getText();
