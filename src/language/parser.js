@@ -92,6 +92,8 @@ module.exports = class Parser {
    * @returns {Promise<string[]>}
    */
   async getContent(workingUri, getPath) {
+    //const hrstart = process.hrtime();
+
     let content;
     let lines = undefined;
   
@@ -152,18 +154,18 @@ module.exports = class Parser {
     } catch (e) {
       lines = [`// ERROR: ${getPath}`];
     }
+
+    //const hrend = process.hrtime(hrstart);
+    //console.info(`getContent() took ${hrend[0]}s and ${hrend[1] / 1000000}ms: ${getPath} (${lines.length})`);
   
     return lines;
   }
 
   /**
    * @param {vscode.Uri} workingUri
-   * @param {string} content 
    */
-  async updateCopybookCache(workingUri, content) {
-    if (this.getParsedCache(workingUri.path)) {
-      this.clearParsedCache(workingUri.path); //Clear parsed data
-    }
+  async updateCopybookCache(workingUri) {
+    this.clearParsedCache(workingUri.path); //Clear parsed data
   }
 
   /**

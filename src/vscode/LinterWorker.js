@@ -249,20 +249,22 @@ module.exports = class LinterWorker {
           let actions = [];
 
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-          const text = document.getText();
           if (isFree) {
-            const options = await this.getLinterOptions(document.uri);
             const docs = await Parser.getDocs(document.uri);
 
-            const detail = Linter.getErrors(text, {
-              indent: Number(vscode.window.activeTextEditor.options.tabSize),
-              ...options
-            }, docs);
+            if (docs) {
+              const options = await this.getLinterOptions(document.uri);
+              const text = document.getText();
+              const detail = Linter.getErrors(text, {
+                indent: Number(vscode.window.activeTextEditor.options.tabSize),
+                ...options
+              }, docs);
 
-            const fixErrors = detail.errors.filter(error => error.range.intersection(range) );
+              const fixErrors = detail.errors.filter(error => error.range.intersection(range) );
 
-            if (fixErrors.length > 0) {
-              actions = LinterWorker.getActions(document, fixErrors);
+              if (fixErrors.length > 0) {
+                actions = LinterWorker.getActions(document, fixErrors);
+              }
             }
           }
           
@@ -278,50 +280,27 @@ module.exports = class LinterWorker {
             clearTimeout(this.editTimeout);
 
             this.editTimeout = setTimeout(async () => {
-              const text = document.getText();
+              Parser.updateCopybookCache(document.uri);
               const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-              Parser.updateCopybookCache(document.uri, text);
               if (isFree) {
+                const text = document.getText();
                 Parser.getDocs(document.uri, text).then(doc => {
                   this.refreshDiagnostics(document, doc);
                 });
               }
-            }, 2000)
+            }, 2000);
           }
         }
       }),
 
       vscode.workspace.onDidSaveTextDocument((document) => {
         const workingUri = document.uri;
-        const basePath = workingUri.path.toUpperCase();
-        const {finishedPath} = Generic.getPathInfo(workingUri, path.basename(workingUri.path));
-        const text = document.getText();
-        const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
         if (document.languageId === `rpgle`) {
           //Else fetch new info from source being edited
-          Parser.updateCopybookCache(workingUri, text)
+          Parser.updateCopybookCache(workingUri)
         }
       }),
-
-      vscode.workspace.onDidOpenTextDocument((document) => {
-        let text;
-        switch (document.languageId) {
-        case `rpgle`:
-          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-          text = document.getText();
-          Parser.updateCopybookCache(document.uri, text);
-          if (isFree) {
-            this.getLinterFile(document.uri).then(file => {
-              Parser.getDocs(document.uri, text).then(docs => {
-                this.refreshDiagnostics(document, docs);
-              });
-            });
-          }
-
-          break;
-        }
-      })
     )
     
   }
