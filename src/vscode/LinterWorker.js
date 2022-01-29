@@ -224,6 +224,9 @@ module.exports = class LinterWorker {
         }
       }),
 
+      /** 
+       * Provides the quick fixes on errors.
+       */
       vscode.languages.registerCodeActionsProvider(`rpgle`, {
         provideCodeActions: async (document, range) => {
           /** @type {vscode.CodeAction[]} */
@@ -253,6 +256,9 @@ module.exports = class LinterWorker {
         }
       }),
 
+      /**
+       * When the document changes, we want to fetch the updated errors.
+       */
       vscode.workspace.onDidChangeTextDocument(async editor => {
         if (editor) {
           const document = editor.document;
@@ -272,6 +278,9 @@ module.exports = class LinterWorker {
         }
       }),
 
+      /**
+       * When the active document changes, we want to fetch the updated errors.
+       */
       vscode.window.onDidChangeActiveTextEditor(async (e) => {
         if (e && e.document) {
           if (e.document.languageId === `rpgle`) {

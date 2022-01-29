@@ -71,6 +71,10 @@ module.exports = class LanguageWorker {
         }
       }), 
 
+      /**
+       * When the editor is opened or switch to, we clear the parsed cache
+       * so it will scan again incase any of the underlying copybooks have changed
+       */
       vscode.window.onDidChangeActiveTextEditor(async (e) => {
         if (e && e.document) {
           if (e.document.languageId === `rpgle`) {
@@ -80,6 +84,10 @@ module.exports = class LanguageWorker {
         }
       }),
 
+      /**
+       * When the editor is saved, we clear the parsed cache incase
+       * any new defintions were added.
+       */
       vscode.workspace.onDidSaveTextDocument((document) => {
         if (document.languageId === `rpgle`) {
           //Else fetch new info from source being edited
@@ -256,6 +264,9 @@ module.exports = class LanguageWorker {
           }
         }),
 
+      /**
+       * This implements 'Go to definition' and 'Peek definition' for RPGLE
+       */
       vscode.languages.registerDefinitionProvider({ language: `rpgle` }, {
         provideDefinition: async (document, position, token) => {
           const doc = await Parser.getDocs(document.uri);
@@ -265,7 +276,7 @@ module.exports = class LanguageWorker {
 
           if (doc) {
             // If they're typing inside of a procedure, let's get the stuff from there too
-            const currentProcedure = doc.procedures.find(proc => range.start.line >= proc.range.start && range.start.line <= proc.range.end);
+            const currentProcedure = doc.procedures.find(proc => line >= proc.range.start && line <= proc.range.end);
             let def;
             
             if (currentProcedure) {
@@ -299,6 +310,9 @@ module.exports = class LanguageWorker {
         }}
       ),
 
+      /**
+       * This implements 'Find references' and 'Peek references' for RPGLE
+       */
       vscode.languages.registerReferenceProvider({ language: `rpgle` }, {
         provideReferences: async (document, position, context, token) => {
 
@@ -310,9 +324,9 @@ module.exports = class LanguageWorker {
             
           const lineNumber = position.line;
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-          const text = document.getText();
           if (isFree) {
             const docs = await Parser.getDocs(document.uri);
+            const text = document.getText();
 
             // Updates docs
             Linter.getErrors(text, {
@@ -348,6 +362,8 @@ module.exports = class LanguageWorker {
                 });
               }
             }
+          } else {
+            vscode.window.showInformationMessage(`You can only use 'Find references' with RPGLE free-format (**FREE)`);
           }
           
           return refs;
