@@ -78,10 +78,16 @@ module.exports = class Parser {
     return newDefs;
   }
 
+  /**
+   * @param {string} path 
+   */
   clearParsedCache(path) {
     this.parsedCache[path] = undefined;
   }
 
+  /**
+   * @param {string} path 
+   */
   getParsedCache(path) {
     return this.parsedCache[path];
   }
@@ -159,13 +165,6 @@ module.exports = class Parser {
     //console.info(`getContent() took ${hrend[0]}s and ${hrend[1] / 1000000}ms: ${getPath} (${lines.length})`);
   
     return lines;
-  }
-
-  /**
-   * @param {vscode.Uri} workingUri
-   */
-  async updateCopybookCache(workingUri) {
-    this.clearParsedCache(workingUri.path); //Clear parsed data
   }
 
   /**
