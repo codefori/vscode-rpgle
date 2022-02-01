@@ -40,6 +40,7 @@ module.exports = class Parser {
    * @returns {Promise<Declaration[]>}
    */
   async fetchTable(name) {
+    if (name.trim() === ``) return [];
     if (!this.tableFetch) return [];
     const table = name.toUpperCase();
     const now = Date.now();
