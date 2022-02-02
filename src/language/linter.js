@@ -424,7 +424,7 @@ module.exports = class Linter {
                     }
     
                     if (rules.QualifiedCheck) {
-                      if (!statement.some(part => part.value && [`LIKEDS`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
+                      if (!statement.some(part => part.value && [`LIKEDS`, `LIKEREC`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
                           offset: undefined,

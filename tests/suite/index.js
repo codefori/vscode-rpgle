@@ -1342,6 +1342,26 @@ module.exports = {
     });
   },
 
+  qualified1: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-Ds Kx Likerec(TitXe :*Key);`,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dsply MyVariable2;`,
+      ``,
+      `Return`,
+    ].join(`\n`);
+  
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      QualifiedCheck: true,
+    }, cache);
+  
+    assert.strictEqual(errors.length, 0, `Expect length of 0`);
+  },
+
   fixed1: async () => {
     const lines = [
       ``,
