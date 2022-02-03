@@ -46,3 +46,8 @@ If the user is developing in `LIB/QRPGLESRC/MYSOURCE.RPGLE`, then the linter set
 See `./src/schemas/rpglint.json` for the available linter options.
 
 Use `vscode-rpgle.openLintConfig` to open the configuration for the source you're working in. If it does not exist, it will ask the user to create one and it will provide some defaults.
+
+## Linter directives
+
+* `// @rpglint-skip`
+   * The next line's indent and rule check will be skipped.
