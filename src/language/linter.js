@@ -722,6 +722,12 @@ module.exports = class Linter {
                   }
                 }
               }
+
+            }
+
+            // We don't want to lint CTDATA... so that's the end
+            if (upperLine.startsWith(`**CTDATA`)) {
+              break;
             }
 
             currentStatement = ``;

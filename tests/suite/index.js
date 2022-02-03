@@ -1362,6 +1362,79 @@ module.exports = {
     assert.strictEqual(errors.length, 0, `Expect length of 0`);
   },
 
+  ctdata1: async () => {
+    const lines = [
+      `**free`,
+      `dcl-s myarray char(100) dim(10) ctdata;`,
+      `dcl-s xxField1 char(1);`,
+      `dcl-ds master qualified inz;`,
+      ``,
+      `  dcl-ds a inz;`,
+      `    fielda1 Like(xxFiel1);`,
+      `    fielda2 packed(2);`,
+      `  End-ds;`,
+      ``,
+      `  dcl-ds b inz;`,
+      `    fieldb1 like(xxField1);`,
+      `    fieldb2 packed(9);`,
+      `  End-ds;`,
+      `End-ds;`,
+      ``,
+      ``,
+      `eval master.a.fielda1 = 'a1';`,
+      `eval master.a.f;`,
+      `eval master.b.fieldb1 = 'b1';`,
+      `//eval myds2.p.field1 = 'p';`,
+      `//eval myds2.o.`,
+      ``,
+      `*INLR = *ON;`,
+      `**ctdata myarray`,
+      `select RMSDESC ,RMACRONYM ,RMLPID ,RMCBAPLAN ,LTTYPE ,LTID ,LTATTREA`,
+      `,digits( RHHRTYPE ) as RHHRTYPE ,varchar( PWDES ,30 )`,
+      ` ,EOEMP as EMP ,min( RHEFFDT ) as EFFDATE`,
+      ` ,dec( 0.0 ,7,2 ) as Hours`,
+      ` ,dec( 0.0 ,10,5 ) as Earned`,
+      ` ,dec( 0.0 ,7,2 ) as Taken`,
+      ` ,dec( ifnull( PTHRS ,0 ) ,7,2 ) as Due`,
+      ` ,dec( 0.0 ,7,2 ) as Prior`,
+      ` ,'N' as SysGen`,
+      `from PRPEMPV0 V0`,
+      `cross join PRPLPMTB RM`,
+      `inner join PRPLPTTB LO on LTLPID = RMLPID`,
+      `inner join PRPLPHTB HT on RHLTID = LTID`,
+      `inner join PRPPHRTP on PWHTP = RHHRTYPE`,
+      `left  join PRPHWLTB PT on EOEMP = PTEMP and PTLPID = LTLPID and PTTID = LTID`,
+      `       and ( PTDTEOW between date( xEARNED_LEAVE_TO_x ) -7 days`,
+      `        and date( xEARNED_LEAVE_TO_x ) -1 days )`,
+      `where EOEFFDT = ( select EOEFFDT from PRPEOCPF where EOEMP = V0.EOEMP`,
+      `            anD EOEFFDT <=xEARNED_LEAVE_TO_8x order by EOEFFDT desc fetch first row only )`,
+      `and   EHHDT = ( select EHHDT from PRPEHTPF where EHEMP = V0.EOEMP`,
+      `            and EHHDT <=xEARNED_LEAVE_TO_8x order by EHHDT desc fetch first row only )`,
+      `and   ETEFFDT= ( select ETEFFDT from PRPETXPF where ETEMP = V0.EOEMP`,
+      `            and ETEFFDT <=xEARNED_LEAVE_TO_8x order by ETEFFDT desc fetch first row only )`,
+      `and RMACRONYM = 'CBA'`,
+      `and EOEMP = xEMP_USEx`,
+      `and LTEFFDT = ( select LTEFFDT from PRPLPTTB LI where LO.LTLPID = LI.LTLPID`,
+      `                and LO.LTTYPE = LI.LTTYPE`,
+      `                and LI.LTEFFDT <= xEARNED_LEAVE_TO_x`,
+      `                order by LTEFFDT desc fetch first row only ) and LTSTS = 'A'`,
+      `and RHEFFDT = ( select RHEFFDT from PRPLPHTB I where I.RHLTID = HT.RHLTID`,
+      `                and I.RHEFFDT <= xEARNED_LEAVE_TO_x`,
+      `                order by RHEFFDT desc fetch first row only ) and RHHTSTS = 'A'`,
+      `group by RMSDESC ,RMACRONYM ,RMLPID ,RMCBAPLAN ,LTTYPE ,LTID ,LTATTREA`,
+      ` ,RHHRTYPE ,PWDES ,EOEMP ,PTHRS`,
+      `order by RMLPID ,LTID ,EFFDATE`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
+  },
+
   fixed1: async () => {
     const lines = [
       ``,
