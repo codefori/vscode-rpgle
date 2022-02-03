@@ -1435,6 +1435,49 @@ module.exports = {
     assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
   },
 
+  skip1: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `/copy myds.ds`,
+      `end-ds;`,
+      ``,
+      `dsply thingy;`,
+      ``,
+      `return`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length > 0, true, `Expect indent errors`);
+  },
+
+  skip2: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `/copy myds.ds`,
+      `// @rpglint-skip`,
+      `end-ds;`,
+      ``,
+      `dsply thingy;`,
+      ``,
+      `return`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2
+    }, cache);
+
+    assert.strictEqual(indentErrors.length, 0, `Expect no indent errors`);
+  },
+
   fixed1: async () => {
     const lines = [
       ``,

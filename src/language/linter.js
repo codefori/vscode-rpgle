@@ -155,8 +155,8 @@ module.exports = class Linter {
         }
 
         if (isLineComment) {
+          const comment = line.substring(currentIndent + 2).trimEnd();
           if (rules.PrettyComments) {
-            const comment = line.substring(currentIndent + 2).trimEnd();
             if (comment === ``) {
               errors.push({
                 range: new vscode.Range(
@@ -187,6 +187,11 @@ module.exports = class Linter {
             }
           } else {
             skipIndentCheck = true;
+          }
+
+          // Special comment check
+          if (comment.trim() === `@rpglint-skip`) {
+            break;
           }
         }
 
