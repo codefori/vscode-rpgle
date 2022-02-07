@@ -26,6 +26,9 @@ module.exports = class Parser {
 
     /** @type {tablePromise} */
     this.tableFetch = undefined;
+
+    /** @type {{[path: string]: vscode.Uri}} */
+    this.localUris = {};
   }
 
   /**
@@ -149,9 +152,22 @@ module.exports = class Parser {
         if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
         if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
 
-        const possibleFile = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
-        if (possibleFile.length > 0) {
-          content = await (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
+        /** @type {vscode.Uri} */
+        let possibleFile;
+
+        if (this.localUris[getPath] !== undefined) possibleFile = this.localUris[getPath];
+        else {
+          const fileSearch = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
+          if (fileSearch.length > 0) { 
+            possibleFile = fileSearch[0];
+            this.localUris[getPath] = possibleFile;
+          } else {
+            this.localUris[getPath] = null;
+          }
+        }
+
+        if (possibleFile) {
+          content = (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
           lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
         } else {
           lines = [`// NOT FOUND: ${getPath}`];
