@@ -1,4 +1,5 @@
 
+const path = require(`path`);
 const vscode = require(`vscode`);
 
 const Generic = require(`./generic`);
@@ -94,6 +95,21 @@ module.exports = class Parser {
    */
   getParsedCache(path) {
     return this.parsedCache[path];
+  }
+
+  /**
+   * Used to tell getContent to search for the local file again
+   * Useful if the file didn't exist previously, but now does
+   * @param {string} basePath 
+   */
+  clearUris(basePath) {
+    const basename = path.parse(basePath).name.toUpperCase();
+
+    const localPaths = Object.keys(this.localUris).filter(p => p.toUpperCase().includes(basename));
+
+    localPaths.forEach(p => {
+      this.localUris[p] = undefined;
+    });
   }
 
   /**

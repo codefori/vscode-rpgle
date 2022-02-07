@@ -283,9 +283,8 @@ module.exports = class LinterWorker {
        */
       vscode.window.onDidChangeActiveTextEditor(async (e) => {
         if (e && e.document) {
-          if (e.document.languageId === `rpgle`) {
-            const document = e.document;
-
+          const document = e.document;
+          if (document.languageId === `rpgle`) {
             clearTimeout(this.editTimeout);
 
             this.editTimeout = setTimeout(async () => {
@@ -297,6 +296,13 @@ module.exports = class LinterWorker {
                 });
               }
             }, 2000);
+          }
+
+          // If it's a local file
+          if (document.uri.scheme === `file`) {
+            // Clear local URI from path if it is null as it now means the file exists
+            
+            Parser.clearUris(document.uri.path);
           }
         }
       }),
