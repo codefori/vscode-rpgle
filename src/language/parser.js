@@ -167,15 +167,15 @@ module.exports = class Parser {
         }
 
         if (possibleFile) {
-          content = (await vscode.workspace.fs.readFile(possibleFile[0])).toString();
+          content = (await vscode.workspace.fs.readFile(possibleFile)).toString();
           lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
         } else {
-          lines = [`// NOT FOUND: ${getPath}`];
+          lines = [];
         }
         break;
       }
     } catch (e) {
-      lines = [`// ERROR: ${getPath}`];
+      lines = [];
     }
 
     //const hrend = process.hrtime(hrstart);
@@ -242,6 +242,7 @@ module.exports = class Parser {
 
     //Now the real work
     for (const file in files) {
+      if (files[file].length === 0) continue;
       lineNumber = -1;
 
       isFullyFree = files[file][0].toUpperCase().startsWith(`**FREE`);
