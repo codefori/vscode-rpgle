@@ -109,7 +109,8 @@
                     "expected": {
                         "type": "string"
                     }
-                }
+                },
+                "additionalProperties": false
             },
             "description": "Specific casing for operation codes."
         },
