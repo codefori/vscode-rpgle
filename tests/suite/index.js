@@ -1918,5 +1918,45 @@ module.exports = {
     const scope = Obj_List.scope;
     assert.strictEqual(scope.subroutines.length, 1);
     assert.strictEqual(scope.variables.length, 1);
+  },
+
+  subds1: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Dcl-Ds DsChangingNodeRole Qualified;`,
+      `  *n Int(10) Inz(0);`,
+      `  *n VarChar(20) Inz('Primary Node');`,
+      `  *n Int(10) Inz(1);`,
+      `  *n VarChar(20) Inz('Backup node');`,
+      `  *n Int(10) Inz(-1);`,
+      `  *n VarChar(20) Inz('Replicate Node');`,
+      `  *n Int(10) Inz(-2);`,
+      `  *n VarChar(20) Inz('Changing Node');`,
+      `  *n Int(10) Inz(-3);`,
+      `  *n VarChar(20) Inz('*List');`,
+      `  *n Int(10) Inz(-4);`,
+      `  *n VarChar(20) Inz('Peer Node');`,
+      `  Dcl-Ds Role Dim(1) Pos(1);`,
+      `    Values Int(10);`,
+      `    Descriotion VarChar(20);`,
+      `  End-Ds Role;`,
+      `End-Ds DsChangingNodeRole;`,
+      ``,
+      `Return;`,
+      ``,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.structs.length, 1);
+
+    const DsChangingNodeRole = cache.find(`DsChangingNodeRole`);
+    assert.strictEqual(DsChangingNodeRole.name, `DsChangingNodeRole`);
+    assert.strictEqual(DsChangingNodeRole.position.line, 2);
+
+    assert.strictEqual(DsChangingNodeRole.subItems.length, 13);
+    assert.strictEqual(DsChangingNodeRole.subItems[12].name, `Role`);
   }
 }

@@ -232,6 +232,9 @@ module.exports = class Parser {
     /** @type {Cache[]} */
     let scopes = [];
 
+    /** @type {Declaration[]} Free format struct scopes. Used for free-format only */
+    let dsScopes = [];
+
     // Global scope bits
     scopes.push(new Cache());
 
@@ -389,36 +392,40 @@ module.exports = class Parser {
 
           case `DCL-DS`:
             if (currentItem === undefined) {
-              if (!parts.includes(`TEMPLATE`)) {
-                currentItem = new Declaration(`struct`);
-                currentItem.name = partsLower[1];
-                currentItem.keywords = parts.slice(2);
-                currentItem.description = currentDescription.join(` `);
-                currentItem.tags = currentTags;
+              currentItem = new Declaration(`struct`);
+              currentItem.name = partsLower[1];
+              currentItem.keywords = parts.slice(2);
+              currentItem.description = currentDescription.join(` `);
+              currentItem.tags = currentTags;
 
-                currentItem.position = {
-                  path: file,
-                  line: lineNumber
-                }
-
-                currentGroup = `structs`;
-                // Does the keywords include a keyword that makes end-ds useless?
-                if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                  scope.structs.push(currentItem);
-                  resetDefinition = true;
-                } else {
-                  currentItem.readParms = true;
-                }
-
-                currentDescription = [];
+              currentItem.position = {
+                path: file,
+                line: lineNumber
               }
+
+              currentGroup = `structs`;
+              // Does the keywords include a keyword that makes end-ds useless?
+              if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
+                scope.structs.push(currentItem);
+              } else {
+                currentItem.readParms = true;
+                dsScopes.push(currentItem);
+              }
+
+              resetDefinition = true;
+
+              currentDescription = [];
+            } else {
+
             }
             break;
 
           case `END-DS`:
-            if (currentItem && currentItem.type === `struct`) {
-              scope.structs.push(currentItem);
-              resetDefinition = true;
+            if (dsScopes.length === 1) {
+              scope.structs.push(dsScopes.pop());
+            } else
+            if (dsScopes.length > 1) {
+              dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
             }
             break;
         
@@ -589,6 +596,13 @@ module.exports = class Parser {
               }
 
             } else {
+              if (!currentItem) {
+                if (dsScopes.length >= 1) {
+                  // We do this as there can be many levels to data structures in free format
+                  currentItem = dsScopes[dsScopes.length - 1];
+                }
+              }
+
               if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
                 if (currentItem.readParms) {
                   if (parts[0].startsWith(`DCL`))
@@ -611,6 +625,10 @@ module.exports = class Parser {
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
+
+                  if (currentItem.type === `struct`) {
+                    resetDefinition = true;
+                  }
                 }
               }
             }
