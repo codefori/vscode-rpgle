@@ -370,8 +370,8 @@ module.exports = class LanguageWorker {
         }
       }),
 
-      vscode.languages.registerCompletionItemProvider({language: `rpgle`, }, {
-        provideCompletionItems: async (document, position) => {
+      vscode.languages.registerCompletionItemProvider({language: `rpgle` }, {
+        provideCompletionItems: async (document, position, token, context) => {
           const text = document.getText();
           const lineNumber = position.line;
           const currentLine = document.getText(new vscode.Range(lineNumber, 0, lineNumber, position.character));
@@ -381,110 +381,156 @@ module.exports = class LanguageWorker {
           let items = [];
           let item;
 
-          if (currentLine.startsWith(`//`)) {
-            for (const tag in possibleTags) {
-              item = new vscode.CompletionItem(`@${tag}`, vscode.CompletionItemKind.Property);
-              item.insertText = new vscode.SnippetString(`@${tag} $0`);
-              item.detail = possibleTags[tag];
-              items.push(item);
-            }
+          // If they're typing inside of a procedure, let's get the stuff from there too
+          const currentProcedure = doc.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
-          } else {
-            for (const procedure of doc.procedures) {
-              item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
-              item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
-              item.detail = procedure.keywords.join(` `);
-              item.documentation = procedure.description;
-              items.push(item);
-            }
+          // This means we're just looking for subfields in the struct
+          if (context && context.triggerCharacter === `.`) {
+            let currentPosition = new vscode.Position(position.line, position.character - 1);
+            let range = document.getWordRangeAtPosition(currentPosition);
 
-            for (const subroutine of doc.subroutines) {
-              item = new vscode.CompletionItem(`${subroutine.name}`, vscode.CompletionItemKind.Function);
-              item.insertText = new vscode.SnippetString(`${subroutine.name}\$0`);
-              item.documentation = subroutine.description;
-              items.push(item);
-            }
+            // Uh oh! Maybe we found dim struct?
+            if (!range) {
+              const startBracket = currentLine.lastIndexOf(`(`, currentPosition.character);
 
-            for (const variable of doc.variables) {
-              item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
-              item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
-              item.detail = variable.keywords.join(` `);
-              item.documentation = variable.description;
-              items.push(item);
-            }
-
-            for (const struct of doc.structs) {
-              item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
-              item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
-              item.detail = struct.keywords.join(` `);
-              item.documentation = struct.description;
-              items.push(item);
-
-              if (!struct.keywords.includes(`QUALIFIED`)) {
-                struct.subItems.forEach(subItem => {
-                  item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
-                  item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
-                  item.detail = subItem.keywords.join(` `);
-                  item.documentation = subItem.description + ` (${struct.name})`;
-                  items.push(item);
-                });
+              if (startBracket > -1) {
+                currentPosition = new vscode.Position(position.line, startBracket-1);
+                range = document.getWordRangeAtPosition(currentPosition);
               }
             }
 
-            for (const constant of doc.constants) {
-              item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
-              item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
-              item.detail = constant.keywords.join(` `);
-              item.documentation = constant.description;
-              items.push(item);
-            }
+            if (range) {
+              const word = document.getText(range).toUpperCase();
 
-            // If they're typing inside of a procedure, let's get the stuff from there too
-            const currentProcedure = doc.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+              if (word) {
+                let possibleStruct;
 
-            if (currentProcedure) {
-              for (const subItem of currentProcedure.subItems) {
-                item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Variable);
-                item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
-                item.detail = [`parameter`, ...subItem.keywords].join(` `);
-                item.documentation = subItem.description;
-                items.push(item);
-              }
-
-              if (currentProcedure.scope) {
-                const scope = currentProcedure.scope;
-                for (const variable of scope.variables) {
-                  item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
-                  item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
-                  item.detail = variable.keywords.join(` `);
-                  item.documentation = variable.description;
-                  items.push(item);
+                if (currentProcedure && currentProcedure.scope) {
+                  possibleStruct = currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === word);
                 }
-  
-                for (const struct of scope.structs) {
-                  item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
-                  item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
-                  item.detail = struct.keywords.join(` `);
-                  item.documentation = struct.description;
-                  items.push(item);
 
-                  if (!struct.keywords.includes(`QUALIFIED`)) {
-                    struct.subItems.forEach(subItem => {
+                if (!possibleStruct) {
+                  possibleStruct = doc.structs.find(struct => struct.name.toUpperCase() === word);
+                }
+
+                if (possibleStruct) {
+                  if (possibleStruct.keywords.includes(`QUALIFIED`)) {
+                    possibleStruct.subItems.forEach(subItem => {
                       item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
                       item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
                       item.detail = subItem.keywords.join(` `);
-                      item.documentation = subItem.description + ` (${struct.name})`;
+                      item.documentation = subItem.description + ` (${possibleStruct.name})`;
                       items.push(item);
                     });
                   }
                 }
-  
-                for (const constant of scope.constants) {
-                  item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
-                  item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
-                  item.detail = constant.keywords.join(` `);
-                  item.documentation = constant.description;
+              }
+            }
+
+          } else {
+
+            if (currentLine.startsWith(`//`)) {
+              for (const tag in possibleTags) {
+                item = new vscode.CompletionItem(`@${tag}`, vscode.CompletionItemKind.Property);
+                item.insertText = new vscode.SnippetString(`@${tag} $0`);
+                item.detail = possibleTags[tag];
+                items.push(item);
+              }
+
+            } else {
+              for (const procedure of doc.procedures) {
+                item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
+                item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
+                item.detail = procedure.keywords.join(` `);
+                item.documentation = procedure.description;
+                items.push(item);
+              }
+
+              for (const subroutine of doc.subroutines) {
+                item = new vscode.CompletionItem(`${subroutine.name}`, vscode.CompletionItemKind.Function);
+                item.insertText = new vscode.SnippetString(`${subroutine.name}\$0`);
+                item.documentation = subroutine.description;
+                items.push(item);
+              }
+
+              for (const variable of doc.variables) {
+                item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
+                item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
+                item.detail = variable.keywords.join(` `);
+                item.documentation = variable.description;
+                items.push(item);
+              }
+
+              for (const struct of doc.structs) {
+                item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
+                item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
+                item.detail = struct.keywords.join(` `);
+                item.documentation = struct.description;
+                items.push(item);
+
+                if (!struct.keywords.includes(`QUALIFIED`)) {
+                  struct.subItems.forEach(subItem => {
+                    item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
+                    item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
+                    item.detail = subItem.keywords.join(` `);
+                    item.documentation = subItem.description + ` (${struct.name})`;
+                    items.push(item);
+                  });
+                }
+              }
+
+              for (const constant of doc.constants) {
+                item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
+                item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
+                item.detail = constant.keywords.join(` `);
+                item.documentation = constant.description;
+                items.push(item);
+              }
+
+              if (currentProcedure) {
+                for (const subItem of currentProcedure.subItems) {
+                  item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Variable);
+                  item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
+                  item.detail = [`parameter`, ...subItem.keywords].join(` `);
+                  item.documentation = subItem.description;
                   items.push(item);
+                }
+
+                if (currentProcedure.scope) {
+                  const scope = currentProcedure.scope;
+                  for (const variable of scope.variables) {
+                    item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
+                    item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
+                    item.detail = variable.keywords.join(` `);
+                    item.documentation = variable.description;
+                    items.push(item);
+                  }
+  
+                  for (const struct of scope.structs) {
+                    item = new vscode.CompletionItem(`${struct.name}`, vscode.CompletionItemKind.Struct);
+                    item.insertText = new vscode.SnippetString(`${struct.name}\$0`);
+                    item.detail = struct.keywords.join(` `);
+                    item.documentation = struct.description;
+                    items.push(item);
+
+                    if (!struct.keywords.includes(`QUALIFIED`)) {
+                      struct.subItems.forEach(subItem => {
+                        item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
+                        item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
+                        item.detail = subItem.keywords.join(` `);
+                        item.documentation = subItem.description + ` (${struct.name})`;
+                        items.push(item);
+                      });
+                    }
+                  }
+  
+                  for (const constant of scope.constants) {
+                    item = new vscode.CompletionItem(`${constant.name}`, vscode.CompletionItemKind.Constant);
+                    item.insertText = new vscode.SnippetString(`${constant.name}\$0`);
+                    item.detail = constant.keywords.join(` `);
+                    item.documentation = constant.description;
+                    items.push(item);
+                  }
                 }
               }
             }
@@ -492,7 +538,7 @@ module.exports = class LanguageWorker {
 
           return items;
         }
-      }),
+      }, `.`),
     )
   }
 }
