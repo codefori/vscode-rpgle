@@ -401,6 +401,7 @@ module.exports = class Parser {
                   line: lineNumber
                 }
 
+                currentGroup = `structs`;
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
                   scope.structs.push(currentItem);
@@ -424,6 +425,7 @@ module.exports = class Parser {
           case `DCL-PR`:
             if (currentItem === undefined) {
               if (!scope.procedures.find(proc => proc.name.toUpperCase() === parts[1])) {
+                currentGroup = `procedures`;
                 currentItem = new Declaration(`procedure`);
                 currentItem.name = partsLower[1];
                 currentItem.keywords = parts.slice(2);
@@ -485,6 +487,7 @@ module.exports = class Parser {
           case `DCL-PI`:
             //Procedures can only exist in the global scope.
             if (currentProcName) {
+              currentGroup = `procedures`;
               currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
               if (currentItem) {
@@ -647,6 +650,7 @@ module.exports = class Parser {
                 });
               });
 
+              currentGroup = `structs`
               scope.structs.push(...recordFormats);
             }
             break;
@@ -792,7 +796,9 @@ module.exports = class Parser {
                     line: lineNumber
                   }
   
+                  currentGroup = `structs`;
                   scope.structs.push(currentItem);
+                  resetDefinition = true;
                 }
                 break;
 
@@ -808,6 +814,7 @@ module.exports = class Parser {
                     line: lineNumber
                   }
   
+                  currentGroup = `procedures`;
                   scope.procedures.push(currentItem);
                   currentDescription = [];
                 }
@@ -818,6 +825,7 @@ module.exports = class Parser {
                 if (currentProcName) {
                   currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
+                  currentGroup = `procedures`;
                   if (currentItem) {
                     currentItem.keywords.push(Fixed.getPrettyType(dSpec), ...dSpec.keywords);
                   }
@@ -825,6 +833,17 @@ module.exports = class Parser {
                 break;
 
               default:
+                switch (currentGroup) {
+                case `procedures`:
+                  // Get from the parent
+                  currentItem = scopes[scopes[0].procedures.length - 1].procedures[scopes[0].procedures.length - 1];
+                  break;
+
+                case `structs`:
+                  currentItem = scope[currentGroup][scope[currentGroup].length - 1];
+                  break;
+                }
+
                 if (currentItem) {
                   currentSub = new Declaration(`subitem`);
                   currentSub.name = (potentialName === `*N` ? `parm${currentItem.subItems.length+1}` : potentialName) ;
@@ -837,6 +856,8 @@ module.exports = class Parser {
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
+
+                  resetDefinition = true;
                 }
                 break;
               }
