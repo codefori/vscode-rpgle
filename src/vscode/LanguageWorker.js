@@ -280,7 +280,13 @@ module.exports = class LanguageWorker {
             let def;
             
             if (currentProcedure) {
+              // First look at all definitions
               def = currentProcedure.scope.find(word);
+
+              if (!def) {
+                // Maybe it's a parameter?
+                def = currentProcedure.subItems.find(subitem => subitem.name.toUpperCase() === word);
+              }
             }
             
             if (!def) {
