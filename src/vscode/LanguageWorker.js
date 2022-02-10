@@ -406,7 +406,13 @@ module.exports = class LanguageWorker {
                 let possibleStruct;
 
                 if (currentProcedure && currentProcedure.scope) {
-                  possibleStruct = currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === word);
+                  const procScop = currentProcedure.scope;
+
+                  possibleStruct = currentProcedure.subItems.find(subitem => subitem.name.toUpperCase() === word && subitem.subItems.length > 0);
+
+                  if (!possibleStruct) {
+                    possibleStruct = procScop.structs.find(struct => struct.name.toUpperCase() === word);
+                  }
                 }
 
                 if (!possibleStruct) {

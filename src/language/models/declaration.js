@@ -10,7 +10,10 @@ module.exports = class Declaration {
   constructor(type) {
     this.type = type;
     this.name = ``;
+
+    /** @type {string[]} */
     this.keywords = [];
+    
     this.description = ``;
 
     /** @type {{tag: string, content: string}[]} */
