@@ -406,6 +406,25 @@ module.exports = class Parser {
               currentGroup = `structs`;
               // Does the keywords include a keyword that makes end-ds useless?
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
+
+                // Expand the LIKEDS value if there is one.
+                const likeDS = currentItem.keywords.find(keyword => keyword.startsWith(`LIKEDS(`) && keyword.endsWith(`)`));
+                if (likeDS) {
+                  const likeDSValue = likeDS.substring(7, likeDS.length - 1).toUpperCase();
+
+                  for (let i = scopes.length - 1; i >= 0; i--) {
+                    const likeDSItem = scopes[i].structs.find(struct => struct.name.toUpperCase() === likeDSValue);
+                    if (likeDSItem) {
+                      currentItem.subItems = likeDSItem.subItems;
+
+                      // We need to add qualified as it is qualified by default.
+                      if (!currentItem.keywords.includes(`QUALIFIED`))
+                        currentItem.keywords.push(`QUALIFIED`);
+                      break;
+                    }
+                  }
+                }
+
                 scope.structs.push(currentItem);
               } else {
                 currentItem.readParms = true;
@@ -507,7 +526,7 @@ module.exports = class Parser {
             break;
 
           case `END-PI`:
-          //Procedures can only exist in the global scope.
+            //Procedures can only exist in the global scope.
             currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
             if (currentItem && currentItem.type === `procedure`) {
@@ -517,7 +536,7 @@ module.exports = class Parser {
             break;
 
           case `END-PROC`:
-          //Procedures can only exist in the global scope.
+            //Procedures can only exist in the global scope.
             currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
             if (currentItem && currentItem.type === `procedure`) {
@@ -617,10 +636,29 @@ module.exports = class Parser {
                     line: lineNumber
                   }
 
+                  // Add comments from the tags
                   const paramTags = currentTags.filter(tag => tag.tag === `param`);
                   const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
                   if (paramTag) {
                     currentSub.description = paramTag.content;
+                  }
+
+                  // If the parameter has likeds, add the subitems to make it a struct.
+                  const likeDS = currentSub.keywords.find(keyword => keyword.startsWith(`LIKEDS(`) && keyword.endsWith(`)`));
+                  if (likeDS) {
+                    const likeDSValue = likeDS.substring(7, likeDS.length - 1).toUpperCase();
+                    
+                    for (let i = scopes.length - 1; i >= 0; i--) {
+                      const likeDSItem = scopes[i].structs.find(struct => struct.name.toUpperCase() === likeDSValue);
+                      if (likeDSItem) {
+                        currentSub.subItems = likeDSItem.subItems;
+                    
+                        // We need to add qualified as it is qualified by default.
+                        if (!currentSub.keywords.includes(`QUALIFIED`))
+                          currentSub.keywords.push(`QUALIFIED`);
+                        break;
+                      }
+                    }
                   }
 
                   currentItem.subItems.push(currentSub);
@@ -775,7 +813,7 @@ module.exports = class Parser {
               case `C`:
                 currentItem = new Declaration(`constant`);
                 currentItem.name = potentialName;
-                currentItem.keywords = [dSpec.keywords];
+                currentItem.keywords = [...dSpec.keywords];
                   
                 // TODO: line number might be different with ...?
                 currentItem.position = {
@@ -870,6 +908,24 @@ module.exports = class Parser {
                   currentSub.position = {
                     path: file,
                     line: lineNumber
+                  }
+
+                  // If the parameter has likeds, add the subitems to make it a struct.
+                  const likeDS = currentSub.keywords.find(keyword => keyword.startsWith(`LIKEDS(`) && keyword.endsWith(`)`));
+                  if (likeDS) {
+                    const likeDSValue = likeDS.substring(7, likeDS.length - 1).toUpperCase();
+  
+                    for (let i = scopes.length - 1; i >= 0; i--) {
+                      const likeDSItem = scopes[i].structs.find(struct => struct.name.toUpperCase() === likeDSValue);
+                      if (likeDSItem) {
+                        currentSub.subItems = likeDSItem.subItems;
+  
+                        // We need to add qualified as it is qualified by default.
+                        if (!currentSub.keywords.includes(`QUALIFIED`))
+                          currentSub.keywords.push(`QUALIFIED`);
+                        break;
+                      }
+                    }
                   }
 
                   currentItem.subItems.push(currentSub);

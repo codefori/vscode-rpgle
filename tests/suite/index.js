@@ -1958,5 +1958,67 @@ module.exports = {
 
     assert.strictEqual(DsChangingNodeRole.subItems.length, 13);
     assert.strictEqual(DsChangingNodeRole.subItems[12].name, `Role`);
+  },
+
+  likeds1: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-s MyVariable2 CHAR(20);`,
+      `Dcl-Ds astructure qualified;`,
+      `  Subitem1 CHAR(20);`,
+      `  Subitem2 CHAR(20);`,
+      `End-ds;`,
+      `Dcl-s MyVariable CHAR(20);`,
+      `Dcl-Ds MyOtherStruct LikeDS(Astructure);`,
+      `//Yes`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 2);
+    assert.strictEqual(cache.structs.length, 2);
+
+    const MyOtherStruct = cache.find(`MyOtherStruct`);
+    assert.strictEqual(MyOtherStruct.name, `MyOtherStruct`);
+    assert.strictEqual(MyOtherStruct.position.line, 7);
+    assert.strictEqual(MyOtherStruct.subItems.length, 2);
+  },
+
+  likeds2: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-s MyVariable2 CHAR(20);`,
+      `Dcl-Ds astructure qualified;`,
+      `  Subitem1 CHAR(20);`,
+      `  Subitem2 CHAR(20);`,
+      `End-ds;`,
+      `Dcl-s MyVariable CHAR(20);`,
+      `Dsply MyVariable;`,
+      `Return;`,
+      `Dcl-Proc myprocedure;`,
+      `  Dcl-Pi *N;`,
+      `    inputDS Likeds(astructure);`,
+      `  End-Pi;`,
+      `  Dsply 'Inside';`,
+      `  Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 2);
+    assert.strictEqual(cache.structs.length, 1);
+    assert.strictEqual(cache.procedures.length, 1);
+
+    const MyOtherStruct = cache.find(`myprocedure`);
+    assert.strictEqual(MyOtherStruct.name, `myprocedure`);
+    assert.strictEqual(MyOtherStruct.position.line, 9);
+    assert.strictEqual(MyOtherStruct.subItems.length, 1);
+
+    const parmInputDs = MyOtherStruct.subItems[0];
+    assert.strictEqual(parmInputDs.name, `inputDS`);
+    assert.strictEqual(parmInputDs.position.line, 11);
+    assert.strictEqual(parmInputDs.subItems.length, 2);
   }
 }
