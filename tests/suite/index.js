@@ -1476,6 +1476,28 @@ module.exports = {
     }, cache);
 
     assert.strictEqual(indentErrors.length, 0, `Expect no indent errors`);
+  },  
+  
+  skip3: async () => {
+    const lines = [
+      `**free`,
+      `dcl-s xxField1 char(1);`,
+      ``,
+      `// @rpglint-skip`,
+      `/copy myds.ds`,
+      ``,
+      `dsply xxfield1;`,
+      ``,
+      `return`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      IncorrectVariableCase: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect one errors`);
   },
 
   fixed1: async () => {
@@ -2020,5 +2042,31 @@ module.exports = {
     assert.strictEqual(parmInputDs.name, `inputDS`);
     assert.strictEqual(parmInputDs.position.line, 11);
     assert.strictEqual(parmInputDs.subItems.length, 2);
-  }
+  },
+
+  // eof1: async () => {
+  //   const lines = [
+  //     `     D UPPERCASE       PR          4096    Varying`,
+  //     `     D   String                    4096    Const Varying`,
+  //     `     D   Escaped                       n   Const Options(*NoPass)`,
+  //     `      /EoF`,
+  //     `            Converts all of the letters in String to their`,
+  //     `            UPPER CASE equivalents.  Non-alphabetic characters`,
+  //     `            remain unchanged.`,
+  //     ``,
+  //     `            Escaped = *ON = converts characters that would crash iPDF and`,
+  //     `                            HTML to approximately equivalent characters.`,
+  //     `                            For example, translate " and ' to \` .`,
+  //     `                            (Default)`,
+  //     `                      *OFF= Do not convert any characters other than A-Z.`,
+  //   ].join(`\n`);
+
+  //   const parser = new Parser();
+  //   const cache = await parser.getDocs(URI, lines);
+
+  //   const uppercase = cache.find(`UPPERCASE`);
+  //   assert.strictEqual(uppercase.name, `UPPERCASE`);
+  //   assert.strictEqual(uppercase.position.line, 0);
+  //   assert.strictEqual(uppercase.subItems, 2);
+  // }
 }

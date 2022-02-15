@@ -125,13 +125,12 @@ module.exports = class Linter {
     /** @type {{value: string, definition?: string, list: {range: vscode.Range, offset: {position: number, length: number}}[]}[]} */
     const stringLiterals = [];
 
-    for (const currentLine of lines) {
+    for (lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+      const currentLine = lines[lineNumber];
       currentIndent = currentLine.search(/\S/);
       let line = currentLine.trimEnd();
 
       let upperLine = line.trim().toUpperCase();
-
-      lineNumber += 1;
 
       isLineComment = line.trimStart().startsWith(`//`);
 
@@ -191,7 +190,8 @@ module.exports = class Linter {
 
           // Special comment check
           if (comment.trim() === `@rpglint-skip`) {
-            break;
+            lineNumber += 1;
+            continue;
           }
         }
 
@@ -246,6 +246,8 @@ module.exports = class Linter {
               let value;
 
               if (statement.length >= 1) {
+                if (statement[0].type === `directive` && statement[0].value.toUpperCase() === `/EOF`) break;
+
                 switch (statement[0].type) {
                 case `format`:
                   if (statement[0].value.toUpperCase() === `**CTDATA`) {

@@ -322,6 +322,11 @@ module.exports = class Parser {
           parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
           partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
 
+          if (parts[0] === `/EOF`) {
+            // End of parsing for this file
+            break;
+          }
+
           switch (parts[0]) {
           case `DCL-F`:
             const recordFormats = await this.fetchTable(parts[1]);
