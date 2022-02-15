@@ -284,7 +284,7 @@ module.exports = class Parser {
 
           if (comment === `/`) {
             // Directives can be parsed by the free format parser
-            line = line.substring(7);
+            line = line.substring(6);
             lineIsFree = true;
           } else {
             if (spec === ` `) {

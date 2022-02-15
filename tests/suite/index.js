@@ -2023,7 +2023,8 @@ module.exports = {
       `    inputDS Likeds(astructure);`,
       `  End-Pi;`,
       `  Dsply 'Inside';`,
-      `  Return;`
+      `  Return;`,
+      `End-Proc;`
     ].join(`\n`);
 
     const parser = new Parser();
@@ -2044,29 +2045,117 @@ module.exports = {
     assert.strictEqual(parmInputDs.subItems.length, 2);
   },
 
-  // eof1: async () => {
-  //   const lines = [
-  //     `     D UPPERCASE       PR          4096    Varying`,
-  //     `     D   String                    4096    Const Varying`,
-  //     `     D   Escaped                       n   Const Options(*NoPass)`,
-  //     `      /EoF`,
-  //     `            Converts all of the letters in String to their`,
-  //     `            UPPER CASE equivalents.  Non-alphabetic characters`,
-  //     `            remain unchanged.`,
-  //     ``,
-  //     `            Escaped = *ON = converts characters that would crash iPDF and`,
-  //     `                            HTML to approximately equivalent characters.`,
-  //     `                            For example, translate " and ' to \` .`,
-  //     `                            (Default)`,
-  //     `                      *OFF= Do not convert any characters other than A-Z.`,
-  //   ].join(`\n`);
+  eof1: async () => {
+    const lines = [
+      `     D UPPERCASE       PR          4096    Varying`,
+      `     D   String                    4096    Const Varying`,
+      `     D   Escaped                       n   Const Options(*NoPass)`,
+      `      /EoF`,
+      `            Converts all of the letters in String to their`,
+      `            UPPER CASE equivalents.  Non-alphabetic characters`,
+      `            remain unchanged.`,
+      ``,
+      `            Escaped = *ON = converts characters that would crash iPDF and`,
+      `                            HTML to approximately equivalent characters.`,
+      `                            For example, translate " and ' to \` .`,
+      `                            (Default)`,
+      `                      *OFF= Do not convert any characters other than A-Z.`,
+    ].join(`\n`);
 
-  //   const parser = new Parser();
-  //   const cache = await parser.getDocs(URI, lines);
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
 
-  //   const uppercase = cache.find(`UPPERCASE`);
-  //   assert.strictEqual(uppercase.name, `UPPERCASE`);
-  //   assert.strictEqual(uppercase.position.line, 0);
-  //   assert.strictEqual(uppercase.subItems, 2);
-  // }
+    const uppercase = cache.find(`UPPERCASE`);
+    assert.strictEqual(uppercase.name, `UPPERCASE`);
+    assert.strictEqual(uppercase.position.line, 0);
+    assert.strictEqual(uppercase.subItems.length, 2);
+  },
+
+  eof2: async () => {
+    const lines = [
+      `     D UPPERCASE       PR          4096    Varying`,
+      `     D   String                    4096    Const Varying`,
+      `     D   Escaped                       n   Const Options(*NoPass)`,
+      `      /EoF`,
+      ``,
+      `     D LOWERCASE       PR          4096    Varying`,
+      `     D   String                    4096    Const Varying`,
+      `     D   Escaped                       n   Const Options(*NoPass)`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.procedures.length, 1);
+
+    const uppercase = cache.find(`UPPERCASE`);
+    assert.strictEqual(uppercase.name, `UPPERCASE`);
+    assert.strictEqual(uppercase.position.line, 0);
+    assert.strictEqual(uppercase.subItems.length, 2);
+  },
+
+  /**
+   * Similar to linter18 test
+   */
+  eof3: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `theProcedure();`,
+      `Dsply MyVariable2;`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Dcl-S mylocal char(20);`,
+      `  MyVariable2 = 'Hello world';`,
+      `  mylocal = Myvariable2;`,
+      `End-Proc;`,
+      ``,
+      `/eof`,
+      ``,
+      `Dcl-Proc theProcedure2;`,
+      `  Dcl-S mylocal char(20);`,
+      `  MyVariable2 = 'Hello world';`,
+      `  mylocal = Myvariable2;`,
+      `End-Proc;`,
+    ].join(`\n`);
+    
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      NoGlobalsInProcedures: true
+    }, cache);
+
+    assert.strictEqual(cache.procedures.length, 1);
+    assert.strictEqual(errors.length, 2);
+  },
+
+  eof4: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DftActGrp(*No);`,
+      ``,
+      `/copy './tests/rpgle/eof4.rpgle'`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `CallP UPPERCASE(myVariable:*on);`,
+      ``,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+
+    const uppercase = cache.find(`UPPERCASE`);
+
+    assert.strictEqual(uppercase.subItems.length, 2, `Expect length of 2`);
+
+    assert.strictEqual(uppercase.position.path, `'./tests/rpgle/eof4.rpgle'`, `Path is incorrect`);
+    assert.strictEqual(uppercase.position.line, 0, `Index of 0 expected`);
+  },
 }

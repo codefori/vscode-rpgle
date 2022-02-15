@@ -246,7 +246,10 @@ module.exports = class Linter {
               let value;
 
               if (statement.length >= 1) {
-                if (statement[0].type === `directive` && statement[0].value.toUpperCase() === `/EOF`) break;
+                if (statement[0].type === `directive` && statement[0].value.toUpperCase() === `/EOF`) {
+                  // End of file
+                  break;
+                }
 
                 switch (statement[0].type) {
                 case `format`:
