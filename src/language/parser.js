@@ -215,7 +215,10 @@ module.exports = class Parser {
     if (!content) return null;
 
     /** @type {{[path: string]: string[]}} */
-    let files = {};
+    const files = {};
+
+    /** @type {string[]} Order which files should be scanned */
+    const fileList = [];
 
     let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
 
@@ -250,9 +253,13 @@ module.exports = class Parser {
 
         if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
           files[pieces[1]] = (await this.getContent(workingUri, pieces[1]));
+          fileList.push(pieces[1]);
         }
       }
     }
+
+    // Scan the base file last. Handle copy books first
+    fileList.push(workingUri.path);
 
     let potentialName;
     /** @type {"structs"|"procedures"} */
@@ -260,7 +267,7 @@ module.exports = class Parser {
     let isFullyFree = false;
 
     //Now the real work
-    for (const file in files) {
+    for (const file of fileList) {
       if (files[file].length === 0) continue;
       lineNumber = -1;
 
@@ -377,21 +384,19 @@ module.exports = class Parser {
 
           case `DCL-S`:
             if (currentItem === undefined) {
-              if (!parts.includes(`TEMPLATE`)) {
-                currentItem = new Declaration(`variable`);
-                currentItem.name = partsLower[1];
-                currentItem.keywords = parts.slice(2);
-                currentItem.description = currentDescription.join(` `);
-                currentItem.tags = currentTags;
+              currentItem = new Declaration(`variable`);
+              currentItem.name = partsLower[1];
+              currentItem.keywords = parts.slice(2);
+              currentItem.description = currentDescription.join(` `);
+              currentItem.tags = currentTags;
 
-                currentItem.position = {
-                  path: file,
-                  line: lineNumber
-                }
-
-                scope.variables.push(currentItem);
-                resetDefinition = true;
+              currentItem.position = {
+                path: file,
+                line: lineNumber
               }
+
+              scope.variables.push(currentItem);
+              resetDefinition = true;
             }
             break;
 
@@ -830,37 +835,33 @@ module.exports = class Parser {
                 resetDefinition = true;
                 break;
               case `S`:
-                if (!dSpec.keywords.includes(`TEMPLATE`)) {
-                  currentItem = new Declaration(`variable`);
-                  currentItem.name = potentialName;
-                  currentItem.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
-  
-                  // TODO: line number might be different with ...?
-                  currentItem.position = {
-                    path: file,
-                    line: lineNumber
-                  }
-  
-                  scope.variables.push(currentItem);
-                  resetDefinition = true;
+                currentItem = new Declaration(`variable`);
+                currentItem.name = potentialName;
+                currentItem.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
+
+                // TODO: line number might be different with ...?
+                currentItem.position = {
+                  path: file,
+                  line: lineNumber
                 }
+
+                scope.variables.push(currentItem);
+                resetDefinition = true;
                 break;
 
               case `DS`:
-                if (!dSpec.keywords.includes(`TEMPLATE`)) {
-                  currentItem = new Declaration(`struct`);
-                  currentItem.name = potentialName;
-                  currentItem.keywords = dSpec.keywords;
-  
-                  currentItem.position = {
-                    path: file,
-                    line: lineNumber
-                  }
-  
-                  currentGroup = `structs`;
-                  scope.structs.push(currentItem);
-                  resetDefinition = true;
+                currentItem = new Declaration(`struct`);
+                currentItem.name = potentialName;
+                currentItem.keywords = dSpec.keywords;
+
+                currentItem.position = {
+                  path: file,
+                  line: lineNumber
                 }
+
+                currentGroup = `structs`;
+                scope.structs.push(currentItem);
+                resetDefinition = true;
                 break;
 
               case `PR`:

@@ -332,17 +332,19 @@ module.exports = {
     assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
 
     // Valid names
-    assert.strictEqual(cache.procedures[0].name, `theLocalProc`, `Expect valid name`);
-    assert.strictEqual(cache.procedures[1].name, `theExtProcedure`, `Expect valid name`);
+    assert.strictEqual(cache.procedures[0].name, `theExtProcedure`, `Expect valid name`);
+    assert.strictEqual(cache.procedures[1].name, `theLocalProc`, `Expect valid name`);
+
+    const theLocalProc = cache.find(`theLocalProc`);
 
     // Has a parameter
-    assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+    assert.strictEqual(theLocalProc.subItems.length, 1, `Expect length of 1`);
 
     // Has a local scope
-    assert.strictEqual(cache.procedures[0].scope !== undefined, true, `Should have a scope`);
+    assert.strictEqual(theLocalProc.scope !== undefined, true, `Should have a scope`);
 
     // Should have a local variable
-    assert.strictEqual(cache.procedures[0].scope.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(theLocalProc.scope.variables.length, 1, `Expect length of 1`);
   },
 
   linter1_indent: async () => {
