@@ -248,13 +248,15 @@ module.exports = class LanguageWorker {
                 );
 
                 structDef.children.push(
-                  ...struct.subItems.map(subitem => new vscode.DocumentSymbol(
-                    subitem.name,
-                    subitem.keywords.join(` `).trim(),
-                    vscode.SymbolKind.Property,
-                    new vscode.Range(subitem.position.line, 0, subitem.position.line, 0),
-                    new vscode.Range(subitem.position.line, 0, subitem.position.line, 0)
-                  ))
+                  ...struct.subItems
+                    .filter(subitem => subitem.position && subitem.position.path === currentPath)
+                    .map(subitem => new vscode.DocumentSymbol(
+                      subitem.name,
+                      subitem.keywords.join(` `).trim(),
+                      vscode.SymbolKind.Property,
+                      new vscode.Range(subitem.position.line, 0, subitem.position.line, 0),
+                      new vscode.Range(subitem.position.line, 0, subitem.position.line, 0)
+                    ))
                 );
 
                 betterDefs.push(structDef);
