@@ -6,7 +6,7 @@ Adds functionality to improve writing RPGLE, including:
 
 * Content assist
 * Outline view
-* Linter (`**FREE only)
+* Linter (`**FREE` only)
 * Column assist for fixed-format RPGLE.
 
 Depends on Code for IBM i due to source code living on the remote system.
