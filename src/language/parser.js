@@ -296,7 +296,7 @@ module.exports = class Parser {
           } else {
             if (spec === ` `) {
             //Clear out stupid comments
-              line = line.substring(8);
+              line = line.substring(7);
 
               lineIsFree = true;
             } else if (![`D`, `P`, `C`, `F`].includes(spec)) {

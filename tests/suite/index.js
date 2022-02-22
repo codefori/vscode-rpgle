@@ -2160,4 +2160,28 @@ module.exports = {
     assert.strictEqual(uppercase.position.path, `'./tests/rpgle/eof4.rpgle'`, `Path is incorrect`);
     assert.strictEqual(uppercase.position.line, 0, `Index of 0 expected`);
   },
+
+  columnFix: async () => {
+    const lines = [
+      `       Dcl-pr abcd1         Extpgm('ABC049');`,
+      `         ParentProductSearch           zoned(11);`,
+      `         AllowSelect                   char(1)   Options(*nopass);`,
+      `         ReturnItemNumber              zoned(7)  Options(*nopass);`,
+      `       end-pr;`,
+      `       dcl-pr abcd2    extpgm('ABC039');`,
+      `         SelectFlag                  char(1);`,
+      `         ReturnProduct               zoned(7);`,
+      `         SupplierFilter              zoned(3) options(*nopass);`,
+      `         DescriptionFilter           char(20) Options(*nopass);`,
+      `       end-pr;`,
+      `       dcl-pr abcd3      extpgm('ABC001');`,
+      `         ProductZoned                  Zoned(7);`,
+      `       end-pr;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.procedures.length, 3);
+  }
 }
