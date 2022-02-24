@@ -27,17 +27,28 @@ module.exports = class {
     case `file`:
       // Local file
       type = `file`;
-      if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
-      if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+      if (getPath.includes(`,`) && !getPath.includes(`/`)) {
+        let memberParts = getPath.split(`,`);
+        if (memberParts.length === 1) {
+          memberParts = [`qrpgleref`, memberParts[0]];
+        }
+        
+        finishedPath = path.join(vscode.workspace.workspaceFolders[0].uri.path, ...memberParts);
+        
+      } else {
+        // IFS styled path
+        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
 
-      if (getPath.startsWith(`/`)) {
+        if (getPath.startsWith(`/`)) {
         //Get from root
-        finishedPath = getPath;
-      } 
+          finishedPath = getPath;
+        }
 
-      else {
-        finishedPath = path.posix.join(vscode.workspace.workspaceFolders[0].uri.path, getPath);
-      };
+        else {
+          finishedPath = path.join(vscode.workspace.workspaceFolders[0].uri.path, getPath);
+        };
+      }
       break;
 
     case `streamfile`:

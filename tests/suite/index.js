@@ -258,6 +258,33 @@ module.exports = {
     assert.strictEqual(cache.procedures[0].position.line, 2, `Index of 3 expected`);
   },
 
+  test10_local_fixedcopy: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DftActGrp(*No);`,
+      ``,
+      `/copy tests,eof4`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `Dcl-C theConstant 'Hello world';`,
+      ``,
+      `dsply theConstant;`,
+      ``,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+    assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+
+    const uppercase = cache.find(`UPPERCASE`);
+    assert.strictEqual(uppercase.position.path, `tests,eof4`, `Path is incorrect`);
+  },
 
   /**
    * Test many copybooks

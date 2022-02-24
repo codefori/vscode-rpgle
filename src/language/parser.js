@@ -168,6 +168,16 @@ module.exports = class Parser {
         if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
         if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
 
+        // Member styled include
+        if (!getPath.includes(`/`)) {
+          let memberParts = getPath.split(`,`);
+
+          if (memberParts.length === 1) {
+            memberParts = [`qrpgleref`, memberParts[0]];
+          }
+          getPath = memberParts.join(path.sep) + `*`
+        }
+
         /** @type {vscode.Uri} */
         let possibleFile;
 
