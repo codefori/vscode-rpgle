@@ -306,9 +306,18 @@ module.exports = class Linter {
                   if (statement.length < 2) break;
 
                   if (rules.SpecificCasing) {
-                    const caseRule = rules.SpecificCasing.find(rule => rule.operation.toUpperCase() === statement[0].value.toUpperCase());
+                    const caseRule = rules.SpecificCasing.find(rule => [statement[0].value.toUpperCase(), `*DECLARE`].includes(rule.operation.toUpperCase()));
                     if (caseRule) {
-                      if (statement[0].value !== caseRule.expected) {
+                      let expected = caseRule.expected;
+                      switch (expected.toUpperCase()) {
+                      case `*UPPER`:
+                        expected = statement[0].value.toUpperCase(); 
+                        break;
+                      case `*LOWER`:
+                        expected = statement[0].value.toLowerCase(); 
+                        break;
+                      }
+                      if (statement[0].value !== expected) {
                         errors.push({
                           range: new vscode.Range(
                             statementStart,
@@ -316,7 +325,7 @@ module.exports = class Linter {
                           ),
                           offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
                           type: `SpecificCasing`,
-                          newValue: caseRule.expected
+                          newValue: expected
                         });
                       }
                     }
@@ -492,9 +501,18 @@ module.exports = class Linter {
                   value = statement[0].value.toUpperCase();
 
                   if (rules.SpecificCasing) {
-                    const caseRule = rules.SpecificCasing.find(rule => rule.operation.toUpperCase() === value);
+                    const caseRule = rules.SpecificCasing.find(rule => [value, `*DECLARE`].includes(rule.operation.toUpperCase()));
                     if (caseRule) {
-                      if (statement[0].value !== caseRule.expected) {
+                      let expected = caseRule.expected;
+                      switch (expected.toUpperCase()) {
+                      case `*UPPER`:
+                        expected = statement[0].value.toUpperCase(); 
+                        break;
+                      case `*LOWER`:
+                        expected = statement[0].value.toLowerCase(); 
+                        break;
+                      }
+                      if (statement[0].value !== expected) {
                         errors.push({
                           range: new vscode.Range(
                             statementStart,
@@ -502,7 +520,7 @@ module.exports = class Linter {
                           ),
                           offset: {position: statement[0].position, length: statement[0].position + value.length},
                           type: `SpecificCasing`,
-                          newValue: caseRule.expected
+                          newValue: expected
                         });
                       }
                     }
@@ -538,9 +556,18 @@ module.exports = class Linter {
                   value = statement[0].value.toUpperCase();
 
                   if (rules.SpecificCasing) {
-                    const caseRule = rules.SpecificCasing.find(rule => rule.operation.toUpperCase() === value);
+                    const caseRule = rules.SpecificCasing.find(rule => value === rule.operation.toUpperCase());
                     if (caseRule) {
-                      if (statement[0].value !== caseRule.expected) {
+                      let expected = caseRule.expected;
+                      switch (expected.toUpperCase()) {
+                      case `*UPPER`:
+                        expected = statement[0].value.toUpperCase(); 
+                        break;
+                      case `*LOWER`:
+                        expected = statement[0].value.toLowerCase(); 
+                        break;
+                      }
+                      if (statement[0].value !== expected) {
                         errors.push({
                           range: new vscode.Range(
                             statementStart,
@@ -548,7 +575,7 @@ module.exports = class Linter {
                           ),
                           offset: {position: statement[0].position, length: statement[0].position + value.length},
                           type: `SpecificCasing`,
-                          newValue: caseRule.expected
+                          newValue: expected
                         });
                       }
                     }
@@ -646,9 +673,18 @@ module.exports = class Linter {
                     switch (part.type) {
                     case `builtin`:
                       if (rules.SpecificCasing) {
-                        const caseRule = rules.SpecificCasing.find(rule => rule.operation.toUpperCase() === part.value.toUpperCase());
+                        const caseRule = rules.SpecificCasing.find(rule => [part.value.toUpperCase(), `*BIF`].includes(rule.operation.toUpperCase()));
                         if (caseRule) {
-                          if (part.value !== caseRule.expected) {
+                          let expected = caseRule.expected;
+                          switch (expected.toUpperCase()) {
+                          case `*UPPER`:
+                            expected = part.value.toUpperCase();
+                            break;
+                          case `*LOWER`:
+                            expected = part.value.toLowerCase();
+                            break;
+                          }
+                          if (part.value !== expected) {
                             errors.push({
                               range: new vscode.Range(
                                 statementStart,
@@ -656,7 +692,7 @@ module.exports = class Linter {
                               ),
                               offset: {position: part.position, length: part.position + part.value.length},
                               type: `SpecificCasing`,
-                              newValue: caseRule.expected
+                              newValue: expected
                             });
                           }
                         }

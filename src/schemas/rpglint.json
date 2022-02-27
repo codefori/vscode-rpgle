@@ -104,15 +104,16 @@
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "description": "The operation code to check."
+                        "description": "The operation code, declaration or built-in function to check. Can use the following special values: `*DECLARE`, `*BIF`"
                     },
                     "expected": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "The expected casing of the operation code, declaration or built-in function. Can use the following special values: `*LOWER`, `*UPPER`"
                     }
                 },
                 "additionalProperties": false
             },
-            "description": "Specific casing for operation codes."
+            "description": "Specific casing for op codes, declartions or built-in functions codes."
         },
         "NoCTDATA": {
             "$id": "#/properties/NoCTDATA",

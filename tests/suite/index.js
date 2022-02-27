@@ -943,6 +943,128 @@ module.exports = {
     assert.strictEqual(errors.length, 0, `Expect length of 0`);
   },
 
+  linter7_casing6: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-S MyVariable1 Varchar(20);`,
+      `Dcl-S MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = 'Hello world';`,
+      ``,
+      `If myVariable1 = *blank;`,
+      `  MyVariable1 = %Trim(myVariable2);`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `*declare`, expected: `*upper` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 3, `Expect length of 3`);
+    assert.strictEqual(errors[0].newValue, `CTL-OPT`);
+    assert.strictEqual(errors[1].newValue, `DCL-S`);
+    assert.strictEqual(errors[2].newValue, `DCL-S`);
+  },
+
+  linter7_casing7: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-S MyVariable1 Varchar(20);`,
+      `Dcl-S MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = 'Hello world';`,
+      ``,
+      `If myVariable1 = *blank;`,
+      `  MyVariable1 = %Trim(myVariable2);`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `ctl-opt`, expected: `Ctl-Opt` },
+        { operation: `*declare`, expected: `*upper` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+    assert.strictEqual(errors[0].newValue, `DCL-S`);
+    assert.strictEqual(errors[1].newValue, `DCL-S`);
+  },
+
+  linter7_casing8: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-S MyVariable1 Varchar(20);`,
+      `Dcl-S MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = 'Hello world';`,
+      ``,
+      `If myVariable1 = *blank;`,
+      `  MyVariable1 = %Trim(myVariable2);`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `ctl-opt`, expected: `Ctl-Opt` },
+        { operation: `*declare`, expected: `*LOWER` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+    assert.strictEqual(errors[0].newValue, `dcl-s`);
+    assert.strictEqual(errors[1].newValue, `dcl-s`);
+  },
+
+  linter7_casing9: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-S MyVariable1 Varchar(20);`,
+      `Dcl-S MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = 'Hello world';`,
+      ``,
+      `If myVariable1 = *blank;`,
+      `  MyVariable1 = %Trim(myVariable2);`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `*bif`, expected: `*lower` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+    assert.strictEqual(errors[0].newValue, `%trim`);
+  },
+
   linter8: async () => {
     const lines = [
       `**FREE`,
