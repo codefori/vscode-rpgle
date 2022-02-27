@@ -114,27 +114,22 @@ module.exports = class LinterWorker {
                   switch (type) {
                   case `member`:
                     const memberPath = path.split(`/`);
-                    try {
-                      await vscode.commands.executeCommand(
-                        `code-for-ibmi.runCommand`,
-                        {
-                          'command': `CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
-                        }
-                      )
-                    } catch (e) {
-                      Output.write(e);
-                    }
+
+                    // Will not crash, even if it fails
+                    await vscode.commands.executeCommand(
+                      `code-for-ibmi.runCommand`,
+                      {
+                        'command': `CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
+                      }
+                    );
   
-                    try {
-                      await vscode.commands.executeCommand(
-                        `code-for-ibmi.runCommand`,
-                        {
-                          command: `ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
-                        }
-                      );
-                    } catch (e) {
-                      Output.write(e);
-                    }
+                    // Will not crash, even if it fails
+                    await vscode.commands.executeCommand(
+                      `code-for-ibmi.runCommand`,
+                      {
+                        command: `ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
+                      }
+                    );
   
                     try {
                       Output.write(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);
