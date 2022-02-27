@@ -740,7 +740,7 @@ module.exports = {
     }, `Error not as expected`);
   },
 
-  linter7: async () => {
+  linter7_casing1: async () => {
     const lines = [
       `**FREE`,
       ``,
@@ -783,6 +783,126 @@ module.exports = {
       type: `SpecificCasing`,
       newValue: `SELECT`
     }, `Error not as expected`);
+  },
+
+  linter7_casing2: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `  Select;`,
+      `    When myVariable2 = *blank;`,
+      `      MyVariable2 = 'Still blank?';`,
+      `    When myVariable2 = 'YOYOYO';`,
+      `        MyVariable2 = 'YOYOYO';`,
+      `  Endsl;`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `ctl-opt`, expected: `Ctl-OPT` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+
+    assert.deepStrictEqual(errors[0], {
+      range: new vscode.Range(
+        new vscode.Position(2, 0),
+        new vscode.Position(2, 22),
+      ),
+      offset: { position: 0, length: 7 },
+      type: `SpecificCasing`,
+      newValue: `Ctl-OPT`
+    }, `Error not as expected`);
+  },
+
+  linter7_casing3: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `  Select;`,
+      `    When myVariable2 = *blank;`,
+      `      MyVariable2 = 'Still blank?';`,
+      `    When myVariable2 = 'YOYOYO';`,
+      `        MyVariable2 = 'YOYOYO';`,
+      `  Endsl;`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `dcl-s`, expected: `DCL-S` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+
+    assert.deepStrictEqual(errors[0], {
+      range: new vscode.Range(
+        new vscode.Position(4, 0),
+        new vscode.Position(4, 26),
+      ),
+      offset: { position: 0, length: 5 },
+      type: `SpecificCasing`,
+      newValue: `DCL-S`
+    }, `Error not as expected`);
+  },
+
+  linter7_casing4: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
+      `Dcl-S MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = *blank;`,
+      ``,
+      `If myVariable2 = *blank;`,
+      `MyVariable2 = 'Hello world';`,
+      `  Select;`,
+      `    When myVariable2 = *blank;`,
+      `      MyVariable2 = 'Still blank?';`,
+      `    When myVariable2 = 'YOYOYO';`,
+      `        MyVariable2 = 'YOYOYO';`,
+      `  Endsl;`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `dcl-s`, expected: `Dcl-S` },
+        { operation: `ctl-opt`, expected: `Ctl-Opt` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 0, `Expect length of 0`);
   },
 
   linter8: async () => {

@@ -304,6 +304,24 @@ module.exports = class Linter {
 
                 case `declare`:
                   if (statement.length < 2) break;
+
+                  if (rules.SpecificCasing) {
+                    const caseRule = rules.SpecificCasing.find(rule => rule.operation.toUpperCase() === statement[0].value.toUpperCase());
+                    if (caseRule) {
+                      if (statement[0].value !== caseRule.expected) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
+                          type: `SpecificCasing`,
+                          newValue: caseRule.expected
+                        });
+                      }
+                    }
+                  }
+
                   value = statement[1].value;
 
                   if (value.match(/^\d/)) {
@@ -471,7 +489,26 @@ module.exports = class Linter {
                   break;
 
                 case `end`:
-                  switch (statement[0].value.toUpperCase()) {
+                  value = statement[0].value.toUpperCase();
+
+                  if (rules.SpecificCasing) {
+                    const caseRule = rules.SpecificCasing.find(rule => rule.operation.toUpperCase() === value);
+                    if (caseRule) {
+                      if (statement[0].value !== caseRule.expected) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          offset: {position: statement[0].position, length: statement[0].position + value.length},
+                          type: `SpecificCasing`,
+                          newValue: caseRule.expected
+                        });
+                      }
+                    }
+                  }
+
+                  switch (value) {
                   case `ENDSR`:
                     if (inProcedure === false) {
                       if (rules.NoGlobalSubroutines) {
