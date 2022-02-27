@@ -5,6 +5,7 @@ const possibleTags = require(`../language/models/tags`);
 
 const Linter = require(`../language/linter`);
 const Generic = require(`../language/generic`);
+const Cache = require(`../language/models/cache`);
 
 const { Parser } = require(`../parser`);
 
@@ -196,59 +197,91 @@ module.exports = class LanguageWorker {
             /** @type vscode.DocumentSymbol[] */
             const betterDefs = [];
 
-            /** @type vscode.SymbolInformation[] */
-            let currentDefs = [];
+            /**
+             * @param {Cache} scope
+             * @returns {vscode.DocumentSymbol[]}
+             */
+            const getScopeVars = (scope) => {
+              /** @type vscode.DocumentSymbol[] */
+              const currentScopeDefs = [];
+
+              currentScopeDefs.push(
+                ...scope.subroutines.filter(sub => sub.position && sub.position.path === currentPath)
+                  .map(def => new vscode.DocumentSymbol(
+                    def.name, 
+                    def.keywords.join(` `).trim(), 
+                    vscode.SymbolKind.Function,
+                    new vscode.Range(def.position.line, 0, def.position.line, 0),
+                    new vscode.Range(def.position.line, 0, def.position.line, 0)
+                  )),
+
+                ...scope.variables
+                  .filter(variable => variable.position && variable.position.path === currentPath)
+                  .map(def => new vscode.DocumentSymbol(
+                    def.name, 
+                    def.keywords.join(` `).trim(), 
+                    vscode.SymbolKind.Variable,
+                    new vscode.Range(def.position.line, 0, def.position.line, 0),
+                    new vscode.Range(def.position.line, 0, def.position.line, 0)
+                  )),
+
+                ...scope.constants
+                  .filter(constant => constant.position && constant.position.path === currentPath)
+                  .map(def => new vscode.DocumentSymbol(
+                    def.name, 
+                    def.keywords.join(` `).trim(), 
+                    vscode.SymbolKind.Constant,
+                    new vscode.Range(def.position.line, 0, def.position.line, 0),
+                    new vscode.Range(def.position.line, 0, def.position.line, 0)
+                  ))
+              );
+
+              scope.structs
+                .filter(struct => struct.position && struct.position.path === currentPath)
+                .forEach(struct => {
+                  const structDef = new vscode.DocumentSymbol(
+                    struct.name,
+                    struct.keywords.join(` `).trim(),
+                    vscode.SymbolKind.Struct,
+                    new vscode.Range(struct.position.line, 0, struct.position.line, 0),
+                    new vscode.Range(struct.position.line, 0, struct.position.line, 0)
+                  );
+
+                  structDef.children.push(
+                    ...struct.subItems
+                      .filter(subitem => subitem.position && subitem.position.path === currentPath)
+                      .map(subitem => new vscode.DocumentSymbol(
+                        subitem.name,
+                        subitem.keywords.join(` `).trim(),
+                        vscode.SymbolKind.Property,
+                        new vscode.Range(subitem.position.line, 0, subitem.position.line, 0),
+                        new vscode.Range(subitem.position.line, 0, subitem.position.line, 0)
+                      ))
+                  );
+
+                  betterDefs.push(structDef);
+                });
+
+              return currentScopeDefs;
+            }
 
             betterDefs.push(
-              ...[
-                ...doc.procedures.filter(proc => proc.position && proc.position.path === currentPath),
-                ...doc.subroutines.filter(sub => sub.position && sub.position.path === currentPath),
-              ].map(def => new vscode.DocumentSymbol(
-                def.name, 
-                def.keywords.join(` `).trim(), 
-                vscode.SymbolKind.Function,
-                new vscode.Range(def.position.line, 0, def.position.line, 0),
-                new vscode.Range(def.position.line, 0, def.position.line, 0)
-              ))
+              ...getScopeVars(doc),
             );
 
-            betterDefs.push(
-              ...doc.variables
-                .filter(variable => variable.position && variable.position.path === currentPath)
-                .map(def => new vscode.DocumentSymbol(
-                  def.name, 
-                  def.keywords.join(` `).trim(), 
-                  vscode.SymbolKind.Variable,
-                  new vscode.Range(def.position.line, 0, def.position.line, 0),
-                  new vscode.Range(def.position.line, 0, def.position.line, 0)
-                ))
-            );
-
-            betterDefs.push(
-              ...doc.constants
-                .filter(constant => constant.position && constant.position.path === currentPath)
-                .map(def => new vscode.DocumentSymbol(
-                  def.name, 
-                  def.keywords.join(` `).trim(), 
-                  vscode.SymbolKind.Constant,
-                  new vscode.Range(def.position.line, 0, def.position.line, 0),
-                  new vscode.Range(def.position.line, 0, def.position.line, 0)
-                ))
-            );
-
-            doc.structs
-              .filter(struct => struct.position && struct.position.path === currentPath)
-              .forEach(struct => {
-                const structDef = new vscode.DocumentSymbol(
-                  struct.name,
-                  struct.keywords.join(` `).trim(),
-                  vscode.SymbolKind.Struct,
-                  new vscode.Range(struct.position.line, 0, struct.position.line, 0),
-                  new vscode.Range(struct.position.line, 0, struct.position.line, 0)
+            doc.procedures
+              .filter(proc => proc.position && proc.position.path === currentPath)
+              .forEach(proc => {
+                const procDef = new vscode.DocumentSymbol(
+                  proc.name,
+                  proc.keywords.join(` `).trim(),
+                  vscode.SymbolKind.Function,
+                  new vscode.Range(proc.position.line, 0, proc.position.line, 0),
+                  new vscode.Range(proc.position.line, 0, proc.position.line, 0)
                 );
 
-                structDef.children.push(
-                  ...struct.subItems
+                procDef.children.push(
+                  ...proc.subItems
                     .filter(subitem => subitem.position && subitem.position.path === currentPath)
                     .map(subitem => new vscode.DocumentSymbol(
                       subitem.name,
@@ -259,7 +292,13 @@ module.exports = class LanguageWorker {
                     ))
                 );
 
-                betterDefs.push(structDef);
+                if (proc.scope) {
+                  procDef.children.push(
+                    ...getScopeVars(proc.scope)
+                  );
+                }
+
+                betterDefs.push(procDef);
               });
 
             return betterDefs;
