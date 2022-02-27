@@ -150,11 +150,22 @@ const commonMatchers = [
     becomes: {
       type: `declare`
     }
+  },
+  {
+    name: `BIF`,
+    match: [
+      { type: `percent` },
+      { type: `word` }
+    ],
+    becomes: {
+      type: `builtin`
+    }
   }
 ]
 
-const splitParts = [`.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`,` `];
+const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, ` `];
 const types = {
+  '%': `percent`,
   '.': `dot`,
   '(': `openbracket`,
   ')': `closebracket`,

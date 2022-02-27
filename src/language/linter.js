@@ -644,6 +644,25 @@ module.exports = class Linter {
 
                   if (part.value) {
                     switch (part.type) {
+                    case `builtin`:
+                      if (rules.SpecificCasing) {
+                        const caseRule = rules.SpecificCasing.find(rule => rule.operation.toUpperCase() === part.value.toUpperCase());
+                        if (caseRule) {
+                          if (part.value !== caseRule.expected) {
+                            errors.push({
+                              range: new vscode.Range(
+                                statementStart,
+                                statementEnd
+                              ),
+                              offset: {position: part.position, length: part.position + part.value.length},
+                              type: `SpecificCasing`,
+                              newValue: caseRule.expected
+                            });
+                          }
+                        }
+                      }
+                      break;
+
                     case `word`:
                       const upperName = part.value.toUpperCase();
 

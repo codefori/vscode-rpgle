@@ -877,6 +877,44 @@ module.exports = {
       ``,
       `Ctl-Opt DFTACTGRP(*No);`,
       ``,
+      `Dcl-S MyVariable1 Varchar(20);`,
+      `Dcl-S MyVariable2 Char(20);`,
+      ``,
+      `myVariable2 = 'Hello world';`,
+      ``,
+      `If myVariable1 = *blank;`,
+      `  MyVariable1 = %Trim(myVariable2);`,
+      `Endif;`,
+      `Return;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      SpecificCasing: [
+        { operation: `%trim`, expected: `%trim` },
+      ]
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+
+    assert.deepStrictEqual(errors[0], {
+      range: new vscode.Range(
+        new vscode.Position(10, 2),
+        new vscode.Position(10, 34),
+      ),
+      offset: { position: 14, length: 19 },
+      type: `SpecificCasing`,
+      newValue: `%trim`
+    }, `Error not as expected`);
+  },
+
+  linter7_casing5: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Ctl-Opt DFTACTGRP(*No);`,
+      ``,
       `Dcl-S MyVariable2 Char(20);`,
       ``,
       `myVariable2 = *blank;`,
