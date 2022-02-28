@@ -284,6 +284,8 @@ module.exports = class Parser {
       isFullyFree = files[file][0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
 
+      let directIfScope = 0;
+
       for (let line of files[file]) {
         const scope = scopes[scopes.length - 1];
         let spec;
@@ -339,9 +341,17 @@ module.exports = class Parser {
           parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
           partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
 
-          if (parts[0] === `/EOF`) {
+          if (parts[0] === `/EOF` && directIfScope === 0) {
             // End of parsing for this file
             break;
+          } else
+          if (parts[0] === `/IF`) {
+            // Directive IF
+            directIfScope += 1;
+          } else
+          if (parts[0] === `/ENDIF`) {
+            // Directive ENDIF
+            directIfScope -= 1;
           }
 
           switch (parts[0]) {
