@@ -259,7 +259,7 @@ module.exports = class LanguageWorker {
                       ))
                   );
 
-                  betterDefs.push(structDef);
+                  currentScopeDefs.push(structDef);
                 });
 
               return currentScopeDefs;
