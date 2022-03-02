@@ -2490,5 +2490,35 @@ module.exports = {
     const cache = await parser.getDocs(URI, lines);
 
     assert.strictEqual(cache.procedures.length, 3);
+  },
+
+  incorrectEnd1: async () => {
+    const lines = [
+      `Dcl-S Text Char(52);`,
+      ``,
+      `Text = 'Hello world';`,
+      ``,
+      `End-Proc;`
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    const { errors } = Linter.getErrors(lines, {
+      PrettyComments: true
+    }, cache);
+
+    assert.deepStrictEqual(errors[0], {
+      type: `UnexpectedEnd`,
+      range: new vscode.Range(
+        new vscode.Position(4, 0),
+        new vscode.Position(4, 8),
+      ),
+      offset: {
+        position: 0,
+        length: 8
+      },
+      newValue: undefined,
+    });
   }
 }

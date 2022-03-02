@@ -31,6 +31,7 @@ const errorText = {
   'PrettyComments': `Comments must be correctly formatted.`,
   'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
   'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
+  'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\``,
 }
 
 module.exports = class Linter {
@@ -81,13 +82,10 @@ module.exports = class Linter {
     // Excluding indent
     const ruleCount = Object.keys(rules).length - (rules.indent ? 1 : 0);
 
-    let globalProcs = [];
+    if (!globalScope) 
+      globalScope = new Cache();
 
-    if (globalScope) {
-      globalProcs = globalScope.procedures;
-    } else {
-      return null;
-    }
+    const globalProcs = globalScope.procedures;
 
     let inProcedure = false;
     let inPrototype = false;
@@ -543,10 +541,34 @@ module.exports = class Linter {
                     }
                     break;
                   case `END-PROC`:
+                    if (inProcedure === false) {
+                      errors.push({
+                        range: new vscode.Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
+                        type: `UnexpectedEnd`,
+                        newValue: undefined,
+                      });
+                    }
+
                     inProcedure = false;
                     break;
                   case `END-PR`:
                   case `END-PI`:
+                    if (inPrototype === false) {
+                      errors.push({
+                        range: new vscode.Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
+                        type: `UnexpectedEnd`,
+                        newValue: undefined,
+                      });
+                    }
+
                     inPrototype = false;
                     break;
                   }

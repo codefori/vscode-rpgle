@@ -18,7 +18,7 @@ module.exports = class ContentRange {
           "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
           "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
           "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"|
-          "NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines"
+          "NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines"|"UnexpectedEnd"
        }
      * */
     this.type = null;
