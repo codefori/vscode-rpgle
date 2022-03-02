@@ -7,6 +7,7 @@ const Linter = require(`../language/linter`);
 const Generic = require(`../language/generic`);
 const Cache = require(`../language/models/cache`);
 
+const Output = require(`../output`);
 const { Parser } = require(`../parser`);
 
 module.exports = class LanguageWorker {
@@ -187,11 +188,29 @@ module.exports = class LanguageWorker {
         }
       }),
 
+      /**
+       * Used for the Outline view
+       */
       vscode.languages.registerDocumentSymbolProvider({ language: `rpgle` }, 
         {
           provideDocumentSymbols: async (document, token) => {
             const text = document.getText();
-            const doc = await Parser.getDocs(document.uri, text);
+            
+            /** @type {Cache} */
+            let doc;
+
+            try {
+              doc = await Parser.getDocs(document.uri, text);
+
+              if (!doc) {
+                Output.write(`Error parsing ${document.uri.path}: Usually indicates scoping issue.`);
+                return [];
+              }
+            } catch (e) {
+              Output.write(`Error parsing ${document.uri.path}: ${e.message}`);
+              Output.write(e.stack);
+              return [];
+            }
 
             const currentPath = document.uri.path;
             /** @type vscode.DocumentSymbol[] */

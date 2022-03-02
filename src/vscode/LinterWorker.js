@@ -373,10 +373,18 @@ module.exports = class LinterWorker {
 
       const options = await this.getLinterOptions(document.uri);
 
-      const detail = Linter.getErrors(text, {
-        indent: Number(vscode.window.activeTextEditor.options.tabSize),
-        ...options
-      }, docs);
+      let detail;
+
+      try {
+        detail = Linter.getErrors(text, {
+          indent: Number(vscode.window.activeTextEditor.options.tabSize),
+          ...options
+        }, docs);
+      } catch (e) {
+        Output.write(`Error linting ${document.uri.path}: ${e.message}`);
+        Output.write(e.stack);
+        return;
+      }
 
       const indentErrors = detail.indentErrors;
       const errors = detail.errors;
