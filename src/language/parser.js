@@ -55,7 +55,7 @@ module.exports = class Parser {
 
       // If we still have a cached version, let's use that
       if (now <= (this.tables[table].fetched + HALF_HOUR)) {
-        return this.tables[table].recordFormats;
+        return this.tables[table].recordFormats.map(d => d.clone());
       }
     }
 
@@ -65,6 +65,7 @@ module.exports = class Parser {
       recordFormats: []
     }
 
+    /** @type {Declaration[]} */
     let newDefs;
 
     try {
@@ -80,7 +81,7 @@ module.exports = class Parser {
 
     this.tables[table].fetching = false;
 
-    return newDefs;
+    return newDefs.map(d => d.clone());
   }
 
   /**
@@ -253,27 +254,58 @@ module.exports = class Parser {
 
     /**
      * Expands LIKEDS and LIKEREC.
+     * @param {string} file
      * @param {Declaration} ds 
      */
-    const expandDs = (ds) => {
-      [`LIKEDS`, `LIKEREC`].forEach(tag => {
+    const expandDs = async (file, ds) => {
+      const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
+      for (const tag of tags) {
         const keyword = ds.keywords.find(keyword => keyword.startsWith(`${tag}(`) && keyword.endsWith(`)`));
         if (keyword) {
-          const keywordValue = keyword.substring(7, keyword.length - 1).toUpperCase();
-  
-          for (let i = scopes.length - 1; i >= 0; i--) {
-            const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
-            if (valuePointer) {
-              ds.subItems = valuePointer.subItems;
-  
-              // We need to add qualified as it is qualified by default.
-              if (!ds.keywords.includes(`QUALIFIED`))
-                ds.keywords.push(`QUALIFIED`);
-              return;
+          let keywordValue = keyword.substring(tag.length+1, keyword.length - 1).toUpperCase();
+
+          if (keywordValue.startsWith(`'`) && keywordValue.endsWith(`'`)) {
+            keywordValue = keywordValue.substring(1, keywordValue.length - 1);
+          }
+
+          if ([`EXTNAME`].includes(tag)) {
+            if (!ds.keywords.includes(`QUALIFIED`))
+              ds.keywords.push(`QUALIFIED`);
+
+            // Fetch from external definitions
+            const recordFormats = await this.fetchTable(keywordValue);
+
+            if (recordFormats.length > 0) {
+
+              // Got to fix the positions for the defintions to be the declare.
+              recordFormats.forEach(recordFormat => {
+                recordFormat.subItems.forEach(subItem => {
+                  subItem.position = {
+                    path: file,
+                    line: lineNumber
+                  };
+                });
+
+                ds.subItems.push(...recordFormat.subItems);
+              });
+            }
+
+          } else {
+            // Fetch from local definitions
+            for (let i = scopes.length - 1; i >= 0; i--) {
+              const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
+              if (valuePointer) {
+                ds.subItems = valuePointer.subItems;
+    
+                // We need to add qualified as it is qualified by default.
+                if (!ds.keywords.includes(`QUALIFIED`))
+                  ds.keywords.push(`QUALIFIED`);
+                return;
+              }
             }
           }
         }
-      });
+      };
     }
 
     files[workingUri.path] = baseLines;
@@ -459,12 +491,12 @@ module.exports = class Parser {
               }
 
               currentGroup = `structs`;
+
+              // Expand the LIKEDS value if there is one.
+              await expandDs(file, currentItem);
+
               // Does the keywords include a keyword that makes end-ds useless?
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-
-                // Expand the LIKEDS value if there is one.
-                expandDs(currentItem);
-
                 scope.structs.push(currentItem);
               } else {
                 currentItem.readParms = true;
@@ -684,7 +716,7 @@ module.exports = class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  expandDs(currentSub);
+                  await expandDs(file, currentSub);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
@@ -874,6 +906,8 @@ module.exports = class Parser {
                   line: lineNumber
                 }
 
+                expandDs(file, currentItem);
+
                 currentGroup = `structs`;
                 scope.structs.push(currentItem);
                 resetDefinition = true;
@@ -932,7 +966,7 @@ module.exports = class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  expandDs(currentSub);
+                  await expandDs(file, currentSub);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;

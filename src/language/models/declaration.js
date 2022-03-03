@@ -44,4 +44,31 @@ module.exports = class Declaration {
     /** @type {Cache|undefined} */
     this.scope = undefined;
   }
+
+  clone() {
+    const clone = new Declaration(this.type);
+    clone.name = this.name;
+    clone.keywords = [...this.keywords];
+    clone.description = this.description;
+    clone.tags = this.tags;
+
+    if (this.position) {
+      clone.position = {
+        path: this.position.path,
+        line: this.position.line
+      };
+    }
+
+    clone.subItems = this.subItems.map(subItem => subItem.clone());
+    
+    clone.range = {
+      start: this.range.start,
+      end: this.range.end
+    };
+
+    //clone.references = this.references;
+    //clone.readParms = this.readParms;
+    //clone.scope = this.scope;
+    return clone;
+  }
 }
