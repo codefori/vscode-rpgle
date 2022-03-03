@@ -251,6 +251,31 @@ module.exports = class Parser {
     // Global scope bits
     scopes.push(new Cache());
 
+    /**
+     * Expands LIKEDS and LIKEREC.
+     * @param {Declaration} ds 
+     */
+    const expandDs = (ds) => {
+      [`LIKEDS`, `LIKEREC`].forEach(tag => {
+        const keyword = ds.keywords.find(keyword => keyword.startsWith(`${tag}(`) && keyword.endsWith(`)`));
+        if (keyword) {
+          const keywordValue = keyword.substring(7, keyword.length - 1).toUpperCase();
+  
+          for (let i = scopes.length - 1; i >= 0; i--) {
+            const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
+            if (valuePointer) {
+              ds.subItems = valuePointer.subItems;
+  
+              // We need to add qualified as it is qualified by default.
+              if (!ds.keywords.includes(`QUALIFIED`))
+                ds.keywords.push(`QUALIFIED`);
+              return;
+            }
+          }
+        }
+      });
+    }
+
     files[workingUri.path] = baseLines;
 
     if (withIncludes) {
@@ -438,22 +463,7 @@ module.exports = class Parser {
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
 
                 // Expand the LIKEDS value if there is one.
-                const likeDS = currentItem.keywords.find(keyword => keyword.startsWith(`LIKEDS(`) && keyword.endsWith(`)`));
-                if (likeDS) {
-                  const likeDSValue = likeDS.substring(7, likeDS.length - 1).toUpperCase();
-
-                  for (let i = scopes.length - 1; i >= 0; i--) {
-                    const likeDSItem = scopes[i].structs.find(struct => struct.name.toUpperCase() === likeDSValue);
-                    if (likeDSItem) {
-                      currentItem.subItems = likeDSItem.subItems;
-
-                      // We need to add qualified as it is qualified by default.
-                      if (!currentItem.keywords.includes(`QUALIFIED`))
-                        currentItem.keywords.push(`QUALIFIED`);
-                      break;
-                    }
-                  }
-                }
+                expandDs(currentItem);
 
                 scope.structs.push(currentItem);
               } else {
@@ -674,22 +684,7 @@ module.exports = class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  const likeDS = currentSub.keywords.find(keyword => keyword.startsWith(`LIKEDS(`) && keyword.endsWith(`)`));
-                  if (likeDS) {
-                    const likeDSValue = likeDS.substring(7, likeDS.length - 1).toUpperCase();
-                    
-                    for (let i = scopes.length - 1; i >= 0; i--) {
-                      const likeDSItem = scopes[i].structs.find(struct => struct.name.toUpperCase() === likeDSValue);
-                      if (likeDSItem) {
-                        currentSub.subItems = likeDSItem.subItems;
-                    
-                        // We need to add qualified as it is qualified by default.
-                        if (!currentSub.keywords.includes(`QUALIFIED`))
-                          currentSub.keywords.push(`QUALIFIED`);
-                        break;
-                      }
-                    }
-                  }
+                  expandDs(currentSub);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
@@ -937,22 +932,7 @@ module.exports = class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  const likeDS = currentSub.keywords.find(keyword => keyword.startsWith(`LIKEDS(`) && keyword.endsWith(`)`));
-                  if (likeDS) {
-                    const likeDSValue = likeDS.substring(7, likeDS.length - 1).toUpperCase();
-  
-                    for (let i = scopes.length - 1; i >= 0; i--) {
-                      const likeDSItem = scopes[i].structs.find(struct => struct.name.toUpperCase() === likeDSValue);
-                      if (likeDSItem) {
-                        currentSub.subItems = likeDSItem.subItems;
-  
-                        // We need to add qualified as it is qualified by default.
-                        if (!currentSub.keywords.includes(`QUALIFIED`))
-                          currentSub.keywords.push(`QUALIFIED`);
-                        break;
-                      }
-                    }
-                  }
+                  expandDs(currentSub);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
