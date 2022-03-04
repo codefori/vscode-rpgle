@@ -894,12 +894,9 @@ module.exports = class Linter {
           if ([
             `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
           ].includes(opcode)) {
-            if (opcode === `DCL-DS` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
-            //No change
+            if ([`DCL-DS`, `DCL-PI`, `DCL-PR`].includes(opcode) && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
+              //No change
             } 
-            else if (opcode === `DCL-PI` && oneLineTriggers[opcode].some(trigger => upperLine.includes(trigger))) {
-            //No change
-            }
             else if (opcode === `SELECT`) {
               if (skipIndentCheck === false) expectedIndent += (indent*2); 
             }

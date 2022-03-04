@@ -537,6 +537,12 @@ module.exports = class Parser {
 
                 currentItem.readParms = true;
 
+                // Does the keywords include a keyword that makes end-ds useless?
+                if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
+                  scope.procedures.push(currentItem);
+                  resetDefinition = true;
+                }
+
                 currentDescription = [];
               }
             }

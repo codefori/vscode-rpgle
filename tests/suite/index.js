@@ -2520,5 +2520,43 @@ module.exports = {
       },
       newValue: undefined,
     });
+  },
+
+  overload1: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `Dcl-PR json_setBool pointer extproc(*CWIDEN : 'jx_SetBoolByName');`,
+      `  node pointer value;`,
+      `  nodePath pointer value options(*string);`,
+      `  value ind value;`,
+      `End-PR;`,
+      ``,
+      `Dcl-PR json_setNum pointer extproc(*CWIDEN : 'jx_SetDecByName');`,
+      `  node pointer value;`,
+      `  nodePath pointer value options(*string);`,
+      `  value packed(30:15) value;`,
+      `End-PR;`,
+      ``,
+      `Dcl-PR json_set pointer overload ( `,
+      `    json_setBool: `,
+      `    json_setNum `,
+      `);`,
+      ``,
+      `Dcl-PR json_nodeType int(5) extproc(*CWIDEN : 'jx_GetNodeType');`,
+      `  node pointer value;`,
+      `End-PR;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    const { indentErrors } = Linter.getErrors(lines, {
+      indent: 2,
+      PrettyComments: true
+    }, cache);
+
+    assert.strictEqual(cache.procedures.length, 4);
+    assert.strictEqual(indentErrors.length, 0);
   }
 }
