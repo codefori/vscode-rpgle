@@ -237,7 +237,11 @@ module.exports = class Parser {
     /** @type {{tag: string, content: string}[]} */
     let currentTags = [];
 
-    let currentItem, currentSub, currentProcName;
+    /** @type {Declaration} */
+    let currentItem;
+    /** @type {Declaration} */
+    let currentSub
+    let currentProcName;
 
     let resetDefinition = false; //Set to true when you're done defining a new item
     let docs = false; // If section is for ILEDocs
@@ -870,12 +874,12 @@ module.exports = class Parser {
               potentialName = dSpec.potentialName.substring(0, dSpec.potentialName.length - 3);
               continue;
             } else {
-              potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName ? potentialName : `*N`;
+              potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName ? potentialName : ``;
 
               switch (dSpec.field) {
               case `C`:
                 currentItem = new Declaration(`constant`);
-                currentItem.name = potentialName;
+                currentItem.name = potentialName || `*N`;
                 currentItem.keywords = [...dSpec.keywords];
                   
                 // TODO: line number might be different with ...?
@@ -889,7 +893,7 @@ module.exports = class Parser {
                 break;
               case `S`:
                 currentItem = new Declaration(`variable`);
-                currentItem.name = potentialName;
+                currentItem.name = potentialName || `*N`;
                 currentItem.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
 
                 // TODO: line number might be different with ...?
@@ -904,7 +908,7 @@ module.exports = class Parser {
 
               case `DS`:
                 currentItem = new Declaration(`struct`);
-                currentItem.name = potentialName;
+                currentItem.name = potentialName || `*N`;
                 currentItem.keywords = dSpec.keywords;
 
                 currentItem.position = {
@@ -923,7 +927,7 @@ module.exports = class Parser {
                 // Only add a PR if it's not been defined
                 if (!scope.procedures.find(proc => proc.name.toUpperCase() === potentialName.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
-                  currentItem.name = potentialName;
+                  currentItem.name = potentialName || `*N`;
                   currentItem.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
   
                   currentItem.position = {
@@ -950,34 +954,48 @@ module.exports = class Parser {
                 break;
 
               default:
-                switch (currentGroup) {
-                case `procedures`:
-                  // Get from the parent
-                  currentItem = scopes[scopes[0].procedures.length - 1].procedures[scopes[0].procedures.length - 1];
-                  break;
+                if (!currentItem) {
+                  switch (currentGroup) {
+                  case `structs`:
+                  case `procedures`:
 
-                case `structs`:
-                  currentItem = scope[currentGroup][scope[currentGroup].length - 1];
-                  break;
+                    // We have to do this backwards lookup to find the definition
+                    // because in fixed format, currentItem is not defined. So
+                    // we go find the latest procedure/structure defined
+                    let validScope;
+                    for (let i = scopes.length - 1; i >= 0; i--) {
+                      validScope = scopes[i];
+                      if (validScope[currentGroup].length > 0) break;
+                    }
+                  
+                    currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
+                    break;
+                  }
                 }
 
                 if (currentItem) {
-                  currentSub = new Declaration(`subitem`);
-                  currentSub.name = (potentialName === `*N` ? `parm${currentItem.subItems.length+1}` : potentialName) ;
-                  currentSub.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
+                  if (potentialName) {
+                    currentSub = new Declaration(`subitem`);
+                    currentSub.name = (potentialName === `` ? `parm${currentItem.subItems.length+1}` : potentialName);
+                    currentSub.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
 
-                  currentSub.position = {
-                    path: file,
-                    line: lineNumber
+                    currentSub.position = {
+                      path: file,
+                      line: lineNumber
+                    }
+
+                    // If the parameter has likeds, add the subitems to make it a struct.
+                    await expandDs(file, currentSub);
+
+                    currentItem.subItems.push(currentSub);
+                    currentSub = undefined;
+
+                    resetDefinition = true;
+                  } else {
+                    if (currentItem) {
+                      currentItem.subItems[currentItem.subItems.length - 1].keywords.push(Fixed.getPrettyType(dSpec), ...dSpec.keywords);
+                    }
                   }
-
-                  // If the parameter has likeds, add the subitems to make it a struct.
-                  await expandDs(file, currentSub);
-
-                  currentItem.subItems.push(currentSub);
-                  currentSub = undefined;
-
-                  resetDefinition = true;
                 }
                 break;
               }
