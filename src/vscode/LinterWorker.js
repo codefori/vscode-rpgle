@@ -101,7 +101,7 @@ module.exports = class LinterWorker {
           if (path) {
             Output.write(`Current path: ${path}`);
   
-            const exists = await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path);
+            const exists = await vscode.commands.executeCommand(`code-for-ibmi.openEditable`, path, 1);
   
             if (!exists) {
               const content = instance.getContent();
