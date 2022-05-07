@@ -257,7 +257,32 @@ module.exports = class Parser {
     scopes.push(new Cache());
 
     /**
-     * Expands LIKEDS and LIKEREC.
+     * Gets value of EXTFILE if it exists.
+     * @param {string} defaultName 
+     * @param {string[]} keywords 
+     * @returns {string}
+     */
+    const getObjectName = (defaultName, keywords) => {
+      let objectName = defaultName;
+      const extObjKeywords = [`EXTFILE`];
+            
+      // Check for external object
+      extObjKeywords.forEach(keyword => {
+        const keywordValue = keywords.find(part => part.startsWith(`${keyword}(`) && part.endsWith(`)`));
+        if (keywordValue) {
+          objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
+
+          if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
+            objectName = objectName.substring(1, objectName.length - 1);
+          }
+        }
+      });
+
+      return objectName;
+    }
+
+    /**
+     * Expands LIKEDS, LIKEREC and EXTNAME.
      * @param {string} file
      * @param {Declaration} ds 
      */
@@ -417,7 +442,9 @@ module.exports = class Parser {
 
           switch (parts[0]) {
           case `DCL-F`:
-            const recordFormats = await this.fetchTable(parts[1]);
+            let objectName = getObjectName(parts[1], parts);
+
+            const recordFormats = await this.fetchTable(objectName);
 
             if (recordFormats.length > 0) {
               const qualified = parts.includes(`QUALIFIED`);
@@ -746,7 +773,7 @@ module.exports = class Parser {
           switch (spec) {
           case `F`:
             const fSpec = Fixed.parseFLine(line);
-            potentialName = fSpec.name;
+            potentialName = getObjectName(fSpec.name, fSpec.keywords);
 
             const recordFormats = await this.fetchTable(potentialName);
 
