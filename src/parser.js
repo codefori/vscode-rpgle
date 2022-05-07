@@ -76,7 +76,7 @@ const fetchTables = async (table) => {
         currentSubfield.name = name;
         currentSubfield.keywords = [Fixed.getPrettyType({
           type,
-          len: digits === `0` ? strLength : digits,
+          len: digits === 0 ? strLength : digits,
           decimals: decimals,
           keywords: [],
         })];
