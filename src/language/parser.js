@@ -15,6 +15,7 @@ const HALF_HOUR = (30 * 60 * 1000);
 /**
  * @callback tablePromise
  * @param  {string} name Table name
+ * @param  {boolean} [aliases] Table name
  * @returns {Promise<Declaration[]>}
  */
 module.exports = class Parser {
@@ -41,25 +42,28 @@ module.exports = class Parser {
 
   /**
    * @param {string} name 
+   * @param {string} keyVersion
+   * @param {boolean} [aliases]
    * @returns {Promise<Declaration[]>}
    */
-  async fetchTable(name) {
+  async fetchTable(name, keyVersion = ``, aliases) {
     if (name.trim() === ``) return [];
     if (!this.tableFetch) return [];
+    const existingVersion = this.tables[name] + keyVersion;
     const table = name.toUpperCase();
     const now = Date.now();
 
-    if (this.tables[table]) {
+    if (this.tables[existingVersion]) {
       // We use this to make sure we aren't running this all over the place
-      if (this.tables[table].fetching) return [];
+      if (this.tables[existingVersion].fetching) return [];
 
       // If we still have a cached version, let's use that
-      if (now <= (this.tables[table].fetched + HALF_HOUR)) {
-        return this.tables[table].recordFormats.map(d => d.clone());
+      if (now <= (this.tables[existingVersion].fetched + HALF_HOUR)) {
+        return this.tables[existingVersion].recordFormats.map(d => d.clone());
       }
     }
 
-    this.tables[table] = {
+    this.tables[existingVersion] = {
       fetching: true,
       fetched: 0,
       recordFormats: []
@@ -69,9 +73,9 @@ module.exports = class Parser {
     let newDefs;
 
     try {
-      newDefs = await this.tableFetch(table);
+      newDefs = await this.tableFetch(table, aliases);
 
-      this.tables[table] = {
+      this.tables[existingVersion] = {
         fetched: now,
         recordFormats: newDefs
       }
@@ -79,7 +83,7 @@ module.exports = class Parser {
       newDefs = [];
     }
 
-    this.tables[table].fetching = false;
+    this.tables[existingVersion].fetching = false;
 
     return newDefs.map(d => d.clone());
   }
@@ -312,7 +316,7 @@ module.exports = class Parser {
               ds.keywords.push(`QUALIFIED`);
 
             // Fetch from external definitions
-            const recordFormats = await this.fetchTable(keywordValue);
+            const recordFormats = await this.fetchTable(keywordValue, ds.keywords.length.toString(), ds.keywords.includes(`ALIAS`));
 
             if (recordFormats.length > 0) {
 
@@ -454,7 +458,7 @@ module.exports = class Parser {
           case `DCL-F`:
             let objectName = getObjectName(parts[1], parts);
 
-            const recordFormats = await this.fetchTable(objectName);
+            const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
 
             if (recordFormats.length > 0) {
               const qualified = parts.includes(`QUALIFIED`);
@@ -785,7 +789,7 @@ module.exports = class Parser {
             const fSpec = Fixed.parseFLine(line);
             potentialName = getObjectName(fSpec.name, fSpec.keywords);
 
-            const recordFormats = await this.fetchTable(potentialName);
+            const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
             if (recordFormats.length > 0) {
               const qualified = fSpec.keywords.includes(`QUALIFIED`);

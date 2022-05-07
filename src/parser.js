@@ -10,9 +10,10 @@ const Fixed = require(`./language/models/fixed`);
 /**
  * 
  * @param {string} table 
+ * @param {boolean} [aliases] Fetch long names if available
  * @returns {Promise<Declaration[]>}
  */
-const fetchTables = async (table) => {
+const fetchTables = async (table, aliases) => {
   const instance = getInstance();
 
   if (instance) {
@@ -53,13 +54,14 @@ const fetchTables = async (table) => {
       data.forEach(row => {
         const {
           WHNAME: formatName,
-          WHFLDE: name,
           WHFLDT: type,
           WHFLDB: strLength, 
           WHFLDD: digits,
           WHFLDP: decimals,
           WHFTXT: text,
         } = row;
+
+        const name = aliases ? row.WHALIS || row.WHFLDE : row.WHFLDE;
 
         if (name.startsWith(`*`)) return;
 
