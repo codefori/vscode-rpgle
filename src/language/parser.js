@@ -293,6 +293,16 @@ module.exports = class Parser {
         if (keyword) {
           let keywordValue = keyword.substring(tag.length+1, keyword.length - 1).toUpperCase();
 
+          if (keywordValue.includes(`:`)) {
+            const parms = keywordValue.split(`:`).filter(part => part.trim().startsWith(`*`) === false);
+
+            if (parms.length > 0) {
+              keywordValue = parms[0];
+            } else {
+              break;
+            }
+          }
+
           if (keywordValue.startsWith(`'`) && keywordValue.endsWith(`'`)) {
             keywordValue = keywordValue.substring(1, keywordValue.length - 1);
           }
