@@ -76,6 +76,10 @@ const fetchTables = async (table, aliases) => {
 
         const currentSubfield = new Declaration(`subitem`);
         currentSubfield.name = name;
+        const keywords = [];
+
+        if (row.WHVARL === `Y`) keywords.push(`VARYING`);
+
         currentSubfield.keywords = [Fixed.getPrettyType({
           type,
           len: digits === 0 ? strLength : digits,

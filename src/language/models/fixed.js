@@ -161,7 +161,7 @@ exports.getPrettyType = (lineData) => {
   case `P`:
     if (lineData.pos != ``) {
       // When using positions packed lineData.length is one less than double the bytes
-      outType = `Packed` + `(` + String(Number(lineData.len)*2-1)  + `:` + lineData.decimals + `)`;
+      outType = `Packed` + `(` + String(Number(lineData.len))  + `:` + lineData.decimals + `)`;
     } else {
       // Not using positions, then the lineData.length is correct
       outType = `Packed` + `(` + lineData.len + `:` + lineData.decimals + `)`;
