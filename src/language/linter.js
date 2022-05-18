@@ -20,7 +20,7 @@ const errorText = {
   'InvalidDeclareNumber': `Variable names cannot start with a number`,
   'IncorrectVariableCase': `Variable name casing does not match definition.`,
   'RequiresParameter': `Procedure calls require brackets.`,
-  'RequiresProcedureDescription': `Proceudres require a title and description.`,
+  'RequiresProcedureDescription': `Procedures require a title and description.`,
   'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
   'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
   'CopybookDirective': `Directive does not match requirement.`,

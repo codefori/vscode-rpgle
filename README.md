@@ -2,14 +2,14 @@
 
 <img src="https://github.com/halcyon-tech/vscode-rpgle/blob/main/media/logo.png?raw=true" height="180px" align="right">
 
-Adds functionality to improve writing RPGLE, including:
+Adds functionality to assist in writing accurate and consistent RPGLE, including:
 
 * Content assist
 * Outline view
-* Linter (`**FREE` only)
+* Linter, including indentation checking and reformating (`**FREE` only) 
 * Column assist for fixed-format RPGLE.
 
-Depends on Code for IBM i due to source code living on the remote system.
+Depends on the Code for IBM i extension due to source code living on the remote system.
 
 ## FAQ
 
@@ -22,12 +22,149 @@ Depends on Code for IBM i due to source code living on the remote system.
 
 Enable these options in VS Code settings.
 
+![Settings](./assets/Settings_01.png)
+
 * `vscode-rpgle.rpgleLanguageToolsEnabled` - enabled by default
-   * Gives outline view, go to defintion and find references
-* `vscode-rpgle.rpgleLinterSupportEnabled` - disabled by default
-   * `vscode-rpgle.openLintConfig` to open or create linter file. Creates / opens relative to source that is currently open. Read more below on linting.
+   * Provides outline view, go to defintion and find references
+* `vscode-rpgle.rpgleLinterSupportEnabled` - disabled by default. See Linter below for more on linting.
 * `vscode-rpgle.showFixedFormatOutline` - column assist for RPGLE fixed-format.
-   * `vscode-rpgle.rpgleColumnAssistant` / Shift+F4 to launch it when on fixed-format line
+   * `vscode-rpgle.rpgleColumnAssistant` - Shift+F4 to launch it when on fixed-format line.
+
+# Linter
+
+Linter support is a set of rules that help you write consistent and accurate code. You can turn a rule on or off to suit your standards.
+
+The linter rules are held in a JSON document relative to the RPGLE source code that is being worked on.
+
+## Rules Location
+
+### Developing in a Library
+
+If the user is developing in `LIB/QRPGLESRC/MYSOURCE.RPGLE`, then the linter rules  exist in `LIB/VSCODE/RPGLINT.JSON`. Each library has its own rules configuration file, binding it to all sources in that library. 
+
+### Developing in the IFS
+
+When developing in the IFS, linter rules exist in `.vscode/rpglint.json` in the current working directory.
+
+<!-- See `./src/schemas/rpglint.json` for the available linter options. -->
+
+### Opening the linter rules
+
+Use `vscode-rpgle.openLintConfig` to open the rules configuration for the source you're working in.
+
+![Open Lint Configuration](./assets/OpenLintConfig.png)
+
+ If it does not exist, you will be asked asked if you want to create one. The created file will provide some defaults, as below.
+
+## Linter directives
+
+### `// @rpglint-skip`
+
+   The next line's indent and rule check will be skipped.
+
+#### Example Before
+
+![Directive Before](./assets/DirectiveBefore.png)
+
+#### Example After
+
+![Directive After](./assets/DirectiveAfter.png)
+
+## Linter Defaults
+
+   When a new linter rules configuration file is created, these defaults are provided:
+
+
+      "BlankStructNamesCheck": true,
+      "QualifiedCheck": true,
+      "PrototypeCheck": true,
+      "ForceOptionalParens": true,
+      "NoOCCURS": true,
+      "NoSELECTAll": true,
+      "UppercaseConstants": true,
+      "IncorrectVariableCase": true,
+      "StringLiteralDupe": true,
+      "NoSQLJoins": true,
+      "NoCTDATA": true,
+      "PrettyComments": true,
+      "NoGlobalSubroutines": true,
+      "NoLocalSubroutines": true,
+      "UppercaseDirectives": true
+
+When a rule conflicts with you coding style it may be disabled by changing it to `false`. For example:
+
+      "PrototypeCheck": false,
+
+You can get more information about a lint option by hovering over it:
+
+![Lint hover](./assets/lintopt_01.png)
+
+Note that you can use a **Linter Directive** (above) to disable checking on a single occurrence of a lint error or warning.
+
+## Optional Linter Checks
+
+Additional Linter rules can be added by entering a new definition anywhere.  When you enter the `"` at the beginning of the new line you see the optional rules and the additional description, and you can select one:
+
+![Addinf optional checks](./assets/lintopt_02.png)
+
+### SpecificCasing
+
+This rule allows you to specify the casing required for any or all declares or BIFs.
+
+If you want all `DCL` to be lower case and all `BIF`s to be upper case, then it would be coded like this:
+
+      "SpecificCasing":[
+         {"operation": "*BIF","expected": "*upper"},
+         {"operation": "*DECLARE", "expected": "*lower"}
+      ]
+
+
+If you wanted `%parms` and `%timestamp` to always be lower case, amd all other BIFs to be upper case, then it would be coded like this:
+
+      "SpecificCasing": [
+         {
+            "operation": "%parms",
+            "expected": "*lower"
+         },
+         {
+            "operation": "%timestamp",
+            "expected": "*lower"
+         },
+         {
+            "operation": "*bif",
+            "expected": "*upper"
+         }
+      ]
+ Note: The order of entries is important here.
+
+ Or, if for some reason, you wanted `%timestamp` to always be coded as `%TimeStamp` then it could be coded like this:
+
+      "SpecificCasing": [
+         {
+            "operation": "%parms",
+            "expected": "*lower"
+         },
+         {
+            "operation": "%timestamp",
+            "expected": "*TimeStamp"
+         },
+         {
+            "operation": "*bif",
+            "expected": "*upper"
+         }
+      ]
+
+## Correcting Linter Errors Automatically
+
+The linter can fix many errors that it highlights, including indentation.
+
+Errors before:
+
+![Lint Fixing](./assets/LintFix_01.png)
+
+Errors fixed:
+
+![Lint Fixing after](./assets/LintFix_02.png)
 
 ## Developing
 
@@ -37,17 +174,3 @@ Enable these options in VS Code settings.
    * `npm run test`
    * Debug 'Run Extension'
 
-# Linter
-
-The linter configuration is held in a JSON document relative to the RPGLE source code that is being worked on.
-
-If the user is developing in `LIB/QRPGLESRC/MYSOURCE.RPGLE`, then the linter settings exist in `LIB/VSCODE/RPGLINT.JSON`. Each library has its own configuration file, binding it to all sources in that library. When developing in the IFS, it will create `.vscode/rpglint.json` in the current working directory.
-
-See `./src/schemas/rpglint.json` for the available linter options.
-
-Use `vscode-rpgle.openLintConfig` to open the configuration for the source you're working in. If it does not exist, it will ask the user to create one and it will provide some defaults.
-
-## Linter directives
-
-* `// @rpglint-skip`
-   * The next line's indent and rule check will be skipped.

@@ -58,7 +58,7 @@
         "RequiresParameter": {
             "$id": "#/properties/RequiresParameter",
             "type": "boolean",
-            "description": "Brackets must be used on a procedure, even if it has no parameters."
+            "description": "Parentheses must be used on a procedure call, even if it has no parameters."
         },
         "RequiresProcedureDescription": {
             "$id": "#/properties/RequiresProcedureDescription",
@@ -79,7 +79,7 @@
             "$id": "#/properties/CopybookDirective",
             "type": "string",
             "enum": ["copy", "include"],
-            "description": "Force which directive which must be used to include other source."
+            "description": "Force which directive which must be used to include other source. (Copy or Include)"
         },
         "UppercaseDirectives": {
             "$id": "#/properties/UppercaseDirectives",
