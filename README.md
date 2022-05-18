@@ -16,8 +16,7 @@ Depends on the Code for IBM i extension due to source code living on the remote 
 1. **Does this only work with free-format?** The content assist and outline view works for all ILE versions of RPG, including fixed-format. The column assist is for fixed-format only. The linter is for `**FREE` format only.
 2. **My copybook is not opening or prototypes are not coming from my copybook.** Right now, it is an explicit path to your member or streamfile. For example, if you're editing `YOURLIB/QRPGLESRC/HELLOWORLD.rpgle` and your copybook path is `QRPGLEREF,PRTYPE`, then it will assume the library of `YOURLIB`. For streamfiles, it will be relative to your working directory. For local files, it will be your VS Code workspace.
 3. **Does this work with local projects?** Yes! But, your local RPGLE must be the IFS style path on your `copy` and `include` directives.
-4. **Why am I getting indentation errors?** When the linter is enabled in the settings, you will start to get errors based on the lint configuration. Indentation errors are based on the indentation setting from VS Code (or the assumed indentation from the current file)
-
+4. **Why am I getting indentation errors?** When the linter is enabled in the settings, you will start to get errors based on the lint rules configuration. Indentation errors are based on the indentation setting from VS Code (or the assumed indentation from the current file).
 ## How to enable
 
 Enable these options in VS Code settings.
@@ -70,7 +69,7 @@ Use `vscode-rpgle.openLintConfig` to open the rules configuration for the source
 
 ![Directive After](./assets/DirectiveAfter.png)
 
-## Linter Defaults
+## Linter Default Rules
 
    When a new linter rules configuration file is created, these defaults are provided:
 
@@ -101,7 +100,7 @@ You can get more information about a lint option by hovering over it:
 
 Note that you can use a **Linter Directive** (above) to disable checking on a single occurrence of a lint error or warning.
 
-## Optional Linter Checks
+## Optional Linter Rules
 
 Additional Linter rules can be added by entering a new definition anywhere.  When you enter the `"` at the beginning of the new line you see the optional rules and the additional description, and you can select one:
 
@@ -135,7 +134,7 @@ If you wanted `%parms` and `%timestamp` to always be lower case, amd all other B
             "expected": "*upper"
          }
       ]
- Note: The order of entries is important here.
+ Note: The order of entries above is important.
 
  Or, if for some reason, you wanted `%timestamp` to always be coded as `%TimeStamp` then it could be coded like this:
 
