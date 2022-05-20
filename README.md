@@ -6,7 +6,7 @@ Adds functionality to assist in writing accurate and consistent RPGLE, including
 
 * Content assist
 * Outline view
-* Linter, including indentation checking and reformating (`**FREE` only) 
+* Linter, including indentation checking and reformatting (`**FREE` only) 
 * Column assist for fixed-format RPGLE.
 
 Depends on the Code for IBM i extension due to source code living on the remote system.
@@ -31,7 +31,7 @@ Enable these options in VS Code settings.
 
 # Linter
 
-Linter support is a set of rules that help you write consistent and accurate code. You can turn a rule on or off to suit your standards.
+Linter support is a set of rules that help you write consistent and accurate code. You can turn a rule on or off to suit your standards, and you can disable linter rules on a single line.
 
 The linter rules are held in a JSON document relative to the RPGLE source code that is being worked on.
 
@@ -39,21 +39,23 @@ The linter rules are held in a JSON document relative to the RPGLE source code t
 
 ### Developing in a Library
 
-If the user is developing in `LIB/QRPGLESRC/MYSOURCE.RPGLE`, then the linter rules  exist in `LIB/VSCODE/RPGLINT.JSON`. Each library has its own rules configuration file, binding it to all sources in that library. 
+If you are developing in `LIB/QRPGLESRC/MYSOURCE.RPGLE`, then the linter rules exist in `LIB/VSCODE/RPGLINT.JSON`. Each library has its own rules configuration file, binding it to all sources in that library. 
 
 ### Developing in the IFS
 
 When developing in the IFS, linter rules exist in `.vscode/rpglint.json` in the current working directory.
 
-<!-- See `./src/schemas/rpglint.json` for the available linter options. -->
-
 ### Opening the linter rules
 
 Use `vscode-rpgle.openLintConfig` to open the rules configuration for the source you're working in.
 
-![Open Lint Configuration](./assets/OpenLintConfig.png)
+![Open Lint Configuration command](./assets/OpenLintConfig.png)
 
- If it does not exist, you will be asked asked if you want to create one. The created file will provide some defaults, as below.
+Or you can right click on a library filter:
+
+![Open Lint Config with a click](./assets/OpenLintConfig_02.png)
+
+ If linter rules file  does not exist, you will be asked asked if you want to create one. The created file will provide some default rules, as below.
 
 ## Linter directives
 
@@ -71,8 +73,7 @@ Use `vscode-rpgle.openLintConfig` to open the rules configuration for the source
 
 ## Linter Default Rules
 
-   When a new linter rules configuration file is created, these defaults are provided:
-
+   This is not an opionated linter, but When a new linter rules configuration file is created, these defaults that we consider useful are provided:
 
       "BlankStructNamesCheck": true,
       "QualifiedCheck": true,
@@ -90,7 +91,7 @@ Use `vscode-rpgle.openLintConfig` to open the rules configuration for the source
       "NoLocalSubroutines": true,
       "UppercaseDirectives": true
 
-When a rule conflicts with you coding style it may be disabled by changing it to `false`. For example:
+When a rule conflicts with your coding style it may be disabled by changing it to `false`. For example:
 
       "PrototypeCheck": false,
 
@@ -102,9 +103,9 @@ Note that you can use a **Linter Directive** (above) to disable checking on a si
 
 ## Optional Linter Rules
 
-Additional Linter rules can be added by entering a new definition anywhere.  When you enter the `"` at the beginning of the new line you see the optional rules and the additional description, and you can select one:
+Additional Linter rules can be added by enabling a new optional rule anywhere.  When you enter the `"` at the beginning of the new line you see the optional rules and the additional description, and you can select one:
 
-![Addinf optional checks](./assets/lintopt_02.png)
+![Adding optional checks](./assets/lintopt_02.png)
 
 ### SpecificCasing
 
@@ -164,6 +165,10 @@ Errors before:
 Errors fixed:
 
 ![Lint Fixing after](./assets/LintFix_02.png)
+
+After you have auto-fixed problems, some auto-fixable problem may still exist. Running another auto-fix pass may be needed.
+
+**Note:**  Undo (Ctrl + Z, or Cmd + Z) undoes only a single auto-fixed line. If you are anticipating extensive changes, you may want to save your file first. 
 
 ## Developing
 
