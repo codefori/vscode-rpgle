@@ -55,7 +55,7 @@ Or you can right click on a library filter:
 
 ![Open Lint Config with a click](./assets/OpenLintConfig_02.png)
 
- If linter rules file  does not exist, you will be asked asked if you want to create one. The created file will provide some default rules, as below.
+ If a linter rules file  does not exist, you will be asked asked if you want to create one. The created file will provide some default rules, as below.
 
 ## Linter directives
 
@@ -73,7 +73,7 @@ Or you can right click on a library filter:
 
 ## Linter Default Rules
 
-   This is not an opionated linter, but When a new linter rules configuration file is created, these defaults that we consider useful are provided:
+   This is not an opionated linter, but when a new linter rules configuration file is created, these defaults that we consider useful are provided:
 
       "BlankStructNamesCheck": true,
       "QualifiedCheck": true,
@@ -166,7 +166,7 @@ Errors fixed:
 
 ![Lint Fixing after](./assets/LintFix_02.png)
 
-After you have auto-fixed problems, some auto-fixable problem may still exist. Running another auto-fix pass may be needed.
+After you have auto-fixed problems, some auto-fixable problems may still exist. Running another auto-fix pass may be needed.
 
 **Note:**  Undo (Ctrl + Z, or Cmd + Z) undoes only a single auto-fixed line. If you are anticipating extensive changes, you may want to save your file first. 
 
