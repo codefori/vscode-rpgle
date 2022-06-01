@@ -721,6 +721,26 @@ module.exports = class Linter {
                       }
                       break;
 
+                    
+                    case `special`:
+                      if (rules.CollectReferences) {
+                        value = part.value.substring(1).toUpperCase();
+                        const defRef = globalScope.find(value);
+                  
+                        if (defRef) {
+                          defRef.references.push({
+                            range: new vscode.Range(
+                              statementStart,
+                              statementEnd
+                            ),
+                            offset: {position: part.position, length: part.position + part.value.length},
+                            type: null,
+                            newValue: undefined,
+                          })
+                        }
+                      }
+                      break;
+
                     case `word`:
                       const upperName = part.value.toUpperCase();
 

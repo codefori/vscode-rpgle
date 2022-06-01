@@ -1,9 +1,16 @@
 const Declaration = require(`./declaration`);
 
+const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
+  const indDef = new Declaration(`variable`);
+  indDef.name = ind;
+  indDef.keywords = [`IND`];
+  return indDef;
+});
+
 module.exports = class Cache {
   /**
    * 
-   * @param {{subroutines?: Declaration[], procedures?: Declaration[], variables?: Declaration[], structs?: Declaration[], constants?: Declaration[]}} cache 
+   * @param {{subroutines?: Declaration[], procedures?: Declaration[], variables?: Declaration[], structs?: Declaration[], constants?: Declaration[], indicators?: Declaration[]}} cache 
    */
   constructor(cache = {}) {
     /** @type {Declaration[]} */
@@ -20,6 +27,9 @@ module.exports = class Cache {
     
     /** @type {Declaration[]} */
     this.constants = cache.constants || [];
+    
+    /** @type {Declaration[]} */
+    this.indicators = cache.indicators || [...inds];
   }
 
   /**
@@ -33,7 +43,8 @@ module.exports = class Cache {
         procedures: [...this.procedures, ...second.procedures],
         variables: [...this.variables, ...second.variables],
         structs: [...this.structs, ...second.structs],
-        constants: [...this.constants, ...second.constants]
+        constants: [...this.constants, ...second.constants],
+        indicators: [...this.indicators, ...second.indicators]
       });
     } else {
       return this;
@@ -66,6 +77,7 @@ module.exports = class Cache {
       ...this.subroutines.filter(def => def.name.toUpperCase() === name), 
       ...this.variables.filter(def => def.name.toUpperCase() === name),
       ...this.structs.filter(def => def.name.toUpperCase() === name),
+      ...this.indicators.filter(def => def.name.toUpperCase() === name),
     ];
 
     if (this.structs.length > 0) {
@@ -75,7 +87,7 @@ module.exports = class Cache {
     }
 
     if (possibles.length > 0) {
-      return possibles[0]
+      return possibles[0];
     } else {
       return null;
     }

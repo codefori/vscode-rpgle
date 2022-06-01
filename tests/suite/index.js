@@ -2619,5 +2619,30 @@ module.exports = {
 
     const Show = cache.find(`Show`);
     assert.strictEqual(Show.subItems.length, 3);
+  },
+
+  indicators1: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-S MyVar char(10);`,
+      ``,
+      `*IN10 = *ON;`,
+      `MyVar = 'Hi';`,
+      ``,
+      `DSply Myvar;`,
+      `*INLR = *IN10;`,
+      `Return;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    Linter.getErrors(lines, {
+      CollectReferences: true,
+    }, cache);
+
+    const in10 = cache.find(`IN10`);
+
+    assert.strictEqual(in10.references.length, 2);
   }
 }
