@@ -28,9 +28,22 @@ const fetchTables = async (table, aliases) => {
 
       Output.write(`Temp OUTFILE: ${fullPath}`);
 
+      const parts = {
+        schema: `*LIBL`,
+        table: ``,
+      };
+
+      if (table.includes(`/`)) {
+        const splitName = table.split(`/`);
+        if (splitName.length >= 2) parts.schema = splitName[splitName.length - 2];
+        if (splitName.length >= 1) parts.table = splitName[splitName.length - 1];
+      } else {
+        parts.table = table;
+      }
+
       await vscode.commands.executeCommand(`code-for-ibmi.runCommand`, {
         environment: `ile`,
-        command: `DSPFFD FILE(*LIBL/${table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
+        command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
       });
 
       Output.write(`Temp OUTFILE created.`);
