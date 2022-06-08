@@ -1,5 +1,5 @@
 module.exports = {
   'DCL-DS': [`LIKEDS`, `LIKEREC`, `END-DS`],
   'DCL-PI': [`END-PI`],
-  'DCL-PR': [`OVERLOAD`]
+  'DCL-PR': [`OVERLOAD`, `END-PR`]
 }
