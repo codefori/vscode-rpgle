@@ -2,11 +2,11 @@
 
 <img src="https://github.com/halcyon-tech/vscode-rpgle/blob/main/media/logo.png?raw=true" height="180px" align="right">
 
-Adds functionality to assist in writing accurate and consistent RPGLE, including:
+Adds functionality to assist in writing accurate, readable and consistent RPGLE, including:
 
 * Content assist
 * Outline view
-* Linter, including indentation checking and reformatting (`**FREE` only) 
+* Linter, including indentation checking and reformatting (`**FREE` only)
 * Column assist for fixed-format RPGLE.
 
 Depends on the Code for IBM i extension due to source code living on the remote system.
@@ -28,6 +28,12 @@ Enable these options in VS Code settings.
 * `vscode-rpgle.rpgleLinterSupportEnabled` - disabled by default. See Linter below for more on linting.
 * `vscode-rpgle.showFixedFormatOutline` - column assist for RPGLE fixed-format.
    * `vscode-rpgle.rpgleColumnAssistant` - Shift+F4 to launch it when on fixed-format line.
+
+# Outline
+
+When you enable the VS Code outline (View/Open View/Outline) you see your code outlined:
+
+![Outlined code](assets/Outline_01.png)
 
 # Linter
 
@@ -170,7 +176,20 @@ After you have auto-fixed problems, some auto-fixable problems may still exist. 
 
 **Note:**  Undo (Ctrl + Z, or Cmd + Z) undoes only a single auto-fixed line. If you are anticipating extensive changes, you may want to save your file first. 
 
-## Developing
+# Column assist for fixed-format RPGLE
+
+If you are still coding in fixed format RPGLE, this feature helps you put code in the correct columns.
+
+The column assistant is invoked by right clicking on a line:
+![Col Assist right click](./assets/ColAssist_01.png)
+
+The column assistant then appears:
+
+![Col Assistant](./assets/ColAssist_02.png)
+
+You can also invoke the column assistant on the current line with Shift + F4.
+ 
+# Developing
 
 1. Fork & clone
 2. `npm i`
