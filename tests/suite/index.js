@@ -2283,6 +2283,42 @@ module.exports = {
     assert.strictEqual(scope.variables.length, 1);
   },
 
+  fixed11: async () => {
+    const lines = [
+      `     D F4DATE          PR`,
+      `     D                                1`,
+      `     D                               15`,
+      `     D                                6    OPTIONS(*NOPASS)`,
+      `     D                                1    OPTIONS(*NOPASS)`,
+      `      `,
+      `     D F4DATEDS        DS                  QUALIFIED`,
+      `     D  IOF                           1A`,
+      `     D  DATE15A                      15A`,
+      `     D  FORMAT                        6A`,
+      `     D  VIEW                          1A`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    const F4DATE = cache.find(`F4DATE`);
+    assert.strictEqual(F4DATE.subItems.length, 4);
+
+    const parm1 = F4DATE.subItems[0];
+    assert.strictEqual(parm1.keywords[0], `CHAR(1)`);
+
+    const parm2 = F4DATE.subItems[1];
+    assert.strictEqual(parm2.keywords[0], `CHAR(15)`);
+
+    const parm3 = F4DATE.subItems[2];
+    assert.strictEqual(parm3.keywords[0], `CHAR(6)`);
+    assert.strictEqual(parm3.keywords[1], `OPTIONS(*NOPASS)`);
+
+    const parm4 = F4DATE.subItems[3];
+    assert.strictEqual(parm4.keywords[0], `CHAR(1)`);
+    assert.strictEqual(parm4.keywords[1], `OPTIONS(*NOPASS)`);
+  }
+
   subds1: async () => {
     const lines = [
       `**FREE`,
@@ -2676,5 +2712,5 @@ module.exports = {
     const in10 = cache.find(`IN10`);
 
     assert.strictEqual(in10.references.length, 2);
-  }
+  },
 }

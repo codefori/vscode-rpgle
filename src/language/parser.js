@@ -1015,9 +1015,14 @@ module.exports = class Parser {
                 }
 
                 if (currentItem) {
+
+                  // This happens when it's a blank parm.
+                  if (potentialName === `` && (dSpec.type || dSpec.len))
+                    potentialName = (potentialName === `` ? `parm${currentItem.subItems.length+1}` : potentialName);
+
                   if (potentialName) {
                     currentSub = new Declaration(`subitem`);
-                    currentSub.name = (potentialName === `` ? `parm${currentItem.subItems.length+1}` : potentialName);
+                    currentSub.name = potentialName;
                     currentSub.keywords = [Fixed.getPrettyType(dSpec), ...dSpec.keywords];
 
                     currentSub.position = {

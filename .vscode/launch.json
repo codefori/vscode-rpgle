@@ -12,7 +12,8 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"type": "pwa-node"
+			"type": "node",
+			"args": ["error1"]
 		},
 		{
 			"name": "Run Extension",
