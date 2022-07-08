@@ -2171,6 +2171,38 @@ module.exports = {
     assert.strictEqual(theExtProcedure.subItems.length, 1);
   },
 
+  /**
+   * Issue with detecting correct type on subfield.
+   */
+  fixed10: async () => {
+    const lines = [
+      `     d  data           ds                  inz`,
+      `     d   arid                         6`,
+      `     d   ardesc                      50`,
+      `     d   artifa                       3`,
+      `     d   arsalePr                     7  2`,
+      `     d act             c                   'act'`,
+      `     D rrn02           s              7  2`,
+      ``,
+      `         return;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+
+    const dataDs = cache.find(`data`);
+    assert.strictEqual(dataDs.name, `data`);
+    assert.strictEqual(dataDs.subItems.length, 4);
+
+    const rrn02 = cache.find(`rrn02`);
+    assert.strictEqual(rrn02.name, `rrn02`);
+    assert.strictEqual(rrn02.keywords.includes(`PACKED(7:2)`), true);
+
+    const arsalePr = dataDs.subItems[3];
+    assert.strictEqual(arsalePr.name, `arsalePr`);
+    assert.strictEqual(arsalePr.keywords.includes(`ZONED(7:2)`), true);
+  },
+
   fixedfree1: async () => {
     const lines = [
       `      *  Field Definitions.`,

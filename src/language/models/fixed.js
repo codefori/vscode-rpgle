@@ -194,9 +194,11 @@ exports.getPrettyType = (lineData) => {
         }
         outType += `(` + lineData.len + `)`;
       } else {
-        if (lineData.field === `DS`) {
+        if (lineData.field === ``) {
+          // Means it's a subfield.
           outType = `Zoned` + `(` + lineData.len + `:` + lineData.decimals + `)`;
         } else {
+          // Means it's a standalone.
           outType = `Packed` + `(` + lineData.len + `:` + lineData.decimals + `)`;
         }
       }
