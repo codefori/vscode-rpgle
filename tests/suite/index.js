@@ -2317,7 +2317,7 @@ module.exports = {
     const parm4 = F4DATE.subItems[3];
     assert.strictEqual(parm4.keywords[0], `CHAR(1)`);
     assert.strictEqual(parm4.keywords[1], `OPTIONS(*NOPASS)`);
-  }
+  },
 
   subds1: async () => {
     const lines = [
