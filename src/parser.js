@@ -76,6 +76,7 @@ const fetchTables = async (table, aliases) => {
 
         const name = aliases ? row.WHALIS || row.WHFLDE : row.WHFLDE;
 
+        if (name.trim() === ``) return;
         if (name.startsWith(`*`)) return;
 
         let recordFormat;
