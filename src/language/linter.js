@@ -6,6 +6,7 @@ const Declaration = require(`./models/declaration`);
 const Statement = require(`./statement`);
 const oneLineTriggers = require(`./models/oneLineTriggers`);
 const IssueRange = require(`./models/ContentRange`);
+const { isContinueStatement } = require("typescript");
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -152,6 +153,10 @@ module.exports = class Linter {
         }
 
         if (isLineComment) {
+          if (isContinueStatement) {
+            currentStatement += line + ``.padEnd(newLineLength, ` `);
+          }
+
           const comment = line.substring(currentIndent + 2).trimEnd();
           if (rules.PrettyComments) {
             if (comment === ``) {

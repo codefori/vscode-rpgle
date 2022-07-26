@@ -1065,6 +1065,41 @@ module.exports = {
     assert.strictEqual(errors[0].newValue, `%trim`);
   },
 
+  linter7_casing10: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `dcl-s sFirstName char(10);`,
+      `dcl-s sEmpNo char(6);`,
+      ``,
+      `Exec Sql`,
+      `  // Break The Parser`,
+      `  Select`,
+      `    empno`,
+      `  Into`,
+      `    :sEmpNo`,
+      `  From`,
+      `    sample.employee`,
+      `  Where`,
+      `    firstnme = :SFIRSTNAME;`,
+      ``,
+      `return;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(URI, lines);
+    const { errors } = Linter.getErrors(lines, {
+      IncorrectVariableCase: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 1, `Expect length of 1`);
+    assert.strictEqual(errors[0].range.start.line, 5);
+    assert.strictEqual(errors[0].range.end.line, 14);
+    assert.strictEqual(errors[0].offset.position, 120);
+    assert.strictEqual(errors[0].offset.length, 130);
+    assert.strictEqual(errors[0].newValue, `sFirstName`)
+  },
+
   linter8: async () => {
     const lines = [
       `**FREE`,

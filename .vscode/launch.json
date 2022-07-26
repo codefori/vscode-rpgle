@@ -12,8 +12,7 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"type": "node",
-			"args": ["error1"]
+			"type": "node"
 		},
 		{
 			"name": "Run Extension",
