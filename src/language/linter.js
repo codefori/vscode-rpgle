@@ -137,6 +137,10 @@ module.exports = class Linter {
         skipIndentCheck = false;
 
         if (continuedStatement) {
+          if (isLineComment) {
+            currentStatement += line + ``.padEnd(newLineLength, ` `);
+          }
+          
           skipIndentCheck = true;
           statementEnd = new vscode.Position(lineNumber, line.length);
 
@@ -153,10 +157,6 @@ module.exports = class Linter {
         }
 
         if (isLineComment) {
-          if (isContinueStatement) {
-            currentStatement += line + ``.padEnd(newLineLength, ` `);
-          }
-
           const comment = line.substring(currentIndent + 2).trimEnd();
           if (rules.PrettyComments) {
             if (comment === ``) {
