@@ -134,6 +134,11 @@
             "$id": "#/properties/NoLocalSubroutines",
             "type": "boolean",
             "description": "Subroutines in procedures are not allowed."
+        },
+        "NoUnreferenced": {
+            "$id": "#/properties/NoLocalSubroutines",
+            "type": "boolean",
+            "description": "Unreferenced definitions are not allowed."
         }
     },
     "additionalProperties": true

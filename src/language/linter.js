@@ -32,6 +32,7 @@ const errorText = {
   'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
   'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
   'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\``,
+  'NoUnreferenced': `No reference to definition.`,
 }
 
 module.exports = class Linter {
@@ -67,6 +68,8 @@ module.exports = class Linter {
    *  NoGlobalSubroutines?: boolean,
    *  NoLocalSubroutines?: boolean,
    *  CollectReferences?: boolean,
+   *  NoUnreferenced?: boolean,
+   *  ReferencesInPath?: string,
    * }} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -119,6 +122,11 @@ module.exports = class Linter {
     let statementStart;
     /** @type {vscode.Position} */
     let statementEnd;
+
+    if (rules.NoUnreferenced) {
+      // We need to collect references for this to work correctly.
+      rules.CollectReferences = true;
+    }
 
     /** @type {{value: string, definition?: string, list: {range: vscode.Range, offset: {position: number, length: number}}[]}[]} */
     const stringLiterals = [];
@@ -831,15 +839,17 @@ module.exports = class Linter {
                         }
 
                         if (defRef) {
-                          defRef.references.push({
-                            range: new vscode.Range(
-                              statementStart,
-                              statementEnd
-                            ),
-                            offset: {position: part.position, length: part.position + part.value.length},
-                            type: null,
-                            newValue: undefined,
-                          })
+                          if (defRef.position.line !== statementStart.line) {
+                            defRef.references.push({
+                              range: new vscode.Range(
+                                statementStart,
+                                statementEnd
+                              ),
+                              offset: {position: part.position, length: part.position + part.value.length},
+                              type: null,
+                              newValue: undefined,
+                            })
+                          }
                         }
                       }
                       break;
@@ -961,6 +971,58 @@ module.exports = class Linter {
             })
           });
         }
+      })
+    }
+
+    if (rules.NoUnreferenced) {
+      [
+        globalScope, 
+        ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
+      ].forEach(dec => {
+        [...dec.constants, ...dec.procedures, ...dec.subroutines, ...dec.variables]
+          .filter(def => def.position.path === rules.ReferencesInPath)
+          .forEach(def => {
+            if (def.references.length === 0) {
+            // Add an error to def
+              errors.push({
+                type: `NoUnreferenced`,
+                range: new vscode.Range(def.position.line, 0, def.position.line, 100),
+                offset: undefined,
+                newValue: undefined,
+              });
+            }
+          });
+
+        dec.structs
+          .filter(struct => struct.position.path === rules.ReferencesInPath)
+          .forEach(struct => {
+            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 0)
+
+            if (struct.references.length === 0) {
+            // We only check the subfields if the parent is never references.
+
+              struct.subItems.forEach(subf => {
+                if (subf.references.length === 0) {
+                // Add an error to subf
+                  errors.push({
+                    type: `NoUnreferenced`,
+                    range: new vscode.Range(subf.position.line, 0, subf.position.line, 100),
+                    offset: undefined,
+                    newValue: undefined,
+                  });
+                }
+              });
+
+              if (subFieldIsUsed === false) {
+                errors.push({
+                  type: `NoUnreferenced`,
+                  range: new vscode.Range(struct.position.line, 0, struct.position.line, 100),
+                  offset: undefined,
+                  newValue: undefined,
+                });
+              }
+            }
+          })
       })
     }
 
