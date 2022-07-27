@@ -622,6 +622,19 @@ module.exports = class Linter {
                       });
                     }
                     break;
+                  case `LEAVESR`:
+                    if (rules.NoGlobalSubroutines && !inProcedure) {
+                      errors.push({
+                        range: new vscode.Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        offset: undefined,
+                        type: `NoGlobalSubroutines`,
+                        newValue: `return`
+                      });
+                    }
+                    break;
                   case `EXSR`:
                     if (rules.NoGlobalSubroutines) {
                       if (statement.length === 2) {

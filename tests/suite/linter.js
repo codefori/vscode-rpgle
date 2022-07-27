@@ -1230,6 +1230,79 @@ exports.linter16 =  async () => {
     }
   });
 };
+
+exports.linter16_with_leavesr =  async () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-s SomeNum int(5);`,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `SomeNum = 5;`,
+    `Exsr theSubroutine;`,
+    `Dsply MyVariable2;`,
+    ``,
+    `Begsr theSubroutine;`,
+    `  If (SomeNum = 5);`,
+    `    Leavesr;`,
+    `  Endif;`,
+    `  MyVariable2 = 'Hello world';`,
+    `Endsr;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(URI, lines);
+  const { errors } = Linter.getErrors(lines, {
+    NoGlobalSubroutines: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 4, `Expect length of 3`);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `NoGlobalSubroutines`,
+    newValue: `theSubroutine()`,
+    range: new vscode.Range(
+      new vscode.Position(5, 0),
+      new vscode.Position(5, 18),
+    ),
+    offset: undefined,
+  });
+
+  assert.deepStrictEqual(errors[1], {
+    type: `NoGlobalSubroutines`,
+    newValue: `Dcl-Proc`,
+    range: new vscode.Range(
+      new vscode.Position(8, 0),
+      new vscode.Position(8, 19),
+    ),
+    offset: {
+      position: 0,
+      length: 5
+    }
+  });
+
+  assert.deepStrictEqual(errors[2], {
+    type: `NoGlobalSubroutines`,
+    newValue: `return`,
+    range: new vscode.Range(
+      new vscode.Position(10, 4),
+      new vscode.Position(10, 11),
+    ),
+    offset: undefined
+  });
+
+  assert.deepStrictEqual(errors[3], {
+    type: `NoGlobalSubroutines`,
+    newValue: `End-Proc`,
+    range: new vscode.Range(
+      new vscode.Position(13, 0),
+      new vscode.Position(13, 5),
+    ),
+    offset: {
+      position: 0,
+      length: 5
+    }
+  });
+};
   
 /**
    * Subroutine in procedure check test
