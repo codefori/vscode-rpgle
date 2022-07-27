@@ -164,56 +164,80 @@ module.exports = class LinterWorker {
           const document = editor.document;
           if (document.languageId === `rpgle`) {
             if (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`) {
-              const options = await this.getLinterOptions(document.uri);
-              const docs = await Parser.getDocs(document.uri, document.getText());
+              vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Fixing issues in document..`,
+              }, async (progress) => {
+                progress.report({
+                  message: `Fetching lint configuration`
+                });
+                
+                const options = await this.getLinterOptions(document.uri);
+                const docs = await Parser.getDocs(document.uri, document.getText());
 
-              // Define the rules 
-              const rules = {
-                indent: Number(vscode.window.activeTextEditor.options.tabSize),
-                literalMinimum: 1,
-                ...options
-              };
+                // Define the rules 
+                const rules = {
+                  indent: Number(vscode.window.activeTextEditor.options.tabSize),
+                  literalMinimum: 1,
+                  ...options
+                };
 
-              // First we do all the indentation fixes.
-              const { indentErrors } = Linter.getErrors(document.getText(), rules, docs);
+                progress.report({
+                  message: `Fixing indentation`,
+                  increment: 1,
+                });
 
-              if (indentErrors.length > 0) {
-                const fixes = indentErrors.map(error => {
-                  const range = Generic.calculateOffset(document, {
-                    range: new vscode.Range(error.line, 0, error.line, error.currentIndent), 
-                    offset: undefined,
-                    type: undefined,
-                    newValue: undefined,
+                // First we do all the indentation fixes.
+                const { indentErrors } = Linter.getErrors(document.getText(), rules, docs);
+
+                if (indentErrors.length > 0) {
+                  const fixes = indentErrors.map(error => {
+                    const range = Generic.calculateOffset(document, {
+                      range: new vscode.Range(error.line, 0, error.line, error.currentIndent), 
+                      offset: undefined,
+                      type: undefined,
+                      newValue: undefined,
+                    });
+                    return new vscode.TextEdit(range, ``.padEnd(error.expectedIndent, ` `));
                   });
-                  return new vscode.TextEdit(range, ``.padEnd(error.expectedIndent, ` `));
-                });
 
-                editor.edit(editBuilder => {
-                  fixes.forEach(fix => editBuilder.replace(fix.range, fix.newText));
-                });
-              }
-              
-              while (true) {
-              // Next up, let's fix all the other things!
-                const {errors} = Linter.getErrors(document.getText(), rules, docs);
-
-                const actions = LinterWorker.getActions(document, errors);
-                let edits = [];
-
-                if (actions.length > 0) {
-                  // We only ever do the first one over and over.
-                  const action = actions[0];
-                  const entries = action.edit.entries();
-                  for (const entry of entries) {
-                    const [uri, actionEdits] = entry;
-                    const workEdits = new vscode.WorkspaceEdit();
-                    workEdits.set(document.uri, actionEdits); // give the edits
-                    await vscode.workspace.applyEdit(workEdits);
-                  }
-                } else {
-                  break;
+                  editor.edit(editBuilder => {
+                    fixes.forEach(fix => editBuilder.replace(fix.range, fix.newText));
+                  });
                 }
-              }
+              
+                while (true) {
+                  progress.report({
+                    message: `Fixing other issues..`,
+                    increment: 2,
+                  });
+
+                  // Next up, let's fix all the other things!
+                  const {errors} = Linter.getErrors(document.getText(), rules, docs);
+
+                  const actions = LinterWorker.getActions(document, errors);
+                  let edits = [];
+
+                  if (actions.length > 0) {
+                    progress.report({
+                      message: `Fixing other issues (remaining: ${actions.length})`,
+                      increment: (actions.length > 100 ? 2 : 100 - actions.length),
+                    });
+
+                    // We only ever do the first one over and over.
+                    const action = actions[0];
+                    const entries = action.edit.entries();
+                    for (const entry of entries) {
+                      const [uri, actionEdits] = entry;
+                      const workEdits = new vscode.WorkspaceEdit();
+                      workEdits.set(document.uri, actionEdits); // give the edits
+                      await vscode.workspace.applyEdit(workEdits);
+                    }
+                  } else {
+                    break;
+                  }
+                }
+              });
             }
           }
         }
