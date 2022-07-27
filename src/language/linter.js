@@ -979,7 +979,7 @@ module.exports = class Linter {
         globalScope, 
         ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
       ].forEach(dec => {
-        [...dec.constants, ...dec.procedures, ...dec.subroutines, ...dec.variables]
+        [...dec.constants, ...dec.subroutines, ...dec.variables]
           .filter(def => def.position.path === rules.ReferencesInPath)
           .forEach(def => {
             if (def.references.length === 0) {
@@ -992,6 +992,22 @@ module.exports = class Linter {
               });
             }
           });
+
+        dec.procedures
+          .filter(struct => struct.position.path === rules.ReferencesInPath)
+          .forEach(proc => {
+            if (!proc.keywords.includes(`EXPORT`)) {
+              if (proc.references.length === 0) {
+                // Add an error to proc
+                errors.push({
+                  type: `NoUnreferenced`,
+                  range: new vscode.Range(proc.position.line, 0, proc.position.line, 100),
+                  offset: undefined,
+                  newValue: undefined,
+                });
+              }
+            }
+          })
 
         dec.structs
           .filter(struct => struct.position.path === rules.ReferencesInPath)

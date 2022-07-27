@@ -1475,12 +1475,12 @@ exports.linter19 = async () => {
   }, cache);
 
   assert.strictEqual(errors.length, 11);
-
+  
   assert.deepStrictEqual(errors[0], {
     type: `NoUnreferenced`,
     range: new vscode.Range(
-      new vscode.Position(68, 0),
-      new vscode.Position(68, 100),
+      new vscode.Position(4, 0),
+      new vscode.Position(4, 100),
     ),
     offset: undefined,
     newValue: undefined,
@@ -1489,8 +1489,8 @@ exports.linter19 = async () => {
   assert.deepStrictEqual(errors[1], {
     type: `NoUnreferenced`,
     range: new vscode.Range(
-      new vscode.Position(4, 0),
-      new vscode.Position(4, 100),
+      new vscode.Position(68, 0),
+      new vscode.Position(68, 100),
     ),
     offset: undefined,
     newValue: undefined,
