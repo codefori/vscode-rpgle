@@ -1391,3 +1391,198 @@ exports.linter18 = async () => {
     newValue: undefined,
   });
 }
+
+exports.linter19 = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s localVarYes Char(1);`,
+    `Dcl-s localVarForProc Int(20);`,
+    `dcl-s localVarNo Ind;`,
+    ``,
+    `dcl-ds structYes;`,
+    `    subfa varchar(12);`,
+    `End-ds;`,
+    ``,
+    `dcl-ds structNo;`,
+    `    subfb packed(12);`,
+    `End-ds;`,
+    ``,
+    `Dcl-ds structYesAlso;`,
+    `    subfc char(20);`,
+    `End-Ds;`,
+    ``,
+    `dcl-ds qualStructYes Qualified;`,
+    `    qualsubA zoned(5);`,
+    `end-ds;`,
+    ``,
+    `dcl-ds qualStructNo Qualified;`,
+    `    qualsubA zoned(5);`,
+    `end-ds;`,
+    ``,
+    `localVarYes = 'Y';`,
+    `procYes();`,
+    ``,
+    `subfa = 'Yes!';`,
+    `structYesAlso = 'Really yes';`,
+    ``,
+    `qualStructYes.qualsubA = 5;`,
+    ``,
+    `return;`,
+    ``,
+    `Dcl-Proc procYes;`,
+    `    dcl-s reallyLocalYes bindec(9);`,
+    `    dcl-s reallyLocalNo Char(1);`,
+    ``,
+    `    dcl-ds localStructYes;`,
+    `        subfd char(12);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localStructAlsoYes;`,
+    `        subfe char(12);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localStructNo;`,
+    `        subfg char(12);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localQualStructYes Qualified;`,
+    `        qualsubA zoned(5);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localQualStructNo Qualified;`,
+    `        qualsubA zoned(5);`,
+    `    end-ds;`,
+    ``,
+    `    reallyLocalYes = 1;`,
+    `    localStructYes = 'Helloworld';`,
+    `    subfe = 'Otherworld';`,
+    `    localQualStructYes.qualsubA = 55;`,
+    ``,
+    `    localVarForProc = 12398;`,
+    `End-Proc;`,
+    ``,
+    `Dcl-Proc procNo;`,
+    `    localVarForProc = 1190348;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(URI, lines);
+  const { errors } = Linter.getErrors(lines, {
+    ReferencesInPath: URI.path,
+    NoUnreferenced: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 11);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(68, 0),
+      new vscode.Position(68, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[1], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(4, 0),
+      new vscode.Position(4, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[2], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(11, 0),
+      new vscode.Position(11, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[3], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(10, 0),
+      new vscode.Position(10, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[4], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(23, 0),
+      new vscode.Position(23, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[5], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(22, 0),
+      new vscode.Position(22, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[6], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(38, 0),
+      new vscode.Position(38, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[7], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(49, 0),
+      new vscode.Position(49, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[8], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(48, 0),
+      new vscode.Position(48, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[9], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(57, 0),
+      new vscode.Position(57, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+
+  assert.deepStrictEqual(errors[10], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(56, 0),
+      new vscode.Position(56, 100),
+    ),
+    offset: undefined,
+    newValue: undefined,
+  });
+}
