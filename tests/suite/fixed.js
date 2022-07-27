@@ -4,7 +4,6 @@ const vscode = require(`vscode`);
 const assert = require(`assert`);
 
 const Parser = require(`../../src/language/parser`);
-const Linter = require(`../../src/language/linter`);
 
 const URI = vscode.Uri.parse(`source.rpgle`);
   
