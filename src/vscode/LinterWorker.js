@@ -219,19 +219,36 @@ module.exports = class LinterWorker {
                   let edits = [];
 
                   if (actions.length > 0) {
+                    const linesChanged = [];
                     progress.report({
                       message: `Fixing other issues (remaining: ${actions.length})`,
                       increment: (actions.length > 100 ? 2 : 100 - actions.length),
                     });
 
                     // We only ever do the first one over and over.
-                    const action = actions[0];
-                    const entries = action.edit.entries();
-                    for (const entry of entries) {
-                      const [uri, actionEdits] = entry;
+                    /** @type {vscode.TextEdit[]} */
+                    const edits = [];
+
+                    actions.filter(action => action.edit).map(action => {
+                      const entries = action.edit.entries();
+                      for (const [uri, actionEdits] of entries) {
+                        if (actionEdits.length > 0) {
+                          const changedLine = actionEdits[0].range.start.line;
+                          if (!linesChanged.includes(changedLine)) {
+                            edits.push(...actionEdits);
+                            linesChanged.push(changedLine);
+                          }
+                        }
+                      }
+                    });
+
+                    if (edits.length) {
                       const workEdits = new vscode.WorkspaceEdit();
-                      workEdits.set(document.uri, actionEdits); // give the edits
+                      workEdits.set(document.uri, edits); // give the edits
                       await vscode.workspace.applyEdit(workEdits);
+
+                    } else {
+                      break;
                     }
                   } else {
                     break;
