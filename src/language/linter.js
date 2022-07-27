@@ -6,7 +6,6 @@ const Declaration = require(`./models/declaration`);
 const Statement = require(`./statement`);
 const oneLineTriggers = require(`./models/oneLineTriggers`);
 const IssueRange = require(`./models/ContentRange`);
-const { isContinueStatement } = require("typescript");
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
