@@ -419,6 +419,7 @@ module.exports = class LinterWorker {
       try {
         detail = Linter.getErrors(text, {
           indent: Number(vscode.window.activeTextEditor.options.tabSize),
+          ReferencesInPath: document.uri.path,
           ...options
         }, docs);
       } catch (e) {
