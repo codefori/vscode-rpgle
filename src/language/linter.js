@@ -145,11 +145,11 @@ module.exports = class Linter {
 
         if (continuedStatement) {
           if (isLineComment) {
-            currentStatement += line + ``.padEnd(newLineLength, ` `);
+            currentStatement += currentLine + ``.padEnd(newLineLength, ` `);
           }
           
           skipIndentCheck = true;
-          statementEnd = new vscode.Position(lineNumber, line.length);
+          statementEnd = new vscode.Position(lineNumber, (currentLine.length));
 
           if (currentIndent < expectedIndent) {
             indentErrors.push({
@@ -160,7 +160,7 @@ module.exports = class Linter {
           }
         } else {
           statementStart = new vscode.Position(lineNumber, currentIndent);
-          statementEnd = new vscode.Position(lineNumber, line.length);
+          statementEnd = new vscode.Position(lineNumber, (currentLine.length));
         }
 
         if (isLineComment) {
@@ -224,7 +224,7 @@ module.exports = class Linter {
             } else {
               continuedStatement = true;
             }
-            currentStatement += line + ``.padEnd(newLineLength, ` `);
+            currentStatement += currentLine + ``.padEnd(newLineLength, ` `);
           }
 
           // We do it again for any changes to the line

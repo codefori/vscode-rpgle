@@ -1586,3 +1586,31 @@ exports.linter19 = async () => {
     newValue: undefined,
   });
 }
+
+exports.linter20 =  async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `    FETCH NEXT FROM empCur       `,
+    `    INTO :myvariable2;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(URI, lines);
+  const { errors } = Linter.getErrors(lines, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+    
+  assert.strictEqual(errors[0].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
+  assert.strictEqual(errors[0].range.start.line, 4);
+  assert.strictEqual(errors[0].range.end.line, 6);
+  assert.strictEqual(errors[0].range.start.character, 0);
+  assert.strictEqual(errors[0].offset.position, 53);
+  assert.strictEqual(errors[0].offset.length, 64);
+  assert.strictEqual(errors[0].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
+};
