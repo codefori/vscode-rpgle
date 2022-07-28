@@ -11,6 +11,7 @@ jobs:
           fetch-depth: 1
       - run: npm install
       - run: node ./node_modules/eslint/bin/eslint src/** --no-error-on-unmatched-pattern
+      - run: npm run test
       
       - run: npm install -g vsce
       - name: Create build
