@@ -23,8 +23,9 @@ const lintFile = {
 module.exports = class LinterWorker {
   /**
    * @param {vscode.ExtensionContext} context
+   * @param {number} [waitTime]
    */
-  constructor(context) {
+  constructor(context, waitTime = 2000) {
     this.linterDiagnostics = vscode.languages.createDiagnosticCollection(`Lint`);
 
     /** @type {{[spfPath: string]: object}} */
@@ -295,7 +296,7 @@ module.exports = class LinterWorker {
       /**
        * When the document changes, we want to fetch the updated errors.
        */
-      vscode.workspace.onDidChangeTextDocument(async editor => {
+      vscode.workspace.onDidChangeTextDocument(async editor => {So
         if (editor) {
           const document = editor.document;
           if (document.languageId === `rpgle`) {
@@ -309,7 +310,7 @@ module.exports = class LinterWorker {
                   this.refreshDiagnostics(document, docs);
                 });
               }
-            }, 2000);
+            }, waitTime);
           }
         }
       }),
@@ -331,7 +332,7 @@ module.exports = class LinterWorker {
                   this.refreshDiagnostics(document, doc);
                 });
               }
-            }, 2000);
+            }, waitTime);
           }
 
           // If it's a local file

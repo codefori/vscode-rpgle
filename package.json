@@ -112,7 +112,12 @@
 				"vscode-rpgle.rpgleLinterSupportEnabled": {
 					"type": "boolean",
 					"default": false,
-					"description": "Will provide warnings for RPGLE sources based on linter configuration. Supports total free RPG only."
+					"description": "Will provide warnings for RPGLE sources based on linter configuration. Supports total free RPG only. Reload after changing this setting."
+				},
+				"vscode-rpgle.rpgleLinterResponseTime": {
+					"type": "number",
+					"default": 2000,
+					"description": "How long (in MS) the extension should wait before running the linter on the active editor. Reload after changing this setting."
 				},
 				"vscode-rpgle.showFixedFormatOutline": {
 					"type": "boolean",
