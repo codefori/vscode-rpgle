@@ -139,6 +139,14 @@
             "$id": "#/properties/NoLocalSubroutines",
             "type": "boolean",
             "description": "Unreferenced definitions are not allowed."
+        },
+        "NoExternalTo": {
+            "$id": "#/properties/NoLocalSubroutines",
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Calls to certain APIs are not allowed. (EXTPROC / EXTPGM)"
         }
     },
     "additionalProperties": true

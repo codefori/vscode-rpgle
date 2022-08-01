@@ -8,4 +8,11 @@ module.exports = {
   NoSQLJoins: true,
   PrettyComments: true,
   NoGlobalSubroutines: true,
+  NoExternalTo: [
+    `QCMD`,
+    `QP2TERM`,
+    `QSH`,
+    `SYSTEM`
+    `QCMDEXC`,
+  ]
 }

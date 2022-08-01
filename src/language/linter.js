@@ -32,6 +32,7 @@ const errorText = {
   'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
   'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\``,
   'NoUnreferenced': `No reference to definition.`,
+  'NoExternalTo': `Cannot declare prototype to this external API.`
 }
 
 module.exports = class Linter {
@@ -98,6 +99,11 @@ module.exports = class Linter {
     if (rules.NoUnreferenced) {
       // We need to collect references for this to work correctly.
       rules.CollectReferences = true;
+    }
+
+    // Make all external refs uppercase.
+    if (rules.NoExternalTo && rules.NoExternalTo.length) {
+      rules.NoExternalTo = rules.NoExternalTo.map(val => val.toUpperCase());
     }
 
     /** @type {{value: string, definition?: string, list: {range: vscode.Range, offset: {position: number, length: number}}[]}[]} */
@@ -928,6 +934,29 @@ module.exports = class Linter {
       })
     }
 
+    if (rules.NoExternalTo && rules.NoExternalTo.length) {
+      [
+        globalScope, 
+        ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
+      ].forEach(scope => {
+        scope.procedures.forEach(localDef => {
+          if (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]) {
+            let callLoc = (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]).toUpperCase();
+
+            // Remove potential string around value
+            callLoc = (callLoc.startsWith(`'`) && callLoc.endsWith(`'`) ? callLoc.substring(1, callLoc.length - 1) : callLoc);
+
+            if (rules.NoExternalTo.includes(callLoc)) {
+              errors.push({
+                type: `NoExternalTo`,
+                range: new vscode.Range(localDef.position.line, 0, localDef.position.line, 100),
+              });
+            }
+          }
+        })
+      })
+    }
+
     if (rules.NoUnreferenced) {
       [
         globalScope, 
@@ -937,7 +966,7 @@ module.exports = class Linter {
           .filter(def => def.position.path === data.uri.path)
           .forEach(def => {
             if (def.references.length === 0) {
-            // Add an error to def
+              // Add an error to def
               errors.push({
                 type: `NoUnreferenced`,
                 range: new vscode.Range(def.position.line, 0, def.position.line, 100),

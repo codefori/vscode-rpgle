@@ -29,6 +29,7 @@ interface Rules {
   NoGlobalSubroutines?: boolean;
   NoLocalSubroutines?: boolean;
   NoUnreferenced?: boolean;
+  NoExternalTo?: string[];
 
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
@@ -48,6 +49,6 @@ interface IssueRange {
   "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
   "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"|
   "NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines"|"UnexpectedEnd"|
-  "NoUnreferenced";
+  "NoUnreferenced"|"NoExternalTo";
   newValue?: string;
 }

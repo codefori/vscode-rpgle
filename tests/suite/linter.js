@@ -1753,3 +1753,149 @@ exports.linter23 = async () => {
 
   assert.strictEqual(errors.length, 0);
 }
+
+exports.linter24 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Pi AUTH;`,
+    `  pUserID   Char(10);`,
+    `  pPassword Char(32);`,
+    `  Result    Char(1);`,
+    `End-Pi;`,
+    ``,
+    `Dcl-PR GetProfile  ExtPgm('QSYGETPH');`,
+    `  UserID         Char(10)   const;`,
+    `  Password       Char(32767) const options(*varsize);`,
+    `  Handle         Char(12);`,
+    `  ErrorCode      Char(256)  Options(*Varsize : *NoPass);`,
+    `  PswLength      Int(10)    const Options(*NoPass);`,
+    `  CCSIDCode      Int(10)    const Options(*NoPass);`,
+    `End-PR;`,
+    ``,
+    `Dcl-Pr CloseProfile ExtPgm('QSYRLSPH');`,
+    `  Handle         Char(12);`,
+    `End-Pr;`,
+    ``,
+    `Dcl-S ResultHandle Char(12);`,
+    ``,
+    `Dcl-S errorOut Char(256);`,
+    `Dcl-S pwLength Int(3);`,
+    ``,
+    `pwLength = %Len(%Trim(pPassword));`,
+    ``,
+    `//pPassword = %Trim(pPassword);`,
+    `ResultHandle = '';`,
+    `Result = *Off;`,
+    ``,
+    `GetProfile(pUserID:pPassword:ResultHandle:errorOut:pwLength:37);`,
+    ``,
+    `//Indicates is incorrect`,
+    `If ResultHandle <> x'000000000000000000000000';`,
+    `  Result = *On;`,
+    `  //We don't want to keep handles open`,
+    `  `,
+    `  CloseProfile(ResultHandle);`,
+    `Endif;`,
+    ``,
+    `*InLR = *On;`,
+    `Return;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    NoExternalTo: [
+      `QSYGETPH`
+    ]
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    type: `NoExternalTo`,
+    range: new vscode.Range(
+      new vscode.Position(8, 0),
+      new vscode.Position(8, 100),
+    ),
+  });
+}
+
+exports.linter25 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Pi AUTH;`,
+    `  pUserID   Char(10);`,
+    `  pPassword Char(32);`,
+    `  Result    Char(1);`,
+    `End-Pi;`,
+    ``,
+    `DoProfileStuff();`,
+    ``,
+    `*InLR = *On;`,
+    `Return;`,
+    ``,
+    `Dcl-Proc DoProfileStuff;`,
+    `  Dcl-PR GetProfile  ExtPgm('QSYGETPH');`,
+    `    UserID         Char(10)   const;`,
+    `    Password       Char(32767) const options(*varsize);`,
+    `    Handle         Char(12);`,
+    `    ErrorCode      Char(256)  Options(*Varsize : *NoPass);`,
+    `    PswLength      Int(10)    const Options(*NoPass);`,
+    `    CCSIDCode      Int(10)    const Options(*NoPass);`,
+    `  End-PR;`,
+    `  `,
+    `  Dcl-Pr CloseProfile ExtPgm('QSYRLSPH');`,
+    `    Handle         Char(12);`,
+    `  End-Pr;`,
+    `  `,
+    `  Dcl-S ResultHandle Char(12);`,
+    `  `,
+    `  Dcl-S errorOut Char(256);`,
+    `  Dcl-S pwLength Int(3);`,
+    `  `,
+    `  pwLength = %Len(%Trim(pPassword));`,
+    `  `,
+    `  //pPassword = %Trim(pPassword);`,
+    `  ResultHandle = '';`,
+    `  Result = *Off;`,
+    `  `,
+    `  GetProfile(pUserID:pPassword:ResultHandle:errorOut:pwLength:37);`,
+    `  `,
+    `  //Indicates is incorrect`,
+    `  If ResultHandle <> x'000000000000000000000000';`,
+    `    Result = *On;`,
+    `    //We don't want to keep handles open`,
+    `    `,
+    `    CloseProfile(ResultHandle);`,
+    `  Endif;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    NoExternalTo: [
+      `QSYGETPH`,
+      `QSYRLSPH`
+    ]
+  }, cache);
+
+  assert.strictEqual(errors.length, 2);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `NoExternalTo`,
+    range: new vscode.Range(
+      new vscode.Position(14, 0),
+      new vscode.Position(14, 100),
+    ),
+  });
+
+  assert.deepStrictEqual(errors[1], {
+    type: `NoExternalTo`,
+    range: new vscode.Range(
+      new vscode.Position(23, 0),
+      new vscode.Position(23, 100),
+    ),
+  });
+}
