@@ -1,4 +1,8 @@
 
+interface Keywords {
+  [keyword]: string|true;
+}
+
 interface Rules {
   indent?: number;
   BlankStructNamesCheck?: boolean;

@@ -948,7 +948,7 @@ module.exports = class Linter {
         dec.procedures
           .filter(struct => struct.position.path === data.uri.path)
           .forEach(proc => {
-            if (!proc.keywords.includes(`EXPORT`)) {
+            if (!proc.keyword[`EXPORT`]) {
               if (proc.references.length === 0) {
                 // Add an error to proc
                 errors.push({

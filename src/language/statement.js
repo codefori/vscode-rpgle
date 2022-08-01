@@ -311,6 +311,7 @@ module.exports = class Statement {
             block: this.createBlocks(statement.slice(start+1, i)),
             position: statement[start].position
           });
+          i = start;
         }
         break;
       }

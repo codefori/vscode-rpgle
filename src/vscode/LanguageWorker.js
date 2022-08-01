@@ -489,7 +489,7 @@ module.exports = class LanguageWorker {
                 }
 
                 if (possibleStruct) {
-                  if (possibleStruct.keywords.includes(`QUALIFIED`)) {
+                  if (possibleStruct.keyword[`QUALIFIED`]) {
                     possibleStruct.subItems.forEach(subItem => {
                       item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
                       item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
@@ -543,7 +543,7 @@ module.exports = class LanguageWorker {
                 item.documentation = struct.description;
                 items.push(item);
 
-                if (!struct.keywords.includes(`QUALIFIED`)) {
+                if (!struct.keyword[`QUALIFIED`]) {
                   struct.subItems.forEach(subItem => {
                     item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
                     item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
@@ -588,7 +588,7 @@ module.exports = class LanguageWorker {
                     item.documentation = struct.description;
                     items.push(item);
 
-                    if (!struct.keywords.includes(`QUALIFIED`)) {
+                    if (!struct.keyword[`QUALIFIED`]) {
                       struct.subItems.forEach(subItem => {
                         item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
                         item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);

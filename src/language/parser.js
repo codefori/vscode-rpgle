@@ -3,6 +3,7 @@ const path = require(`path`);
 const vscode = require(`vscode`);
 
 const Generic = require(`./generic`);
+const Statement = require(`./statement`);
 
 const Cache = require(`./models/cache`);
 const Declaration = require(`./models/declaration`);
@@ -768,6 +769,7 @@ module.exports = class Parser {
 
                   // If the parameter has likeds, add the subitems to make it a struct.
                   await expandDs(file, currentSub);
+                  currentSub.keyword = Parser.expandKeywords(currentSub.keywords);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
@@ -1032,6 +1034,7 @@ module.exports = class Parser {
 
                     // If the parameter has likeds, add the subitems to make it a struct.
                     await expandDs(file, currentSub);
+                    currentSub.keyword = Parser.expandKeywords(currentSub.keywords);
 
                     currentItem.subItems.push(currentSub);
                     currentSub = undefined;
@@ -1053,6 +1056,9 @@ module.exports = class Parser {
         }
 
         if (resetDefinition) {
+          // Parse keywords to make it easier to use later
+          currentItem.keyword = Parser.expandKeywords(currentItem.keywords);
+
           currentItem = undefined;
           currentTitle = undefined;
           currentDescription = [];
@@ -1067,5 +1073,28 @@ module.exports = class Parser {
     this.parsedCache[workingUri.path] = parsedData;
 
     return parsedData;
+  }
+
+  /**
+   * @param {string[]} parts 
+   * @returns {Keywords}
+   */
+  static expandKeywords(parts) {
+    const keyvalues = {};
+
+    if (parts.length > 0) {
+      const keywordParts = Statement.createBlocks(Statement.parseStatement(parts.join(` `)));
+
+      for (let i = 0; i < keywordParts.length; i++) {
+        if (keywordParts[i+1] && keywordParts[i+1].type === `block`) {
+          keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i+1].block.map(part => part.value).join(``);
+          i++; // Skip one for the block.
+        } else {
+          keyvalues[keywordParts[i].value.toUpperCase()] = true;
+        }
+      }
+    }
+
+    return keyvalues;
   }
 }

@@ -70,6 +70,7 @@ exports.fixed2 = async () => {
 
   const countVar = cache.variables.find(v => v.name === `Count`);
   assert.strictEqual(countVar.keywords[0], `PACKED(4:0)`);
+  assert.strictEqual(countVar.keyword[`PACKED`], `4:0`)
 };
 
 exports.fixed3 = async () => {
@@ -98,12 +99,14 @@ exports.fixed3 = async () => {
   assert.strictEqual(Worktype.position.line, 0);
   assert.strictEqual(Worktype.keywords[0], `CHAR(10)`);
   assert.strictEqual(Worktype.keywords[1], `INZ('*OUTQ')`);
+  assert.strictEqual(Worktype.keyword[`CHAR`], `10`);
+  assert.strictEqual(Worktype.keyword[`INZ`], `'*OUTQ'`);
 
   const DS = cache.structs[0];
   assert.strictEqual(DS.name, `*N`);
   assert.strictEqual(DS.position.line, 3);
   assert.strictEqual(DS.subItems.length, 7);
-  assert.strictEqual(DS.subItems.find(i => !i.keywords[0].startsWith(`BINDEC`)), undefined);
+  assert.strictEqual(DS.subItems.find(i => !i.keyword[`BINDEC`]), undefined);
 };
 
 exports.fixed4 = async () => {
@@ -198,6 +201,7 @@ exports.fixed5 = async () => {
   assert.strictEqual(RtvObjD.name, `RtvObjD`);
   assert.strictEqual(RtvObjD.position.line, 18);
   assert.strictEqual(RtvObjD.keywords.join(` `).trim(), `EXTPGM( 'QUSROBJD' )`);
+  assert.strictEqual(RtvObjD.keyword[`EXTPGM`], `'QUSROBJD'`);
   assert.strictEqual(RtvObjD.subItems.length, 6);
 };
 
@@ -224,18 +228,23 @@ exports.fixed6 = async () => {
   assert.strictEqual(lenVar.name, `len`);
   assert.strictEqual(lenVar.position.line, 6);
   assert.strictEqual(lenVar.keywords[0], `INT(5)`);
+  assert.strictEqual(lenVar.keyword[`INT`], `5`);
 
   const date2Var = cache.find(`DATE2`);
   assert.strictEqual(date2Var.name, `DATE2`);
   assert.strictEqual(date2Var.position.line, 3);
   assert.strictEqual(date2Var.keywords[0], `DATE`);
+  assert.strictEqual(date2Var.keyword[`DATE`], true);
   assert.strictEqual(date2Var.keywords[1], `DATFMT(*JIS)`);
+  assert.strictEqual(date2Var.keyword[`DATFMT`], `*JIS`);
 
   const time0Var = cache.find(`TIME0`);
   assert.strictEqual(time0Var.name, `TIME0`);
   assert.strictEqual(time0Var.position.line, 7);
   assert.strictEqual(time0Var.keywords[0], `TIME`);
+  assert.strictEqual(time0Var.keyword[`TIME`], true);
   assert.strictEqual(time0Var.keywords[1], `INZ(T'10.12.15')`);
+  assert.strictEqual(time0Var.keyword[`INZ`], `T'10.12.15'`);
 };
 
 exports.fixed7 = async () => {
@@ -266,7 +275,9 @@ exports.fixed7 = async () => {
   assert.strictEqual(Obj_Next.name, `Obj_Next`);
   assert.strictEqual(Obj_Next.position.line, 3);
   assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
+  assert.strictEqual(Obj_Next.keyword[`EXPORT`], true);
   assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
+  assert.strictEqual(Obj_Next.keyword[`LIKEDS`], `OBJECTDS`);
   assert.strictEqual(Obj_Next.subItems.length, 0);
 };
 
@@ -360,6 +371,8 @@ exports.fixed9 = async () => {
   assert.strictEqual(Obj_Next.position.line, 5);
   assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
   assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
+  assert.strictEqual(Obj_Next.keyword[`EXPORT`], true);
+  assert.strictEqual(Obj_Next.keyword[`LIKEDS`], `OBJECTDS`);
   assert.strictEqual(Obj_Next.subItems.length, 0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
@@ -395,10 +408,12 @@ exports.fixed10 = async () => {
   const rrn02 = cache.find(`rrn02`);
   assert.strictEqual(rrn02.name, `rrn02`);
   assert.strictEqual(rrn02.keywords.includes(`PACKED(7:2)`), true);
+  assert.strictEqual(rrn02.keyword[`PACKED`], `7:2`);
 
   const arsalePr = dataDs.subItems[3];
   assert.strictEqual(arsalePr.name, `arsalePr`);
   assert.strictEqual(arsalePr.keywords.includes(`ZONED(7:2)`), true);
+  assert.strictEqual(arsalePr.keyword[`ZONED`], `7:2`);
 };
 
 exports.fixedfree1 = async () => {
@@ -471,6 +486,7 @@ exports.fixedfree1 = async () => {
   assert.strictEqual(Obj_List.name, `Obj_List`);
   assert.strictEqual(Obj_List.position.line, 6);
   assert.strictEqual(Obj_List.keywords.includes(`EXPORT`), true);
+  assert.strictEqual(Obj_List.keyword[`EXPORT`], true);
   assert.strictEqual(Obj_List.subItems.length, 3);
 
   assert.strictEqual(Obj_List.subItems.find(i => !i.keywords.includes(`CHAR(10)`)), undefined);

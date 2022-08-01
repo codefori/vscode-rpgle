@@ -12,6 +12,9 @@ module.exports = class Declaration {
 
     /** @type {string[]} */
     this.keywords = [];
+
+    /** @type {Keywords} */
+    this.keyword = {};
     
     this.description = ``;
 
