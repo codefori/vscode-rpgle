@@ -12,7 +12,7 @@ module.exports = {
     `QCMD`,
     `QP2TERM`,
     `QSH`,
-    `SYSTEM`
+    `SYSTEM`,
     `QCMDEXC`,
   ]
 }
