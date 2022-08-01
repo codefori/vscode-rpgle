@@ -640,7 +640,7 @@ module.exports = class Parser {
               currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
               if (currentItem) {
-                currentItem.keywords = parts.slice(2);
+                currentItem.keywords.push(...parts.slice(2));
                 currentItem.readParms = true;
 
                 currentDescription = [];
