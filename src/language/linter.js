@@ -772,6 +772,10 @@ module.exports = class Linter {
                         let defRef;
                         if (currentProcedure) {
                           defRef = currentProcedure.scope.find(upperName);
+
+                          if (!defRef) {
+                            defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === upperName)
+                          }
                         }
 
                         if (!defRef) {
@@ -952,6 +956,15 @@ module.exports = class Linter {
                   range: new vscode.Range(proc.position.line, 0, proc.position.line, 100),
                 });
               }
+
+              proc.subItems.forEach(parm => {
+                if (parm.references.length === 0) {
+                  errors.push({
+                    type: `NoUnreferenced`,
+                    range: new vscode.Range(parm.position.line, 0, parm.position.line, 100),
+                  });
+                }
+              })
             }
           })
 

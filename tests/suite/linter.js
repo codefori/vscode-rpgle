@@ -1641,3 +1641,42 @@ exports.linter20 =  async () => {
   assert.strictEqual(errors[0].offset.length, 64);
   assert.strictEqual(errors[0].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
 };
+
+exports.linter21 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `Yesproc(MyVariable2);`,
+    `AlsoYesProc();`,
+    `Return;`,
+    ``,
+    `Dcl-Proc Yesproc;`,
+    `  Dcl-Pi *N;`,
+    `    parmA Char(20);`,
+    `  End-Pi;`,
+    ``,
+    `  parmA = 'Goodbye world';`,
+    `End-Proc;`,
+    ``,
+    `Dcl-Proc AlsoYesProc;`,
+    `  Dcl-Pi *n Int(10);`,
+    `    parmB Int(10);`,
+    `  End-pi;`,
+    ``,
+    `  return 2 * 2;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(URI, lines);
+  const { errors } = Linter.getErrors(lines, {
+    ReferencesInPath: URI.path,
+    NoUnreferenced: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+}

@@ -12,7 +12,6 @@ const Linter = require(`../language/linter`);
 const Generic = require(`../language/generic`);
 
 const { Parser } = require(`../parser`);
-const IssueRange = require(`../language/models/ContentRange`);
 
 const lintFile = {
   member: `vscode,rpglint`,
