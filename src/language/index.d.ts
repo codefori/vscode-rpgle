@@ -31,6 +31,7 @@ interface Rules {
   NoUnreferenced?: boolean;
   NoExternalTo?: string[];
   NoExecuteImmediate?: boolean;
+  NoExtProgramVariable?: boolean;
 
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
@@ -50,6 +51,6 @@ interface IssueRange {
   "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
   "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"|
   "NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines"|"UnexpectedEnd"|
-  "NoUnreferenced"|"NoExternalTo"|"NoExecuteImmediate";
+  "NoUnreferenced"|"NoExternalTo"|"NoExecuteImmediate"|"NoExtProgramVariable";
   newValue?: string;
 }

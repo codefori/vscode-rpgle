@@ -33,7 +33,8 @@ const errorText = {
   'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\``,
   'NoUnreferenced': `No reference to definition.`,
   'NoExternalTo': `Cannot declare prototype to this external API.`,
-  'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`
+  'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`,
+  'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`
 }
 
 module.exports = class Linter {
@@ -416,9 +417,27 @@ module.exports = class Linter {
 
                   case `DCL-PR`:
                     inPrototype = true;
-                    if (rules.PrototypeCheck) {
-                      // Unneeded PR
-                      if (!statement.some(part => part.value && part.value.toUpperCase().startsWith(`EXT`))) {
+                    if (rules.PrototypeCheck || rules.NoExtProgramVariable) {
+                      
+                      const extIndex = statement.findIndex(part => part.value && part.value.toUpperCase().startsWith(`EXT`));
+                      if (extIndex >= 0) {
+                        if (rules.NoExtProgramVariable) {
+
+                          const keywordValue = statement.find((part, index) => index > extIndex && part.type === `word`);
+                          if (keywordValue) {
+                            errors.push({
+                              range: new vscode.Range(
+                                statementStart,
+                                statementEnd
+                              ),
+                              offset: {position: keywordValue.position, length: keywordValue.position + keywordValue.value.length},
+                              type: `NoExtProgramVariable`
+                            });
+                          }
+                        }
+
+                      } else if (rules.PrototypeCheck) {
+                        // Not EXTPROC / EXTPGM found. Likely don't need this PR if it's for local procedure.
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
                           type: `PrototypeCheck`,

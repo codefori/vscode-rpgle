@@ -152,6 +152,11 @@
             "$id": "#/properties/NoExecuteImmediate",
             "type": "boolean",
             "description": "Embedded SQL statement with EXECUTE IMMEDIATE not allowed."
+        },
+        "NoExtProgramVariable": {
+            "$id": "#/properties/NoExtProgramVariable",
+            "type": "boolean",
+            "description": "Declaring a prototype with EXTPGM and EXTPROC using a procedure is now allowed."
         }
     },
     "additionalProperties": true

@@ -1955,3 +1955,47 @@ exports.linter27 = async () => {
     ),
   });
 }
+
+exports.linter28 = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-Pr APGM extpgm(myvarNotused);`,
+    `End-Pr;`,
+    `Dcl-Pr OTHERPGM extproc(*cwiden:myvarNotused);`,
+    `End-Pr;`,
+    `Dcl-Pr OTHERPGM extpgm('realString');`,
+    `End-Pr;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    NoExtProgramVariable: true
+  }, cache);
+  
+  assert.strictEqual(errors.length, 2);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `NoExtProgramVariable`,
+    range: new vscode.Range(
+      new vscode.Position(1, 0),
+      new vscode.Position(1, 32),
+    ),
+    offset: {
+      position: 19,
+      length: 31
+    }
+  });
+
+  assert.deepStrictEqual(errors[1], {
+    type: `NoExtProgramVariable`,
+    range: new vscode.Range(
+      new vscode.Position(3, 0),
+      new vscode.Position(3, 45),
+    ),
+    offset: {
+      position: 32,
+      length: 44
+    }
+  });
+}
