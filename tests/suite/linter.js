@@ -1679,4 +1679,49 @@ exports.linter21 = async () => {
   }, cache);
 
   assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    type: `NoUnreferenced`,
+    range: new vscode.Range(
+      new vscode.Position(20, 0),
+      new vscode.Position(20, 100),
+    ),
+  });
+}
+
+/**
+   * Test procedure length.
+   * When Procedure is defined, the prototype is overridden.
+   */
+exports.linter22 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Pr TheProcedure;`,
+    `  parmA CHAR(20);`,
+    `End-Pr`,
+    ``,
+    `Dcl-S theVar CHAR(20);`,
+    ``,
+    `Dcl-Proc theProcedure;`,
+    `  Dcl-Pi *N;`,
+    `    newValue Char(20);`,
+    `  End-Pi;`,
+    `  theVar = newValue;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(URI, lines);
+  const { errors } = Linter.getErrors(lines, {
+    PrototypeCheck: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    type: `PrototypeCheck`,
+    range: new vscode.Range(
+      new vscode.Position(2, 0),
+      new vscode.Position(2, 19),
+    ),
+  });
 }
