@@ -5,7 +5,7 @@ const assert = require(`assert`);
 const Parser = require(`../../src/language/parser`);
 const Linter = require(`../../src/language/linter`);
 
-const URI = vscode.Uri.parse(`source.rpgle`);
+const uri = vscode.Uri.parse(`source.rpgle`);
 
 exports.qualified1 = async () => {
   const lines = [
@@ -19,8 +19,8 @@ exports.qualified1 = async () => {
   ].join(`\n`);
   
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
-  const { errors } = Linter.getErrors(lines, {
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
     QualifiedCheck: true,
   }, cache);
   
@@ -92,8 +92,8 @@ exports.ctdata1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
-  const { indentErrors } = Linter.getErrors(lines, {
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
     indent: 2
   }, cache);
 
@@ -115,7 +115,7 @@ exports.likeds1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2);
   assert.strictEqual(cache.structs.length, 2);
@@ -147,7 +147,7 @@ exports.likeds2 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2);
   assert.strictEqual(cache.structs.length, 1);
@@ -191,9 +191,9 @@ exports.overload1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
-  const { indentErrors } = Linter.getErrors(lines, {
+  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
     indent: 2,
     PrettyComments: true
   }, cache);

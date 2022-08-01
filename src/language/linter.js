@@ -40,15 +40,15 @@ module.exports = class Linter {
   }
 
   /**
-   * @param {string} content 
+   * @param {{uri: vscode.Uri, content: string}} data
    * @param {Rules} rules 
    * @param {Cache|null} [globalScope]
    */
-  static getErrors(content, rules, globalScope) {
-    const newLineLength = (content.indexOf(`\r\n`) !== -1) ? 2 : 1;
+  static getErrors(data, rules, globalScope) {
+    const newLineLength = (data.content.indexOf(`\r\n`) !== -1) ? 2 : 1;
 
     /** @type {string[]} */
-    const lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+    const lines = data.content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
 
     const indentEnabled = rules.indent !== undefined;
     const indent = rules.indent || 2;
@@ -934,7 +934,7 @@ module.exports = class Linter {
         ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
       ].forEach(dec => {
         [...dec.constants, ...dec.subroutines, ...dec.variables]
-          .filter(def => def.position.path === rules.ReferencesInPath)
+          .filter(def => def.position.path === data.uri.path)
           .forEach(def => {
             if (def.references.length === 0) {
             // Add an error to def
@@ -946,7 +946,7 @@ module.exports = class Linter {
           });
 
         dec.procedures
-          .filter(struct => struct.position.path === rules.ReferencesInPath)
+          .filter(struct => struct.position.path === data.uri.path)
           .forEach(proc => {
             if (!proc.keywords.includes(`EXPORT`)) {
               if (proc.references.length === 0) {
@@ -969,7 +969,7 @@ module.exports = class Linter {
           })
 
         dec.structs
-          .filter(struct => struct.position.path === rules.ReferencesInPath)
+          .filter(struct => struct.position.path === data.uri.path)
           .forEach(struct => {
             const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 0)
 

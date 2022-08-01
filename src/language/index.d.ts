@@ -28,9 +28,6 @@ interface Rules {
 
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
-
-  /** Used in conjunction with NoUnreferences, this will assure only errors from the base file are shown */
-  ReferencesInPath?: string;
 }
 
 interface Offset {

@@ -395,7 +395,10 @@ module.exports = class LanguageWorker {
             const text = document.getText();
 
             // Updates docs
-            Linter.getErrors(text, {
+            Linter.getErrors({
+              uri: document.uri,
+              content: text
+            }, {
               CollectReferences: true,
             }, docs);
 

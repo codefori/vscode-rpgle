@@ -5,7 +5,7 @@ const assert = require(`assert`);
 
 const Parser = require(`../../src/language/parser`);
 
-const URI = vscode.Uri.parse(`source.rpgle`);
+const uri = vscode.Uri.parse(`source.rpgle`);
   
 exports.fixed1 = async () => {
   const lines = [
@@ -21,7 +21,7 @@ exports.fixed1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
 
@@ -61,7 +61,7 @@ exports.fixed2 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 13, `Expect length of 13`);
 
@@ -88,7 +88,7 @@ exports.fixed3 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
@@ -127,7 +127,7 @@ exports.fixed4 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
@@ -188,7 +188,7 @@ exports.fixed5 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 2, `Expect length of 2`);
@@ -216,7 +216,7 @@ exports.fixed6 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 8, `Expect length of 8`);
 
@@ -258,7 +258,7 @@ exports.fixed7 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
 
@@ -322,7 +322,7 @@ exports.fixed8 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.subroutines.length, 2);
   assert.strictEqual(cache.subroutines[0].name, `$QUSCRTUS`);
@@ -351,7 +351,7 @@ exports.fixed9 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 2);
 
@@ -386,7 +386,7 @@ exports.fixed10 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   const dataDs = cache.find(`data`);
   assert.strictEqual(dataDs.name, `data`);
@@ -458,7 +458,7 @@ exports.fixedfree1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 3);
   assert.strictEqual(cache.variables.find(i => !i.keywords.includes(`CHAR(10)`)), undefined);
@@ -497,7 +497,7 @@ exports.fixed11 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   const F4DATE = cache.find(`F4DATE`);
   assert.strictEqual(F4DATE.subItems.length, 4);
@@ -536,7 +536,7 @@ exports.columnFix = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 3);
 };
@@ -579,7 +579,7 @@ exports.comments1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 6);
 

@@ -5,7 +5,7 @@ const assert = require(`assert`);
 const Parser = require(`../../src/language/parser`);
 const Linter = require(`../../src/language/linter`);
 
-const URI = vscode.Uri.parse(`source.rpgle`);
+const uri = vscode.Uri.parse(`source.rpgle`);
 
 module.exports = {
   skip1: async () => {
@@ -21,8 +21,8 @@ module.exports = {
     ].join(`\n`);
 
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
-    const { indentErrors } = Linter.getErrors(lines, {
+    const cache = await parser.getDocs(uri, lines);
+    const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
     }, cache);
 
@@ -43,8 +43,8 @@ module.exports = {
     ].join(`\n`);
 
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
-    const { indentErrors } = Linter.getErrors(lines, {
+    const cache = await parser.getDocs(uri, lines);
+    const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
     }, cache);
 
@@ -65,8 +65,8 @@ module.exports = {
     ].join(`\n`);
 
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
-    const { errors } = Linter.getErrors(lines, {
+    const cache = await parser.getDocs(uri, lines);
+    const { errors } = Linter.getErrors({uri, content: lines}, {
       IncorrectVariableCase: true
     }, cache);
 
@@ -91,7 +91,7 @@ module.exports = {
     ].join(`\n`);
 
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
+    const cache = await parser.getDocs(uri, lines);
 
     const uppercase = cache.find(`UPPERCASE`);
     assert.strictEqual(uppercase.name, `UPPERCASE`);
@@ -112,7 +112,7 @@ module.exports = {
     ].join(`\n`);
 
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
+    const cache = await parser.getDocs(uri, lines);
 
     assert.strictEqual(cache.procedures.length, 1);
 
@@ -149,8 +149,8 @@ module.exports = {
     ].join(`\n`);
     
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
-    const { errors } = Linter.getErrors(lines, {
+    const cache = await parser.getDocs(uri, lines);
+    const { errors } = Linter.getErrors({uri, content: lines}, {
       NoGlobalsInProcedures: true
     }, cache);
 
@@ -174,7 +174,7 @@ module.exports = {
     ].join(`\n`);
 
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
+    const cache = await parser.getDocs(uri, lines);
 
     assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -197,9 +197,9 @@ module.exports = {
     ].join(`\n`);
 
     const parser = new Parser();
-    const cache = await parser.getDocs(URI, lines);
+    const cache = await parser.getDocs(uri, lines);
 
-    const { errors } = Linter.getErrors(lines, {
+    const { errors } = Linter.getErrors({uri, content: lines}, {
       PrettyComments: true
     }, cache);
 

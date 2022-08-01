@@ -188,7 +188,10 @@ module.exports = class LinterWorker {
                 });
 
                 // First we do all the indentation fixes.
-                const { indentErrors } = Linter.getErrors(document.getText(), rules, docs);
+                const { indentErrors } = Linter.getErrors({
+                  uri: document.uri,
+                  content: document.getText()
+                }, rules, docs);
 
                 if (indentErrors.length > 0) {
                   const fixes = indentErrors.map(error => {
@@ -213,7 +216,10 @@ module.exports = class LinterWorker {
                   });
 
                   // Next up, let's fix all the other things!
-                  const {errors} = Linter.getErrors(document.getText(), rules, docs);
+                  const {errors} = Linter.getErrors({
+                    uri: document.uri,
+                    content: document.getText()
+                  }, rules, docs);
 
                   const actions = LinterWorker.getActions(document, errors);
                   let edits = [];
@@ -275,7 +281,10 @@ module.exports = class LinterWorker {
             if (docs) {
               const options = await this.getLinterOptions(document.uri);
               const text = document.getText();
-              const detail = Linter.getErrors(text, {
+              const detail = Linter.getErrors({
+                uri: document.uri,
+                content: text
+              }, {
                 indent: Number(vscode.window.activeTextEditor.options.tabSize),
                 ...options
               }, docs);
@@ -417,9 +426,11 @@ module.exports = class LinterWorker {
       let detail;
 
       try {
-        detail = Linter.getErrors(text, {
+        detail = Linter.getErrors({
+          uri: document.uri,
+          content: text,
+        }, {
           indent: Number(vscode.window.activeTextEditor.options.tabSize),
-          ReferencesInPath: document.uri.path,
           ...options
         }, docs);
       } catch (e) {

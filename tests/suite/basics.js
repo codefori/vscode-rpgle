@@ -4,7 +4,7 @@ const assert = require(`assert`);
 const Parser = require(`../../src/language/parser`);
 const Linter = require(`../../src/language/linter`);
 
-const URI = vscode.Uri.parse(`source.rpgle`);
+const uri = vscode.Uri.parse(`source.rpgle`);
 
 exports.test1 = async () => {
   const lines = [
@@ -13,7 +13,7 @@ exports.test1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
@@ -31,7 +31,7 @@ exports.test2 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
@@ -54,7 +54,7 @@ exports.test3 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
@@ -81,7 +81,7 @@ exports.test4 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.subroutines.length, 1, `Expect length of 1`);
@@ -112,7 +112,7 @@ exports.test5 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
@@ -138,7 +138,7 @@ exports.test6 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -167,7 +167,7 @@ exports.test7 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -186,7 +186,7 @@ exports.test8 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
@@ -213,7 +213,7 @@ exports.test9 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
@@ -242,7 +242,7 @@ exports.test10 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
@@ -271,7 +271,7 @@ exports.test10_local_fixedcopy = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
@@ -305,7 +305,7 @@ exports.test11 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 2, `Expect length of 2`);
@@ -345,7 +345,7 @@ exports.test12 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
@@ -383,9 +383,9 @@ exports.indicators1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
-  Linter.getErrors(lines, {
+  Linter.getErrors({uri, content: lines}, {
     CollectReferences: true,
   }, cache);
 
@@ -423,7 +423,7 @@ exports.subds1 = async () => {
   ].join(`\n`);
 
   const parser = new Parser();
-  const cache = await parser.getDocs(URI, lines);
+  const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.structs.length, 1);
 
