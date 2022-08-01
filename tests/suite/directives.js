@@ -213,7 +213,6 @@ module.exports = {
         position: 0,
         length: 8
       },
-      newValue: undefined,
     });
   },
 }

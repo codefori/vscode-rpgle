@@ -1,6 +1,5 @@
 
 const Cache = require(`./cache`);
-const ContentRange = require(`./ContentRange`);
 
 module.exports = class Declaration {
   /**
@@ -23,7 +22,7 @@ module.exports = class Declaration {
     /** @type {{path: string, line: number}} */
     this.position = undefined;
 
-    /** @type {ContentRange[]} */
+    /** @type {IssueRange[]} */
     this.references = [];
 
     // Not used in subitem:

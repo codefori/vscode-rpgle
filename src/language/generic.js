@@ -4,8 +4,6 @@ const path = require(`path`);
 
 const getInstance = require(`../base`);
 
-const ContentRange = require(`./models/ContentRange`);
-
 module.exports = class {
 
   /**
@@ -121,7 +119,7 @@ module.exports = class {
 
   /**
    * @param {vscode.TextDocument} document
-   * @param {ContentRange} error 
+   * @param {IssueRange} error 
    */
   static calculateOffset(document, error) {
     const offset = error.offset;

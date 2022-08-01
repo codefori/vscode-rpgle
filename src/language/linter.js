@@ -5,7 +5,6 @@ const Cache = require(`./models/cache`);
 const Declaration = require(`./models/declaration`);
 const Statement = require(`./statement`);
 const oneLineTriggers = require(`./models/oneLineTriggers`);
-const IssueRange = require(`./models/ContentRange`);
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -42,35 +41,7 @@ module.exports = class Linter {
 
   /**
    * @param {string} content 
-   * @param {{
-   *  indent?: number,
-   *  BlankStructNamesCheck?: boolean,
-   *  QualifiedCheck?: boolean,
-   *  PrototypeCheck?: boolean,
-   *  ForceOptionalParens?: boolean,
-   *  NoOCCURS?: boolean,
-   *  NoSELECTAll?: boolean,
-   *  UselessOperationCheck?: boolean,
-   *  UppercaseConstants?: boolean,
-   *  IncorrectVariableCase?: boolean,
-   *  RequiresParameter?: boolean,
-   *  RequiresProcedureDescription?: boolean,
-   *  StringLiteralDupe?: boolean,
-   *  literalMinimum?: number,
-   *  RequireBlankSpecial?: boolean,
-   *  CopybookDirective?: "copy"|"include"
-   *  UppercaseDirectives?: boolean,
-   *  NoSQLJoins?: boolean,
-   *  NoGlobalsInProcedures?: boolean,
-   *  SpecificCasing?: {operation: string, expected: string}[],
-   *  NoCTDATA?: boolean,
-   *  PrettyComments?: boolean,
-   *  NoGlobalSubroutines?: boolean,
-   *  NoLocalSubroutines?: boolean,
-   *  CollectReferences?: boolean,
-   *  NoUnreferenced?: boolean,
-   *  ReferencesInPath?: string,
-   * }} rules 
+   * @param {Rules} rules 
    * @param {Cache|null} [globalScope]
    */
   static getErrors(content, rules, globalScope) {
@@ -173,7 +144,6 @@ module.exports = class Linter {
                   new vscode.Position(lineNumber, currentIndent),
                   new vscode.Position(lineNumber, currentIndent + 2)
                 ),
-                offset: undefined,
                 type: `PrettyComments`,
                 newValue: ``
               });
@@ -188,7 +158,6 @@ module.exports = class Linter {
                       new vscode.Position(lineNumber, currentIndent),
                       new vscode.Position(lineNumber, currentIndent + 2)
                     ),
-                    offset: undefined,
                     type: `PrettyComments`,
                     newValue: `// `,
                   });
@@ -273,7 +242,6 @@ module.exports = class Linter {
                         ),
                         offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
                         type: `NoCTDATA`,
-                        newValue: undefined,
                       });
                     }
                   }
@@ -352,7 +320,6 @@ module.exports = class Linter {
                       ),
                       offset: {position: statement[1].position, length: statement[1].position + value.length},
                       type: `InvalidDeclareNumber`,
-                      newValue: undefined
                     });
                   }
 
@@ -365,9 +332,7 @@ module.exports = class Linter {
                             statementStart,
                             statementEnd
                           ),
-                          offset: undefined,
                           type: `NoLocalSubroutines`,
-                          newValue: undefined,
                         });
                       }
                     } else {
@@ -397,9 +362,7 @@ module.exports = class Linter {
                               statementStart,
                               statementEnd
                             ),
-                            offset: undefined,
                             type: `RequiresProcedureDescription`,
-                            newValue: undefined,
                           });
                         }
                       }
@@ -451,9 +414,7 @@ module.exports = class Linter {
                       if (!statement.some(part => part.value && part.value.toUpperCase().startsWith(`EXT`))) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          offset: undefined,
                           type: `PrototypeCheck`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -464,9 +425,7 @@ module.exports = class Linter {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          offset: undefined,
                           type: `NoOCCURS`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -475,9 +434,7 @@ module.exports = class Linter {
                       if (!statement.some(part => part.value && [`LIKEDS`, `LIKEREC`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          offset: undefined,
                           type: `QualifiedCheck`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -486,9 +443,7 @@ module.exports = class Linter {
                       if (statement.some(part => part.type === `special` && part.value.toUpperCase() === `*N`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          offset: undefined,
                           type: `BlankStructNamesCheck`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -497,9 +452,7 @@ module.exports = class Linter {
                       if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value.toUpperCase()))) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          offset: undefined,
                           type: `NoCTDATA`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -562,7 +515,6 @@ module.exports = class Linter {
                         ),
                         offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
                         type: `UnexpectedEnd`,
-                        newValue: undefined,
                       });
                     }
 
@@ -578,7 +530,6 @@ module.exports = class Linter {
                         ),
                         offset: {position: statement[0].position, length: statement[0].position + statement[0].value.length},
                         type: `UnexpectedEnd`,
-                        newValue: undefined,
                       });
                     }
 
@@ -627,7 +578,6 @@ module.exports = class Linter {
                         ),
                         offset: {position: statement[0].position, length: statement[0].position + value.length + 1},
                         type: `UselessOperationCheck`,
-                        newValue: undefined,
                       });
                     }
                     break;
@@ -638,7 +588,6 @@ module.exports = class Linter {
                           statementStart,
                           statementEnd
                         ),
-                        offset: undefined,
                         type: `NoGlobalSubroutines`,
                         newValue: `return`
                       });
@@ -653,7 +602,6 @@ module.exports = class Linter {
                               statementStart,
                               statementEnd
                             ),
-                            offset: undefined,
                             type: `NoGlobalSubroutines`,
                             newValue: `${statement[1].value}()`
                           });
@@ -666,9 +614,7 @@ module.exports = class Linter {
                       if (currentStatementUpper.includes(`SELECT *`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          offset: undefined,
                           type: `NoSELECTAll`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -677,9 +623,7 @@ module.exports = class Linter {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
                         errors.push({
                           range: new vscode.Range(statementStart, statementEnd),
-                          offset: undefined,
                           type: `NoSQLJoins`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -698,9 +642,7 @@ module.exports = class Linter {
                             new vscode.Position(statementStart.line, statementStart.character + statement[0].value.length + 1),
                             statementEnd
                           ),
-                          offset: undefined,
                           type: `ForceOptionalParens`,
-                          newValue: undefined,
                         });
                       }
                     }
@@ -761,7 +703,6 @@ module.exports = class Linter {
                             ),
                             offset: {position: part.position, length: part.position + part.value.length},
                             type: null,
-                            newValue: undefined,
                           })
                         }
                       }
@@ -781,7 +722,6 @@ module.exports = class Linter {
                               ),
                               offset: {position: part.position, length: part.position + part.value.length},
                               type: `NoGlobalsInProcedures`,
-                              newValue: undefined,
                             });
                           }
                         }
@@ -823,7 +763,6 @@ module.exports = class Linter {
                               ),
                               offset: {position: part.position, length: part.position + part.value.length},
                               type: `RequiresParameter`,
-                              newValue: undefined,
                             });
                           }
                         }
@@ -847,8 +786,6 @@ module.exports = class Linter {
                                 statementEnd
                               ),
                               offset: {position: part.position, length: part.position + part.value.length},
-                              type: null,
-                              newValue: undefined,
                             })
                           }
                         }
@@ -1000,8 +937,6 @@ module.exports = class Linter {
               errors.push({
                 type: `NoUnreferenced`,
                 range: new vscode.Range(def.position.line, 0, def.position.line, 100),
-                offset: undefined,
-                newValue: undefined,
               });
             }
           });
@@ -1015,8 +950,6 @@ module.exports = class Linter {
                 errors.push({
                   type: `NoUnreferenced`,
                   range: new vscode.Range(proc.position.line, 0, proc.position.line, 100),
-                  offset: undefined,
-                  newValue: undefined,
                 });
               }
             }
@@ -1036,8 +969,6 @@ module.exports = class Linter {
                   errors.push({
                     type: `NoUnreferenced`,
                     range: new vscode.Range(subf.position.line, 0, subf.position.line, 100),
-                    offset: undefined,
-                    newValue: undefined,
                   });
                 }
               });
@@ -1046,8 +977,6 @@ module.exports = class Linter {
                 errors.push({
                   type: `NoUnreferenced`,
                   range: new vscode.Range(struct.position.line, 0, struct.position.line, 100),
-                  offset: undefined,
-                  newValue: undefined,
                 });
               }
             }

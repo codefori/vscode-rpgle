@@ -829,7 +829,6 @@ exports.linter8 =  async () => {
     ),
     offset: { position: 3, length: 12 },
     type: `RequiresParameter`,
-    newValue: undefined
   }, `Error not as expected`);
 };
 
@@ -935,9 +934,7 @@ exports.linter10 =  async () => {
       new vscode.Position(2, 0),
       new vscode.Position(2, 38),
     ),
-    offset: undefined,
     type: `NoCTDATA`,
-    newValue: undefined
   }, `Error not as expected`);
 
   assert.deepStrictEqual(errors[1], {
@@ -947,7 +944,6 @@ exports.linter10 =  async () => {
     ),
     offset: { position: 0, length: 8 },
     type: `NoCTDATA`,
-    newValue: undefined
   }, `Error not as expected`);
 };
 
@@ -1191,7 +1187,6 @@ exports.linter15 =  async () => {
       new vscode.Position(4, 0),
       new vscode.Position(4, 2),
     ),
-    offset: undefined,
   });
 
   assert.deepStrictEqual(errors[1], {
@@ -1201,7 +1196,6 @@ exports.linter15 =  async () => {
       new vscode.Position(5, 0),
       new vscode.Position(5, 2),
     ),
-    offset: undefined,
   });
 
   assert.deepStrictEqual(errors[2], {
@@ -1211,7 +1205,6 @@ exports.linter15 =  async () => {
       new vscode.Position(6, 0),
       new vscode.Position(6, 2),
     ),
-    offset: undefined,
   });
 
   assert.deepStrictEqual(errors[3], {
@@ -1221,7 +1214,6 @@ exports.linter15 =  async () => {
       new vscode.Position(14, 2),
       new vscode.Position(14, 4),
     ),
-    offset: undefined,
   });
 
   assert.deepStrictEqual(errors[4], {
@@ -1231,7 +1223,6 @@ exports.linter15 =  async () => {
       new vscode.Position(16, 2),
       new vscode.Position(16, 4),
     ),
-    offset: undefined,
   });
 };
 
@@ -1266,7 +1257,6 @@ exports.linter16 =  async () => {
       new vscode.Position(3, 0),
       new vscode.Position(3, 18),
     ),
-    offset: undefined,
   });
 
   assert.deepStrictEqual(errors[1], {
@@ -1329,7 +1319,6 @@ exports.linter16_with_leavesr =  async () => {
       new vscode.Position(5, 0),
       new vscode.Position(5, 18),
     ),
-    offset: undefined,
   });
 
   assert.deepStrictEqual(errors[1], {
@@ -1352,7 +1341,6 @@ exports.linter16_with_leavesr =  async () => {
       new vscode.Position(10, 4),
       new vscode.Position(10, 11),
     ),
-    offset: undefined
   });
 
   assert.deepStrictEqual(errors[3], {
@@ -1402,8 +1390,6 @@ exports.linter17 =  async () => {
       new vscode.Position(8, 2),
       new vscode.Position(8, 21),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 };
 
@@ -1440,7 +1426,6 @@ exports.linter18 = async () => {
       position: 0,
       length: 11
     },
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[1], {
@@ -1453,7 +1438,6 @@ exports.linter18 = async () => {
       position: 10,
       length: 21
     },
-    newValue: undefined,
   });
 }
 
@@ -1547,8 +1531,6 @@ exports.linter19 = async () => {
       new vscode.Position(4, 0),
       new vscode.Position(4, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[1], {
@@ -1557,8 +1539,6 @@ exports.linter19 = async () => {
       new vscode.Position(68, 0),
       new vscode.Position(68, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[2], {
@@ -1567,8 +1547,6 @@ exports.linter19 = async () => {
       new vscode.Position(11, 0),
       new vscode.Position(11, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[3], {
@@ -1577,8 +1555,6 @@ exports.linter19 = async () => {
       new vscode.Position(10, 0),
       new vscode.Position(10, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[4], {
@@ -1587,8 +1563,6 @@ exports.linter19 = async () => {
       new vscode.Position(23, 0),
       new vscode.Position(23, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[5], {
@@ -1597,8 +1571,6 @@ exports.linter19 = async () => {
       new vscode.Position(22, 0),
       new vscode.Position(22, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[6], {
@@ -1607,8 +1579,6 @@ exports.linter19 = async () => {
       new vscode.Position(38, 0),
       new vscode.Position(38, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[7], {
@@ -1617,8 +1587,6 @@ exports.linter19 = async () => {
       new vscode.Position(49, 0),
       new vscode.Position(49, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[8], {
@@ -1627,8 +1595,6 @@ exports.linter19 = async () => {
       new vscode.Position(48, 0),
       new vscode.Position(48, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[9], {
@@ -1637,8 +1603,6 @@ exports.linter19 = async () => {
       new vscode.Position(57, 0),
       new vscode.Position(57, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 
   assert.deepStrictEqual(errors[10], {
@@ -1647,8 +1611,6 @@ exports.linter19 = async () => {
       new vscode.Position(56, 0),
       new vscode.Position(56, 100),
     ),
-    offset: undefined,
-    newValue: undefined,
   });
 }
 
