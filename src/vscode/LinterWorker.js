@@ -296,7 +296,7 @@ module.exports = class LinterWorker {
       /**
        * When the document changes, we want to fetch the updated errors.
        */
-      vscode.workspace.onDidChangeTextDocument(async editor => {So
+      vscode.workspace.onDidChangeTextDocument(async editor => {
         if (editor) {
           const document = editor.document;
           if (document.languageId === `rpgle`) {

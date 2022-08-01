@@ -7,6 +7,71 @@ const Linter = require(`../../src/language/linter`);
 
 const URI = vscode.Uri.parse(`source.rpgle`);
 
+exports.linter_indent_multi_1 = async () => {
+  const lines = [
+    `**FREE`,
+    `Begsr shouldBeGood;`,
+    `  If a`,
+    `  and b`,
+    `      or c;`,
+    `    clear x;`,
+    `  Endif;`,
+    `  If a // comment`,
+    `  and b // comment`,
+    `      or c; // comment`,
+    `    clear x;`,
+    `  Elseif x`,
+    `  and y`,
+    `      or z;`,
+    `    Dou not x`,
+    `    and not y`,
+    `    and not z;`,
+    `      clear z;`,
+    `    Enddo;`,
+    `  Endif;`,
+    `Endsr;`,
+    `Return;`
+  ].join(`\n`);
+ 
+  const parser = new Parser();
+  const cache = await parser.getDocs(URI, lines);
+  const { indentErrors } = Linter.getErrors(lines, {
+    indent: 2
+  }, cache);
+  
+  assert.strictEqual(indentErrors.length, 0, `There should be no errors`);
+};
+
+exports.linter_indent_multi_2 = async () => {
+  const lines = [
+    `**FREE`,
+    `Begsr shouldError;`,
+    `  If a`,
+    ` and b`,
+    `      or c;`,
+    `     clear x;`,
+    `  Endif;`,
+    `Endsr;`,
+    `Return;`
+  ].join(`\n`);
+ 
+  const parser = new Parser();
+  const cache = await parser.getDocs(URI, lines);
+  const { indentErrors } = Linter.getErrors(lines, {
+    indent: 2
+  }, cache);
+  
+  assert.strictEqual(indentErrors.length, 2, `There should be 2 errors`);
+
+  assert.strictEqual(indentErrors[0].line, 3, `First error should be index 3`);
+  assert.strictEqual(indentErrors[0].currentIndent, 1, `Actual indent should be 1`);
+  assert.strictEqual(indentErrors[0].expectedIndent, 2, `Expected indent should be 2`);
+
+  assert.strictEqual(indentErrors[1].line, 5, `Second error should be index 5`);
+  assert.strictEqual(indentErrors[1].currentIndent, 5, `Actual indent should be 5`);
+  assert.strictEqual(indentErrors[1].expectedIndent, 4, `Expected indent should be 4`);
+};
+
 exports.linter1_indent = async () => {
   const lines = [
     `**FREE`,
