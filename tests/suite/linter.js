@@ -1899,3 +1899,28 @@ exports.linter25 = async () => {
     ),
   });
 }
+
+exports.linter26 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Pr CloseProfile ExtPgm('QSYRLSPH');`,
+    `  Handle         Char(12);`,
+    `End-Pr;`,
+    ``,
+    `Dcl-S ResultHandle Char(12);`,
+    ``,
+    `CloseProfile(ResultHandle);`,
+    ``,
+    `*InLR = *On;`,
+    `Return;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    NoUnreferenced: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}

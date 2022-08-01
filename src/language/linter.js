@@ -986,14 +986,16 @@ module.exports = class Linter {
                 });
               }
 
-              proc.subItems.forEach(parm => {
-                if (parm.references.length === 0) {
-                  errors.push({
-                    type: `NoUnreferenced`,
-                    range: new vscode.Range(parm.position.line, 0, parm.position.line, 100),
-                  });
-                }
-              })
+              if (!proc.keyword[`EXTPGM`] && !proc.keyword[`EXTPROC`]) {
+                proc.subItems.forEach(parm => {
+                  if (parm.references.length === 0) {
+                    errors.push({
+                      type: `NoUnreferenced`,
+                      range: new vscode.Range(parm.position.line, 0, parm.position.line, 100),
+                    });
+                  }
+                })
+              }
             }
           })
 
