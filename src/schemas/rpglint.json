@@ -136,17 +136,22 @@
             "description": "Subroutines in procedures are not allowed."
         },
         "NoUnreferenced": {
-            "$id": "#/properties/NoLocalSubroutines",
+            "$id": "#/properties/NoUnreferenced",
             "type": "boolean",
             "description": "Unreferenced definitions are not allowed."
         },
         "NoExternalTo": {
-            "$id": "#/properties/NoLocalSubroutines",
+            "$id": "#/properties/NoExternalTo",
             "type": "array",
             "items": {
                 "type": "string"
             },
             "description": "Calls to certain APIs are not allowed. (EXTPROC / EXTPGM)"
+        },
+        "NoExecuteImmediate": {
+            "$id": "#/properties/NoExecuteImmediate",
+            "type": "boolean",
+            "description": "Embedded SQL statement with EXECUTE IMMEDIATE not allowed."
         }
     },
     "additionalProperties": true

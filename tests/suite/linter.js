@@ -1924,3 +1924,34 @@ exports.linter26 = async () => {
 
   assert.strictEqual(errors.length, 0);
 }
+
+exports.linter27 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `    FETCH NEXT FROM empCur       `,
+    `    INTO :myvariable2;`,
+    `EXEC SQL`,
+    `    EXECUTE IMMEDIATE :myvariable2;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    NoExecuteImmediate: true
+  }, cache);
+  
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    type: `NoExecuteImmediate`,
+    range: new vscode.Range(
+      new vscode.Position(7, 0),
+      new vscode.Position(8, 34),
+    ),
+  });
+}

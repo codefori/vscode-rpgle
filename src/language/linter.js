@@ -32,7 +32,8 @@ const errorText = {
   'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
   'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\``,
   'NoUnreferenced': `No reference to definition.`,
-  'NoExternalTo': `Cannot declare prototype to this external API.`
+  'NoExternalTo': `Cannot declare prototype to this external API.`,
+  'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`
 }
 
 module.exports = class Linter {
@@ -631,6 +632,20 @@ module.exports = class Linter {
                           range: new vscode.Range(statementStart, statementEnd),
                           type: `NoSQLJoins`,
                         });
+                      }
+                    }
+
+                    if (rules.NoExecuteImmediate) {
+                      const executeIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `EXECUTE`);
+                      const immediateIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `IMMEDIATE`);
+
+                      if (executeIndex >= 0) {
+                        if (executeIndex + 1 === immediateIndex) {
+                          errors.push({
+                            range: new vscode.Range(statementStart, statementEnd),
+                            type: `NoExecuteImmediate`,
+                          });
+                        }
                       }
                     }
                     break;
