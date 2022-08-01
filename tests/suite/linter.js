@@ -1723,3 +1723,33 @@ exports.linter22 = async () => {
     ),
   });
 }
+
+exports.linter23 = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-Proc SQL_ToUpper Export;`,
+    `  Dcl-Pi *n char(256);`,
+    `    stringIn char(20);`,
+    `  end-Pi;`,
+    ``,
+    `  EXEC SQL SET :stringIn = UPPER(:stringIn);`,
+    `End-Proc;`,
+    ``,
+    `Dcl-Proc SQL_ToLower Export;`,
+    `  Dcl-Pi *n char(256);`,
+    `    stringIn char(20);`,
+    `  end-Pi;`,
+    ``,
+    `  EXEC SQL SET :stringIn = LOWER(:stringIn);`,
+    `End-Proc;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    NoUnreferenced: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}
