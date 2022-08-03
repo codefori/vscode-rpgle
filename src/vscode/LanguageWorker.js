@@ -16,7 +16,7 @@ module.exports = class LanguageWorker {
    */
   constructor(context) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, () => {
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, async () => {
         const editor = vscode.window.activeTextEditor;
           
         if (editor) {
@@ -25,22 +25,12 @@ module.exports = class LanguageWorker {
           if (document.languageId === `rpgle`) {
             const linePieces = document.lineAt(position.line).text.trim().split(` `);
             if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-              const {finishedPath, type} = Generic.getPathInfo(document.uri, linePieces[1]);
+              const {uri} = await Parser.getContent(document.uri, linePieces[1]);
   
-              switch (type) {
-              case `member`:
-                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, `${finishedPath.substring(1)}.rpgle`);
-                break;
-  
-              case `streamfile`:
-                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, finishedPath);
-                break;
-
-              case `file`:
-                vscode.workspace.openTextDocument(vscode.Uri.file(finishedPath)).then(doc => {
+              if (uri) {
+                vscode.workspace.openTextDocument(uri).then(doc => {
                   vscode.window.showTextDocument(doc);
                 });
-                break;
               }
             }
           }
@@ -179,11 +169,11 @@ module.exports = class LanguageWorker {
 
             } else {
               if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-                const {type, memberPath, finishedPath} = Generic.getPathInfo(document.uri, linePieces[1]);
+                const include = await Parser.getContent(document.uri, linePieces[1]);
     
                 return new vscode.Hover(
                   new vscode.MarkdownString(
-                    `\`'${finishedPath}'\` (${type})`
+                    `\`'${include.path}'\` (${include.type}${include.found ? `` : `, not found`})`
                   )
                 )
               }
@@ -360,22 +350,20 @@ module.exports = class LanguageWorker {
             }
             
             if (def) {
-              let {finishedPath, type} = Generic.getPathInfo(document.uri, def.position.path);
-              if (document.uri.path.startsWith(finishedPath)) {
+              let {path, type, uri} = await Parser.getContent(document.uri, def.position.path);
+              if (document.uri.path.startsWith(path)) {
                 return new vscode.Location(
                   document.uri,
                   new vscode.Range(def.position.line, 0, def.position.line, 0)
                 );
 
               } else {
-                if (type === `member`) {
-                  finishedPath = `${finishedPath}.rpgle`;
+                if (uri) {
+                  return new vscode.Location(
+                    uri,
+                    new vscode.Range(def.position.line, 0, def.position.line, 0)
+                  );
                 }
-  
-                return new vscode.Location(
-                  vscode.Uri.parse(finishedPath).with({scheme: type, path: finishedPath}),
-                  new vscode.Range(def.position.line, 0, def.position.line, 0)
-                );
               }
             }
           }

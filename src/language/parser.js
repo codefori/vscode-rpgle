@@ -121,13 +121,18 @@ module.exports = class Parser {
   /**
    * @param {vscode.Uri} workingUri Path being worked with
    * @param {string} getPath IFS or member path to fetch
-   * @returns {Promise<string[]>}
+   * @returns {Promise<{lines: string[], found: boolean, uri: vscode.Uri, path: string, type: "member"|"streamfile"|"file"}>}
+   * @deprecated Use `Parser.getContent` instead.
    */
   async getContent(workingUri, getPath) {
     //const hrstart = process.hrtime();
 
     let content;
     let lines = undefined;
+
+    let uri;
+    let found = true;
+    let attemptedPath;
   
     let {type, memberPath, finishedPath} = Generic.getPathInfo(workingUri, getPath);
   
@@ -136,6 +141,7 @@ module.exports = class Parser {
       let eol;
       switch (type) {
       case `member`:
+        attemptedPath = finishedPath;
 
         // We have to be agnostic for the type. First we check if we opened a copybook before.
         const openDoc = vscode.workspace.textDocuments.find(doc => 
@@ -149,22 +155,26 @@ module.exports = class Parser {
           // Otherwise, we go and fetch the correct content
           doc = await vscode.workspace.openTextDocument(vscode.Uri.from({
             scheme: type,
-            path: finishedPath + `.MBR`
+            path: finishedPath + `.RPGLE`
           }));
         }
 
         eol = doc.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
 
+        uri = doc.uri;
         lines = doc.getText().split(eol);
         break;
   
       case `streamfile`:
+        attemptedPath = finishedPath;
+
         doc = await vscode.workspace.openTextDocument(vscode.Uri.from({
           scheme: type,
           path: finishedPath
         }));
         eol = doc.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
 
+        uri = doc.uri;
         lines = doc.getText().split(eol);
         break;
 
@@ -184,6 +194,8 @@ module.exports = class Parser {
           getPath = memberParts.join(path.sep) + `*`
         }
 
+        attemptedPath = getPath;
+
         /** @type {vscode.Uri} */
         let possibleFile;
 
@@ -200,20 +212,29 @@ module.exports = class Parser {
 
         if (possibleFile) {
           content = (await vscode.workspace.fs.readFile(possibleFile)).toString();
+          uri = possibleFile;
           lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
         } else {
           lines = [];
+          found = false;
         }
         break;
       }
     } catch (e) {
       lines = [];
+      found = false;
     }
 
     //const hrend = process.hrtime(hrstart);
     //console.info(`getContent() took ${hrend[0]}s and ${hrend[1] / 1000000}ms: ${getPath} (${lines.length})`);
   
-    return lines;
+    return {
+      lines,
+      path: attemptedPath,
+      uri,
+      found,
+      type
+    };
   }
 
   /**
@@ -362,9 +383,15 @@ module.exports = class Parser {
 
         pieces = line.split(` `).filter(piece => piece !== ``);
 
+        this.brokenPaths = [];
+
         if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
-          files[pieces[1]] = (await this.getContent(workingUri, pieces[1]));
+          const include = (await this.getContent(workingUri, pieces[1]));
+          files[pieces[1]] = include.lines;
           fileList.push(pieces[1]);
+
+          if (include.lines.length === 0) {
+          }
         }
       }
     }

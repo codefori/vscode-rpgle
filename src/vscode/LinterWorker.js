@@ -392,7 +392,7 @@ module.exports = class LinterWorker {
 
     const possibleJson = await this.getLinterFile(workingUri);
     if (possibleJson) {
-      const jsonString = possibleJson.join(``).trim();
+      const jsonString = possibleJson.lines.join(``).trim();
       if (jsonString) {
         try {
           options = JSON.parse(jsonString);
