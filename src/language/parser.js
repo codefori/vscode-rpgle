@@ -122,7 +122,6 @@ module.exports = class Parser {
    * @param {vscode.Uri} workingUri Path being worked with
    * @param {string} getPath IFS or member path to fetch
    * @returns {Promise<{lines: string[], found: boolean, uri: vscode.Uri, path: string, type: "member"|"streamfile"|"file"}>}
-   * @deprecated Use `Parser.getContent` instead.
    */
   async getContent(workingUri, getPath) {
     //const hrstart = process.hrtime();
@@ -389,9 +388,6 @@ module.exports = class Parser {
           const include = (await this.getContent(workingUri, pieces[1]));
           files[pieces[1]] = include.lines;
           fileList.push(pieces[1]);
-
-          if (include.lines.length === 0) {
-          }
         }
       }
     }
