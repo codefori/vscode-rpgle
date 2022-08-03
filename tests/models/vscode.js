@@ -13,6 +13,10 @@ module.exports = {
   Uri,
   Position: require(`./Position`),
   Range: require(`./Range`),
+  EndOfLine: {
+    LF: 1,
+    CRLF: 2,
+  },
   workspace: {
     workspaceFolders: [
       {
@@ -23,6 +27,15 @@ module.exports = {
     fs: {
       readFile: (uri) => {
         return fs.readFile(uri.fsPath);
+      }
+    },
+    openTextDocument: async (uri) => {
+      const content = (await module.exports.workspace.fs.readFile(uri)).toString();
+
+      return {
+        uri,
+        eol: content.indexOf(`\r\n`) >= 0 ? module.exports.EndOfLine.CRLF : module.exports.EndOfLine.LF,
+        getText: () => {return content}
       }
     },
     findFiles: async (path) => {

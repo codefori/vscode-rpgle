@@ -22,6 +22,7 @@ module.exports = class {
     let type = undefined;
 
     switch (workingUri.scheme) {
+    case `vscode-vfs`:
     case `file`:
       // Local file
       type = `file`;
@@ -66,7 +67,7 @@ module.exports = class {
         const config = instance.getConfig();
         finishedPath = path.posix.join(config.homeDirectory, getPath);
       };
-      break
+      break;
 
     case `member`:
       //Fetch member

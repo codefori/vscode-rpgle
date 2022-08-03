@@ -212,9 +212,10 @@ module.exports = class Parser {
         }
 
         if (possibleFile) {
-          content = (await vscode.workspace.fs.readFile(possibleFile)).toString();
-          uri = possibleFile;
-          lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+          doc = await vscode.workspace.openTextDocument(possibleFile);
+          eol = doc.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+          uri = doc.uri;
+          lines = doc.getText().split(eol);
         } else {
           found = false;
         }
