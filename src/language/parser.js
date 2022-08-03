@@ -127,7 +127,7 @@ module.exports = class Parser {
     //const hrstart = process.hrtime();
 
     let content;
-    let lines = undefined;
+    let lines = [];
 
     let uri;
     let found = true;
@@ -214,13 +214,11 @@ module.exports = class Parser {
           uri = possibleFile;
           lines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
         } else {
-          lines = [];
           found = false;
         }
         break;
       }
     } catch (e) {
-      lines = [];
       found = false;
     }
 
