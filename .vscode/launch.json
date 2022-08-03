@@ -27,6 +27,17 @@
 			"preLaunchTask": "npm: webpack",
 			"sourceMaps": true
 		},
-
+		{
+			"name": "Run Web Extension in VS Code Web",
+			"type": "extensionHost",
+			"debugWebWorkerHost": true,
+			"request": "launch",
+			"args": [
+			    "--extensionDevelopmentPath=${workspaceFolder}",
+			    "--extensionDevelopmentKind=web"
+			],
+			"outFiles": ["${workspaceFolder}/dist/web.js"],
+			"preLaunchTask": "npm: webpack-web"
+		  }
 	]
 }

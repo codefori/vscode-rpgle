@@ -1,7 +1,6 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require(`vscode`);
-const path = require(`path`);
 
 const LinterWorker = require(`./vscode/LinterWorker`);
 const LanguageWorker = require(`./vscode/LanguageWorker`);
@@ -18,24 +17,26 @@ const Output = require(`./output`);
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
-
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log(`Congratulations, your extension "vscode-rpgle" is now active!`);
-  
   Output.init();
 
-  /** @type {LinterWorker} */
-  let linterWorker;
+  const env = process.env.TARGET;
+
+  console.log(`Congratulations, your extension "vscode-rpgle" for ${env} is now active!`);
+  Output.write(`Congratulations, your extension "vscode-rpgle" for ${env} is now active!`);
 
   /** @type {LanguageWorker} */
   let languageWorker;
+  const languageEnabled = (Configuration.get(`rpgleLanguageToolsEnabled`) || env === `web`);
 
-  if (Configuration.get(`rpgleLanguageToolsEnabled`)) {
+  /** @type {LinterWorker} */
+  let linterWorker;
+  const linterEnabled = (Configuration.get(`rpgleLinterSupportEnabled`) || env === `web`)
+
+  if (languageEnabled) {
     languageWorker = new LanguageWorker(context);
   }
 
-  if (Configuration.get(`rpgleLinterSupportEnabled`)) {
+  if (linterEnabled) {
     linterWorker = new LinterWorker(context);
   }
 
