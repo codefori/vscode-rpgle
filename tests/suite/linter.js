@@ -1999,3 +1999,166 @@ exports.linter28 = async () => {
     }
   });
 }
+
+exports.linter29 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy './tests/rpgle/copy1.rpgle'`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `CallP theExtProcedure(myVariable);`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    IncludeMustBeRelative: true
+  }, cache);
+
+  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+
+  assert.strictEqual(cache.procedures[0].position.path, `'./tests/rpgle/copy1.rpgle'`, `Path is incorrect`);
+  assert.strictEqual(cache.procedures[0].position.line, 2, `Index of 3 expected`);
+
+  assert.strictEqual(errors.length, 0);
+}
+
+exports.linter30 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy copy1`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `CallP theExtProcedure(myVariable);`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    IncludeMustBeRelative: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `IncludeMustBeRelative`,
+    range: new vscode.Range(
+      new vscode.Position(4, 0),
+      new vscode.Position(4, 11),
+    ),
+    offset: {
+      position: 6,
+      length: 11
+    }
+  });
+}
+
+exports.linter31 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy rpgle,copy1`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `CallP theExtProcedure(myVariable);`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    IncludeMustBeRelative: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}
+
+exports.linter32 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy 'tests/rpgle/copy1.rpgle'`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `CallP theExtProcedure(myVariable);`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    IncludeMustBeRelative: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `IncludeMustBeRelative`,
+    range: new vscode.Range(
+      new vscode.Position(4, 0),
+      new vscode.Position(4, 31),
+    ),
+    offset: {
+      position: 6,
+      length: 31
+    }
+  });
+}
+
+
+exports.linter33 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy '/tests/rpgle/copy1.rpgle'`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `CallP theExtProcedure(myVariable);`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    IncludeMustBeRelative: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}

@@ -157,6 +157,11 @@
             "$id": "#/properties/NoExtProgramVariable",
             "type": "boolean",
             "description": "Declaring a prototype with EXTPGM and EXTPROC using a procedure is now allowed."
+        },
+        "IncludeMustBeRelative": {
+            "$id": "#/properties/IncludeMustBeRelative",
+            "type": "boolean",
+            "description": "When using copy or include statements, path must be relative. For members, you must at least include the source file. For streamfiles, it is relative from the working directory."
         }
     },
     "additionalProperties": true

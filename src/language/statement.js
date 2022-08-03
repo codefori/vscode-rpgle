@@ -163,7 +163,7 @@ const commonMatchers = [
   }
 ]
 
-const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, ` `];
+const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, `,`, ` `];
 const types = {
   '%': `percent`,
   '.': `dot`,
@@ -175,7 +175,8 @@ const types = {
   '*': `asterisk`,
   '=': `equal`,
   ':': `seperator`,
-  ';': `end`
+  ';': `end`,
+  ',': `comma`
 }
 
 module.exports = class Statement {

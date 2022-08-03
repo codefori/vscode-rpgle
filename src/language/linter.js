@@ -271,19 +271,54 @@ module.exports = class Linter {
                     }
                   }
 
-                  if (rules.CopybookDirective) {
+                  if (rules.CopybookDirective || rules.IncludeMustBeRelative) {
                     if ([`/COPY`, `/INCLUDE`].includes(value.toUpperCase())) {
-                      const correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
-                      if (value.toUpperCase() !== correctDirective) {
-                        errors.push({
-                          range: new vscode.Range(
-                            statementStart,
-                            statementEnd
-                          ),
-                          offset: {position: statement[0].position, length: statement[0].position + value.length},
-                          type: `CopybookDirective`,
-                          newValue: correctDirective
-                        });
+                      if (rules.IncludeMustBeRelative) {
+                        if (statement.length === 2) {
+                          const path = statement[1];
+
+                          if (path.type === `word`) {
+                            // /INCLUDE MEMBER
+                            // This is bad.
+                            errors.push({
+                              range: new vscode.Range(
+                                statementStart,
+                                statementEnd
+                              ),
+                              offset: {position: path.position, length: path.position + path.value.length},
+                              type: `IncludeMustBeRelative`,
+                            });
+                          } else if (path.type === `string`) {
+                            // /INCLUDE 'path/to/file'
+                            const pathValue = path.value.substring(1, path.value.length - 1).trim();
+                            if (pathValue.startsWith(`/`) !== true && pathValue.startsWith(`.`) !== true) {
+                              // Bad. Path must be absolute or relative. Not inbetween.
+                              errors.push({
+                                range: new vscode.Range(
+                                  statementStart,
+                                  statementEnd
+                                ),
+                                offset: {position: path.position, length: path.position + path.value.length},
+                                type: `IncludeMustBeRelative`,
+                              });
+                            }
+                          }
+                        }
+                      }
+
+                      if (rules.CopybookDirective) {
+                        const correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
+                        if (value.toUpperCase() !== correctDirective) {
+                          errors.push({
+                            range: new vscode.Range(
+                              statementStart,
+                              statementEnd
+                            ),
+                            offset: {position: statement[0].position, length: statement[0].position + value.length},
+                            type: `CopybookDirective`,
+                            newValue: correctDirective
+                          });
+                        }
                       }
                     }
                   }
