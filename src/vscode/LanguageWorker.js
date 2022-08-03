@@ -29,11 +29,17 @@ module.exports = class LanguageWorker {
   
               switch (type) {
               case `member`:
-                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, `${finishedPath.substr(1)}.rpgle`);
+                vscode.commands.executeCommand(`code-for-ibmi.openEditable`, `${finishedPath.substring(1)}.rpgle`);
                 break;
   
               case `streamfile`:
                 vscode.commands.executeCommand(`code-for-ibmi.openEditable`, finishedPath);
+                break;
+
+              case `file`:
+                vscode.workspace.openTextDocument(vscode.Uri.file(finishedPath)).then(doc => {
+                  vscode.window.showTextDocument(doc);
+                });
                 break;
               }
             }

@@ -104,15 +104,12 @@ module.exports = class {
       finishedPath = memberPath.join(`/`);
 
       if (workingPath.length === 5) {
-        finishedPath = `/${finishedPath}`;
+        finishedPath = `/${finishedPath}`.toUpperCase();
       }
 
       type = `member`;
       break;
     }
-
-    if (finishedPath)
-      finishedPath = finishedPath.toUpperCase();
 
     return {type, memberPath, finishedPath};
   }
