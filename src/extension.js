@@ -34,10 +34,12 @@ function activate(context) {
 
   if (languageEnabled) {
     languageWorker = new LanguageWorker(context);
+    Output.write(`vscode-rpgle language tools enabled.`);
   }
 
   if (linterEnabled) {
     linterWorker = new LinterWorker(context);
+    Output.write(`vscode-rpgle linter enabled.`);
   }
 
   registerColumnAssist(context);

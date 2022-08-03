@@ -16,7 +16,8 @@ const { Parser } = require(`../parser`);
 const lintFile = {
   member: `vscode,rpglint`,
   streamfile: `.vscode/rpglint.json`,
-  file: `.vscode/rpglint.json`
+  file: `.vscode/rpglint.json`,
+  'vscode-vfs': `.vscode/rpglint.json`
 };
 
 module.exports = class LinterWorker {
@@ -39,7 +40,7 @@ module.exports = class LinterWorker {
         const instance = getInstance();
         const editor = vscode.window.activeTextEditor;
   
-        if (editor && editor.document.uri.scheme === `file`) {
+        if (editor && [`file`, `vscode-vfs`].includes(editor.document.uri.scheme)) {
           const workspaces = vscode.workspace.workspaceFolders;
           if (workspaces && workspaces.length > 0) {
             const linter = await vscode.workspace.findFiles(`**/.vscode/rpglint.json`, null, 1);
