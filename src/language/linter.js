@@ -34,7 +34,8 @@ const errorText = {
   'NoUnreferenced': `No reference to definition.`,
   'NoExternalTo': `Cannot declare prototype to this external API.`,
   'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`,
-  'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`
+  'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`,
+  'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`
 }
 
 module.exports = class Linter {
