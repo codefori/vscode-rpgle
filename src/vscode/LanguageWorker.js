@@ -173,7 +173,7 @@ module.exports = class LanguageWorker {
     
                 return new vscode.Hover(
                   new vscode.MarkdownString(
-                    `\`'${include.path}'\` (${include.type}${include.found ? `` : `, not found`})`
+                    (include.path ? `\`${include.path}\`` : linePieces[1]) + `(${include.type}${include.found ? `` : `, not found`})`
                   )
                 )
               }

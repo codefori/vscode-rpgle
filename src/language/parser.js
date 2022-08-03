@@ -121,7 +121,7 @@ module.exports = class Parser {
   /**
    * @param {vscode.Uri} workingUri Path being worked with
    * @param {string} getPath IFS or member path to fetch
-   * @returns {Promise<{lines: string[], found: boolean, uri: vscode.Uri, path: string, type: "member"|"streamfile"|"file"}>}
+   * @returns {Promise<{lines: string[], found: boolean, uri: vscode.Uri, path: string, type: string}>}
    */
   async getContent(workingUri, getPath) {
     //const hrstart = process.hrtime();
@@ -133,7 +133,8 @@ module.exports = class Parser {
     let found = true;
     let attemptedPath;
   
-    let {type, memberPath, finishedPath} = Generic.getPathInfo(workingUri, getPath);
+    const type = workingUri.scheme;
+    const {finishedPath} = Generic.getPathInfo(workingUri, getPath);
   
     try {
       let doc;
@@ -178,6 +179,7 @@ module.exports = class Parser {
         break;
 
       case `file`:
+      case `vscode-vfs`:
         // We have to find the file because of the case insensitivity
         if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
         if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
@@ -216,6 +218,10 @@ module.exports = class Parser {
         } else {
           found = false;
         }
+        break;
+
+      default:
+        found = false;
         break;
       }
     } catch (e) {
