@@ -2204,3 +2204,32 @@ exports.linter34 = async () => {
     newValue: `:Deptnum`
   });
 }
+
+exports.linter35 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `// My variable`,
+    `Dcl-s MyVariable2 Char(20);`,
+    `Dcl-s abcd ind;`,
+    ``,
+    `myVariable2 = *blank;`,
+    ``,
+    `// a comment`,
+    `if (abcd = *off);`,
+    `  // Inside if`,
+    `  MyVariable2 = 'Hello world';`,
+    `Endif;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+    ForceOptionalParens: true
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 0);
+}
