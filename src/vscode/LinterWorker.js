@@ -541,6 +541,7 @@ module.exports = class LinterWorker {
         actions.push(action);
         break;
 
+      case `SQLHostVarCheck`:
       case `CopybookDirective`:
       case `StringLiteralDupe`:
       case `NoGlobalSubroutines`:

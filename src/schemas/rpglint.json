@@ -162,6 +162,11 @@
             "$id": "#/properties/IncludeMustBeRelative",
             "type": "boolean",
             "description": "When using copy or include statements, path must be relative. For members, you must at least include the source file. For streamfiles, it is relative from the working directory."
+        },
+        "SQLHostVarCheck": {
+            "$id": "#/properties/SQLHostVarCheck",
+            "type": "boolean",
+            "description": "Warns when referencing variables in Embedded SQL that are also defined locally."
         }
     },
     "additionalProperties": true

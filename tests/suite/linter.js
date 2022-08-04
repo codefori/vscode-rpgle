@@ -2162,3 +2162,45 @@ exports.linter33 = async () => {
 
   assert.strictEqual(errors.length, 0);
 }
+
+exports.linter34 = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-s DeptNum Char(3);`,
+    ``,
+    `DeptNum = 'ABC';`,
+    ``,
+    `ClearSubfile();`,
+    ``,
+    `EXEC SQL DECLARE empCurA CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    `    FROM Employee`,
+    `    WHERE WORKDEPT = Deptnum;`,
+    ``,
+    `EXEC SQL DECLARE empCurB CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    `    FROM Employee`,
+    `    WHERE WORKDEPT = :deptNum;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    SQLHostVarCheck: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `SQLHostVarCheck`,
+    range: new vscode.Range(
+      new vscode.Position(7, 0),
+      new vscode.Position(10, 28),
+    ),
+    offset: {
+      position: 117,
+      length: 124
+    },
+    newValue: `:Deptnum`
+  });
+}

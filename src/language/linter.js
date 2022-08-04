@@ -35,7 +35,8 @@ const errorText = {
   'NoExternalTo': `Cannot declare prototype to this external API.`,
   'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`,
   'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`,
-  'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`
+  'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
+  'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`
 }
 
 module.exports = class Linter {
@@ -230,6 +231,9 @@ module.exports = class Linter {
 
               const currentProcedure = globalScope.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
               const currentScope = globalScope.merge(inProcedure && currentProcedure ? currentProcedure.scope : undefined);
+
+              // Only fetch the names if we have a rule that requires it. It might be slow.
+              const definedNames = (rules.IncorrectVariableCase || rules.SQLHostVarCheck ? currentScope.getNames() : []);
 
               const statement = Statement.parseStatement(currentStatement);
               let value;
@@ -703,6 +707,22 @@ module.exports = class Linter {
                         }
                       }
                     }
+
+                    if (rules.SQLHostVarCheck) {
+                      statement.forEach((part, index) => {
+                        if (part.type === `word` && definedNames.some(name => name.toUpperCase() === part.value.toUpperCase())) {
+                          const prior = statement[index-1];
+                          if (prior && ![`dot`, `seperator`].includes(prior.type)) {
+                            errors.push({
+                              range: new vscode.Range(statementStart, statementEnd),
+                              offset: {position: part.position, length: part.position + part.value.length},
+                              type: `SQLHostVarCheck`,
+                              newValue: `:${part.value}`
+                            });
+                          }
+                        }
+                      })
+                    }
                     break;
 
                   case `IF`:
@@ -805,7 +825,6 @@ module.exports = class Linter {
                 
                       if (rules.IncorrectVariableCase) {
                         // Check the casing of the reference matches the definition
-                        const definedNames = currentScope.getNames();
                         const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
                         if (definedName && definedName !== part.value) {
                           errors.push({
