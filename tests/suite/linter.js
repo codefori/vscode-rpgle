@@ -2229,9 +2229,38 @@ exports.linter35 = async () => {
 
   const parser = new Parser();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({uri, content: lines}, {
     ForceOptionalParens: true
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0);
+  assert.strictEqual(errors.length, 0);
+}
+
+exports.linter36 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `// My variable`,
+    `Dcl-s MyVariable2 Char(20);`,
+    `Dcl-s abcd ind;`,
+    ``,
+    `myVariable2 = *blank;           // Why comment here`,
+    ``,
+    `// a comment                    // Why comment here`,
+    `if (abcd = *off);               // Why comment here`,
+    `  // Inside if`,
+    `  MyVariable2 = 'Hello world';  // Why comment here`,
+    `Endif;                          // Why comment here`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    ForceOptionalParens: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
 }

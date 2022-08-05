@@ -186,24 +186,22 @@ module.exports = class Linter {
         }
 
         if (!isLineComment) {
-          if (line.endsWith(`;`)) {
-            statementEnd = new vscode.Position(lineNumber, line.length - 1);
-            line = line.substr(0, line.length-1);
+          const semiIndex = line.lastIndexOf(`;`);
+          const commentIndex = line.lastIndexOf(`//`);
+
+          if (commentIndex > semiIndex && semiIndex >= 0) {
+            // Replace comments after the semicolon...
+            line = line.substring(0, semiIndex+1) + ``.padEnd(line.length - semiIndex - 1);
+          }
+
+          if (line.trimEnd().endsWith(`;`)) {
+            statementEnd = new vscode.Position(lineNumber, semiIndex);
+            line = line.substring(0, semiIndex);
             currentStatement += line;
             continuedStatement = false;
 
           } else {
-
-            const semiIndex = line.lastIndexOf(`;`);
-            const commentIndex = line.lastIndexOf(`//`);
-
-            if (commentIndex > semiIndex && semiIndex >= 0) {
-              statementEnd = new vscode.Position(lineNumber, line.lastIndexOf(`;`));
-              line = line.substr(0, semiIndex);
-              continuedStatement = false;
-            } else {
-              continuedStatement = true;
-            }
+            continuedStatement = true;
             currentStatement += currentLine + ``.padEnd(newLineLength, ` `);
           }
 
@@ -214,7 +212,7 @@ module.exports = class Linter {
           if (upperLine.startsWith(`//`)) {
             currentStatement = ``;
           } else if (upperLine.startsWith(`/`)) {
-          // But not directives!
+            // But not directives!
             continuedStatement = false;
           }
 
