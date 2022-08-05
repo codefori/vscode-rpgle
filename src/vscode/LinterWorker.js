@@ -13,12 +13,9 @@ const Generic = require(`../language/generic`);
 
 const { Parser } = require(`../parser`);
 
-const lintFile = {
-  member: `vscode,rpglint`,
-  streamfile: `.vscode/rpglint.json`,
-  file: `.vscode/rpglint.json`,
-  'vscode-vfs': `.vscode/rpglint.json`
-};
+const lintFile = (scheme) => {
+  return scheme === `member` ? `vscode,rpglint` : `.vscode/rpglint.json`;
+}
 
 module.exports = class LinterWorker {
   /**
@@ -40,7 +37,7 @@ module.exports = class LinterWorker {
         const instance = getInstance();
         const editor = vscode.window.activeTextEditor;
   
-        if (editor && [`file`, `vscode-vfs`].includes(editor.document.uri.scheme)) {
+        if (editor && ![`member`, `streamfile`].includes(editor.document.uri.scheme)) {
           const workspaces = vscode.workspace.workspaceFolders;
           if (workspaces && workspaces.length > 0) {
             const linter = await vscode.workspace.findFiles(`**/.vscode/rpglint.json`, null, 1);
@@ -361,7 +358,7 @@ module.exports = class LinterWorker {
    * @param {vscode.Uri} uri 
    */
   static getLintConfigPath(uri) {
-    const lintPath = lintFile[uri.scheme];
+    const lintPath = lintFile(uri.scheme);
 
     if (lintPath) {
       let {finishedPath, type} = Generic.getPathInfo(uri, lintPath);
@@ -382,7 +379,7 @@ module.exports = class LinterWorker {
   getLinterFile(uri) {
     // Used to fetch the linter settings
     // Will only download once.
-    const lintPath = lintFile[uri.scheme];
+    const lintPath = lintFile(uri.scheme);
     if (lintPath) {
       return Parser.getContent(uri, lintPath);
     }

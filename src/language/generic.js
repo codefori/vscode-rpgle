@@ -18,38 +18,9 @@ module.exports = class {
     /** @type {string[]} */
     let memberPath = undefined;
 
-    /** @type {"streamfile"|"member"|"file"|undefined} */
     let type = undefined;
 
     switch (workingUri.scheme) {
-    case `vscode-vfs`:
-    case `file`:
-      // Local file
-      type = `file`;
-      if (getPath.includes(`,`) && !getPath.includes(`/`)) {
-        let memberParts = getPath.split(`,`);
-        if (memberParts.length === 1) {
-          memberParts = [`qrpgleref`, memberParts[0]];
-        }
-        
-        finishedPath = path.join(vscode.workspace.workspaceFolders[0].uri.path, ...memberParts);
-        
-      } else {
-        // IFS styled path
-        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
-        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
-
-        if (getPath.startsWith(`/`)) {
-        //Get from root
-          finishedPath = getPath;
-        }
-
-        else {
-          finishedPath = path.join(vscode.workspace.workspaceFolders[0].uri.path, getPath);
-        };
-      }
-      break;
-
     case `streamfile`:
       type = `streamfile`;
       //Fetch IFS
@@ -110,6 +81,32 @@ module.exports = class {
 
       type = `member`;
       break;
+
+    default:
+      // Local file
+      type = workingUri.scheme;
+      if (getPath.includes(`,`) && !getPath.includes(`/`)) {
+        let memberParts = getPath.split(`,`);
+        if (memberParts.length === 1) {
+          memberParts = [`qrpgleref`, memberParts[0]];
+        }
+              
+        finishedPath = path.join(vscode.workspace.workspaceFolders[0].uri.path, ...memberParts);
+              
+      } else {
+        // IFS styled path
+        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+      
+        if (getPath.startsWith(`/`)) {
+          //Get from root
+          finishedPath = getPath;
+        }
+      
+        else {
+          finishedPath = path.join(vscode.workspace.workspaceFolders[0].uri.path, getPath);
+        };
+      }
     }
 
     return {type, memberPath, finishedPath};
