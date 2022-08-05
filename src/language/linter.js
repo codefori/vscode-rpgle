@@ -1030,7 +1030,13 @@ module.exports = class Linter {
       ].forEach(scope => {
         scope.procedures.forEach(localDef => {
           if (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]) {
-            let callLoc = (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]).toUpperCase();
+            let callLoc = (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]);
+
+            if (callLoc === true) {
+              callLoc = localDef.name.toUpperCase();
+            } else {
+              callLoc = callLoc.toUpperCase()
+            }
 
             // Remove potential string around value
             callLoc = (callLoc.startsWith(`'`) && callLoc.endsWith(`'`) ? callLoc.substring(1, callLoc.length - 1) : callLoc);
