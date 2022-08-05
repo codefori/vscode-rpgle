@@ -4,6 +4,7 @@ const assert = require(`assert`);
 
 const Parser = require(`../../src/language/parser`);
 const Linter = require(`../../src/language/linter`);
+const path = require(`path`);
 
 const uri = vscode.Uri.parse(`source.rpgle`);
 
@@ -183,7 +184,8 @@ module.exports = {
 
     assert.strictEqual(uppercase.subItems.length, 2, `Expect length of 2`);
 
-    assert.strictEqual(uppercase.position.path, `'./tests/rpgle/eof4.rpgle'`, `Path is incorrect`);
+    const baseNameInclude = path.basename(uppercase.position.path);
+    assert.strictEqual(baseNameInclude, `eof4.rpgle`, `Path is incorrect`);
     assert.strictEqual(uppercase.position.line, 0, `Index of 0 expected`);
   },
 

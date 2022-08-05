@@ -258,9 +258,6 @@ module.exports = class Parser {
     /** @type {{[path: string]: string[]}} */
     const files = {};
 
-    /** @type {string[]} Order which files should be scanned */
-    const fileList = [];
-
     let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
 
     let currentTitle = undefined, currentDescription = [];
@@ -377,8 +374,6 @@ module.exports = class Parser {
       };
     }
 
-    files[workingUri.path] = baseLines;
-
     if (withIncludes) {
     //First loop is for copy/include statements
       for (let i = baseLines.length - 1; i >= 0; i--) {
@@ -391,14 +386,14 @@ module.exports = class Parser {
 
         if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
           const include = (await this.getContent(workingUri, pieces[1]));
-          files[pieces[1]] = include.lines;
-          fileList.push(pieces[1]);
+          if (include.found) {
+            files[include.uri.fsPath] = include.lines;
+          }
         }
       }
     }
 
-    // Scan the base file last. Handle copy books first
-    fileList.push(workingUri.path);
+    files[workingUri.path] = baseLines;
 
     let potentialName;
     /** @type {"structs"|"procedures"} */
@@ -406,7 +401,7 @@ module.exports = class Parser {
     let isFullyFree = false;
 
     //Now the real work
-    for (const file of fileList) {
+    for (const file of Object.keys(files)) {
       if (files[file].length === 0) continue;
       lineNumber = -1;
 

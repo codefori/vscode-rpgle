@@ -1,5 +1,6 @@
 const vscode = require(`vscode`);
 const assert = require(`assert`);
+const path = require(`path`);
 
 const Parser = require(`../../src/language/parser`);
 const Linter = require(`../../src/language/linter`);
@@ -249,7 +250,8 @@ exports.test10 = async () => {
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
 
-  assert.strictEqual(cache.procedures[0].position.path, `'./tests/rpgle/copy1.rpgle'`, `Path is incorrect`);
+  const baseNameInclude = path.basename(cache.procedures[0].position.path);
+  assert.strictEqual(baseNameInclude, `copy1.rpgle`, `Path is incorrect`);
   assert.strictEqual(cache.procedures[0].position.line, 2, `Index of 3 expected`);
 }
 
@@ -278,7 +280,9 @@ exports.test10_local_fixedcopy = async () => {
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
 
   const uppercase = cache.find(`UPPERCASE`);
-  assert.strictEqual(uppercase.position.path, `tests,eof4`, `Path is incorrect`);
+
+  const baseNameInclude = path.basename(uppercase.position.path);
+  assert.strictEqual(baseNameInclude, `eof4.rpgle`, `Path is incorrect`);
 }
 
 /**

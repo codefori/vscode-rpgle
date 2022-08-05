@@ -4,6 +4,7 @@ const assert = require(`assert`);
 
 const Parser = require(`../../src/language/parser`);
 const Linter = require(`../../src/language/linter`);
+const path = require(`path`);
 
 const uri = vscode.Uri.parse(`source.rpgle`);
 
@@ -2028,7 +2029,8 @@ exports.linter29 = async () => {
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
 
-  assert.strictEqual(cache.procedures[0].position.path, `'./tests/rpgle/copy1.rpgle'`, `Path is incorrect`);
+  const baseNameInclude = path.basename(cache.procedures[0].position.path);
+  assert.strictEqual(baseNameInclude, `copy1.rpgle`, `Path is incorrect`);
   assert.strictEqual(cache.procedures[0].position.line, 2, `Index of 3 expected`);
 
   assert.strictEqual(errors.length, 0);
