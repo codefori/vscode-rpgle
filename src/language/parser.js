@@ -480,34 +480,41 @@ module.exports = class Parser {
 
           switch (parts[0]) {
           case `DCL-F`:
-            let objectName = getObjectName(parts[1], parts);
+            if (currentItem === undefined) {
+              currentItem = new Declaration(`file`);
+              currentItem.name = partsLower[1];
+              currentItem.keywords = parts.slice(2);
+              currentItem.description = currentDescription.join(` `);
 
-            const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
+              currentItem.position = {
+                path: file,
+                line: lineNumber
+              }
 
-            if (recordFormats.length > 0) {
-              const qualified = parts.includes(`QUALIFIED`);
+              const objectName = getObjectName(parts[1], parts);
 
-              // Got to fix the positions for the defintions to be the declare.
-              recordFormats.forEach(recordFormat => {
-                recordFormat.description = `Table ${parts[1]}`;
+              const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
 
-                recordFormat.keywords = [parts[1]];
-                if (qualified) recordFormat.keywords.push(`QUALIFIED`);
+              if (recordFormats.length > 0) {
+                const qualified = parts.includes(`QUALIFIED`);
 
-                recordFormat.position = {
-                  path: file,
-                  line: lineNumber
-                };
+                // Got to fix the positions for the defintions to be the declare.
+                recordFormats.forEach(recordFormat => {
+                  recordFormat.keywords = [parts[1]];
+                  if (qualified) recordFormat.keywords.push(`QUALIFIED`);
 
-                recordFormat.subItems.forEach(subItem => {
-                  subItem.position = {
-                    path: file,
-                    line: lineNumber
-                  };
+                  recordFormat.position = currentItem.position;
+
+                  recordFormat.subItems.forEach(subItem => {
+                    subItem.position = currentItem.position;
+                  });
                 });
-              });
 
-              scope.structs.push(...recordFormats);
+                currentItem.subItems.push(...recordFormats);
+              }
+
+              scope.files.push(currentItem);
+              resetDefinition = true;
             }
             break;
 
@@ -814,6 +821,15 @@ module.exports = class Parser {
             const fSpec = Fixed.parseFLine(line);
             potentialName = getObjectName(fSpec.name, fSpec.keywords);
 
+            currentItem = new Declaration(`file`);
+            currentItem.name = potentialName;
+            currentItem.keywords = fSpec.keywords;
+
+            currentItem.position = {
+              path: file,
+              line: lineNumber
+            }
+
             const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
             if (recordFormats.length > 0) {
@@ -821,27 +837,22 @@ module.exports = class Parser {
 
               // Got to fix the positions for the defintions to be the declare.
               recordFormats.forEach(recordFormat => {
-                recordFormat.description = `Table ${potentialName}`;
-
                 recordFormat.keywords = [potentialName];
                 if (qualified) recordFormat.keywords.push(`QUALIFIED`);
 
-                recordFormat.position = {
-                  path: file,
-                  line: lineNumber
-                };
+                recordFormat.position = currentItem.position;
 
                 recordFormat.subItems.forEach(subItem => {
-                  subItem.position = {
-                    path: file,
-                    line: lineNumber
-                  };
+                  subItem.position = currentItem.position;
                 });
               });
 
               currentGroup = `structs`
-              scope.structs.push(...recordFormats);
+              currentItem.subItems.push(...recordFormats);
             }
+
+            scope.files.push(currentItem);
+            resetDefinition = true;
             break;
 
           case `C`:
