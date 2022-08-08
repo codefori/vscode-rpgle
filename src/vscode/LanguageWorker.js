@@ -251,6 +251,46 @@ module.exports = class LanguageWorker {
                   ))
               );
 
+              scope.files
+                .filter(struct => struct.position && struct.position.path === currentPath)
+                .forEach(file => {
+                  const fileDef = new vscode.DocumentSymbol(
+                    file.name,
+                    file.keywords.join(` `).trim(),
+                    vscode.SymbolKind.File,
+                    new vscode.Range(file.position.line, 0, file.position.line, 0),
+                    new vscode.Range(file.position.line, 0, file.position.line, 0)
+                  );
+
+                  file.subItems
+                    .filter(recordFormat => recordFormat.position && recordFormat.position.path === currentPath)
+                    .forEach(recordFormat => {
+                      const recordFormatDef = new vscode.DocumentSymbol(
+                        recordFormat.name,
+                        recordFormat.keywords.join(` `).trim(),
+                        vscode.SymbolKind.Struct,
+                        new vscode.Range(recordFormat.position.line, 0, recordFormat.position.line, 0),
+                        new vscode.Range(recordFormat.position.line, 0, recordFormat.position.line, 0)
+                      );
+  
+                      recordFormatDef.children.push(
+                        ...recordFormat.subItems
+                          .filter(subitem => subitem.position && subitem.position.path === currentPath)
+                          .map(subitem => new vscode.DocumentSymbol(
+                            subitem.name,
+                            subitem.keywords.join(` `).trim(),
+                            vscode.SymbolKind.Property,
+                            new vscode.Range(subitem.position.line, 0, subitem.position.line, 0),
+                            new vscode.Range(subitem.position.line, 0, subitem.position.line, 0)
+                          ))
+                      );
+
+                      fileDef.children.push(recordFormatDef);
+                    });
+
+                  currentScopeDefs.push(fileDef);
+                });
+
               scope.structs
                 .filter(struct => struct.position && struct.position.path === currentPath)
                 .forEach(struct => {
