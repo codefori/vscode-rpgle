@@ -4,7 +4,7 @@ const Cache = require(`./cache`);
 module.exports = class Declaration {
   /**
    * 
-   * @param {"procedure"|"subroutine"|"struct"|"subitem"|"variable"|"constant"} type 
+   * @param {"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"} type 
    */
   constructor(type) {
     this.type = type;

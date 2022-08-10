@@ -10,7 +10,7 @@ const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().pa
 module.exports = class Cache {
   /**
    * 
-   * @param {{subroutines?: Declaration[], procedures?: Declaration[], variables?: Declaration[], structs?: Declaration[], constants?: Declaration[], indicators?: Declaration[]}} cache 
+   * @param {{subroutines?: Declaration[], procedures?: Declaration[], files?: Declaration[], variables?: Declaration[], structs?: Declaration[], constants?: Declaration[], indicators?: Declaration[]}} cache 
    */
   constructor(cache = {}) {
     /** @type {Declaration[]} */
@@ -18,6 +18,9 @@ module.exports = class Cache {
 
     /** @type {Declaration[]} */
     this.procedures = cache.procedures || [];
+
+    /** @type {Declaration[]} */
+    this.files = cache.files || [];
 
     /** @type {Declaration[]} */
     this.variables = cache.variables || [];
@@ -42,6 +45,7 @@ module.exports = class Cache {
         subroutines: [...this.subroutines, ...second.subroutines],
         procedures: [...this.procedures, ...second.procedures],
         variables: [...this.variables, ...second.variables],
+        files: [...this.files, ...second.files],
         structs: [...this.structs, ...second.structs],
         constants: [...this.constants, ...second.constants],
         indicators: [...this.indicators, ...second.indicators]
@@ -55,9 +59,12 @@ module.exports = class Cache {
    * @returns {String[]}
    */
   getNames() {
+    const fileStructNames = this.files.map(file => file.subItems.map(sub => sub.name)).flat();
     return [
-      ...this.constants.map(def => def.name), 
-      ...this.procedures.map(def => def.name), 
+      ...this.constants.map(def => def.name),
+      ...this.procedures.map(def => def.name),
+      ...this.files.map(def => def.name),
+      ...fileStructNames,
       ...this.subroutines.map(def => def.name), 
       ...this.variables.map(def => def.name),
       ...this.structs.map(def => def.name),
@@ -71,17 +78,21 @@ module.exports = class Cache {
    */
   find(name) {
     name = name.toUpperCase();
+    const fileStructs = this.files.map(file => file.subItems).flat();
+    const allStructs = [...fileStructs, ...this.structs];
+
     const possibles = [
       ...this.constants.filter(def => def.name.toUpperCase() === name), 
       ...this.procedures.filter(def => def.name.toUpperCase() === name), 
-      ...this.subroutines.filter(def => def.name.toUpperCase() === name), 
+      ...this.files.filter(def => def.name.toUpperCase() === name),
+      ...allStructs.filter(def => def.name.toUpperCase() === name),
+      ...this.subroutines.filter(def => def.name.toUpperCase() === name),
       ...this.variables.filter(def => def.name.toUpperCase() === name),
-      ...this.structs.filter(def => def.name.toUpperCase() === name),
       ...this.indicators.filter(def => def.name.toUpperCase() === name),
     ];
 
-    if (this.structs.length > 0) {
-      this.structs.filter(def => !def.keywords.includes(`QUALIFIED`)).forEach(def => {
+    if (allStructs.length > 0 && possibles.length === 0) {
+      allStructs.filter(def => !def.keywords.includes(`QUALIFIED`)).forEach(def => {
         possibles.push(...def.subItems.filter(sub => sub.name.toUpperCase() === name));
       });
     }

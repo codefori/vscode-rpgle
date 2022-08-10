@@ -23,6 +23,7 @@ exports.fixed1 = async () => {
   const parser = new Parser();
   const cache = await parser.getDocs(uri, lines);
 
+  assert.strictEqual(cache.files.length, 1);
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
 
   const wkCorp = cache.variables[0];
