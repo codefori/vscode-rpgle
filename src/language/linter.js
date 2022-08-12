@@ -1003,6 +1003,8 @@ module.exports = class Linter {
           }
           
         }
+      } else if (continuedStatement === true) {
+        currentStatement += currentLine + ``.padEnd(newLineLength, ` `);
       }
     }
 
