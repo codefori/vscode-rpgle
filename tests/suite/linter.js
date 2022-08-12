@@ -2181,6 +2181,7 @@ exports.linter34 = async () => {
     ``,
     `EXEC SQL DECLARE empCurB CURSOR FOR`,
     `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    ``,
     `    FROM Employee`,
     `    WHERE WORKDEPT = :deptNum;`,
   ].join(`\n`);
