@@ -799,6 +799,100 @@ exports.linter7_casing10 =  async () => {
   assert.strictEqual(errors[0].newValue, `sFirstName`)
 };
 
+exports.linter7_casing11 =  async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s sFirstName char(10);`,
+    `dcl-s sEmpNo char(6);`,
+    ``,
+    `Exec Sql`,
+    `  // Break The Parser`,
+    `  Select`,
+    `    sempno`,
+    `  Into`,
+    `    :sempno`,
+    `  From`,
+    `    sample.employee`,
+    `  Where`,
+    `    firstnme = :SFIRSTNAME;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 2);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `IncorrectVariableCase`,
+    range: new vscode.Range(
+      new vscode.Position(5, 0),
+      new vscode.Position(14, 26),
+    ),
+    offset: {
+      position: 63,
+      length: 69
+    },
+    newValue: `sEmpNo`
+  });
+
+  assert.deepStrictEqual(errors[1], {
+    type: `IncorrectVariableCase`,
+    range: new vscode.Range(
+      new vscode.Position(5, 0),
+      new vscode.Position(14, 26),
+    ),
+    offset: {
+      position: 121,
+      length: 131
+    },
+    newValue: `sFirstName`
+  });
+};
+
+exports.linter7_casing12 = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s NULL pointer inz(*NULL);`,
+    `dcl-s amount1 packed(7:2);`,
+    `dcl-s amount2 packed(7:2);`,
+    `dcl-s amount3 packed(7:2);`,
+    `dcl-s amount4 packed(7:2);`,
+    `dcl-s amount5 packed(7:2);`,
+    ``,
+    `// Watch null move left`,
+    `Exec Sql`,
+    `  select`,
+    `    max(case when bonus < 900 then bonus else null end),`,
+    ``,
+    `    max(case when bonus < 800 then bonus else null end),`,
+    ``,
+    `    max(case when bonus < 700 then bonus else null end),`,
+    ``,
+    `    max(case when bonus < 600 then bonus else null end),`,
+    ``,
+    `    max(case when bonus < 500 then bonus else null end)`,
+    `  into`,
+    `    :amount1,:amount2,:amount3,:amount4,:amount5`,
+    `  from`,
+    `    sample.employee;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}
+
 exports.linter8 =  async () => {
   const lines = [
     `**FREE`,

@@ -751,6 +751,7 @@ module.exports = class Linter {
               let part;
 
               if (statement.length > 0 && [`declare`, `end`].includes(statement[0].type) === false) {
+                const isSQL = (statement[0].type === `word` && statement[0].value.toUpperCase() === `EXEC`);
 
                 for (let i = 0; i < statement.length; i++) {
                   part = statement[i];
@@ -827,15 +828,17 @@ module.exports = class Linter {
                         // Check the casing of the reference matches the definition
                         const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
                         if (definedName && definedName !== part.value) {
-                          errors.push({
-                            range: new vscode.Range(
-                              statementStart,
-                              statementEnd
-                            ),
-                            offset: {position: part.position, length: part.position + part.value.length},
-                            type: `IncorrectVariableCase`,
-                            newValue: definedName
-                          });
+                          if (isSQL === false || (isSQL && statement[i-1] && statement[i-1].type === `seperator`)) {
+                            errors.push({
+                              range: new vscode.Range(
+                                statementStart,
+                                statementEnd
+                              ),
+                              offset: {position: part.position, length: part.position + part.value.length},
+                              type: `IncorrectVariableCase`,
+                              newValue: definedName
+                            });
+                          }
                         }
                       }
   
