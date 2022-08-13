@@ -1,4 +1,5 @@
 module.exports = {
+  indent: 2,
   PrototypeCheck: true,
   NoOCCURS: true,
   NoSELECTAll: true,

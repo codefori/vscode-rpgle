@@ -8,7 +8,7 @@
         "indent": {
             "$id": "#/properties/indent",
             "type": "number",
-            "description": "Indent for RPGLE. This will override the VS Code default."
+            "description": "Indent for RPGLE."
         },
         "BlankStructNamesCheck": {
             "$id": "#/properties/BlankStructNamesCheck",

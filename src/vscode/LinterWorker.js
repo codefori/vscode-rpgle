@@ -175,7 +175,6 @@ module.exports = class LinterWorker {
 
                 // Define the rules 
                 const rules = {
-                  indent: Number(vscode.window.activeTextEditor.options.tabSize),
                   literalMinimum: 1,
                   ...options
                 };
@@ -282,10 +281,7 @@ module.exports = class LinterWorker {
               const detail = Linter.getErrors({
                 uri: document.uri,
                 content: text
-              }, {
-                indent: Number(vscode.window.activeTextEditor.options.tabSize),
-                ...options
-              }, docs);
+              }, options, docs);
 
               const fixErrors = detail.errors.filter(error => error.range.intersection(range) );
 
@@ -385,6 +381,10 @@ module.exports = class LinterWorker {
     }
   }
 
+  /**
+   * @param {vscode.Uri} workingUri 
+   * @returns {Promise<Rules>}
+   */
   async getLinterOptions(workingUri) {
     let options = {};
 
@@ -427,10 +427,7 @@ module.exports = class LinterWorker {
         detail = Linter.getErrors({
           uri: document.uri,
           content: text,
-        }, {
-          indent: Number(vscode.window.activeTextEditor.options.tabSize),
-          ...options
-        }, docs);
+        }, options, docs);
       } catch (e) {
         Output.write(`Error linting ${document.uri.path}: ${e.message}`);
         Output.write(e.stack);
