@@ -2265,3 +2265,42 @@ exports.linter36 = async () => {
 
   assert.strictEqual(errors.length, 0);
 }
+
+exports.linter37 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy 'tests/rpgle/copy1.rpgle'`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `CallP theExtProcedure(myVariable);`,
+    `CallP(e) theExtProcedure(myVariable);`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    UselessOperationCheck: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `UselessOperationCheck`,
+    range: new vscode.Range(
+      new vscode.Position(10, 0),
+      new vscode.Position(10, 33),
+    ),
+    offset: {
+      position: 0,
+      length: 6
+    }
+  });
+}

@@ -634,15 +634,17 @@ module.exports = class Linter {
                   switch (value.toUpperCase()) {
                   case `EVAL`:
                   case `CALLP`:
-                    if (rules.UselessOperationCheck) {
-                      errors.push({
-                        range: new vscode.Range(
-                          statementStart,
-                          statementEnd
-                        ),
-                        offset: {position: statement[0].position, length: statement[0].position + value.length + 1},
-                        type: `UselessOperationCheck`,
-                      });
+                    if (statement[1] && statement[1].type !== `openbracket`) {
+                      if (rules.UselessOperationCheck) {
+                        errors.push({
+                          range: new vscode.Range(
+                            statementStart,
+                            statementEnd
+                          ),
+                          offset: {position: statement[0].position, length: statement[0].position + value.length + 1},
+                          type: `UselessOperationCheck`,
+                        });
+                      }
                     }
                     break;
                   case `LEAVESR`:
