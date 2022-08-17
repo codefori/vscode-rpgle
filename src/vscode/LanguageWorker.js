@@ -205,6 +205,7 @@ module.exports = class LanguageWorker {
             } catch (e) {
               Output.write(`Error parsing ${document.uri.path}: ${e.message}`);
               Output.write(e.stack);
+              console.log(e);
               return [];
             }
 

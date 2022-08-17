@@ -50,8 +50,8 @@ module.exports = class Parser {
   async fetchTable(name, keyVersion = ``, aliases) {
     if (name.trim() === ``) return [];
     if (!this.tableFetch) return [];
-    const existingVersion = this.tables[name] + keyVersion;
     const table = name.toUpperCase();
+    const existingVersion = table + keyVersion;
     const now = Date.now();
 
     if (this.tables[existingVersion]) {
@@ -821,37 +821,40 @@ module.exports = class Parser {
             const fSpec = Fixed.parseFLine(line);
             potentialName = getObjectName(fSpec.name, fSpec.keywords);
 
-            currentItem = new Declaration(`file`);
-            currentItem.name = potentialName;
-            currentItem.keywords = fSpec.keywords;
+            if (potentialName) {
+              currentItem = new Declaration(`file`);
+              currentItem.name = potentialName;
+              currentItem.keywords = fSpec.keywords;
 
-            currentItem.position = {
-              path: file,
-              line: lineNumber
-            }
+              currentItem.position = {
+                path: file,
+                line: lineNumber
+              }
 
-            const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
+              const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
-            if (recordFormats.length > 0) {
-              const qualified = fSpec.keywords.includes(`QUALIFIED`);
+              if (recordFormats.length > 0) {
+                const qualified = fSpec.keywords.includes(`QUALIFIED`);
 
-              // Got to fix the positions for the defintions to be the declare.
-              recordFormats.forEach(recordFormat => {
-                recordFormat.keywords = [potentialName];
-                if (qualified) recordFormat.keywords.push(`QUALIFIED`);
+                // Got to fix the positions for the defintions to be the declare.
+                recordFormats.forEach(recordFormat => {
+                  recordFormat.keywords = [potentialName];
+                  if (qualified) recordFormat.keywords.push(`QUALIFIED`);
 
-                recordFormat.position = currentItem.position;
+                  recordFormat.position = currentItem.position;
 
-                recordFormat.subItems.forEach(subItem => {
-                  subItem.position = currentItem.position;
+                  recordFormat.subItems.forEach(subItem => {
+                    subItem.position = currentItem.position;
+                  });
                 });
-              });
 
-              currentGroup = `structs`
-              currentItem.subItems.push(...recordFormats);
+                currentGroup = `structs`
+                currentItem.subItems.push(...recordFormats);
+              }
+
+              scope.files.push(currentItem);
             }
-
-            scope.files.push(currentItem);
+            
             resetDefinition = true;
             break;
 
@@ -1091,7 +1094,9 @@ module.exports = class Parser {
 
         if (resetDefinition) {
           // Parse keywords to make it easier to use later
-          currentItem.keyword = Parser.expandKeywords(currentItem.keywords);
+          if (currentItem) {
+            currentItem.keyword = Parser.expandKeywords(currentItem.keywords);
+          }
 
           currentItem = undefined;
           currentTitle = undefined;
