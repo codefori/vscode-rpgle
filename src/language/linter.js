@@ -868,7 +868,7 @@ module.exports = class Linter {
 
                       if (rules.CollectReferences) {
                         let defRef;
-                        if (currentProcedure) {
+                        if (currentProcedure && currentProcedure.scope) {
                           defRef = currentProcedure.scope.find(upperName);
 
                           if (!defRef) {
