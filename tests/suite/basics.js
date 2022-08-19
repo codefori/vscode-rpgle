@@ -65,6 +65,11 @@ exports.test3 = async () => {
   assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
   assert.strictEqual(cache.variables[1].position.line, 6, `Index of 6 expected`);
   assert.strictEqual(cache.structs[0].position.line, 2, `Index of 2 expected`);
+
+  assert.deepStrictEqual(cache.structs[0].range, {
+    start: 2,
+    end: 5
+  });
 }
 
 /**
@@ -89,6 +94,7 @@ exports.test4 = async () => {
 
   assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
   assert.strictEqual(cache.subroutines[0].range.start, 4, `Index of 4 expected`);
+  assert.strictEqual(cache.subroutines[0].range.end, 6);
 }
 
 /**
@@ -363,6 +369,11 @@ exports.test12 = async () => {
 
   const theLocalProc = cache.find(`theLocalProc`);
 
+  assert.deepStrictEqual(theLocalProc.range, {
+    start: 16,
+    end: 23
+  });
+
   // Has a parameter
   assert.strictEqual(theLocalProc.subItems.length, 1, `Expect length of 1`);
 
@@ -437,4 +448,57 @@ exports.subds1 = async () => {
 
   assert.strictEqual(DsChangingNodeRole.subItems.length, 13);
   assert.strictEqual(DsChangingNodeRole.subItems[12].name, `Role`);
+
+  assert.deepStrictEqual(DsChangingNodeRole.range, {
+    start: 2,
+    end: 19
+  });
+};
+
+exports.dothingy = async () => {
+  const lines = [
+    `**FREE`,
+    `///`,
+    `// Get delimiters`,
+    `//`,
+    `// Returns a pointer to the used delimiters for parsing the JSON and XML data.`,
+    `// The pointer points to a data structure in the format <em>jx_DelimiterDS</em>.`,
+    `//`,
+    `// @return Pointer to the delimiters data structure (jx_DelimiterDS)`,
+    `//`,
+    `// @warning Do not deallocate the returned pointer!`,
+    `///`,
+    `Dcl-PR json_getDelims Pointer extproc(*CWIDEN : 'jx_GetDelimiters') End-PR;`,
+    ``,
+    `///`,
+    `// Set delimiters`,
+    `//`,
+    `// Sets the delimiters used for parsing the JSON and XML data.`,
+    `// For the default delimiters see constant json_DELIMITERS.`,
+    `//`,
+    `// @param Delimiters`,
+    `///`,
+    `Dcl-PR json_setDelimiters extproc(*CWIDEN : 'jx_SetDelimiters');`,
+    `  delimiters pointer value options(*string);`,
+    `End-PR;`,
+    ``,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.procedures.length, 2);
+
+  const json_getDelims = cache.find(`json_getDelims`);
+  assert.deepStrictEqual(json_getDelims.range, {
+    start: 11,
+    end: 11
+  });
+
+  const json_getDelimiters = cache.find(`json_setDelimiters`);
+  assert.strictEqual(json_getDelimiters.subItems.length, 1);
+  assert.deepStrictEqual(json_getDelimiters.range, {
+    start: 21,
+    end: 23
+  });
 };
