@@ -455,7 +455,7 @@ exports.subds1 = async () => {
   });
 };
 
-exports.dothingy = async () => {
+exports.range1 = async () => {
   const lines = [
     `**FREE`,
     `///`,
@@ -502,3 +502,27 @@ exports.dothingy = async () => {
     end: 23
   });
 };
+
+exports.range2 = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-S  FullCmd      Char(32);`,
+    `Dcl-DS ABCD  LikeDS(BBOOP);`,
+    ``,
+    ``,
+    `Dcl-S Eod          Ind;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.variables.length, 2);
+  assert.strictEqual(cache.structs.length, 1);
+
+  const ABCD = cache.find(`ABCD`);
+  assert.strictEqual(ABCD.keyword[`LIKEDS`], `BBOOP`);
+  assert.deepStrictEqual(ABCD.range, {
+    start: 2,
+    end: 2
+  });
+}

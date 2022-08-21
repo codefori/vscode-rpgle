@@ -578,6 +578,7 @@ module.exports = class Parser {
 
               // Does the keywords include a keyword that makes end-ds useless?
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
+                currentItem.range.end = lineNumber;
                 scope.structs.push(currentItem);
               } else {
                 currentItem.readParms = true;
@@ -1039,7 +1040,7 @@ module.exports = class Parser {
 
                   currentItem.range = {
                     start: lineNumber,
-                    end: null
+                    end: lineNumber
                   };
   
                   currentGroup = `procedures`;
