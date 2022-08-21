@@ -217,4 +217,42 @@ module.exports = {
       },
     });
   },
+
+  if1: async () => {
+    const lines = [
+      `**FREE`,
+      `// Function Return Param Definitions`,
+      `Dcl-Ds Prp00a Qualified`,
+      `/IF DEFINED(PRP00A_TEMPLATE_ALL_DS)`,
+      ` Template`,
+      `/ENDIF`,
+      `;`,
+      `  Address Char(220);`,
+      `  Emp Packed(6);`,
+      `  Empname Char(60);`,
+      `  Phone_w_errm Char(95);`,
+      `  Phone Char(15) Overlay(Phone_w_errm :1);`,
+      `  Zipcode_w_errm Char(90);`,
+      `  Zipcode Char(10) Overlay(Zipcode_w_errm :1);`,
+      `End-Ds;`,
+      ``,
+      `Dcl-Ds Tmplt_EmpFmtAddress Qualified Template;`,
+      `  Name Char(60);`,
+      `  Addr1 Char(40);`,
+      `  Addr2 Char(40);`,
+      `  Addr3 Char(40);`,
+      `  Addr4 Char(40);`,
+      `End-Ds;`,
+    ].join(`\n`);
+
+    const parser = new Parser();
+    const cache = await parser.getDocs(uri, lines);
+
+    assert.strictEqual(cache.structs.length, 2);
+    
+    const Prp00a = cache.find(`Prp00a`);
+    assert.strictEqual(Prp00a.subItems.length, 7);
+    assert.strictEqual(Prp00a.keyword[`QUALIFIED`], true);
+    assert.strictEqual(Prp00a.keyword[`TEMPLATE`], undefined);
+  }
 }

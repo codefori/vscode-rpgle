@@ -472,10 +472,16 @@ module.exports = class Parser {
           if (parts[0] === `/IF`) {
             // Directive IF
             directIfScope += 1;
+            continue;
           } else
           if (parts[0] === `/ENDIF`) {
             // Directive ENDIF
             directIfScope -= 1;
+            continue;
+          } else
+          if (directIfScope > 0) {
+            // Ignore lines inside the IF scope.
+            continue;
           }
 
           switch (parts[0]) {
@@ -777,7 +783,7 @@ module.exports = class Parser {
               }
 
               if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
-                if (currentItem.readParms) {
+                if (currentItem.readParms && parts.length > 0) {
                   if (parts[0].startsWith(`DCL`))
                     parts.slice(1);
 
