@@ -9,6 +9,7 @@ const Cache = require(`../language/models/cache`);
 
 const Output = require(`../output`);
 const { Parser } = require(`../parser`);
+const { Range } = require("../../tests/models/vscode");
 
 module.exports = class LanguageWorker {
   /**
@@ -410,6 +411,15 @@ module.exports = class LanguageWorker {
           }
         }}
       ),
+
+      vscode.languages.registerRenameProvider({ language: `rpgle`}, {
+        prepareRename: async (document, position, cancelToken) => {
+          return new vscode.Range(0, 0, 0, 0);
+        },
+        provideRenameEdits: async (document, position, newName, cancelToken) => {
+          return new vscode.WorkspaceEdit();
+        },
+      }),
 
       /**
        * This implements 'Find references' and 'Peek references' for RPGLE
