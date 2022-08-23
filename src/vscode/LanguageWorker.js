@@ -445,7 +445,7 @@ module.exports = class LanguageWorker {
             }
           }
 
-          return undefined;
+          throw new Error(`Unable to find variable definition.`);
         },
         provideRenameEdits: async (document, position, newName, cancelToken) => {
           // We assume it is **free at this point.
