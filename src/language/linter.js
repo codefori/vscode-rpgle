@@ -105,6 +105,11 @@ module.exports = class Linter {
       rules.CollectReferences = true;
     }
 
+    // Clear out all the old references.
+    if (rules.CollectReferences) {
+      globalScope.clearReferences();
+    }
+
     // Make all external refs uppercase.
     if (rules.NoExternalTo && rules.NoExternalTo.length) {
       rules.NoExternalTo = rules.NoExternalTo.map(val => val.toUpperCase());
@@ -912,13 +917,15 @@ module.exports = class Linter {
 
                                 // Find the subitem
                                 const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
-                                subItemDef.references.push({
-                                  range: new vscode.Range(
-                                    statementStart,
-                                    statementEnd
-                                  ),
-                                  offset: {position: subItemPart.position, length: subItemPart.position + subItemPart.value.length},
-                                });
+                                if (subItemDef) {
+                                  subItemDef.references.push({
+                                    range: new vscode.Range(
+                                      statementStart,
+                                      statementEnd
+                                    ),
+                                    offset: {position: subItemPart.position, length: subItemPart.position + subItemPart.value.length},
+                                  });
+                                }
                               }
                             }
                           }

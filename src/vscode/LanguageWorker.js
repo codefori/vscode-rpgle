@@ -9,7 +9,7 @@ const Cache = require(`../language/models/cache`);
 
 const Output = require(`../output`);
 const { Parser } = require(`../parser`);
-const { Range } = require("../../tests/models/vscode");
+const Declaration = require(`../language/models/declaration`);
 
 module.exports = class LanguageWorker {
   /**
@@ -414,26 +414,9 @@ module.exports = class LanguageWorker {
 
       vscode.languages.registerRenameProvider({ language: `rpgle`}, {
         prepareRename: async (document, position, cancelToken) => {
-          return new vscode.Range(0, 0, 0, 0);
-        },
-        provideRenameEdits: async (document, position, newName, cancelToken) => {
-          return new vscode.WorkspaceEdit();
-        },
-      }),
-
-      /**
-       * This implements 'Find references' and 'Peek references' for RPGLE
-       */
-      vscode.languages.registerReferenceProvider({ language: `rpgle` }, {
-        provideReferences: async (document, position, context, token) => {
-
-          /** @type {vscode.Location[]} */
-          let refs = [];
-
           const range = document.getWordRangeAtPosition(position);
           const word = document.getText(range).toUpperCase();
-            
-          const lineNumber = position.line;
+
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
           if (isFree) {
             const docs = await Parser.getDocs(document.uri);
@@ -446,35 +429,87 @@ module.exports = class LanguageWorker {
             }, {
               CollectReferences: true,
             }, docs);
+            
+            const currentPath = document.uri.path;
+            const definition = await LanguageWorker.findDefintion(document, position, word);
 
-            // If they're typing inside of a procedure, let's get the stuff from there too
-            const currentProcedure = docs.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
-
-            if (currentProcedure) {
-              const localDef = currentProcedure.scope.find(word);
-
-              if (localDef) {
-                localDef.references.forEach(ref => {
-                  refs.push(new vscode.Location(
-                    document.uri, 
-                    Generic.calculateOffset(document, ref)
-                  ))
-                });
+            if (definition) {
+              if (definition.position && definition.position.path === currentPath) {
+                // We don't store the defintion range, just line number
+                const defIndex = document.lineAt(definition.position.line).text.indexOf(definition.name);
+                return {
+                  range: new vscode.Range(definition.position.line, defIndex, definition.position.line, defIndex+definition.name.length),
+                  placeholder: definition.name
+                };
               }
             }
+          }
 
-            // Otherwise, maybe it's a global variable
-            if (refs.length === 0) {
-              const globalDef = docs.find(word);
+          return undefined;
+        },
+        provideRenameEdits: async (document, position, newName, cancelToken) => {
+          // We assume it is **free at this point.
+          const range = document.getWordRangeAtPosition(position);
+          const word = document.getText(range).toUpperCase();
 
-              if (globalDef) {
-                globalDef.references.forEach(ref => {
+          const docs = await Parser.getDocs(document.uri);
+          const text = document.getText();
+
+          // Updates docs
+          Linter.getErrors({
+            uri: document.uri,
+            content: text
+          }, {
+            CollectReferences: true,
+          }, docs);
+          
+          const currentPath = document.uri.path;
+          const definition = await LanguageWorker.findDefintion(document, position, word);
+
+          if (definition) {
+            if (definition.position && definition.position.path === currentPath) {
+              const edits = new vscode.WorkspaceEdit();
+              // We don't store the defintion range, just line number
+              const defIndex = document.lineAt(definition.position.line).text.indexOf(definition.name);
+
+              edits.replace(document.uri, new vscode.Range(definition.position.line, defIndex, definition.position.line, defIndex+definition.name.length), newName);
+              definition.references.forEach(ref => {
+                console.log(ref.range);
+                edits.replace(document.uri, Generic.calculateOffset(document, ref), newName);
+              })
+
+              return edits;
+            }
+          }
+        },
+      }),
+
+      /**
+       * This implements 'Find references' and 'Peek references' for RPGLE
+       */
+      vscode.languages.registerReferenceProvider({ language: `rpgle` }, {
+        provideReferences: async (document, position, context, token) => {
+          /** @type {vscode.Location[]} */
+          let refs = [];
+
+          const range = document.getWordRangeAtPosition(position);
+          const word = document.getText(range).toUpperCase();
+            
+          const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+          if (isFree) {
+            try {
+              const declaration = await LanguageWorker.findDefintion(document, position, word);
+
+              if (declaration) {
+                declaration.references.forEach(ref => {
                   refs.push(new vscode.Location(
                     document.uri, 
                     Generic.calculateOffset(document, ref)
                   ))
                 });
               }
+            } catch (e) {
+              console.log(e);
             }
           } else {
             vscode.window.showInformationMessage(`You can only use 'Find references' with RPGLE free-format (**FREE)`);
@@ -664,5 +699,43 @@ module.exports = class LanguageWorker {
         }
       }, `.`),
     )
+  }
+
+  /**
+   * 
+   * @param {vscode.TextDocument} document 
+   * @param {vscode.Position} currentPosition 
+   * @param {string} word 
+   * @returns {Promise<Declaration>}
+   */
+  static async findDefintion(document, currentPosition, word) {
+    const lineNumber = currentPosition.line;
+    const docs = await Parser.getDocs(document.uri);
+    const text = document.getText();
+
+    // Updates docs
+    Linter.getErrors({
+      uri: document.uri,
+      content: text
+    }, {
+      CollectReferences: true,
+    }, docs);
+
+    // If they're typing inside of a procedure, let's get the stuff from there too
+    const currentProcedure = docs.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+
+    if (currentProcedure) {
+      const localDef = currentProcedure.scope.find(word);
+
+      if (localDef) {
+        return localDef;
+      }
+    }
+
+    const globalDef = docs.find(word);
+
+    if (globalDef) {
+      return globalDef;
+    }
   }
 }
