@@ -92,7 +92,7 @@ module.exports = class Cache {
     ];
 
     if (allStructs.length > 0 && possibles.length === 0) {
-      allStructs.filter(def => !def.keywords.includes(`QUALIFIED`)).forEach(def => {
+      allStructs.filter(def => def.keyword[`QUALIFIED`] !== true).forEach(def => {
         possibles.push(...def.subItems.filter(sub => sub.name.toUpperCase() === name));
       });
     }
