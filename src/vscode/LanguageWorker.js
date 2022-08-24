@@ -415,6 +415,7 @@ module.exports = class LanguageWorker {
       vscode.languages.registerRenameProvider({ language: `rpgle`}, {
         prepareRename: async (document, position, cancelToken) => {
           const range = document.getWordRangeAtPosition(position);
+          const lineNumber = position.line;
           const word = document.getText(range).toUpperCase();
 
           const isFree = (document.getText(new vscode.Range(0, 0, 0, 6)).toUpperCase() === `**FREE`);
@@ -437,10 +438,19 @@ module.exports = class LanguageWorker {
               if (definition.position && definition.position.path === currentPath) {
                 // We don't store the defintion range, just line number
                 const defIndex = document.lineAt(definition.position.line).text.indexOf(definition.name);
-                return {
-                  range: new vscode.Range(definition.position.line, defIndex, definition.position.line, defIndex+definition.name.length),
-                  placeholder: definition.name
-                };
+                const currentReference = definition.references.find(ref => ref.range.start.line === lineNumber);
+
+                if (currentReference) {
+                  return {
+                    range: Generic.calculateOffset(document, currentReference),
+                    placeholder: definition.name
+                  };
+                } else {
+                  return {
+                    range: new vscode.Range(definition.position.line, defIndex, definition.position.line, defIndex+definition.name.length),
+                    placeholder: definition.name
+                  };
+                }
               }
             }
           }
@@ -706,7 +716,7 @@ module.exports = class LanguageWorker {
    * @param {vscode.TextDocument} document 
    * @param {vscode.Position} currentPosition 
    * @param {string} word 
-   * @returns {Promise<Declaration>}
+   * @return {Promise<Declaration>}
    */
   static async findDefintion(document, currentPosition, word) {
     const lineNumber = currentPosition.line;
