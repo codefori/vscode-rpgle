@@ -2427,6 +2427,10 @@ exports.linter38_subrefs = async () => {
     `    qualsubA zoned(5);`,
     `end-ds;`,
     ``,
+    `dcl-ds qualDimStructYup Qualified Dim(2);`,
+    `    boopABC zoned(5);`,
+    `end-ds;`,
+    ``,
     `localVarYes = 'Y';`,
     `procYes();`,
     ``,
@@ -2434,6 +2438,10 @@ exports.linter38_subrefs = async () => {
     `structYesAlso = 'Really yes';`,
     ``,
     `qualStructYes.qualsubA = 5;`,
+    ``,
+    `qualDimStructYup(1).boopabc = 5;`,
+    `qualDimStructYup(localVarForProc).boopAbc = 5;`,
+    `qualDimStructYup(localVarForProc - 1).boopABC = 5;`,
     ``,
     `return;`,
     ``,
@@ -2483,7 +2491,7 @@ exports.linter38_subrefs = async () => {
   const subfa = cache.find(`subfa`);
   assert.strictEqual(subfa.references.length, 1);
   assert.deepStrictEqual(subfa.references[0], {
-    range: new vscode.Range(29, 0, 29, 14),
+    range: new vscode.Range(33, 0, 33, 14),
     offset: {
       position: 0,
       length: 5
@@ -2493,7 +2501,7 @@ exports.linter38_subrefs = async () => {
   const structYesAlso = cache.find(`structYesAlso`);
   assert.strictEqual(structYesAlso.references.length, 1);
   assert.deepStrictEqual(structYesAlso.references[0], {
-    range: new vscode.Range(30, 0, 30, 28),
+    range: new vscode.Range(34, 0, 34, 28),
     offset: {
       position: 0,
       length: 13
@@ -2507,7 +2515,7 @@ exports.linter38_subrefs = async () => {
   const qualStructYes = cache.find(`qualStructYes`);
   assert.strictEqual(qualStructYes.references.length, 1);
   assert.deepStrictEqual(qualStructYes.references[0], {
-    range: new vscode.Range(32, 0, 32, 26),
+    range: new vscode.Range(36, 0, 36, 26),
     offset: {
       position: 0,
       length: 13
@@ -2518,7 +2526,7 @@ exports.linter38_subrefs = async () => {
   assert.strictEqual(qualsubA.name, `qualsubA`);
   assert.strictEqual(qualsubA.references.length, 1);
   assert.deepStrictEqual(qualsubA.references[0], {
-    range: new vscode.Range(32, 0, 32, 26),
+    range: new vscode.Range(36, 0, 36, 26),
     offset: {
       position: 14,
       length: 22
@@ -2531,7 +2539,7 @@ exports.linter38_subrefs = async () => {
   const localStructYes = subProc.find(`localStructYes`);
   assert.strictEqual(localStructYes.references.length, 1);
   assert.deepStrictEqual(localStructYes.references[0], {
-    range: new vscode.Range(61, 4, 61, 33),
+    range: new vscode.Range(69, 4, 69, 33),
     offset: {
       position: 0,
       length: 14
@@ -2545,10 +2553,65 @@ exports.linter38_subrefs = async () => {
   assert.strictEqual(subfe.name, `subfe`);
   assert.strictEqual(subfe.references.length, 1);
   assert.deepStrictEqual(subfe.references[0], {
-    range: new vscode.Range(62, 4, 62, 24),
+    range: new vscode.Range(70, 4, 70, 24),
     offset: {
       position: 0,
       length: 5
+    }
+  });
+
+  const qualDimStructYup = cache.find(`qualDimStructYup`);
+  assert.strictEqual(qualDimStructYup.references.length, 3)
+  
+  assert.deepStrictEqual(qualDimStructYup.references[0], {
+    range: new vscode.Range(38, 0, 38, 31),
+    offset: {
+      position: 0,
+      length: 16
+    }
+  });
+
+  assert.deepStrictEqual(qualDimStructYup.references[1], {
+    range: new vscode.Range(39, 0, 39, 45),
+    offset: {
+      position: 0,
+      length: 16
+    }
+  });
+
+  assert.deepStrictEqual(qualDimStructYup.references[2], {
+    range: new vscode.Range(40, 0, 40, 49),
+    offset: {
+      position: 0,
+      length: 16
+    }
+  });
+
+  const boopABC = qualDimStructYup.subItems[0];
+  assert.strictEqual(boopABC.name, `boopABC`);
+  assert.strictEqual(boopABC.references.length, 3);
+
+  assert.deepStrictEqual(boopABC.references[0], {
+    range: new vscode.Range(38, 0, 38, 31),
+    offset: {
+      position: 20,
+      length: 27
+    }
+  });
+
+  assert.deepStrictEqual(boopABC.references[1], {
+    range: new vscode.Range(39, 0, 39, 45),
+    offset: {
+      position: 34,
+      length: 41
+    }
+  });
+
+  assert.deepStrictEqual(boopABC.references[2], {
+    range: new vscode.Range(40, 0, 40, 49),
+    offset: {
+      position: 38,
+      length: 45
     }
   });
 }

@@ -872,6 +872,10 @@ module.exports = class Linter {
                       }
 
                       if (rules.CollectReferences) {
+                        if (statement[i-1] && statement[i-1].type === `dot`) {
+                          break;
+                        }
+
                         let defRef;
                         if (currentProcedure) {
                           defRef = currentProcedure.scope.find(upperName);
