@@ -406,6 +406,9 @@ exports.fixed10 = async () => {
   assert.strictEqual(dataDs.name, `data`);
   assert.strictEqual(dataDs.subItems.length, 4);
 
+  assert.strictEqual(dataDs.range.start, 0);
+  assert.strictEqual(dataDs.range.end, 4);
+
   const rrn02 = cache.find(`rrn02`);
   assert.strictEqual(rrn02.name, `rrn02`);
   assert.strictEqual(rrn02.keywords.includes(`PACKED(7:2)`), true);
@@ -485,6 +488,8 @@ exports.fixedfree1 = async () => {
     
   const Obj_List = cache.find(`Obj_List`);
   assert.strictEqual(Obj_List.name, `Obj_List`);
+  assert.strictEqual(Obj_List.range.start, 6);
+  assert.strictEqual(Obj_List.range.end, 50);
   assert.strictEqual(Obj_List.position.line, 6);
   assert.strictEqual(Obj_List.keywords.includes(`EXPORT`), true);
   assert.strictEqual(Obj_List.keyword[`EXPORT`], true);
@@ -518,6 +523,8 @@ exports.fixed11 = async () => {
 
   const F4DATE = cache.find(`F4DATE`);
   assert.strictEqual(F4DATE.subItems.length, 4);
+  assert.strictEqual(F4DATE.range.start, 0);
+  assert.strictEqual(F4DATE.range.end, 4);
 
   const parm1 = F4DATE.subItems[0];
   assert.strictEqual(parm1.keywords[0], `CHAR(1)`);
@@ -532,6 +539,11 @@ exports.fixed11 = async () => {
   const parm4 = F4DATE.subItems[3];
   assert.strictEqual(parm4.keywords[0], `CHAR(1)`);
   assert.strictEqual(parm4.keywords[1], `OPTIONS(*NOPASS)`);
+
+  const F4DATEDS = cache.find(`F4DATEDS`);
+  assert.strictEqual(F4DATEDS.subItems.length, 4);
+  assert.strictEqual(F4DATEDS.range.start, 6);
+  assert.strictEqual(F4DATEDS.range.end, 10);
 };
 
 exports.columnFix = async () => {
@@ -556,6 +568,24 @@ exports.columnFix = async () => {
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 3);
+
+  const abcd1 = cache.find(`abcd1`);
+  assert.deepStrictEqual(abcd1.range, {
+    start: 0,
+    end: 4
+  });
+
+  const abcd2 = cache.find(`abcd2`);
+  assert.deepStrictEqual(abcd2.range, {
+    start: 5,
+    end: 10
+  });
+
+  const abcd3 = cache.find(`abcd3`);
+  assert.deepStrictEqual(abcd3.range, {
+    start: 11,
+    end: 13
+  });
 };
 
 exports.comments1 = async () => {
@@ -602,19 +632,43 @@ exports.comments1 = async () => {
 
   const SndMsgPgmQ = cache.find(`SndMsgPgmQ`);
   assert.strictEqual(SndMsgPgmQ.subItems.length, 4);
+  assert.deepStrictEqual(SndMsgPgmQ.range,  {
+    start: 2,
+    end: 7
+  });
 
   const ClrMsgPgmQ = cache.find(`ClrMsgPgmQ`);
   assert.strictEqual(ClrMsgPgmQ.subItems.length, 1);
+  assert.deepStrictEqual(ClrMsgPgmQ.range,  {
+    start: 9,
+    end: 10
+  });
 
   const SndEscMsg = cache.find(`SndEscMsg`);
   assert.strictEqual(SndEscMsg.subItems.length, 1);
+  assert.deepStrictEqual(SndEscMsg.range,  {
+    start: 13,
+    end: 14
+  });
 
   const SndInfMsg = cache.find(`SndInfMsg`);
   assert.strictEqual(SndInfMsg.subItems.length, 1);
+  assert.deepStrictEqual(SndInfMsg.range,  {
+    start: 17,
+    end: 18
+  });
 
   const JobLogMsg = cache.find(`JobLogMsg`);
   assert.strictEqual(JobLogMsg.subItems.length, 1);
+  assert.deepStrictEqual(JobLogMsg.range,  {
+    start: 21,
+    end: 22
+  });
 
   const Show = cache.find(`Show`);
   assert.strictEqual(Show.subItems.length, 3);
+  assert.deepStrictEqual(Show.range,  {
+    start: 25,
+    end: 28
+  });
 };

@@ -225,11 +225,11 @@ module.exports = class LanguageWorker {
               currentScopeDefs.push(
                 ...scope.subroutines.filter(sub => sub.position && sub.position.path === currentPath)
                   .map(def => new vscode.DocumentSymbol(
-                    def.name, 
+                    def.name,
                     def.keywords.join(` `).trim(), 
                     vscode.SymbolKind.Function,
-                    new vscode.Range(def.position.line, 0, def.position.line, 0),
-                    new vscode.Range(def.position.line, 0, def.position.line, 0)
+                    new vscode.Range(def.range.start, 0, def.range.end, 0),
+                    new vscode.Range(def.range.start, 0, def.range.start, 0),
                   )),
 
                 ...scope.variables
@@ -300,8 +300,8 @@ module.exports = class LanguageWorker {
                     struct.name,
                     struct.keywords.join(` `).trim(),
                     vscode.SymbolKind.Struct,
-                    new vscode.Range(struct.position.line, 0, struct.position.line, 0),
-                    new vscode.Range(struct.position.line, 0, struct.position.line, 0)
+                    new vscode.Range(struct.range.start, 0, struct.range.end, 0),
+                    new vscode.Range(struct.range.start, 0, struct.range.start, 0),
                   );
 
                   structDef.children.push(
@@ -333,8 +333,8 @@ module.exports = class LanguageWorker {
                   proc.name,
                   proc.keywords.join(` `).trim(),
                   vscode.SymbolKind.Function,
-                  new vscode.Range(proc.position.line, 0, proc.position.line, 0),
-                  new vscode.Range(proc.position.line, 0, proc.position.line, 0)
+                  new vscode.Range(proc.range.start, 0, proc.range.end, 0),
+                  new vscode.Range(proc.range.start, 0, proc.range.start, 0),
                 );
 
                 procDef.children.push(

@@ -572,6 +572,11 @@ module.exports = class Parser {
                 line: lineNumber
               }
 
+              currentItem.range = {
+                start: lineNumber,
+                end: null
+              };
+
               currentGroup = `structs`;
 
               // Expand the LIKEDS value if there is one.
@@ -579,6 +584,7 @@ module.exports = class Parser {
 
               // Does the keywords include a keyword that makes end-ds useless?
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
+                currentItem.range.end = lineNumber;
                 scope.structs.push(currentItem);
               } else {
                 currentItem.readParms = true;
@@ -594,6 +600,11 @@ module.exports = class Parser {
             break;
 
           case `END-DS`:
+            if (dsScopes.length > 0) {
+              const currentDs = dsScopes[dsScopes.length - 1];
+              currentDs.range.end = lineNumber;
+            }
+
             if (dsScopes.length === 1) {
               scope.structs.push(dsScopes.pop());
             } else
@@ -619,8 +630,14 @@ module.exports = class Parser {
 
                 currentItem.readParms = true;
 
+                currentItem.range = {
+                  start: lineNumber,
+                  end: null
+                };
+
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
+                  currentItem.range.end = lineNumber;
                   scope.procedures.push(currentItem);
                   resetDefinition = true;
                 }
@@ -632,6 +649,7 @@ module.exports = class Parser {
 
           case `END-PR`:
             if (currentItem && currentItem.type === `procedure`) {
+              currentItem.range.end = lineNumber;
               scope.procedures.push(currentItem);
               resetDefinition = true;
             }
@@ -1002,6 +1020,11 @@ module.exports = class Parser {
                   line: lineNumber
                 }
 
+                currentItem.range = {
+                  start: lineNumber,
+                  end: null
+                };
+
                 expandDs(file, currentItem);
 
                 currentGroup = `structs`;
@@ -1020,6 +1043,11 @@ module.exports = class Parser {
                     path: file,
                     line: lineNumber
                   }
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
   
                   currentGroup = `procedures`;
                   scope.procedures.push(currentItem);
@@ -1040,6 +1068,7 @@ module.exports = class Parser {
                 break;
 
               default:
+                // No type, must be either a struct subfield OR a parameter
                 if (!currentItem) {
                   switch (currentGroup) {
                   case `structs`:
@@ -1088,6 +1117,8 @@ module.exports = class Parser {
                       currentItem.subItems[currentItem.subItems.length - 1].keywords.push(Fixed.getPrettyType(dSpec), ...dSpec.keywords);
                     }
                   }
+
+                  currentItem.range.end = lineNumber;
                 }
                 break;
               }
