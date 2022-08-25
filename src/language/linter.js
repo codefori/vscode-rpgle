@@ -105,6 +105,11 @@ module.exports = class Linter {
       rules.CollectReferences = true;
     }
 
+    // Clear out all the old references.
+    if (rules.CollectReferences) {
+      globalScope.clearReferences();
+    }
+
     // Make all external refs uppercase.
     if (rules.NoExternalTo && rules.NoExternalTo.length) {
       rules.NoExternalTo = rules.NoExternalTo.map(val => val.toUpperCase());
@@ -867,6 +872,10 @@ module.exports = class Linter {
                       }
 
                       if (rules.CollectReferences) {
+                        if (statement[i-1] && statement[i-1].type === `dot`) {
+                          break;
+                        }
+
                         let defRef;
                         if (currentProcedure) {
                           defRef = currentProcedure.scope.find(upperName);
@@ -888,7 +897,41 @@ module.exports = class Linter {
                                 statementEnd
                               ),
                               offset: {position: part.position, length: part.position + part.value.length},
-                            })
+                            });
+                          }
+
+                          if (defRef.keyword[`QUALIFIED`]) {
+                            let nextPartIndex = i+1;
+
+                            // First, check if there is an array call here and skip over it
+                            if (statement[nextPartIndex].type === `openbracket`) {
+                              nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+
+                              if (nextPartIndex >= 0) nextPartIndex++;
+                            }
+
+                            // Check if the next part is a dot
+                            if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                              nextPartIndex++;
+
+                              // Check if the next part is a word
+                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                                const subItemPart = statement[nextPartIndex];
+                                const subItemName = subItemPart.value.toUpperCase();
+
+                                // Find the subitem
+                                const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                                if (subItemDef) {
+                                  subItemDef.references.push({
+                                    range: new vscode.Range(
+                                      statementStart,
+                                      statementEnd
+                                    ),
+                                    offset: {position: subItemPart.position, length: subItemPart.position + subItemPart.value.length},
+                                  });
+                                }
+                              }
+                            }
                           }
                         }
                       }

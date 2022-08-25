@@ -115,6 +115,7 @@ module.exports = class {
   /**
    * @param {vscode.TextDocument} document
    * @param {IssueRange} error 
+   * @returns {vscode.Range}
    */
   static calculateOffset(document, error) {
     const offset = error.offset;

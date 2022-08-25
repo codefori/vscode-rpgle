@@ -92,7 +92,7 @@ module.exports = class Cache {
     ];
 
     if (allStructs.length > 0 && possibles.length === 0) {
-      allStructs.filter(def => !def.keywords.includes(`QUALIFIED`)).forEach(def => {
+      allStructs.filter(def => def.keyword[`QUALIFIED`] !== true).forEach(def => {
         possibles.push(...def.subItems.filter(sub => sub.name.toUpperCase() === name));
       });
     }
@@ -102,5 +102,24 @@ module.exports = class Cache {
     } else {
       return null;
     }
+  }
+
+  clearReferences() {
+    [...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
+      def.references = [];
+    });
+
+    this.procedures.forEach(proc => {
+      if (proc.scope) {
+        proc.scope.clearReferences()
+      }
+    });
+
+    const fileStructs = this.files.map(file => file.subItems).flat();
+    const allStructs = [...fileStructs, ...this.structs];
+
+    allStructs.forEach(struct => {
+      struct.subItems.forEach(sub => sub.references = [])
+    });
   }
 }

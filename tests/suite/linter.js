@@ -2398,3 +2398,220 @@ exports.linter37 = async () => {
     }
   });
 }
+
+exports.linter38_subrefs = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s localVarYes Char(1);`,
+    `Dcl-s localVarForProc Int(20);`,
+    `dcl-s localVarNo Ind;`,
+    ``,
+    `dcl-ds structYes;`,
+    `    subfa varchar(12);`,
+    `End-ds;`,
+    ``,
+    `dcl-ds structNo;`,
+    `    subfb packed(12);`,
+    `End-ds;`,
+    ``,
+    `Dcl-ds structYesAlso;`,
+    `    subfc char(20);`,
+    `End-Ds;`,
+    ``,
+    `dcl-ds qualStructYes Qualified;`,
+    `    qualsubA zoned(5);`,
+    `end-ds;`,
+    ``,
+    `dcl-ds qualStructNo Qualified;`,
+    `    qualsubA zoned(5);`,
+    `end-ds;`,
+    ``,
+    `dcl-ds qualDimStructYup Qualified Dim(2);`,
+    `    boopABC zoned(5);`,
+    `end-ds;`,
+    ``,
+    `localVarYes = 'Y';`,
+    `procYes();`,
+    ``,
+    `subfa = 'Yes!';`,
+    `structYesAlso = 'Really yes';`,
+    ``,
+    `qualStructYes.qualsubA = 5;`,
+    ``,
+    `qualDimStructYup(1).boopabc = 5;`,
+    `qualDimStructYup(localVarForProc).boopAbc = 5;`,
+    `qualDimStructYup(localVarForProc - 1).boopABC = 5;`,
+    ``,
+    `return;`,
+    ``,
+    `Dcl-Proc procYes;`,
+    `    dcl-s reallyLocalYes bindec(9);`,
+    `    dcl-s reallyLocalNo Char(1);`,
+    ``,
+    `    dcl-ds localStructYes;`,
+    `        subfd char(12);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localStructAlsoYes;`,
+    `        subfe char(12);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localStructNo;`,
+    `        subfg char(12);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localQualStructYes Qualified;`,
+    `        qualsubA zoned(5);`,
+    `    end-ds;`,
+    ``,
+    `    dcl-ds localQualStructNo Qualified;`,
+    `        qualsubA zoned(5);`,
+    `    end-ds;`,
+    ``,
+    `    reallyLocalYes = 1;`,
+    `    localStructYes = 'Helloworld';`,
+    `    subfe = 'Otherworld';`,
+    `    localQualStructYes.qualsubA = 55;`,
+    ``,
+    `    localVarForProc = 12398;`,
+    `End-Proc;`,
+    ``,
+    `Dcl-Proc procNo;`,
+    `    localVarForProc = 1190348;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  Linter.getErrors({uri, content: lines}, {
+    CollectReferences: true,
+  }, cache);
+
+  const subfa = cache.find(`subfa`);
+  assert.strictEqual(subfa.references.length, 1);
+  assert.deepStrictEqual(subfa.references[0], {
+    range: new vscode.Range(33, 0, 33, 14),
+    offset: {
+      position: 0,
+      length: 5
+    }
+  });
+
+  const structYesAlso = cache.find(`structYesAlso`);
+  assert.strictEqual(structYesAlso.references.length, 1);
+  assert.deepStrictEqual(structYesAlso.references[0], {
+    range: new vscode.Range(34, 0, 34, 28),
+    offset: {
+      position: 0,
+      length: 13
+    }
+  });
+
+  const subfc = structYesAlso.subItems[0];
+  assert.strictEqual(subfc.name, `subfc`);
+  assert.strictEqual(subfc.references.length, 0);
+
+  const qualStructYes = cache.find(`qualStructYes`);
+  assert.strictEqual(qualStructYes.references.length, 1);
+  assert.deepStrictEqual(qualStructYes.references[0], {
+    range: new vscode.Range(36, 0, 36, 26),
+    offset: {
+      position: 0,
+      length: 13
+    }
+  });
+
+  const qualsubA = qualStructYes.subItems[0];
+  assert.strictEqual(qualsubA.name, `qualsubA`);
+  assert.strictEqual(qualsubA.references.length, 1);
+  assert.deepStrictEqual(qualsubA.references[0], {
+    range: new vscode.Range(36, 0, 36, 26),
+    offset: {
+      position: 14,
+      length: 22
+    }
+  });
+
+  const procYes = cache.find(`procYes`);
+  const subProc = procYes.scope;
+
+  const localStructYes = subProc.find(`localStructYes`);
+  assert.strictEqual(localStructYes.references.length, 1);
+  assert.deepStrictEqual(localStructYes.references[0], {
+    range: new vscode.Range(69, 4, 69, 33),
+    offset: {
+      position: 0,
+      length: 14
+    }
+  });
+
+  const localStructAlsoYes = subProc.find(`localStructAlsoYes`);
+  assert.strictEqual(localStructAlsoYes.references.length, 0);
+
+  const subfe = localStructAlsoYes.subItems[0];
+  assert.strictEqual(subfe.name, `subfe`);
+  assert.strictEqual(subfe.references.length, 1);
+  assert.deepStrictEqual(subfe.references[0], {
+    range: new vscode.Range(70, 4, 70, 24),
+    offset: {
+      position: 0,
+      length: 5
+    }
+  });
+
+  const qualDimStructYup = cache.find(`qualDimStructYup`);
+  assert.strictEqual(qualDimStructYup.references.length, 3)
+  
+  assert.deepStrictEqual(qualDimStructYup.references[0], {
+    range: new vscode.Range(38, 0, 38, 31),
+    offset: {
+      position: 0,
+      length: 16
+    }
+  });
+
+  assert.deepStrictEqual(qualDimStructYup.references[1], {
+    range: new vscode.Range(39, 0, 39, 45),
+    offset: {
+      position: 0,
+      length: 16
+    }
+  });
+
+  assert.deepStrictEqual(qualDimStructYup.references[2], {
+    range: new vscode.Range(40, 0, 40, 49),
+    offset: {
+      position: 0,
+      length: 16
+    }
+  });
+
+  const boopABC = qualDimStructYup.subItems[0];
+  assert.strictEqual(boopABC.name, `boopABC`);
+  assert.strictEqual(boopABC.references.length, 3);
+
+  assert.deepStrictEqual(boopABC.references[0], {
+    range: new vscode.Range(38, 0, 38, 31),
+    offset: {
+      position: 20,
+      length: 27
+    }
+  });
+
+  assert.deepStrictEqual(boopABC.references[1], {
+    range: new vscode.Range(39, 0, 39, 45),
+    offset: {
+      position: 34,
+      length: 41
+    }
+  });
+
+  assert.deepStrictEqual(boopABC.references[2], {
+    range: new vscode.Range(40, 0, 40, 49),
+    offset: {
+      position: 38,
+      length: 45
+    }
+  });
+}
