@@ -16,6 +16,11 @@ module.exports = class LanguageWorker {
    * @param {vscode.ExtensionContext} context
    */
   constructor(context) {
+    /** @type {number|undefined} */
+    this.lineEditedBefore = undefined;
+    /** @type {NodeJS.Timeout|undefined} */
+    this.editTimeout = undefined;
+
     context.subscriptions.push(
       vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, async () => {
         const editor = vscode.window.activeTextEditor;
@@ -84,13 +89,29 @@ module.exports = class LanguageWorker {
       }),
 
       /**
-       * When the editor is saved, we clear the parsed cache incase
-       * any new defintions were added.
+       * When we change the document, we want to refresh the outline view
        */
-      vscode.workspace.onDidSaveTextDocument((document) => {
-        if (document.languageId === `rpgle`) {
-          //Else fetch new info from source being edited
-          Parser.clearParsedCache(document.uri.path);
+      vscode.workspace.onDidChangeTextDocument(event => {
+        const document = event.document;
+
+        if (document.isDirty) {
+          const currentEditingLine = 
+            event.contentChanges.length === 1 && 
+            event.contentChanges[0].range.isSingleLine && 
+            !event.contentChanges[0].text.includes(`\n`)
+              ? event.contentChanges[0].range.start.line : undefined;
+          
+          // Refresh the document when we change a different line
+          if (this.lineEditedBefore === undefined || currentEditingLine !== this.lineEditedBefore) {
+            clearTimeout(this.editTimeout);
+            this.editTimeout = setTimeout(() => {
+              Parser.getDocs(document.uri, document.getText(), {
+                ignoreCache: true
+              });
+            }, 500);
+          }
+
+          this.lineEditedBefore = currentEditingLine;
         }
       }),
 
