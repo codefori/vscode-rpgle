@@ -244,12 +244,12 @@ module.exports = class Parser {
   /**
    * @param {vscode.Uri} workingUri
    * @param {string} [content] 
-   * @param {boolean} [withIncludes] To make sure include statements are parsed
+   * @param {{withIncludes?: boolean, ignoreCache?: boolean}} options
    * @returns {Promise<Cache|null>}
    */
-  async getDocs(workingUri, content, withIncludes = true) {
+  async getDocs(workingUri, content, options = {withIncludes: true}) {
     const existingCache = this.getParsedCache(workingUri.path);
-    if (existingCache) {
+    if (options.ignoreCache !== true && existingCache) {
       return existingCache;
     };
 
@@ -374,7 +374,7 @@ module.exports = class Parser {
       };
     }
 
-    if (withIncludes) {
+    if (options.withIncludes) {
     //First loop is for copy/include statements
       for (let i = baseLines.length - 1; i >= 0; i--) {
         let line = baseLines[i].trim(); //Paths are case insensitive so it's okay

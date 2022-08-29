@@ -89,17 +89,6 @@ module.exports = class LanguageWorker {
       }),
 
       /**
-       * When the editor is saved, we clear the parsed cache incase
-       * any new defintions were added.
-       */
-      vscode.workspace.onDidSaveTextDocument((document) => {
-        if (document.languageId === `rpgle`) {
-          //Else fetch new info from source being edited
-          Parser.clearParsedCache(document.uri.path);
-        }
-      }),
-
-      /**
        * When we change the document, we want to refresh the outline view
        */
       vscode.workspace.onDidChangeTextDocument(event => {
@@ -116,8 +105,9 @@ module.exports = class LanguageWorker {
           if (this.lineEditedBefore === undefined || currentEditingLine !== this.lineEditedBefore) {
             clearTimeout(this.editTimeout);
             this.editTimeout = setTimeout(() => {
-              console.log(`refresh`);
-              Parser.clearParsedCache(document.uri.path);
+              Parser.getDocs(document.uri, document.getText(), {
+                ignoreCache: true
+              });
             }, 500);
           }
 
