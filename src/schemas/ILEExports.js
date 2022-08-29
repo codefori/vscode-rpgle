@@ -117,6 +117,30 @@ exports.api = {
       `EnvVarValue = 'Some value to store';`,
       `putenv('ENVVAR=' + EnvVarValue);`
     ]
+  },
+  QUSCRTUS: {
+    type: `function`,
+    insertText: `QUSCRTUS(\n  \${1:'NAME      LIB'}:\n  \${2:'LOG'}:\n  \${3:size}:\n  \${4:'*ALL'}:\n  \${5:'New object'}\n);$0`,
+    detail: `void`,
+    description: `Create User Space`,
+    prototype: [
+      `dcl-pr QUSCRTUS extpgm('QUSCRTUS');`,
+      `  qualifiedName char(20) const;`,
+      `  extendedAtribute char(10) const;`,
+      `  initialSize int(10) const;`,
+      `  initialValue char(1) const;`,
+      `  publicAuthority char(10) const;`,
+      `  description char(50) const;`,
+      `  // optional parm group 1`,
+      `  UsrSpcRepl char(10) const options(*nopass);`,
+      `  UsrSpcErrC likeds(ApiErrC) options(*nopass: *varsize);`,
+      `  // optional parm group 2`,
+      `  UsrSpcDomn char(10) const options(*nopass);`,
+      `  // optional parm group 3`,
+      `  UsrSpcReqS int(10) const options(*nopass);`,
+      `  UsrSpcOptA char(1) const options(*nopass);`,
+      `end-pr;`,
+    ]
   }
 };
 
