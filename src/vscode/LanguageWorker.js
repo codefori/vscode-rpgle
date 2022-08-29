@@ -714,6 +714,9 @@ module.exports = class LanguageWorker {
               expandScope(doc);
 
               if (isFree) {
+                const insertAt = doc.getDefinitionBlockStart(document.uri.fsPath);
+                const insertRange = new vscode.Range(insertAt, 0, insertAt, 0);
+
                 // TODO: support not free
                 ILEExports.apis.filter(
                   apiName => !doc.procedures.some(proc => proc.name.toUpperCase() === apiName.toUpperCase())
@@ -723,7 +726,7 @@ module.exports = class LanguageWorker {
                   item = new vscode.CompletionItem(apiName, vscode.CompletionItemKind.Function);
                   item.insertText = new vscode.SnippetString(currentExport.insertText);
                   item.detail = currentExport.detail;
-                  
+
                   item.documentation = new vscode.MarkdownString([
                     currentExport.description,
                     `---`,
@@ -732,8 +735,8 @@ module.exports = class LanguageWorker {
 
                   item.additionalTextEdits = [
                     new vscode.TextEdit(
-                      new vscode.Range(1, 0, 1, 0), 
-                      currentExport.prototype.join(eol) + eol
+                      insertRange, 
+                      eol + currentExport.prototype.join(eol) + eol + eol
                     )
                   ]
                   items.push(item);

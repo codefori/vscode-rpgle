@@ -72,6 +72,25 @@ module.exports = class Cache {
   }
 
   /**
+   * Returns 0-indexed line number where definition block starts for current scope
+   * @param {string} fsPath Path to check
+   * @returns {number} Line number
+   */
+  getDefinitionBlockStart(fsPath) {
+    const firsts = [
+      this.procedures.find(d => d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined),
+      this.structs.find(d => d.position.path === fsPath), 
+      this.variables.find(d => d.position.path === fsPath), 
+      this.constants.find(d => d.position.path === fsPath), 
+      this.files.find(d => d.position.path === fsPath)
+    ].filter(d => d !== undefined);
+
+    const lines = firsts.map(d => d.position.line).sort((a, b) => a - b);
+
+    return (lines.length >= 1 ? lines[0] : 1);
+  }
+
+  /**
    * 
    * @param {string} name 
    * @returns {Declaration}
