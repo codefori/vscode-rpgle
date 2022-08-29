@@ -19,6 +19,7 @@ exports.api = {
     example: [
       `**free`,
       `dcl-s outtext varchar(50);`,
+      `outtext = 'Hello world'`,
       `printf(outtext + '\\n');`,
     ]
   },
@@ -34,7 +35,6 @@ exports.api = {
       `// an information message type to the job log.`,
       `// To ensure messages are written to the job log, always`,
       `// use a new line (\\n) at the end of each format-string.`,
-      `//`,
       `// @param format-string`,
       `///`,
       `dcl-pr Qp0zLprintf int(10) extproc('Qp0zLprintf');`,
@@ -68,7 +68,6 @@ exports.api = {
       `// QzshSystem`,
       `// Runs the specified shell command by`,
       `// spawning a child process and invoking qsh`,
-      `//`,
       `// @param The command as string pointer`,
       `///`,
       `dcl-pr QzshSystem int(10) extproc('QzshSystem');`,
@@ -80,17 +79,38 @@ exports.api = {
     type: `function`,
     insertText: `getenv(\${1:'ENVVAR'})\$0`,
     detail: `pointer`,
-    description: `Searches the job-level environment list for a string`,    
+    description: `Searches the job-level environment list for a string`,
     prototype: [
       `///`,
       `// getenv`,
       `// Searches the job-level environment list for a string`,
-      `//`,
       `// @param Environment variable name`,
       `///`,
       `dcl-pr getenv pointer extproc('getenv');`,
       `  name pointer value options(*string:*trim);`,
       `end-pr;`,
+    ]
+  },
+  putenv: {
+    type: `function`,
+    insertText: `putenv(\${1:'ENVVAR=value'})\$0`,
+    detail: `int(10)`,
+    description: `Creates or changes an environment variable`,
+    prototype: [
+      `///`,
+      `// putenv`,
+      `// Creates or changes an environment variable`,
+      `// @param Environment variable name and value`,
+      `///`,
+      `dcl-pr putenv pointer extproc('putenv');`,
+      `  change pointer value options(*string:*trim);`,
+      `end-pr;`,
+    ],
+    example: [
+      `**free`,
+      `dcl-s EnvVarValue char(500);`,
+      `EnvVarValue = 'Some value to store';`,
+      `putenv('ENVVAR=' + EnvVarValue);`
     ]
   }
 };
