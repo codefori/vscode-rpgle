@@ -76,18 +76,18 @@ module.exports = class Cache {
    * @param {string} fsPath Path to check
    * @returns {number} Line number
    */
-  getDefinitionBlockStart(fsPath) {
-    const firsts = [
-      this.procedures.find(d => d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined),
-      this.structs.find(d => d.position.path === fsPath), 
-      this.variables.find(d => d.position.path === fsPath), 
-      this.constants.find(d => d.position.path === fsPath), 
-      this.files.find(d => d.position.path === fsPath)
+  getDefinitionBlockEnd(fsPath) {
+    const lasts = [
+      this.procedures.filter(d => d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined).pop(),
+      this.structs.filter(d => d.position.path === fsPath).pop(), 
+      this.variables.filter(d => d.position.path === fsPath).pop(), 
+      this.constants.filter(d => d.position.path === fsPath).pop(), 
+      this.files.filter(d => d.position.path === fsPath).pop()
     ].filter(d => d !== undefined);
 
-    const lines = firsts.map(d => d.position.line).sort((a, b) => a - b);
+    const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.line).sort((a, b) => b - a);
 
-    return (lines.length >= 1 ? lines[0] : 1);
+    return (lines.length >= 1 ? lines[0] : 0);
   }
 
   /**

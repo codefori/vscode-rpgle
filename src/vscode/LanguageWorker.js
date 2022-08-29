@@ -714,7 +714,7 @@ module.exports = class LanguageWorker {
               expandScope(doc);
 
               if (isFree) {
-                const insertAt = doc.getDefinitionBlockStart(document.uri.fsPath);
+                const insertAt = doc.getDefinitionBlockEnd(document.uri.fsPath) + 1;
                 const insertRange = new vscode.Range(insertAt, 0, insertAt, 0);
 
                 // TODO: support not free
@@ -736,7 +736,7 @@ module.exports = class LanguageWorker {
                   item.additionalTextEdits = [
                     new vscode.TextEdit(
                       insertRange, 
-                      eol + currentExport.prototype.join(eol) + eol + eol
+                      eol + currentExport.prototype.join(eol) + eol
                     )
                   ]
                   items.push(item);
