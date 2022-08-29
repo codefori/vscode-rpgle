@@ -728,9 +728,11 @@ module.exports = class LanguageWorker {
                     const apiNameUpper = apiName.toUpperCase();
                     if (proc.name.toUpperCase() === apiNameUpper) return true;
 
-                    const possibleExternalName = proc.keyword[`EXTPROC`] || proc.keyword[`EXTPGM`];
+                    let possibleExternalName = proc.keyword[`EXTPROC`] || proc.keyword[`EXTPGM`];
 
                     if (typeof possibleExternalName === `string`) {
+                      if (possibleExternalName.startsWith(`'`)) possibleExternalName = possibleExternalName.substring(1);
+                      if (possibleExternalName.endsWith(`'`)) possibleExternalName = possibleExternalName.substring(0, possibleExternalName.length - 1);
                       if (possibleExternalName.toUpperCase() === apiNameUpper) return true;
                     }
                   })
