@@ -13,7 +13,7 @@ exports.api = {
       `// @param String value pointer`,
       `///`,
       `dcl-pr printf int(10) extproc;`,
-      `  value pointer value options(*string);`,
+      `  valueIn pointer value options(*string);`,
       `end-pr;`
     ]
   }
