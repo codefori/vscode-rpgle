@@ -718,13 +718,22 @@ module.exports = class LanguageWorker {
 
               expandScope(doc);
 
+              // TODO: support not free
               if (isFree) {
                 const insertAt = doc.getDefinitionBlockEnd(document.uri.fsPath) + 1;
                 const insertRange = new vscode.Range(insertAt, 0, insertAt, 0);
 
-                // TODO: support not free
                 ILEExports.apis.filter(
-                  apiName => !doc.procedures.some(proc => proc.name.toUpperCase() === apiName.toUpperCase())
+                  apiName => !doc.procedures.some(proc =>{
+                    const apiNameUpper = apiName.toUpperCase();
+                    if (proc.name.toUpperCase() === apiNameUpper) return true;
+
+                    const possibleExternalName = proc.keyword[`EXTPROC`] || proc.keyword[`EXTPGM`];
+
+                    if (typeof possibleExternalName === `string`) {
+                      if (possibleExternalName.toUpperCase() === apiNameUpper) return true;
+                    }
+                  })
                 ).forEach(apiName => {
                   const currentExport = ILEExports.api[apiName];
 
