@@ -15,6 +15,11 @@ exports.api = {
       `dcl-pr printf int(10) extproc;`,
       `  format pointer value options(*string);`,
       `end-pr;`
+    ],
+    example: [
+      `**free`,
+      `dcl-s outtext varchar(50);`,
+      `printf(outtext + '\\n');`,
     ]
   },
   Qp0zLprintf: {

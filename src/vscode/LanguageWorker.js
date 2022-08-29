@@ -725,13 +725,9 @@ module.exports = class LanguageWorker {
 
                   item = new vscode.CompletionItem(apiName, vscode.CompletionItemKind.Function);
                   item.insertText = new vscode.SnippetString(currentExport.insertText);
-                  item.detail = currentExport.detail;
-
-                  item.documentation = new vscode.MarkdownString([
-                    currentExport.description,
-                    `---`,
-                    `Will import`
-                  ].join(`\n\n`));
+                  item.detail = `${currentExport.detail} (auto-import)`;
+                  item.documentation = new vscode.MarkdownString(currentExport.description);
+                  if (currentExport.example) item.documentation.appendCodeblock(currentExport.example.join(`\n`), `rpgle`);
 
                   item.additionalTextEdits = [
                     new vscode.TextEdit(

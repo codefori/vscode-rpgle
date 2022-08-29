@@ -6,4 +6,5 @@ interface APIInterface {
   detail: string;
   description: string; 
   prototype: string[];
+  example?: string[];
 }
