@@ -2,6 +2,7 @@
 const vscode = require(`vscode`);
 
 const possibleTags = require(`../language/models/tags`);
+const ILEExports = require(`../schemas/ILEExports`);
 
 const Linter = require(`../language/linter`);
 const Generic = require(`../language/generic`);
@@ -560,6 +561,9 @@ module.exports = class LanguageWorker {
           const currentLine = document.getText(new vscode.Range(lineNumber, 0, lineNumber, position.character));
           const doc = await Parser.getDocs(document.uri, text);
 
+          const eol = document.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
+          const isFree = (text.length >= 6 ? text.substring(0, 6).toUpperCase() === `**FREE` : false);
+
           /** @type vscode.CompletionItem[] */
           let items = [];
           let item;
@@ -618,7 +622,7 @@ module.exports = class LanguageWorker {
 
           } else {
 
-            if (currentLine.startsWith(`//`)) {
+            if (currentLine.trimStart().startsWith(`//`)) {
               for (const tag in possibleTags) {
                 item = new vscode.CompletionItem(`@${tag}`, vscode.CompletionItemKind.Property);
                 item.insertText = new vscode.SnippetString(`@${tag} $0`);
@@ -709,6 +713,32 @@ module.exports = class LanguageWorker {
 
               expandScope(doc);
 
+              if (isFree) {
+                // TODO: support not free
+                ILEExports.apis.filter(
+                  apiName => !doc.procedures.some(proc => proc.name.toUpperCase() === apiName.toUpperCase())
+                ).forEach(apiName => {
+                  const currentExport = ILEExports.api[apiName];
+
+                  item = new vscode.CompletionItem(apiName, vscode.CompletionItemKind.Function);
+                  item.insertText = new vscode.SnippetString(currentExport.insertText);
+                  item.detail = currentExport.detail;
+                  
+                  item.documentation = new vscode.MarkdownString([
+                    currentExport.description,
+                    `---`,
+                    `Will import`
+                  ].join(`\n\n`));
+
+                  item.additionalTextEdits = [
+                    new vscode.TextEdit(
+                      new vscode.Range(1, 0, 1, 0), 
+                      currentExport.prototype.join(eol) + eol
+                    )
+                  ]
+                  items.push(item);
+                })
+              }
 
               if (currentProcedure) {
                 for (const subItem of currentProcedure.subItems) {
