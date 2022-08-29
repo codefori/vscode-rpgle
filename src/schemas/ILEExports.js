@@ -25,7 +25,7 @@ exports.api = {
   },
   Qp0zLprintf: {
     type: `function`,
-    insertText: `QzshSystem(\${1:value})\$0`,
+    insertText: `Qp0zLprintf(\${1:value})\$0`,
     detail: `int(10)`,
     description: `Prints user data specified by format-string as an information message type to the job log.`,
     prototype: [
