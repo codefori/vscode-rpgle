@@ -12,6 +12,11 @@ const Output = require(`../output`);
 const { Parser } = require(`../parser`);
 const Declaration = require(`../language/models/declaration`);
 
+const completionKind = {
+  function: vscode.CompletionItemKind.Function,
+  struct: vscode.CompletionItemKind.Struct
+};
+
 module.exports = class LanguageWorker {
   /**
    * @param {vscode.ExtensionContext} context
@@ -723,10 +728,13 @@ module.exports = class LanguageWorker {
                 ).forEach(apiName => {
                   const currentExport = ILEExports.api[apiName];
 
-                  item = new vscode.CompletionItem(apiName, vscode.CompletionItemKind.Function);
+                  item = new vscode.CompletionItem(apiName, completionKind[currentExport.type]);
                   item.insertText = new vscode.SnippetString(currentExport.insertText);
                   item.detail = `${currentExport.detail} (auto-import)`;
-                  item.documentation = new vscode.MarkdownString(currentExport.description);
+                  item.documentation = new vscode.MarkdownString([
+                    currentExport.description,
+                    `---`
+                  ].join(`\n\n`));
                   if (currentExport.example) item.documentation.appendCodeblock(currentExport.example.join(`\n`), `rpgle`);
 
                   item.additionalTextEdits = [
