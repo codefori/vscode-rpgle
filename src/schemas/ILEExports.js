@@ -89,6 +89,11 @@ exports.api = {
       `dcl-pr getenv pointer extproc('getenv');`,
       `  name pointer value options(*string:*trim);`,
       `end-pr;`,
+    ],
+    example: [
+      `**free`,
+      `dcl-s EnvVarValue char(500);`,
+      `EnvVarValue = %str(getenv('ENVVAR'));`
     ]
   },
   putenv: {
