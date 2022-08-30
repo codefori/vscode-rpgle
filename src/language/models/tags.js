@@ -6,6 +6,7 @@ module.exports = {
   'deprecated': `Description why a program or procedure shouldn't be used and stating any replacement.`,
   'return': `Description of the return value`,
   'param': `Description of the parameter`,
+  'value': `A possible value and description for current variable or subfield`,
   'project': `Name of the project (so that the module can be placed under the corresponding project in the UI)`,
   'warning': `multi line`,
   'info': `multi line`,

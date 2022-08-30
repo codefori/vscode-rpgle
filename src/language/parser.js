@@ -815,11 +815,11 @@ module.exports = class Parser {
                   }
 
                   // Add comments from the tags
-                  const paramTags = currentTags.filter(tag => tag.tag === `param`);
-                  const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
-                  if (paramTag) {
-                    currentSub.description = paramTag.content;
+                  if (currentDescription.length > 0) {
+                    currentSub.description = currentDescription.join(` `);
                   }
+
+                  currentSub.tags = currentTags;
 
                   // If the parameter has likeds, add the subitems to make it a struct.
                   await expandDs(file, currentSub);

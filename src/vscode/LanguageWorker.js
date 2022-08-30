@@ -159,7 +159,12 @@ module.exports = class LanguageWorker {
             if (procedure.description) markdownResult.appendMarkdown(`${procedure.description}\n\n`);
 
             // Params
-            markdownResult.appendMarkdown(procedure.subItems.map(parm => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${parm.description}`).join(`\n\n`));
+            const paramTags = procedure.tags.filter(t => t.tag === `param`);
+            markdownResult.appendMarkdown(procedure.subItems.map((parm, i) => 
+              `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${
+                parm.description || (paramTags[i] ? paramTags[i].content : ``)
+              }`
+            ).join(`\n\n`));
 
             // Return value
             if (returnTag) {
@@ -209,6 +214,19 @@ module.exports = class LanguageWorker {
                   `---`, 
                   theVariable.description
                 );
+              }
+
+              if (theVariable.tags.some(t => t.tag === `value`)) {
+                md.push(`---`, `Possible values`, 
+                  theVariable.tags.map(t => {
+                    const spaceSplit = t.content.indexOf(` `);
+
+                    if (spaceSplit > 0) {
+                      return `* \`${t.content.substring(0, spaceSplit)}\` ${t.content.substring(spaceSplit+1)}`;
+                    } else {
+                      return `* \`${t.content}\``;
+                    }
+                  }).join(`\n`))
               }
 
               // Variable definition found
@@ -622,7 +640,20 @@ module.exports = class LanguageWorker {
                       item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
                       item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
                       item.detail = subItem.keywords.join(` `);
-                      item.documentation = subItem.description + ` (${possibleStruct.name})`;
+
+                      const subItemMd = [subItem.description + ` (${possibleStruct.name})`];
+                      if (subItem.tags.some(t => t.tag === `value`)) {
+                        subItemMd.push(`---`, `Possible values`, subItem.tags.map(t => {
+                          const spaceSplit = t.content.indexOf(` `);
+
+                          if (spaceSplit > 0) {
+                            return `* \`${t.content.substring(0, spaceSplit)}\` ${t.content.substring(spaceSplit+1)}`;
+                          } else {
+                            return `* \`${t.content}\``;
+                          }
+                        }).join(`\n`))
+                      }
+                      item.documentation = new vscode.MarkdownString(subItemMd.join(`\n\n`));
                       items.push(item);
                     });
                   }
@@ -645,6 +676,8 @@ module.exports = class LanguageWorker {
                * @param {Cache} localCache 
                */
               const expandScope = (localCache) => {
+                let currentMd;
+
                 for (const procedure of localCache.procedures) {
                   item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
                   item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
@@ -664,7 +697,22 @@ module.exports = class LanguageWorker {
                   item = new vscode.CompletionItem(`${variable.name}`, vscode.CompletionItemKind.Variable);
                   item.insertText = new vscode.SnippetString(`${variable.name}\$0`);
                   item.detail = variable.keywords.join(` `);
-                  item.documentation = variable.description;
+
+                  currentMd = [variable.description];
+                  if (variable.tags.some(t => t.tag === `value`)) {
+                    currentMd.push(`---`, `Possible values`, 
+                      variable.tags.map(t => {
+                        const spaceSplit = t.content.indexOf(` `);
+
+                        if (spaceSplit > 0) {
+                          return `* \`${t.content.substring(0, spaceSplit)}\` ${t.content.substring(spaceSplit+1)}`;
+                        } else {
+                          return `* \`${t.content}\``;
+                        }
+                      }).join(`\n`))
+                  }
+                  item.documentation = new vscode.MarkdownString(currentMd.join(`\n\n`));
+
                   items.push(item);
                 }
   
@@ -706,7 +754,21 @@ module.exports = class LanguageWorker {
                       item = new vscode.CompletionItem(`${subItem.name}`, vscode.CompletionItemKind.Property);
                       item.insertText = new vscode.SnippetString(`${subItem.name}\$0`);
                       item.detail = subItem.keywords.join(` `);
-                      item.documentation = subItem.description + ` (${struct.name})`;
+                      currentMd = [subItem.description + ` (${struct.name})`];
+                      if (subItem.tags.some(t => t.tag === `value`)) {
+                        currentMd.push(`---`, `Possible values`,
+                          subItem.tags.map(t => {
+                            const spaceSplit = t.content.indexOf(` `);
+    
+                            if (spaceSplit > 0) {
+                              return `* \`${t.content.substring(0, spaceSplit)}\` ${t.content.substring(spaceSplit+1)}`;
+                            } else {
+                              return `* \`${t.content}\``;
+                            }
+                          }).join(`\n`))
+                      }
+                      item.documentation = new vscode.MarkdownString(currentMd.join(`\n\n`));
+                      
                       items.push(item);
                     });
                   }
