@@ -404,7 +404,7 @@ module.exports = class LanguageWorker {
           const word = document.getText(range).toUpperCase();
 
           if (doc) {
-            const def = await LanguageWorker.findDefintion(document, position, word);
+            const def = await LanguageWorker.findDefintion(document, position, word, false);
             
             if (def) {
               let {path, type, uri} = await Parser.getContent(document.uri, def.position.path);
