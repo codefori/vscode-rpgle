@@ -50,7 +50,7 @@ exports.parseDLine = (line) => {
   line = line.padEnd(80);
   const potentialName = line.substring(6).trim();
   const name = line.substr(6, 15).trim();
-  const pos = line.substr(19, 3).trim();
+  const pos = line.substr(25, 7).trim();
   const len = line.substr(32, 7).trim();
   const type = line.substr(39, 1).trim();
   const decimals = line.substr(40, 3).trim();
@@ -96,6 +96,11 @@ exports.parsePLine = (line) => {
  */
 exports.getPrettyType = (lineData) => {
   let outType = ``;
+  let length = Number(lineData.len);
+
+  if (lineData.pos) {
+    length = length - Number(lineData.pos) + 1;
+  }
 
   switch (lineData.type.toUpperCase()) {
   case `A`:
@@ -104,7 +109,7 @@ exports.getPrettyType = (lineData) => {
     } else {
       outType = `Char`;
     }
-    outType += `(` + lineData.len + `)`;
+    outType += `(` + length + `)`;
     break;
   case `B`:
     if (lineData.pos != ``) {
@@ -138,43 +143,52 @@ exports.getPrettyType = (lineData) => {
     outType += `(` + lineData.len + `)`;
     break;
   case `I`:
-    switch (lineData.len) {
-    case `1`:
+    switch (length) {
+    case 1:
       outType = `Int(3)`;
       break;
-    case `2`:
+    case 2:
       outType = `Int(5)`;
       break;
-    case `4`:
+    case 4:
       outType = `Int(10)`;
       break;
-    case `8`:
+    case 8:
       outType = `Int(20)`;
       break;
     default:
-      outType = `Int(` + lineData.len + `)`;
+      outType = `Int(` + length + `)`;
     }
     break;
   case `N`:
     outType = `Ind`;
     break;
   case `P`:
-    if (lineData.pos != ``) {
-      // When using positions packed lineData.length is one less than double the bytes
-      outType = `Packed` + `(` + String(Number(lineData.len))  + `:` + lineData.decimals + `)`;
-    } else {
-      // Not using positions, then the lineData.length is correct
-      outType = `Packed` + `(` + lineData.len + `:` + lineData.decimals + `)`;
-    }  
+    outType = `Packed` + `(` + length + `:` + lineData.decimals + `)`;
     break;
   case `S`:
-    outType = `Zoned` + `(` + lineData.len + `:` + lineData.decimals + `)`;
+    outType = `Zoned` + `(` + length + `:` + lineData.decimals + `)`;
     break;
   case `T`:
     outType = `Time`;
     break;
   case `U`:
-    outType = `Uns` + `(` + lineData.len + `)`;
+    switch (length) {
+    case 1:
+      outType = `Uns(3)`;
+      break;
+    case 2:
+      outType = `Uns(5)`;
+      break;
+    case 4:
+      outType = `Uns(10)`;
+      break;
+    case 8:
+      outType = `Uns(20)`;
+      break;
+    default:
+      outType = `Uns(` + length + `)`;
+    }
     break;
   case `Z`:
     outType = `Timestamp`;
@@ -192,14 +206,14 @@ exports.getPrettyType = (lineData) => {
         } else {
           outType = `Char`;
         }
-        outType += `(` + lineData.len + `)`;
+        outType += `(` + length + `)`;
       } else {
         if (lineData.field === ``) {
           // Means it's a subfield.
-          outType = `Zoned` + `(` + lineData.len + `:` + lineData.decimals + `)`;
+          outType = `Zoned` + `(` + length + `:` + lineData.decimals + `)`;
         } else {
           // Means it's a standalone.
-          outType = `Packed` + `(` + lineData.len + `:` + lineData.decimals + `)`;
+          outType = `Packed` + `(` + length + `:` + lineData.decimals + `)`;
         }
       }
     }
