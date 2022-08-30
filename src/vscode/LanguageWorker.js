@@ -724,6 +724,7 @@ module.exports = class LanguageWorker {
                 const insertRange = new vscode.Range(insertAt, 0, insertAt, 0);
 
                 ILEExports.apis.filter(
+                  // Check the prototype doesn't exist
                   apiName => !doc.procedures.some(proc =>{
                     const apiNameUpper = apiName.toUpperCase();
                     if (proc.name.toUpperCase() === apiNameUpper) return true;
@@ -735,7 +736,10 @@ module.exports = class LanguageWorker {
                       if (possibleExternalName.endsWith(`'`)) possibleExternalName = possibleExternalName.substring(0, possibleExternalName.length - 1);
                       if (possibleExternalName.toUpperCase() === apiNameUpper) return true;
                     }
-                  })
+                  }) &&
+
+                  // And also the struct hasn't been defined with the same name
+                  !doc.structs.some(struct => struct.name.toUpperCase() === apiName.toUpperCase())
                 ).forEach(apiName => {
                   const currentExport = ILEExports.api[apiName];
 

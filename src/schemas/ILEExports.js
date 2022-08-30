@@ -145,6 +145,35 @@ exports.api = {
       `  UsrSpcOptA char(1) const options(*nopass);`,
       `end-pr;`,
     ]
+  },
+  APIERRC_T: {
+    type: `struct`,
+    insertText: `APIERRC_T`,
+    detail: `ERRC0100 format`,
+    description: `Error data structure`,
+    prototype: [
+      `///`,
+      `// APPERRC template`,
+      `// If supported, including this data structure`,
+      `// as a parameter in your API calls is equivalent`,
+      `// to using MONITOR to trap hard errors. If an`,
+      `// error occurs, it allows the API to pass back`,
+      `// the error message ID and any replacement data`,
+      `// associated with that message id.`,
+      `///`,
+      `dcl-ds APIERRC_T Qualified Template;`,
+      `  bytesProvided Int(10:0); // Inz(%size(ApiErrC))`,
+      `  bytesAvailable Int(10:0);`,
+      `  exceptionID Char(7);`,
+      `  reserved Char(1);`,
+      `  exceptionData Char(3000);`,
+      `end-ds;`,
+    ],
+    example: [
+      `**free`,
+      `dcl-ds apierrc likeds(APIERRC_T);`,
+      `apierrc.bytesProvided = %size(apierrc);`
+    ]
   }
 };
 
