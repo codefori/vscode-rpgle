@@ -137,7 +137,6 @@ module.exports = class LanguageWorker {
 
             const markdownResult = new vscode.MarkdownString();
 
-
             // Deprecated notice
             if (deprecatedTag) {
               markdownResult.appendMarkdown(`**Deprecated:** ${deprecatedTag.content}\n\n---\n\n`);
@@ -171,12 +170,30 @@ module.exports = class LanguageWorker {
               markdownResult.appendMarkdown(`\n\n*@file* \`${procedure.position.path}:${procedure.position.line+1}\``);
             }
 
+            // If it's a system API we know about, why not add the example?
+            const extRef = procedure.keyword[`EXTPROC`] || procedure.keyword[`EXTPGM`];
+            if (extRef) {
+              let extName = (typeof extRef === `boolean` ? procedure.name : extRef);
+              if (extName.startsWith(`'`)) extName = extName.substring(1);
+              if (extName.endsWith(`'`)) extName = extName.substring(0, extName.length - 1);
+              extName = extName.toUpperCase();
+
+              const internalName = ILEExports.apis.find(name => name.toUpperCase() == extName);
+
+              if (internalName && ILEExports.api[internalName].example) {
+                markdownResult.appendMarkdown(`\n\n---\n\n`);
+                markdownResult.appendCodeblock(
+                  ILEExports.api[internalName].example.join(`\n`),
+                  `rpgle`
+                );
+              }
+            }
+
             return new vscode.Hover(markdownResult);
           } else {
             const theVariable = await LanguageWorker.findDefintion(document, position, word, false);
 
             if (theVariable) {
-
               const md = [];
 
               // Deprecated notice
