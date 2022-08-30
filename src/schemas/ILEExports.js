@@ -146,6 +146,22 @@ exports.api = {
       `end-pr;`,
     ]
   },
+  QUSDLTUS: {
+    type: `function`,
+    insertText: `QUSDLTUS(\${1:'NAME      LIB'}:\${2:APIERRC});`,
+    detail: `void`,
+    description: `Delete User Space`,
+    prototype: [
+      `///`,
+      `// QUSDLTUS`,
+      `// Delete User Space`,
+      `///`,
+      `dcl-pr QUSDLTUS extpgm('QUSDLTUS');`,
+      `  qualifiedName char(20) const;`,
+      `  errorResponse likeds(APIERRC_T) options(*varsize);`,
+      `end-pr;`
+    ]
+  },
   APIERRC_T: {
     type: `struct`,
     insertText: `APIERRC_T`,
@@ -154,12 +170,7 @@ exports.api = {
     prototype: [
       `///`,
       `// APPERRC template`,
-      `// If supported, including this data structure`,
-      `// as a parameter in your API calls is equivalent`,
-      `// to using MONITOR to trap hard errors. If an`,
-      `// error occurs, it allows the API to pass back`,
-      `// the error message ID and any replacement data`,
-      `// associated with that message id.`,
+      `// Used for error capturing`,
       `///`,
       `dcl-ds APIERRC_T Qualified Template;`,
       `  bytesProvided Int(10:0); // Inz(%size(ApiErrC))`,
