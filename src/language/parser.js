@@ -839,6 +839,10 @@ module.exports = class Parser {
 
         } else {
           // Fixed format!
+          if (directIfScope > 0) {
+            // Ignore lines inside the IF scope.
+            continue;
+          }
 
           switch (spec) {
           case `F`:
@@ -1114,7 +1118,10 @@ module.exports = class Parser {
                     resetDefinition = true;
                   } else {
                     if (currentItem) {
-                      currentItem.subItems[currentItem.subItems.length - 1].keywords.push(Fixed.getPrettyType(dSpec), ...dSpec.keywords);
+                      if (currentItem.subItems.length > 0)
+                        currentItem.subItems[currentItem.subItems.length - 1].keywords.push(Fixed.getPrettyType(dSpec), ...dSpec.keywords);
+                      else
+                        currentItem.keywords.push(...dSpec.keywords)
                     }
                   }
 

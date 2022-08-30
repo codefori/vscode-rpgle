@@ -814,7 +814,7 @@ module.exports = class LanguageWorker {
     // If they're typing inside of a procedure, let's get the stuff from there too
     const currentProcedure = docs.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
-    if (currentProcedure) {
+    if (currentProcedure && currentProcedure.scope) {
       const localDef = currentProcedure.scope.find(word);
 
       if (localDef) {
