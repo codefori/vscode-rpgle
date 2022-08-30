@@ -124,6 +124,10 @@ exports.api = {
     detail: `void`,
     description: `Create User Space`,
     prototype: [
+      `///`,
+      `// QUSCRTUS`,
+      `// Create User Space`,
+      `///`,
       `dcl-pr QUSCRTUS extpgm('QUSCRTUS');`,
       `  qualifiedName char(20) const;`,
       `  extendedAtribute char(10) const;`,
