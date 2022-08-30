@@ -243,6 +243,162 @@ exports.api = {
       `  isJourneyEntry CHAR(10) CONST OPTIONS(*NOPASS);`,
       `End-Pr;`
     ]
+  },
+  "memcpy": {
+    "type": `function`,
+    "description": ``,
+    "detail": `void`,
+    "insertText": `memcpy(\n  \${1:target}:\n  \${2:source}:\n  \${3:length}\n)$0`,
+    "prototype": [
+      `///`,
+      `// memcpy`,
+      `// API`,
+      `///`,
+      `dcl-pr memcpy EXTPROC('__MEMCPY');`,
+      `  target POINTER VALUE;`,
+      `  source POINTER VALUE;`,
+      `  length UNS(10) VALUE;`,
+      `end-pr;`
+    ]
+  },
+  "QRCVDTAQ": {
+    "type": `function`,
+    "description": ``,
+    "detail": `void`,
+    "insertText": `QRCVDTAQ(\n  \${1:Object}:\n  \${2:Library}:\n  \${3:DataLen}:\n  \${4:Data}:\n  \${5:WaitTime}:\n  \${6:KeyOrder}:\n  \${7:KeyLen}:\n  \${8:Key}\n)$0`,
+    "prototype": [
+      `///`,
+      `// QRCVDTAQ`,
+      `// API`,
+      `///`,
+      `dcl-pr QRCVDTAQ EXTPGM('QRCVDTAQ');`,
+      `  Object CHAR(10);`,
+      `  Library CHAR(10);`,
+      `  DataLen PACKED(5);`,
+      `  Data CHAR(DQ_LEN);`,
+      `  WaitTime PACKED(5);`,
+      `  KeyOrder CHAR(2) OPTIONS(*NOPASS);`,
+      `  KeyLen PACKED(3) OPTIONS(*NOPASS);`,
+      `  Key POINTER OPTIONS(*NOPASS);`,
+      `end-pr;`
+    ]
+  },
+  "RSLVSP2": {
+    "type": `function`,
+    "description": `Get library pointer`,
+    "detail": `void`,
+    "insertText": `RSLVSP2(\n  \${1:objectResult}:\n  \${2:rslvsp_in}\n)$0`,
+    "prototype": [
+      `///`,
+      `// RSLVSP2`,
+      `// Get library pointer`,
+      `// @param Resulting pointer by reference`,
+      `// @param Struct rslvsp_t`,
+      `///`,
+      `dcl-pr RSLVSP2 EXTPROC('_RSLVSP2');`,
+      `  objectResult POINTER;`,
+      `  rslvsp_in LIKEDS(RSLVSP_T) QUALIFIED;`,
+      `end-pr;`
+    ]
+  },
+  "RSLVSP4": {
+    "type": `function`,
+    "description": `Get object pointer`,
+    "detail": `void`,
+    "insertText": `RSLVSP4(\n  \${1:objectResult}:\n  \${2:rslvsp_in}:\n  \${3:libraryPointer}\n)$0`,
+    "prototype": [
+      `///`,
+      `// RSLVSP4`,
+      `// Get object pointer`,
+      `// @param Resulting pointer by reference`,
+      `// @param Struct rslvsp_t`,
+      `// @param Library pointer from RSLVSP2`,
+      `///`,
+      `dcl-pr RSLVSP4 EXTPROC('_RSLVSP4');`,
+      `  objectResult POINTER;`,
+      `  rslvsp_in CHAR(34);`,
+      `  libraryPointer POINTER;`,
+      `end-pr;`
+    ]
+  },
+  "QleActBndPgmLong": {
+    "type": `function`,
+    "description": `Activate service program`,
+    "detail": `INT(20)`,
+    "insertText": `QleActBndPgmLong(\n  \${1:serviceProgram}\n)$0`,
+    "prototype": [
+      `///`,
+      `// QleActBndPgmLong`,
+      `// Activate service program`,
+      `// @param Pointer to service program from RSLVSP4`,
+      `///`,
+      `dcl-pr QleActBndPgmLong INT(20) EXTPROC('QLEACTBNDPGMLONG');`,
+      `  serviceProgram POINTER;`,
+      `end-pr;`
+    ]
+  },
+  "RetrieveFunctionPointer": {
+    "type": `function`,
+    "description": `Retrieve function pointer`,
+    "detail": `POINTER`,
+    "insertText": `RetrieveFunctionPointer(\n  \${1:Mark}:\n  \${2:ExportNum}:\n  \${3:ExportNameLen}:\n  \${4:ExportName}:\n  \${5:rFuncPointer}:\n  \${6:rFuncResult}\n)$0`,
+    "prototype": [
+      `///`,
+      `// RetrieveFunctionPointer`,
+      `// Retrieve function pointer`,
+      `// @param Value from QleActBndPgmLong`,
+      `// @param Export number. Zero is valid`,
+      `// @param Export name length`,
+      `// @param Export name`,
+      `// @param Resulting function pointer`,
+      `// @param Resulting status code`,
+      `///`,
+      `dcl-pr RetrieveFunctionPointer POINTER EXTPROC('QLEGETEXPLONG');`,
+      `  Mark INT(20);`,
+      `  ExportNum INT(10) VALUE;`,
+      `  ExportNameLen INT(10);`,
+      `  ExportName POINTER VALUE OPTIONS(*STRING);`,
+      `  rFuncPointer POINTER;`,
+      `  rFuncResult INT(10);`,
+      `end-pr;`
+    ]
+  },
+  "callpgmv": {
+    "type": `function`,
+    "description": ``,
+    "detail": `void`,
+    "insertText": `callpgmv(\n  \${1:pgm_ptr}:\n  \${2:argv}:\n  \${3:argc}\n)$0`,
+    "prototype": [
+      `///`,
+      `// callpgmv`,
+      `// API`,
+      `///`,
+      `dcl-pr callpgmv EXTPROC('_CALLPGMV');`,
+      `  pgm_ptr POINTER;`,
+      `  argv POINTER DIM(256);`,
+      `  argc UNS(10) VALUE;`,
+      `end-pr;`
+    ]
+  },
+  "rslvsp_t": {
+    "type": `struct`,
+    "description": `Resolve object pointer struct`,
+    "detail": `QUALIFIED TEMPLATE`,
+    "insertText": `rslvsp_t`,
+    "prototype": [
+      `///`,
+      `// rslvsp_t`,
+      `// Obj_Type values:`,
+      `//   * x'0401' = Library`,
+      `//   * x'0201' = Program`,
+      `//   * x'0203' = Service Program`,
+      `///`,
+      `dcl-ds rslvsp_t QUALIFIED TEMPLATE;`,
+      `  Obj_Type CHAR(2);`,
+      `  Obj_Name CHAR(30);`,
+      `  Auth CHAR(2) INZ(X'0000');`,
+      `end-ds;`
+    ]
   }
 };
 
