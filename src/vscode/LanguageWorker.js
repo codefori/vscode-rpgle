@@ -132,68 +132,72 @@ module.exports = class LanguageWorker {
           const procedure = doc.procedures.find(proc => proc.name.toUpperCase() === word);
 
           if (procedure) {
-            let markdown = ``;
-            let retrunValue = procedure.keywords.filter(keyword => keyword !== `EXTPROC`);
-            if (retrunValue.length === 0) retrunValue = [`void`];
-
             const returnTag = procedure.tags.find(tag => tag.tag === `return`);
             const deprecatedTag = procedure.tags.find(tag => tag.tag === `deprecated`);
 
+            const markdownResult = new vscode.MarkdownString();
+
+
             // Deprecated notice
             if (deprecatedTag) {
-              markdown += `**Deprecated:** ${deprecatedTag.content}\n\n`;
+              markdownResult.appendMarkdown(`**Deprecated:** ${deprecatedTag.content}\n\n---\n\n`);
             }
 
-            // Formatted code
-            markdown += `\`\`\`vb\n${procedure.name}(`;
-
-            if (procedure.subItems.length > 0) {
-              markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${parm.keywords.join(` `).trim()}`).join(`,\n  `)}\n`;
-            }
-
-            markdown += `): ${retrunValue.join(` `)}\n\`\`\` \n`;
+            markdownResult.appendCodeblock(
+              [
+                `**free`,
+                `dcl-pr ${procedure.name} ${procedure.keywords.join(` `)};`,
+                ...procedure.subItems.map(subItem => 
+                  `  ${subItem.name} ${subItem.keywords.join(` `)};`
+                ),
+                `dcl-pr;`
+              ].join(`\n`),
+              `rpgle`
+            );
+            markdownResult.appendMarkdown(`---\n\n`);
 
             // Description
-            if (procedure.description)
-              markdown += `${procedure.description}\n\n`;
+            if (procedure.description) markdownResult.appendMarkdown(`${procedure.description}\n\n`);
 
             // Params
-            markdown += procedure.subItems.map(parm => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${parm.description}`).join(`\n\n`);
+            markdownResult.appendMarkdown(procedure.subItems.map(parm => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${parm.description}`).join(`\n\n`));
 
             // Return value
             if (returnTag) {
-              markdown += `\n\n*@returns* ${returnTag.content}`;
+              markdownResult.appendMarkdown(`\n\n*@returns* ${returnTag.content}`);
             }
 
             if (procedure.position) {
-              markdown += `\n\n*@file* \`${procedure.position.path}:${procedure.position.line+1}\``;
+              markdownResult.appendMarkdown(`\n\n*@file* \`${procedure.position.path}:${procedure.position.line+1}\``);
             }
 
-            return new vscode.Hover(
-              new vscode.MarkdownString(
-                markdown
-              )
-            );
+            return new vscode.Hover(markdownResult);
           } else {
-            // If they're typing inside of a procedure, let's get the stuff from there too
-            const currentProcedure = doc.procedures.find(proc => range.start.line >= proc.range.start && range.start.line <= proc.range.end);
-            let theVariable;
-
-            if (currentProcedure) {
-              theVariable = currentProcedure.scope.find(word);
-            }
-
-            if (!theVariable) {
-              theVariable = doc.find(word);
-            }
+            const theVariable = await LanguageWorker.findDefintion(document, position, word, false);
 
             if (theVariable) {
+
+              const md = [];
+
+              // Deprecated notice
+              const deprecatedTag = theVariable.tags.find(tag => tag.tag === `deprecated`);
+              if (deprecatedTag) {
+                md.push(`**Deprecated:** ${deprecatedTag.content}`, `---`);
+              }
+
+              md.push(`\`${theVariable.name}\`: \`${theVariable.keywords.join(` `).trim()}\``);
+
+              if (theVariable.description) {
+                md.push(
+                  `---`, 
+                  theVariable.description
+                );
+              }
+
               // Variable definition found
               return new vscode.Hover(
-                new vscode.MarkdownString(
-                  `\`${theVariable.name}\`: \`${theVariable.keywords.join(` `).trim()}\``
-                )
-              )
+                new vscode.MarkdownString(md.join(`\n\n`))
+              );
 
             } else {
               if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
@@ -785,24 +789,27 @@ module.exports = class LanguageWorker {
   }
 
   /**
-   * 
+   * Things and stuff here
    * @param {vscode.TextDocument} document 
    * @param {vscode.Position} currentPosition 
    * @param {string} word 
+   * @param {boolean} [findRefs]
    * @return {Promise<Declaration>}
    */
-  static async findDefintion(document, currentPosition, word) {
+  static async findDefintion(document, currentPosition, word, findRefs = true) {
     const lineNumber = currentPosition.line;
     const docs = await Parser.getDocs(document.uri);
     const text = document.getText();
 
+    if (findRefs) {
     // Updates docs
-    Linter.getErrors({
-      uri: document.uri,
-      content: text
-    }, {
-      CollectReferences: true,
-    }, docs);
+      Linter.getErrors({
+        uri: document.uri,
+        content: text
+      }, {
+        CollectReferences: true,
+      }, docs);
+    }
 
     // If they're typing inside of a procedure, let's get the stuff from there too
     const currentProcedure = docs.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
