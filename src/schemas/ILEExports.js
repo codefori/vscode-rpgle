@@ -185,6 +185,64 @@ exports.api = {
       `dcl-ds apierrc likeds(APIERRC_T);`,
       `apierrc.bytesProvided = %size(apierrc);`
     ]
+  },
+  "QCMDEXC": {
+    "type": `function`,
+    "description": `Execute a system command`,
+    "detail": `void`,
+    "insertText": `QCMDEXC(\n  \${1:commandString}:\n  \${2:commandLength}\n)$0`,
+    "prototype": [
+      `///`,
+      `// QCMDEXC`,
+      `// Execute a system command`,
+      `///`,
+      `Dcl-Pr QCMDEXC EXTPGM('QCMDEXC');`,
+      `  commandString CHAR(32702) CONST OPTIONS(*VARSIZE);`,
+      `  commandLength PACKED(15:5) CONST;`,
+      `End-Pr;`
+    ]
+  },
+  "QCLRDTAQ": {
+    "type": `function`,
+    "description": `Clear data queue`,
+    "detail": `void`,
+    "insertText": `QCLRDTAQ(\n  \${1:dqName}:\n  \${2:dqLibrary}:\n  \${3:keyOrder}:\n  \${4:keyDataLength}:\n  \${5:keyData}:\n  \${6:prErrCode}\n)$0`,
+    "prototype": [
+      `///`,
+      `// QCLRDTAQ`,
+      `// Clear data queue`,
+      `///`,
+      `Dcl-Pr QCLRDTAQ EXTPGM('QCLRDTAQ');`,
+      `  dqName CHAR(10) CONST;`,
+      `  dqLibrary CHAR(10) CONST;`,
+      `  keyOrder CHAR(2) CONST OPTIONS(*NOPASS);`,
+      `  keyDataLength PACKED(3:0) CONST OPTIONS(*NOPASS);`,
+      `  keyData CHAR(256) CONST OPTIONS(*NOPASS:*VARSIZE);`,
+      `  prErrCode LIKEDS(APIERRC_T) OPTIONS(*NOPASS:*VARSIZE);`,
+      `End-Pr;`
+    ]
+  },
+  "QSNDDTAQ": {
+    "type": `function`,
+    "description": `Send to data queue`,
+    "detail": `void`,
+    "insertText": `QSNDDTAQ(\n  \${1:dqName}:\n  \${2:dqLibrary}:\n  \${3:dataInLen}:\n  \${4:dataIn}:\n  \${5:keyDataLength}:\n  \${6:keyData}:\n  \${7:asyncRequest}:\n  \${8:isJourneyEntry}\n)$0`,
+    "prototype": [
+      `///`,
+      `// QSNDDTAQ`,
+      `// Send to data queue`,
+      `///`,
+      `Dcl-Pr QSNDDTAQ EXTPGM('QSNDDTAQ');`,
+      `  dqName CHAR(10) CONST;`,
+      `  dqLibrary CHAR(10) CONST;`,
+      `  dataInLen PACKED(5:0);`,
+      `  dataIn CHAR(65535) OPTIONS(*VARSIZE);`,
+      `  keyDataLength PACKED(3:0) CONST OPTIONS(*NOPASS);`,
+      `  keyData CHAR(256) CONST OPTIONS(*NOPASS:*VARSIZE);`,
+      `  asyncRequest CHAR(10) CONST OPTIONS(*NOPASS);`,
+      `  isJourneyEntry CHAR(10) CONST OPTIONS(*NOPASS);`,
+      `End-Pr;`
+    ]
   }
 };
 
