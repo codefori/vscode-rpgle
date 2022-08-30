@@ -672,3 +672,69 @@ exports.comments1 = async () => {
     end: 28
   });
 };
+
+exports.ranges = async () => {
+  const lines = [
+    `     D******************************************************************`,
+    `     D*Record structure for QUSRJOBI JOBI1000 format`,
+    `     D******************************************************************`,
+    `     DQUSI1000         DS`,
+    `     D*                                             Qwc JOBI1000`,
+    `     D QUSBR12                 1      4I 0`,
+    `     D*                                             Bytes Return`,
+    `     D QUSBA12                 5      8I 0`,
+    `     D*                                             Bytes Avail`,
+    `     D QUSJN16                 9     18`,
+    `     D*                                             Job Name`,
+    `     D QUSUN19                19     28`,
+    `     D*                                             User Name`,
+    `     D QUSJNBR15              29     34`,
+    `     D*                                             Job Number`,
+    `     D QUSIJID13              35     50`,
+    `     D*                                             Int Job ID`,
+    `     D QUSJS25                51     60`,
+    `     D*                                             Job Status`,
+    `     D QUSJT13                61     61`,
+    `     D*                                             Job Type`,
+    `     D QUSJS26                62     62`,
+    `     D*                                             Job Subtype`,
+    `     D QUSERVED50             63     64`,
+    `     D*                                             Reserved`,
+    `     D QUSET01                65     72U 0`,
+    `     D*                                             Elapsed Time`,
+    `     D QUSTDIOC               73     80U 0`,
+    `     D*                                             Total DiskIO Count`,
+    `     D QUSADIOC               81     88U 0`,
+    `     D*                                             Async DiskIO Count`,
+    `     D QUSSDIOC               89     96U 0`,
+    `     D*                                             Sync DiskIO Count`,
+    `     D QUSIRT                 97    100I 0`,
+    `     D*                                             Int Response Time`,
+    `     D QUSITC                101    104I 0`,
+    `     D*                                             Int Trans Count`,
+    `     D QUSCPUUP              105    108I 0`,
+    `     D*                                             CPU Used Percent`,
+    `     D QUSUUDBP              109    112I 0`,
+    `     D*                                             CPU Used DB Percent`,
+    `     D QUSCPUUT              113    120U 0`,
+    `     D*                                             CPU Used Time`,
+    `     D QUSUUDBT              121    128U 0`,
+    `     D*                                             CPU Used DB Time`,
+    `     D QUSLWT                129    136U 0`,
+    `     D*                                             Lock Wait Time`,
+    `     D QUSPFC                137    144U 0`,
+    `     D*                                             Page Fault Count`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+
+  const QUSLWT = cache.find(`QUSLWT`);
+  assert.strictEqual(QUSLWT.keyword[`UNS`], `20`);
+
+  const QUSUUDBP = cache.find(`QUSUUDBP`);
+  assert.strictEqual(QUSUUDBP.keyword[`INT`], `10`);
+
+  const QUSUN19 = cache.find(`QUSUN19`);
+  assert.strictEqual(QUSUN19.keyword[`CHAR`], `10`);
+}
