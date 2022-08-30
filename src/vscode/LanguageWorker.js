@@ -149,7 +149,7 @@ module.exports = class LanguageWorker {
                 ...procedure.subItems.map(subItem => 
                   `  ${subItem.name} ${subItem.keywords.join(` `)};`
                 ),
-                `dcl-pr;`
+                `end-pr;`
               ].join(`\n`),
               `rpgle`
             );
