@@ -60,7 +60,7 @@ module.exports = class LanguageWorker {
               const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
   
               if (currentProcedure) {
-                let prototype = [
+                const prototype = [
                   `Dcl-Pr ${currentProcedure.name} ${currentProcedure.keywords.join(` `)};`,
                   ...currentProcedure.subItems.map(subItem => 
                     `  ${subItem.name} ${subItem.keywords.join(` `)};`
@@ -404,23 +404,7 @@ module.exports = class LanguageWorker {
           const word = document.getText(range).toUpperCase();
 
           if (doc) {
-            // If they're typing inside of a procedure, let's get the stuff from there too
-            const currentProcedure = doc.procedures.find(proc => line >= proc.range.start && line <= proc.range.end);
-            let def;
-            
-            if (currentProcedure) {
-              // First look at all definitions
-              def = currentProcedure.scope.find(word);
-
-              if (!def) {
-                // Maybe it's a parameter?
-                def = currentProcedure.subItems.find(subitem => subitem.name.toUpperCase() === word);
-              }
-            }
-            
-            if (!def) {
-              def = doc.find(word);
-            }
+            const def = await LanguageWorker.findDefintion(document, position, word);
             
             if (def) {
               let {path, type, uri} = await Parser.getContent(document.uri, def.position.path);
@@ -822,6 +806,7 @@ module.exports = class LanguageWorker {
       }
     }
 
+    // If nothing is found based on the procedure scope, then we look globally.
     const globalDef = docs.find(word);
 
     if (globalDef) {
