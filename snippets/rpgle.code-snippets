@@ -594,20 +594,21 @@
 		],
 		"description": "%TIMESTAMP returns the current system timestamp, accurate to microsecond precision."
 	},
-	"%timestamp-expression": {
-		"prefix": "%timestamp-expression",
-		"body": [
-			"%timestamp(${1:character or numeric expression} :${2|*ISO,*ISO0|} :${3:(optional) fractional seconds})"
-		],
-		"description": "%TIMESTAMP returns the a timestamp of the character or numeric expression in *ISO format. The second parameter specifies the format of the first parameter. The optional third parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
-	},
-	"%timestamp-date-timestamp-expression": {
-		"prefix": "%timestamp-date-timestamp-expression",
-		"body": [
-			"%timestamp(${1:date or timestamp expression} :${2:(optional) fractional seconds})"
-		],
-		"description": "%TIMESTAMP returns the a timestamp of the date or timestamp expression. The optional second parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
-	},
+	// "%timestamp-expression": {
+
+	// 	"prefix": "%timestamp-expression",
+	// 	"body": [
+	// 		"%timestamp(${1:character or numeric expression} :${2|*ISO,*ISO0|} :${3:(optional) fractional seconds})"
+	// 	],
+	// 	"description": "%TIMESTAMP returns the a timestamp of the character or numeric expression in *ISO format. The second parameter specifies the format of the first parameter. The optional third parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
+	// },
+	// "%timestamp-date-timestamp-expression": {
+	// 	"prefix": "%timestamp-date-timestamp-expression",
+	// 	"body": [
+	// 		"%timestamp(${1:date or timestamp expression} :${2:(optional) fractional seconds})"
+	// 	],
+	// 	"description": "%TIMESTAMP returns the a timestamp of the date or timestamp expression. The optional second parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
+	// },
 	"%timestamp-sys": {
 		"prefix": "%timestamp-sys",
 		"body": [
