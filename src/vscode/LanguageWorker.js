@@ -680,7 +680,24 @@ module.exports = class LanguageWorker {
 
                 for (const procedure of localCache.procedures) {
                   item = new vscode.CompletionItem(`${procedure.name}`, vscode.CompletionItemKind.Function);
-                  item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index+1}:${parm.name}}`).join(`:`)})\$0`)
+                  item.insertText = new vscode.SnippetString(`${procedure.name}(${procedure.subItems.map((parm, index) => {
+                    const possibleValues = parm.tags.filter(t => t.tag === `value`);
+                    if (possibleValues.length > 0) {
+                      const actualValues = possibleValues.map(t => {
+                        const spaceSplit = t.content.indexOf(` `);
+
+                        if (spaceSplit > 0) {
+                          return t.content.substring(0, spaceSplit);
+                        } else {
+                          return t.content;
+                        }
+                      });
+
+                      return `\${${index+1}|${actualValues.join(`,`)}|}`;
+                    }
+
+                    return `\${${index+1}:${parm.name}}`;
+                  }).join(`:`)})\$0`)
                   item.detail = procedure.keywords.join(` `);
                   item.documentation = procedure.description;
                   items.push(item);

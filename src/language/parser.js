@@ -827,6 +827,7 @@ module.exports = class Parser {
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
+                  currentTags = [];
 
                   if (currentItem.type === `struct`) {
                     resetDefinition = true;
