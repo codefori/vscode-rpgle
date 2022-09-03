@@ -417,6 +417,11 @@ module.exports = class Parser {
         lineIsFree = false;
         lineNumber += 1;
 
+        // After compile time data, we're done
+        if (lineNumber > 0 && line.startsWith(`**`)) {
+          break;
+        }
+
         if (isFullyFree === false && line.length > 6) {
           const comment = line[6];
           spec = line[5].toUpperCase();

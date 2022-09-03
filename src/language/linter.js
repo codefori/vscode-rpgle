@@ -249,7 +249,7 @@ module.exports = class Linter {
 
                 switch (statement[0].type) {
                 case `format`:
-                  if (statement[0].value.toUpperCase() === `**CTDATA`) {
+                  if (lineNumber > 0 && statement[0].value.startsWith(`**`)) {
                     if (rules.NoCTDATA) {
                       errors.push({
                         range: new vscode.Range(

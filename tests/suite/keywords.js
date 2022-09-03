@@ -100,6 +100,34 @@ exports.ctdata1 = async () => {
   assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
 },
 
+exports.ctdata2 = async () => {
+  const lines = [
+    `**FREE`,
+    `ctl-opt debug option(*nodebugio: *srcstmt);`,
+    `dcl-ds mything DIM(8) PERRCD(3) CTDATA;`,
+    `end-ds;`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `myVariable2 = *blank;`,
+    ``,
+    `If myVariable2 = *blank;`,
+    `MyVariable2 = 'Hello world';`,
+    `Endif;`,
+    `Return;`,
+    ``,
+    `** ARC`,
+    `Toronto        12:15:00Winnipeg       13:23:00Calgary        15:44:00`,
+    `Sydney         17:24:30Edmonton       21:33:00Saskatoon      08:40:00`,
+    `Regina         12:33:00Vancouver      13:20:00`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.variables.length, 1);
+  assert.strictEqual(cache.structs.length, 1);
+}
 
 exports.likeds1 = async () => {
   const lines = [
