@@ -129,6 +129,34 @@ exports.ctdata2 = async () => {
   assert.strictEqual(cache.structs.length, 1);
 }
 
+exports.ctdata3 = async () => {
+  const lines = [
+    `       DCL-F QSYSPRT PRINTER(132) USAGE(*OUTPUT) OFLIND(*INOF);`,
+    ` `,
+    `       DCL-S OVR_FILE CHAR(21);`,
+    ``,
+    `       DCL-S TP CHAR(1) DIM(6) CTDATA PERRCD(1);                                // Deduction types`,
+    `       DCL-S TD CHAR(20) DIM(6) ALT(TP);`,
+    ``,
+    `       *INLR = *ON;`,
+    `       Return;`,
+    ``,
+    `**    TP and TD - Deduction types and descriptions`,
+    `BBenefit      Benefit`,
+    `DDeferred CompDef Cmp`,
+    `CChild supportCh Sup`,
+    `GGarnishment  Garnish`,
+    `SStatutory    Statut.`,
+    `VVoluntary    Volntry`,
+  ].join(`\n`);
+  
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.files.length, 1);
+  assert.strictEqual(cache.variables.length, 3);
+}
+
 exports.likeds1 = async () => {
   const lines = [
     `**FREE`,
