@@ -20,9 +20,12 @@ function activate(context) {
   Output.init();
 
   const env = process.env.TARGET;
+  const debugMode = (Configuration.get(`enableDebugOutput`) || false)
 
   console.log(`Congratulations, your extension "vscode-rpgle" for ${env} is now active!`);
   Output.write(`Congratulations, your extension "vscode-rpgle" for ${env} is now active!`);
+
+  if (debugMode) Output.write(`Debug mode is active.`);
 
   /** @type {LanguageWorker} */
   let languageWorker;
@@ -30,7 +33,8 @@ function activate(context) {
 
   /** @type {LinterWorker} */
   let linterWorker;
-  const linterEnabled = (Configuration.get(`rpgleLinterSupportEnabled`) || env === `web`)
+  const linterEnabled = (Configuration.get(`rpgleLinterSupportEnabled`) || env === `web`);
+  const linterWaitTime = (Configuration.get(`rpgleLinterResponseTime`) || 2000);
 
   if (languageEnabled) {
     languageWorker = new LanguageWorker(context);
@@ -38,7 +42,10 @@ function activate(context) {
   }
 
   if (linterEnabled) {
-    linterWorker = new LinterWorker(context);
+    linterWorker = new LinterWorker(context, {
+      waitTime: linterWaitTime,
+      debug: debugMode
+    });
     Output.write(`vscode-rpgle linter enabled.`);
   }
 

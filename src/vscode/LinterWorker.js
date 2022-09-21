@@ -20,9 +20,12 @@ const lintFile = (scheme) => {
 module.exports = class LinterWorker {
   /**
    * @param {vscode.ExtensionContext} context
-   * @param {number} [waitTime]
+   * @param {{waitTime?: number, debug?: boolean}} options
    */
-  constructor(context, waitTime = 2000) {
+  constructor(context, options) {
+    this.debug = options.debug;
+    const waitTime = options.waitTime || 2000;
+
     this.linterDiagnostics = vscode.languages.createDiagnosticCollection(`Lint`);
 
     /** @type {{[spfPath: string]: object}} */
@@ -436,6 +439,11 @@ module.exports = class LinterWorker {
       } catch (e) {
         Output.write(`Error linting ${document.uri.path}: ${e.message}`);
         Output.write(e.stack);
+
+        if (this.debug) {
+          Output.debugInfo(docs, text);
+        }
+
         return;
       }
 

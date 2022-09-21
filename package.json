@@ -124,6 +124,11 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
+				},
+				"vscode-rpgle.enableDebugOutput": {
+					"type": "boolean",
+					"default": false,
+					"description": "Provides useful information to track down bugs with this tool. Only enable when trying to track down a bug. Requires restart when enabled/disabled."
 				}
 			}
 		}
