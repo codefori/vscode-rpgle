@@ -2677,3 +2677,58 @@ exports.linter40 =  async () => {
 
   assert.strictEqual(errors.length, 0);
 };
+
+exports.linter4 =  async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dsply 'aaa';`,
+    `DSPLY '';`,
+    `Dsply 'aaa';`,
+    ``,
+    `EXEC SQL`,
+    `   Select nullif('aaa', '') from sysibm/sysdummy1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequireBlankSpecial: true,
+    StringLiteralDupe: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 3);
+  
+  assert.deepStrictEqual(errors[0], {
+    range: new vscode.Range(5, 0, 5, 8),
+    offset: {
+      position: 6,
+      length: 8
+    },
+    type: `RequireBlankSpecial`,
+    newValue: `*BLANK`
+  });
+
+  assert.deepStrictEqual(errors[1], {
+    range: new vscode.Range(4, 0, 4, 11),
+    offset: {
+      position: 6,
+      length: 11
+    },
+    type: `StringLiteralDupe`,
+    newValue: undefined
+  });
+
+  assert.deepStrictEqual(errors[2], {
+    range: new vscode.Range(6, 0, 6, 11),
+    offset: {
+      position: 6,
+      length: 11
+    },
+    type: `StringLiteralDupe`,
+    newValue: undefined
+  });
+}
