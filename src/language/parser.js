@@ -402,6 +402,8 @@ module.exports = class Parser {
     files[workingUri.path] = baseLines;
 
     let potentialName;
+    let potentialNameUsed = false;
+
     /** @type {"structs"|"procedures"} */
     let currentGroup;
     let isFullyFree = false;
@@ -585,7 +587,7 @@ module.exports = class Parser {
 
               currentItem.range = {
                 start: lineNumber,
-                end: null
+                end: lineNumber
               };
 
               currentGroup = `structs`;
@@ -643,7 +645,7 @@ module.exports = class Parser {
 
                 currentItem.range = {
                   start: lineNumber,
-                  end: null
+                  end: lineNumber
                 };
 
                 // Does the keywords include a keyword that makes end-ds useless?
@@ -690,7 +692,7 @@ module.exports = class Parser {
 
             currentItem.range = {
               start: lineNumber,
-              end: null
+              end: lineNumber
             };
 
             scope.procedures.push(currentItem);
@@ -748,7 +750,7 @@ module.exports = class Parser {
 
               currentItem.range = {
                 start: lineNumber,
-                end: null
+                end: lineNumber
               };
 
               currentDescription = [];
@@ -916,7 +918,7 @@ module.exports = class Parser {
   
                 currentItem.range = {
                   start: lineNumber,
-                  end: null
+                  end: lineNumber
                 };
   
                 currentDescription = [];
@@ -939,6 +941,7 @@ module.exports = class Parser {
 
             if (pSpec.potentialName.endsWith(`...`)) {
               potentialName = pSpec.potentialName.substring(0, pSpec.potentialName.length - 3);
+              potentialNameUsed = true;
             } else {
               if (pSpec.start) {
                 potentialName = pSpec.name.length > 0 ? pSpec.name : potentialName;
@@ -958,12 +961,12 @@ module.exports = class Parser {
 
                   currentItem.position = {
                     path: file,
-                    line: lineNumber
+                    line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   }
 
                   currentItem.range = {
-                    start: lineNumber,
-                    end: null
+                    start: currentItem.position.line,
+                    end: currentItem.position.line
                   };
 
                   scope.procedures.push(currentItem);
@@ -991,6 +994,7 @@ module.exports = class Parser {
 
             if (dSpec.potentialName.endsWith(`...`)) {
               potentialName = dSpec.potentialName.substring(0, dSpec.potentialName.length - 3);
+              potentialNameUsed = true;
               continue;
             } else {
               potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName ? potentialName : ``;
@@ -1004,7 +1008,7 @@ module.exports = class Parser {
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 }
     
                 scope.constants.push(currentItem);
@@ -1018,7 +1022,7 @@ module.exports = class Parser {
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 }
 
                 scope.variables.push(currentItem);
@@ -1032,12 +1036,12 @@ module.exports = class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 }
 
                 currentItem.range = {
-                  start: lineNumber,
-                  end: null
+                  start: currentItem.position.line,
+                  end: currentItem.position.line
                 };
 
                 expandDs(file, currentItem);
@@ -1056,12 +1060,12 @@ module.exports = class Parser {
   
                   currentItem.position = {
                     path: file,
-                    line: lineNumber
+                    line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   }
 
                   currentItem.range = {
-                    start: lineNumber,
-                    end: lineNumber
+                    start: currentItem.position.line,
+                    end: currentItem.position.line
                   };
   
                   currentGroup = `procedures`;
@@ -1153,6 +1157,9 @@ module.exports = class Parser {
             currentItem.keyword = Parser.expandKeywords(currentItem.keywords);
           }
 
+          potentialName = undefined;
+          potentialNameUsed = false;
+          
           currentItem = undefined;
           currentTitle = undefined;
           currentDescription = [];
