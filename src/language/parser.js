@@ -384,8 +384,14 @@ module.exports = class Parser {
 
         this.brokenPaths = [];
 
-        if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
-          const include = (await this.getContent(workingUri, pieces[1]));
+        const copyIndex = pieces.findIndex(piece => {
+          if (piece.includes(`*`)) return false; // Comment
+          const pieceUpper = piece.toUpperCase();
+          return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
+        });
+
+        if (copyIndex >= 0 && pieces[copyIndex+1]) {
+          const include = (await this.getContent(workingUri, pieces[copyIndex+1]));
           if (include.found) {
             files[include.uri.fsPath] = include.lines;
           }

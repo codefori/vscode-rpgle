@@ -383,6 +383,48 @@ exports.fixed9 = async () => {
   assert.strictEqual(theExtProcedure.subItems.length, 1);
 };
 
+exports.fixed9_2 = async () => {
+  const lines = [
+    ``,
+    `       // -----------------------`,
+    `     d/copy './tests/rpgle/copy1.rpgle'`,
+    `     */copy './tests/rpgle/copy2.rpgle'`,
+    `       // -----------------------`,
+    `     P Obj_Next        B                   Export`,
+    `     D Obj_Next        PI                  LikeDS(ObjectDs)`,
+    ``,
+    `      /Free`,
+    `          $UserSpace( Userspace : StartPosit : StartLen : ObjectDs);`,
+    `          StartPosit += SizeEntry;`,
+    ``,
+    `          Return ObjectDs;`,
+    `      /End-Free`,
+    ``,
+    `     P                 E`,
+    ``,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.procedures.length, 2);
+
+  const Obj_Next = cache.find(`Obj_Next`);
+  assert.strictEqual(Obj_Next.name, `Obj_Next`);
+  assert.strictEqual(Obj_Next.position.line, 5);
+  assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
+  assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
+  assert.strictEqual(Obj_Next.keyword[`EXPORT`], true);
+  assert.strictEqual(Obj_Next.keyword[`LIKEDS`], `OBJECTDS`);
+  assert.strictEqual(Obj_Next.subItems.length, 0);
+
+  const theExtProcedure = cache.find(`theExtProcedure`);
+  assert.strictEqual(theExtProcedure.name, `theExtProcedure`);
+  assert.strictEqual(theExtProcedure.position.line, 2);
+  assert.strictEqual(theExtProcedure.keywords.includes(`EXTPROC`), true);
+  assert.strictEqual(theExtProcedure.subItems.length, 1);
+};
+
 /**
    * Issue with detecting correct type on subfield.
    */
