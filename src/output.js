@@ -36,7 +36,7 @@ exports.debugInfo = (cache, content) => {
       await vscode.window.showTextDocument(textDoc);
 
       vscode.window.showInformationMessage(
-        `To help us resolve this, we recommend sharing this JSON with us on a new GitHub or privately. Note that this JSON does contain the active source code.`,
+        `To help us resolve this, we recommend sharing this JSON with us on a new GitHub issue or privately. Note that this JSON does contain the active source code.`,
         `Copy to clipboard`, `Copy to clipboard and open new Issue`
       ).then(async result => {
         if ([`Copy to clipboard`, `Copy to clipboard and open new Issue`].includes(result)) {
