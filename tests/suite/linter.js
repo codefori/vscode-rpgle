@@ -1264,6 +1264,8 @@ exports.linter15 =  async () => {
     ``,
     `Dsply MyVariable2;`,
     ``,
+    `     // Append a single quote. This procedure exists to make other code more readable.`,
+    ``,
     `return;`
   ].join(`\n`);
 
@@ -2615,3 +2617,63 @@ exports.linter38_subrefs = async () => {
     }
   });
 }
+
+exports.linter39 =  async () => {
+  const lines = [
+    `**FREE`,
+    `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
+    `dcl-proc BASE36ADD export ;`,
+    `  dcl-pi BASE36ADD varchar(50);`,
+    `    PI_Value varchar(50) const; // Input value`,
+    `  end-pi BASE36ADD;`,
+    `  dcl-s a char(1);`,
+    `  if a ='/';`,
+    `    a=' ';`,
+    `    a= BASE36ADD;`,
+    `  endif;`,
+    `  return a;`,
+    `end-proc BASE36ADD;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequiresProcedureDescription: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    range: new vscode.Range(2, 0, 2, 26),
+    type: `RequiresProcedureDescription`
+  });
+};
+
+exports.linter40 =  async () => {
+  const lines = [
+    `**FREE`,
+    `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
+    `///`,
+    `// BASE36ADD`,
+    `// Does a thing!`,
+    `///`,
+    `dcl-proc BASE36ADD export ;`,
+    `  dcl-pi BASE36ADD varchar(50);`,
+    `    PI_Value varchar(50) const; // Input value`,
+    `  end-pi BASE36ADD;`,
+    `  dcl-s a char(1);`,
+    `  if a ='/';`,
+    `    a=' ';`,
+    `    a= BASE36ADD;`,
+    `  endif;`,
+    `  return a;`,
+    `end-proc BASE36ADD;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequiresProcedureDescription: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+};

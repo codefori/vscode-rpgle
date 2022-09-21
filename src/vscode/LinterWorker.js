@@ -171,7 +171,7 @@ module.exports = class LinterWorker {
                 });
                 
                 const options = await this.getLinterOptions(document.uri);
-                const docs = await Parser.getDocs(document.uri, document.getText());
+                let docs = await Parser.getDocs(document.uri, document.getText());
 
                 // Define the rules 
                 const rules = {
@@ -212,6 +212,12 @@ module.exports = class LinterWorker {
                     increment: 2,
                   });
 
+                  // Need to fetch the docs again incase comments were added
+                  // as part of RequiresProcedureDescription
+                  docs = await Parser.getDocs(document.uri, document.getText(), {
+                    ignoreCache: true
+                  });
+
                   // Next up, let's fix all the other things!
                   const {errors} = Linter.getErrors({
                     uri: document.uri,
@@ -219,7 +225,6 @@ module.exports = class LinterWorker {
                   }, rules, docs);
 
                   const actions = LinterWorker.getActions(document, errors);
-                  let edits = [];
 
                   if (actions.length > 0) {
                     const linesChanged = [];
@@ -228,7 +233,6 @@ module.exports = class LinterWorker {
                       increment: (actions.length > 100 ? 2 : 100 - actions.length),
                     });
 
-                    // We only ever do the first one over and over.
                     /** @type {vscode.TextEdit[]} */
                     const edits = [];
 
@@ -237,6 +241,7 @@ module.exports = class LinterWorker {
                       for (const [uri, actionEdits] of entries) {
                         if (actionEdits.length > 0) {
                           const changedLine = actionEdits[0].range.start.line;
+                          // We play it safe and don't change the same line twice.
                           if (!linesChanged.includes(changedLine)) {
                             edits.push(...actionEdits);
                             linesChanged.push(changedLine);
