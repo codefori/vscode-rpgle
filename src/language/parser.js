@@ -292,6 +292,7 @@ module.exports = class Parser {
     const getObjectName = (defaultName, keywords) => {
       let objectName = defaultName;
       const extObjKeywords = [`EXTFILE`];
+      const extObjKeywordsDesc = [`EXTDESC`];
             
       // Check for external object
       extObjKeywords.forEach(keyword => {
@@ -304,6 +305,20 @@ module.exports = class Parser {
           }
         }
       });
+
+      if(objectName === `*EXTDESC`){
+        // Check for external object
+        extObjKeywordsDesc.forEach(keyword => {
+          const keywordValue = keywords.find(part => part.startsWith(`${keyword}(`) && part.endsWith(`)`));
+          if (keywordValue) {
+            objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
+
+            if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
+              objectName = objectName.substring(1, objectName.length - 1);
+            }
+          }
+        });
+      }
 
       return objectName;
     }
