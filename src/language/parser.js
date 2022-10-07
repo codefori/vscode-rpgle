@@ -180,39 +180,46 @@ module.exports = class Parser {
 
       case `file`:
       case `vscode-vfs`:
-        // We have to find the file because of the case insensitivity
-        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
-        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
-        if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
-
-        // Member styled include
-        if (!getPath.includes(`/`)) {
-          let memberParts = getPath.split(`,`);
-
-          if (memberParts.length === 1) {
-            memberParts = [`qrpgleref`, memberParts[0]];
-          }
-          getPath = memberParts.join(path.sep) + `*`
-        }
-
-        attemptedPath = getPath;
-
         /** @type {vscode.Uri} */
         let possibleFile;
 
-        if (this.localUris[getPath] !== undefined) possibleFile = this.localUris[getPath];
-        else {
-          const fileSearch = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
-          if (fileSearch.length > 0) { 
-            possibleFile = fileSearch[0];
-            this.localUris[getPath] = possibleFile;
-          } else {
-            this.localUris[getPath] = null;
+        if (getPath.startsWith(`/`)) {
+          possibleFile = vscode.Uri.from({
+            scheme: type,
+            path: getPath
+          });
+          
+        } else {
+          if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+          if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+          if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
+  
+          // Member styled include
+          if (!getPath.includes(`/`)) {
+            let memberParts = getPath.split(`,`);
+  
+            if (memberParts.length === 1) {
+              memberParts = [`qrpgleref`, memberParts[0]];
+            }
+            getPath = memberParts.join(path.sep) + `*`
+          }
+  
+          attemptedPath = getPath;
+
+          if (this.localUris[getPath]) possibleFile = this.localUris[getPath];
+          else {
+            const fileSearch = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
+            if (fileSearch.length > 0) { 
+              possibleFile = fileSearch[0];
+            }
           }
         }
 
+
         if (possibleFile) {
           doc = await vscode.workspace.openTextDocument(possibleFile);
+          this.localUris[getPath] = possibleFile;
+
           eol = doc.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
           uri = doc.uri;
           lines = doc.getText().split(eol);
