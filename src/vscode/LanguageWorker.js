@@ -11,6 +11,7 @@ const Output = require(`../output`);
 const { Parser } = require(`../parser`);
 const Declaration = require(`../language/models/declaration`);
 
+const rpgLanguageid = `rpgle`;
 module.exports = class LanguageWorker {
   /**
    * @param {vscode.ExtensionContext} context
@@ -28,7 +29,7 @@ module.exports = class LanguageWorker {
         if (editor) {
           const document = editor.document;
           const position = editor.selection.active;
-          if (document.languageId === `rpgle`) {
+          if (document.languageId === rpgLanguageid) {
             const linePieces = document.lineAt(position.line).text.trim().split(` `);
             if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
               const {uri} = await Parser.getContent(document.uri, linePieces[1]);
@@ -49,7 +50,7 @@ module.exports = class LanguageWorker {
         if (editor) {
           const document = editor.document;
           const position = editor.selection.active.line;
-          if (document.languageId === `rpgle`) {
+          if (document.languageId === rpgLanguageid) {
             Parser.getDocs(document.uri).then(docs => {
               const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
   
@@ -81,7 +82,7 @@ module.exports = class LanguageWorker {
        */
       vscode.window.onDidChangeActiveTextEditor(async (e) => {
         if (e && e.document) {
-          if (e.document.languageId === `rpgle`) {
+          if (e.document.languageId === rpgLanguageid) {
             const document = e.document;
             Parser.clearParsedCache(document.uri.path);
           }
@@ -93,29 +94,31 @@ module.exports = class LanguageWorker {
        */
       vscode.workspace.onDidChangeTextDocument(event => {
         const document = event.document;
+        if (document.uri && document.uri.scheme === rpgLanguageid) {
 
-        if (document.isDirty) {
-          const currentEditingLine = 
+          if (document.isDirty) {
+            const currentEditingLine =
             event.contentChanges.length === 1 && 
             event.contentChanges[0].range.isSingleLine && 
             !event.contentChanges[0].text.includes(`\n`)
               ? event.contentChanges[0].range.start.line : undefined;
           
-          // Refresh the document when we change a different line
-          if (this.lineEditedBefore === undefined || currentEditingLine !== this.lineEditedBefore) {
-            clearTimeout(this.editTimeout);
-            this.editTimeout = setTimeout(() => {
-              Parser.getDocs(document.uri, document.getText(), {
-                ignoreCache: true
-              });
-            }, 500);
-          }
+            // Refresh the document when we change a different line
+            if (this.lineEditedBefore === undefined || currentEditingLine !== this.lineEditedBefore) {
+              clearTimeout(this.editTimeout);
+              this.editTimeout = setTimeout(() => {
+                Parser.getDocs(document.uri, document.getText(), {
+                  ignoreCache: true
+                });
+              }, 500);
+            }
 
-          this.lineEditedBefore = currentEditingLine;
+            this.lineEditedBefore = currentEditingLine;
+          }
         }
       }),
 
-      vscode.languages.registerHoverProvider({language: `rpgle`}, {
+      vscode.languages.registerHoverProvider({language: rpgLanguageid}, {
         provideHover: async (document, position, token) => {
           const text = document.getText();
           const doc = await Parser.getDocs(document.uri, text);
@@ -209,7 +212,7 @@ module.exports = class LanguageWorker {
       /**
        * Used for the Outline view
        */
-      vscode.languages.registerDocumentSymbolProvider({ language: `rpgle` }, 
+      vscode.languages.registerDocumentSymbolProvider({ language: rpgLanguageid }, 
         {
           provideDocumentSymbols: async (document, token) => {
             const text = document.getText();
@@ -386,7 +389,7 @@ module.exports = class LanguageWorker {
       /**
        * This implements 'Go to definition' and 'Peek definition' for RPGLE
        */
-      vscode.languages.registerDefinitionProvider({ language: `rpgle` }, {
+      vscode.languages.registerDefinitionProvider({ language: rpgLanguageid }, {
         provideDefinition: async (document, position, token) => {
           const doc = await Parser.getDocs(document.uri);
           const range = document.getWordRangeAtPosition(position);
@@ -433,7 +436,7 @@ module.exports = class LanguageWorker {
         }}
       ),
 
-      vscode.languages.registerRenameProvider({ language: `rpgle`}, {
+      vscode.languages.registerRenameProvider({ language: rpgLanguageid}, {
         prepareRename: async (document, position, cancelToken) => {
           const range = document.getWordRangeAtPosition(position);
           const lineNumber = position.line;
@@ -518,7 +521,7 @@ module.exports = class LanguageWorker {
       /**
        * This implements 'Find references' and 'Peek references' for RPGLE
        */
-      vscode.languages.registerReferenceProvider({ language: `rpgle` }, {
+      vscode.languages.registerReferenceProvider({ language: rpgLanguageid }, {
         provideReferences: async (document, position, context, token) => {
           /** @type {vscode.Location[]} */
           let refs = [];
@@ -553,7 +556,7 @@ module.exports = class LanguageWorker {
       /**
        * Provides content assist when writing code
        */
-      vscode.languages.registerCompletionItemProvider({language: `rpgle` }, {
+      vscode.languages.registerCompletionItemProvider({language: rpgLanguageid }, {
         provideCompletionItems: async (document, position, token, context) => {
           const text = document.getText();
           const lineNumber = position.line;
