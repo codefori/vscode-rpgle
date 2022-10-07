@@ -353,6 +353,12 @@ module.exports = class LinterWorker {
           }
         }
       }),
+
+      vscode.workspace.onDidCloseTextDocument(async document => {
+        if (document && document.languageId === `rpgle`) {
+          this.clearDiagnostics(document.uri);
+        }
+      })
     )
     
   }
@@ -410,6 +416,13 @@ module.exports = class LinterWorker {
     }
 
     return options;
+  }
+
+  /**
+   * @param {vscode.Uri} uri 
+   */
+  clearDiagnostics(uri) {
+    this.linterDiagnostics.set(uri, []);
   }
 
   /** 
