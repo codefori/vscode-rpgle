@@ -2717,9 +2717,6 @@ exports.linter40_return = async () => {
   Linter.getErrors({uri, content: lines}, {
     CollectReferences: true,
   }, cache);
-
-  // TODO: do this tomorrow
-  console.log(cache);
   
   const procedure = cache.find(`InputIsValid`);
   const validationResult = procedure.scope.find(`validationResult`);
