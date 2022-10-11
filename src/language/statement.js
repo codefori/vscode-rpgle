@@ -18,7 +18,7 @@ const commonMatchers = [
       { type: `divide` },
       { 
         type: `word`, 
-        match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINED`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`].includes(word.toUpperCase())
+        match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINED`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`, `CHARCOUNT`].includes(word.toUpperCase())
       },
     ],
     becomes: {
