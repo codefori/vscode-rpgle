@@ -2678,7 +2678,56 @@ exports.linter40 =  async () => {
   assert.strictEqual(errors.length, 0);
 };
 
-exports.linter4 =  async () => {
+exports.linter40_return = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-Proc InputIsValid;`,
+    `  Dcl-PI InputIsValid likeds(validationResult);`,
+    `    comp Char(1);`,
+    `  End-PI;`,
+    ``,
+    `  Dcl-S isValid Ind inz(*on);`,
+    `  Dcl-S isFound Ind inz(*on);`,
+    ``,
+    `  Dcl-DS validationResult Qualified;`,
+    `    isValid Ind inz(*on);`,
+    `    errorField Char(20) inz(*blanks);`,
+    `    errorMessage Char(100) inz(*blanks);`,
+    `  End-DS;`,
+    ``,
+    `  // Validate company value`,
+    `  isFound = company_getrecord(comp);`,
+    `  if (isFound = *off);`,
+    `    validationResult.isValid = *off;`,
+    `    validationResult.errorField = 'comp';`,
+    `    validationResult.errorMessage = 'Company value inva lid';`,
+    ``,
+    `    return validationResult;`,
+    `  endif;`,
+    ``,
+    `  // Validate other input parameters...`,
+    ``,
+    `  return validationResult;`,
+    ``,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  Linter.getErrors({uri, content: lines}, {
+    CollectReferences: true,
+  }, cache);
+
+  // TODO: do this tomorrow
+  console.log(cache);
+  
+  const procedure = cache.find(`InputIsValid`);
+  const validationResult = procedure.scope.find(`validationResult`);
+
+  assert.strictEqual(validationResult.references.length, 5);
+}
+
+exports.linter41 = async () => {
   const lines = [
     `**FREE`,
     ``,
