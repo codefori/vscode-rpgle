@@ -526,3 +526,30 @@ exports.range2 = async () => {
     end: 2
   });
 }
+
+exports.inline_end_pi = async () => {
+  const lines = [
+    `       dcl-proc getHandle;`,
+    ``,
+    `       dcl-pi *n like(handle_t) end-pi;`,
+    ``,
+    `       dcl-s rcdHandle like(handle_t) inz;`,
+    ``,
+    `       rcdHandle = %lookup(' ' :handles);`,
+    `       if (rcdHandle > 0);`,
+    `         handles(rcdHandle) = 'A';`,
+    `       endif;`,
+    ``,
+    `       return rcdHandle;`,
+    ``,
+    `       end-proc getHandle;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+
+  const getHandle = cache.find(`getHandle`);
+  
+  assert.strictEqual(getHandle.keyword[`LIKE`], `HANDLE_T`);
+  assert.strictEqual(getHandle.keyword[`END-PI`], undefined);
+}

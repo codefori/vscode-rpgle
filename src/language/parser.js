@@ -729,7 +729,17 @@ module.exports = class Parser {
               currentGroup = `procedures`;
               currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
+              const endInline = parts.findIndex(part => part === `END-PI`);
+
               if (currentItem) {
+
+                // Indicates that the PI starts and ends on the same line
+                if (endInline >= 0) { 
+                  parts.splice(endInline, 1);
+                  currentItem.readParms = false;
+                  resetDefinition = true;
+                }
+
                 currentItem.keywords.push(...parts.slice(2));
                 currentItem.readParms = true;
 
