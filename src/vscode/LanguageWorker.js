@@ -31,8 +31,14 @@ module.exports = class LanguageWorker {
           const position = editor.selection.active;
           if (document.languageId === rpgLanguageid) {
             const linePieces = document.lineAt(position.line).text.trim().split(` `);
-            if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-              const {uri} = await Parser.getContent(document.uri, linePieces[1]);
+            const copyIndex = linePieces.findIndex(piece => {
+              if (piece.includes(`*`)) return false; // Comment
+              const pieceUpper = piece.toUpperCase();
+              return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
+            });
+
+            if (copyIndex >= 0 && linePieces[copyIndex+1]) {
+              const {uri} = await Parser.getContent(document.uri, linePieces[copyIndex+1]);
   
               if (uri) {
                 vscode.workspace.openTextDocument(uri).then(doc => {
@@ -193,8 +199,14 @@ module.exports = class LanguageWorker {
               )
 
             } else {
-              if ([`/COPY`, `/INCLUDE`].includes(linePieces[0].toUpperCase())) {
-                const include = await Parser.getContent(document.uri, linePieces[1]);
+              const copyIndex = linePieces.findIndex(piece => {
+                if (piece.includes(`*`)) return false; // Comment
+                const pieceUpper = piece.toUpperCase();
+                return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
+              });
+              
+              if (copyIndex >= 0 && linePieces[copyIndex+1]) {
+                const include = await Parser.getContent(document.uri, linePieces[copyIndex+1]);
     
                 return new vscode.Hover(
                   new vscode.MarkdownString(
