@@ -38,6 +38,16 @@ exports.parseUris = async (sources) => {
   });
 }
 
+/**
+ * @param {string} name 
+ */
+exports.findProgramFile = (name) => {
+  const lowerName = name.toLowerCase() + `.pgm.`;
+  const foundUriKey = Object.keys(Parser.parsedCache).find(keyPath => keyPath.includes(lowerName));
+
+  return foundUriKey;
+}
+
 const typeKeyword = {
   program: `EXTPGM`,
   function: `EXTPROC`

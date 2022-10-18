@@ -1,6 +1,6 @@
 
 const vscode = require(`vscode`);
-const { findOtherPrototypes, trimQuotes, findExportDefinition } = require(`./internals`);
+const { findOtherPrototypes, trimQuotes, findExportDefinition, findProgramFile } = require(`./internals`);
 const { Parser } = require(`../parser`);
 
 const unsupportedSchemes = [`member`, `streamfile`]
@@ -27,6 +27,48 @@ module.exports = class ReferencesLensProvider {
     
     if (!unsupportedSchemes.includes(document.uri.scheme)) {
       const cache = await Parser.getDocs(document.uri, document.getText());
+
+      // EXTPGM prototype code lens
+      cache.procedures.filter(proc => proc.keyword[`EXTPGM`]).forEach(proc => {
+        let actualName;
+        const keyword = proc.keyword[`EXTPGM`];
+
+        if (keyword) {
+          if (keyword === true) {
+            actualName = proc.name;
+          } else
+          if (keyword !== proc.name) {
+            actualName = trimQuotes(keyword);
+          }
+        }
+
+        if (actualName) {
+          const possibleFile = findProgramFile(actualName)
+          if (possibleFile) {
+            const currentLineRange = new vscode.Range(
+              proc.position.line, 0, proc.position.line, 0
+            );
+            codeLens.push(
+              new vscode.CodeLens(
+                currentLineRange,
+                {
+                  title: `Open implementation`,
+                  command: `vscode.open`,
+                  arguments: [
+                    vscode.Uri.from({
+                      scheme: document.uri.scheme,
+                      path: possibleFile
+                    }), 
+                    {
+                      preview: true
+                    }
+                  ]
+                }
+              ),
+            )
+          }
+        }
+      });
 
       // EXTPROC prototype code lens
       // TODO: write implementation provider
