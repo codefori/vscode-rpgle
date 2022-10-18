@@ -108,8 +108,10 @@ exports.findOtherPrototypes = (type, name) => {
           addReference = true;
         }
       } else
-      if (type === `function`) {
-        // TOOD: add reference
+      if (type === `function` && !proc.keyword[`EXPORT`]) {
+        if (proc.name.toUpperCase() === upperName) {
+          addReference = true;
+        }
       }
 
       if (addReference) {
