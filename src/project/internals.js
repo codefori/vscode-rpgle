@@ -91,7 +91,7 @@ exports.findOtherPrototypes = (type, name) => {
             addReference = true;
           }
         } else
-        if (keyword.toUpperCase() === upperName) {
+        if (trimQuotes(keyword).toUpperCase() === upperName) {
           addReference = true;
         }
       }
@@ -99,18 +99,26 @@ exports.findOtherPrototypes = (type, name) => {
       if (addReference) {
         if (keyPath === proc.position.path) {
           // This means the PR is declared in the same source
-          references.push(proc.position)
+          references.push(proc.position);
+          references.push(...proc.references.map(ref => ({path: keyPath, line: ref.range.start.line})));
         } else {
           // This means the prototype is defined in an include
           // TODO: review this later
-          references.push({
-            path: keyPath,
-            line: 1
-          });
+          references.push(proc.position);
+          references.push(...proc.references.map(ref => ({path: keyPath, line: ref.range.start.line})));
         }
       }
     })
   });
 
   return references;
+}
+
+/**
+ * @param {string} input 
+ */
+const trimQuotes = input => {
+  if (input[0] === `'`) input = input.substring(1);
+  if (input[input.length - 1] === `'`) input = input.substring(0, input.length - 1);
+  return input;
 }
