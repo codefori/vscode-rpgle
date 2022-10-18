@@ -5,6 +5,8 @@ const vscode = require(`vscode`);
 const LinterWorker = require(`./vscode/LinterWorker`);
 const LanguageWorker = require(`./vscode/LanguageWorker`);
 
+const Project = require(`./project`);
+
 const { registerColumnAssist } = require(`./vscode/columnAssist`);
 
 const Configuration = require(`./configuration`);
@@ -39,6 +41,8 @@ function activate(context) {
   if (languageEnabled) {
     languageWorker = new LanguageWorker(context);
     Output.write(`vscode-rpgle language tools enabled.`);
+
+    Project.startup(context);
   }
 
   if (linterEnabled) {

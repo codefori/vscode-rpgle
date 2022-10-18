@@ -21,8 +21,7 @@ module.exports = class Declaration {
     /** @type {{tag: string, content: string}[]} */
     this.tags = [];
 
-    // Used for everything but procedures and subroutines
-    /** @type {{path: string, line: number}} */
+    /** @type {DefinitionPosition|undefined} */
     this.position = undefined;
 
     /** @type {IssueRange[]} */

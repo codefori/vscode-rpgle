@@ -39,6 +39,11 @@ interface Rules {
   CollectReferences?: boolean;
 }
 
+interface DefinitionPosition {
+  path: string;
+  line: number;
+}
+
 interface Offset {
   position?: number,
   length?: number
