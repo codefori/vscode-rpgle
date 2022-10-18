@@ -50,15 +50,19 @@ module.exports = class LanguageWorker {
         }
       }), 
 
-      vscode.commands.registerCommand(`vscode-rpgle.rpgleGetPrototype`, () => {
+      vscode.commands.registerCommand(`vscode-rpgle.rpgleGetPrototype`, (procedureName) => {
         const editor = vscode.window.activeTextEditor;
           
         if (editor) {
           const document = editor.document;
           const position = editor.selection.active.line;
+
           if (document.languageId === rpgLanguageid) {
             Parser.getDocs(document.uri).then(docs => {
-              const currentProcedure = docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
+              const currentProcedure = 
+              typeof procedureName === `string` ? 
+                docs.procedures.find(proc => proc.name === procedureName) :
+                docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
   
               if (currentProcedure) {
                 let prototype = [
@@ -70,10 +74,10 @@ module.exports = class LanguageWorker {
                 ].join(`\n`);
   
                 vscode.env.clipboard.writeText(prototype);
-                vscode.window.showInformationMessage(`Prototype copied to clipboard.`);
+                vscode.window.showInformationMessage(`Prototype for ${currentProcedure.name} copied to clipboard.`);
   
               } else {
-                vscode.window.showErrorMessage(`No procedure block at line ${position}.`);
+                vscode.window.showErrorMessage(`No procedure found.`);
               }
             });
           } else {

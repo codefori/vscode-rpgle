@@ -37,20 +37,32 @@ module.exports = class ReferencesLensProvider {
           }), new vscode.Range(ref.line, 0, ref.line, 0)
         ));
 
-        codeLens.push(new vscode.CodeLens(
-          new vscode.Range(
-            proc.position.line, 0, proc.position.line, 0
+        const currentLineRange = new vscode.Range(
+          proc.position.line, 0, proc.position.line, 0
+        );
+
+        codeLens.push(
+          new vscode.CodeLens(
+            currentLineRange,
+            {
+              title: `${references.length} reference${references.length === 1 ? `` : `s`}`,
+              command: `editor.action.showReferences`,
+              arguments: [
+                document.uri, 
+                new vscode.Range(proc.position.line, 0, proc.position.line, 0).start, 
+                locations
+              ]
+            }
           ),
-          {
-            title: `${references.length} references`,
-            command: `editor.action.showReferences`,
-            arguments: [
-              document.uri, 
-              new vscode.Range(proc.position.line, 0, proc.position.line, 0).start, 
-              locations
-            ]
-          }
-        ));
+          new vscode.CodeLens(
+            currentLineRange,
+            {
+              title: `Copy prototype`,
+              command: `vscode-rpgle.rpgleGetPrototype`,
+              arguments: [proc.name]
+            }
+          ),
+        );
       });
     }
 
