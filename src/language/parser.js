@@ -180,39 +180,46 @@ module.exports = class Parser {
 
       case `file`:
       case `vscode-vfs`:
-        // We have to find the file because of the case insensitivity
-        if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
-        if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
-        if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
-
-        // Member styled include
-        if (!getPath.includes(`/`)) {
-          let memberParts = getPath.split(`,`);
-
-          if (memberParts.length === 1) {
-            memberParts = [`qrpgleref`, memberParts[0]];
-          }
-          getPath = memberParts.join(path.sep) + `*`
-        }
-
-        attemptedPath = getPath;
-
         /** @type {vscode.Uri} */
         let possibleFile;
 
-        if (this.localUris[getPath] !== undefined) possibleFile = this.localUris[getPath];
-        else {
-          const fileSearch = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
-          if (fileSearch.length > 0) { 
-            possibleFile = fileSearch[0];
-            this.localUris[getPath] = possibleFile;
-          } else {
-            this.localUris[getPath] = null;
+        if (getPath.startsWith(`/`)) {
+          possibleFile = vscode.Uri.from({
+            scheme: type,
+            path: getPath
+          });
+          
+        } else {
+          if (getPath.startsWith(`'`)) getPath = getPath.substring(1);
+          if (getPath.endsWith(`'`)) getPath = getPath.substring(0, getPath.length - 1);
+          if (getPath.startsWith(`./`)) getPath = getPath.substring(2);
+  
+          // Member styled include
+          if (!getPath.includes(`/`)) {
+            let memberParts = getPath.split(`,`);
+  
+            if (memberParts.length === 1) {
+              memberParts = [`qrpgleref`, memberParts[0]];
+            }
+            getPath = memberParts.join(path.sep) + `*`
+          }
+  
+          attemptedPath = getPath;
+
+          if (this.localUris[getPath]) possibleFile = this.localUris[getPath];
+          else {
+            const fileSearch = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
+            if (fileSearch.length > 0) { 
+              possibleFile = fileSearch[0];
+            }
           }
         }
 
+
         if (possibleFile) {
           doc = await vscode.workspace.openTextDocument(possibleFile);
+          this.localUris[getPath] = possibleFile;
+
           eol = doc.eol === vscode.EndOfLine.CRLF ? `\r\n` : `\n`;
           uri = doc.uri;
           lines = doc.getText().split(eol);
@@ -292,6 +299,7 @@ module.exports = class Parser {
     const getObjectName = (defaultName, keywords) => {
       let objectName = defaultName;
       const extObjKeywords = [`EXTFILE`];
+      const extObjKeywordsDesc = [`EXTDESC`];
             
       // Check for external object
       extObjKeywords.forEach(keyword => {
@@ -304,6 +312,20 @@ module.exports = class Parser {
           }
         }
       });
+
+      if(objectName === `*EXTDESC`){
+        // Check for external object
+        extObjKeywordsDesc.forEach(keyword => {
+          const keywordValue = keywords.find(part => part.startsWith(`${keyword}(`) && part.endsWith(`)`));
+          if (keywordValue) {
+            objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
+
+            if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
+              objectName = objectName.substring(1, objectName.length - 1);
+            }
+          }
+        });
+      }
 
       return objectName;
     }
@@ -384,8 +406,14 @@ module.exports = class Parser {
 
         this.brokenPaths = [];
 
-        if ([`/COPY`, `/INCLUDE`].includes(pieces[0].toUpperCase())) {
-          const include = (await this.getContent(workingUri, pieces[1]));
+        const copyIndex = pieces.findIndex(piece => {
+          if (piece.includes(`*`)) return false; // Comment
+          const pieceUpper = piece.toUpperCase();
+          return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
+        });
+
+        if (copyIndex >= 0 && pieces[copyIndex+1]) {
+          const include = (await this.getContent(workingUri, pieces[copyIndex+1]));
           if (include.found) {
             files[include.uri.fsPath] = include.lines;
           }
@@ -396,6 +424,8 @@ module.exports = class Parser {
     files[workingUri.path] = baseLines;
 
     let potentialName;
+    let potentialNameUsed = false;
+
     /** @type {"structs"|"procedures"} */
     let currentGroup;
     let isFullyFree = false;
@@ -416,6 +446,11 @@ module.exports = class Parser {
 
         lineIsFree = false;
         lineNumber += 1;
+
+        // After compile time data, we're done
+        if (lineNumber > 0 && line.startsWith(`**`)) {
+          break;
+        }
 
         if (isFullyFree === false && line.length > 6) {
           const comment = line[6];
@@ -574,7 +609,7 @@ module.exports = class Parser {
 
               currentItem.range = {
                 start: lineNumber,
-                end: null
+                end: lineNumber
               };
 
               currentGroup = `structs`;
@@ -632,7 +667,7 @@ module.exports = class Parser {
 
                 currentItem.range = {
                   start: lineNumber,
-                  end: null
+                  end: lineNumber
                 };
 
                 // Does the keywords include a keyword that makes end-ds useless?
@@ -679,7 +714,7 @@ module.exports = class Parser {
 
             currentItem.range = {
               start: lineNumber,
-              end: null
+              end: lineNumber
             };
 
             scope.procedures.push(currentItem);
@@ -694,7 +729,17 @@ module.exports = class Parser {
               currentGroup = `procedures`;
               currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
+              const endInline = parts.findIndex(part => part === `END-PI`);
+
               if (currentItem) {
+
+                // Indicates that the PI starts and ends on the same line
+                if (endInline >= 0) { 
+                  parts.splice(endInline, 1);
+                  currentItem.readParms = false;
+                  resetDefinition = true;
+                }
+
                 currentItem.keywords.push(...parts.slice(2));
                 currentItem.readParms = true;
 
@@ -737,7 +782,7 @@ module.exports = class Parser {
 
               currentItem.range = {
                 start: lineNumber,
-                end: null
+                end: lineNumber
               };
 
               currentDescription = [];
@@ -906,7 +951,7 @@ module.exports = class Parser {
   
                 currentItem.range = {
                   start: lineNumber,
-                  end: null
+                  end: lineNumber
                 };
   
                 currentDescription = [];
@@ -929,6 +974,7 @@ module.exports = class Parser {
 
             if (pSpec.potentialName.endsWith(`...`)) {
               potentialName = pSpec.potentialName.substring(0, pSpec.potentialName.length - 3);
+              potentialNameUsed = true;
             } else {
               if (pSpec.start) {
                 potentialName = pSpec.name.length > 0 ? pSpec.name : potentialName;
@@ -948,12 +994,12 @@ module.exports = class Parser {
 
                   currentItem.position = {
                     path: file,
-                    line: lineNumber
+                    line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   }
 
                   currentItem.range = {
-                    start: lineNumber,
-                    end: null
+                    start: currentItem.position.line,
+                    end: currentItem.position.line
                   };
 
                   scope.procedures.push(currentItem);
@@ -981,6 +1027,7 @@ module.exports = class Parser {
 
             if (dSpec.potentialName.endsWith(`...`)) {
               potentialName = dSpec.potentialName.substring(0, dSpec.potentialName.length - 3);
+              potentialNameUsed = true;
               continue;
             } else {
               potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName ? potentialName : ``;
@@ -994,7 +1041,7 @@ module.exports = class Parser {
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 }
     
                 scope.constants.push(currentItem);
@@ -1008,7 +1055,7 @@ module.exports = class Parser {
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 }
 
                 scope.variables.push(currentItem);
@@ -1022,12 +1069,12 @@ module.exports = class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 }
 
                 currentItem.range = {
-                  start: lineNumber,
-                  end: null
+                  start: currentItem.position.line,
+                  end: currentItem.position.line
                 };
 
                 expandDs(file, currentItem);
@@ -1046,12 +1093,12 @@ module.exports = class Parser {
   
                   currentItem.position = {
                     path: file,
-                    line: lineNumber
+                    line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   }
 
                   currentItem.range = {
-                    start: lineNumber,
-                    end: lineNumber
+                    start: currentItem.position.line,
+                    end: currentItem.position.line
                   };
   
                   currentGroup = `procedures`;
@@ -1143,6 +1190,9 @@ module.exports = class Parser {
             currentItem.keyword = Parser.expandKeywords(currentItem.keywords);
           }
 
+          potentialName = undefined;
+          potentialNameUsed = false;
+          
           currentItem = undefined;
           currentTitle = undefined;
           currentDescription = [];

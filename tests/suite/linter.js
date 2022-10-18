@@ -1264,6 +1264,8 @@ exports.linter15 =  async () => {
     ``,
     `Dsply MyVariable2;`,
     ``,
+    `     // Append a single quote. This procedure exists to make other code more readable.`,
+    ``,
     `return;`
   ].join(`\n`);
 
@@ -2613,5 +2615,166 @@ exports.linter38_subrefs = async () => {
       position: 38,
       length: 45
     }
+  });
+}
+
+exports.linter39 =  async () => {
+  const lines = [
+    `**FREE`,
+    `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
+    `dcl-proc BASE36ADD export ;`,
+    `  dcl-pi BASE36ADD varchar(50);`,
+    `    PI_Value varchar(50) const; // Input value`,
+    `  end-pi BASE36ADD;`,
+    `  dcl-s a char(1);`,
+    `  if a ='/';`,
+    `    a=' ';`,
+    `    a= BASE36ADD;`,
+    `  endif;`,
+    `  return a;`,
+    `end-proc BASE36ADD;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequiresProcedureDescription: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    range: new vscode.Range(2, 0, 2, 26),
+    type: `RequiresProcedureDescription`
+  });
+};
+
+exports.linter40 =  async () => {
+  const lines = [
+    `**FREE`,
+    `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
+    `///`,
+    `// BASE36ADD`,
+    `// Does a thing!`,
+    `///`,
+    `dcl-proc BASE36ADD export ;`,
+    `  dcl-pi BASE36ADD varchar(50);`,
+    `    PI_Value varchar(50) const; // Input value`,
+    `  end-pi BASE36ADD;`,
+    `  dcl-s a char(1);`,
+    `  if a ='/';`,
+    `    a=' ';`,
+    `    a= BASE36ADD;`,
+    `  endif;`,
+    `  return a;`,
+    `end-proc BASE36ADD;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequiresProcedureDescription: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+};
+
+exports.linter40_return = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-Proc InputIsValid;`,
+    `  Dcl-PI InputIsValid likeds(validationResult);`,
+    `    comp Char(1);`,
+    `  End-PI;`,
+    ``,
+    `  Dcl-S isValid Ind inz(*on);`,
+    `  Dcl-S isFound Ind inz(*on);`,
+    ``,
+    `  Dcl-DS validationResult Qualified;`,
+    `    isValid Ind inz(*on);`,
+    `    errorField Char(20) inz(*blanks);`,
+    `    errorMessage Char(100) inz(*blanks);`,
+    `  End-DS;`,
+    ``,
+    `  // Validate company value`,
+    `  isFound = company_getrecord(comp);`,
+    `  if (isFound = *off);`,
+    `    validationResult.isValid = *off;`,
+    `    validationResult.errorField = 'comp';`,
+    `    validationResult.errorMessage = 'Company value inva lid';`,
+    ``,
+    `    return validationResult;`,
+    `  endif;`,
+    ``,
+    `  // Validate other input parameters...`,
+    ``,
+    `  return validationResult;`,
+    ``,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  Linter.getErrors({uri, content: lines}, {
+    CollectReferences: true,
+  }, cache);
+  
+  const procedure = cache.find(`InputIsValid`);
+  const validationResult = procedure.scope.find(`validationResult`);
+
+  assert.strictEqual(validationResult.references.length, 5);
+}
+
+exports.linter41 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dsply 'aaa';`,
+    `DSPLY '';`,
+    `Dsply 'aaa';`,
+    ``,
+    `EXEC SQL`,
+    `   Select nullif('aaa', '') from sysibm/sysdummy1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = new Parser();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequireBlankSpecial: true,
+    StringLiteralDupe: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 3);
+  
+  assert.deepStrictEqual(errors[0], {
+    range: new vscode.Range(5, 0, 5, 8),
+    offset: {
+      position: 6,
+      length: 8
+    },
+    type: `RequireBlankSpecial`,
+    newValue: `*BLANK`
+  });
+
+  assert.deepStrictEqual(errors[1], {
+    range: new vscode.Range(4, 0, 4, 11),
+    offset: {
+      position: 6,
+      length: 11
+    },
+    type: `StringLiteralDupe`,
+    newValue: undefined
+  });
+
+  assert.deepStrictEqual(errors[2], {
+    range: new vscode.Range(6, 0, 6, 11),
+    offset: {
+      position: 6,
+      length: 11
+    },
+    type: `StringLiteralDupe`,
+    newValue: undefined
   });
 }

@@ -41,42 +41,48 @@ module.exports = class {
       break;
 
     case `member`:
-      //Fetch member
-      const getLib = getPath.split(`/`);
-      const getMember = getLib[getLib.length-1].split(`,`);
-      const workingPath = workingUri.path.split(`/`);
-      memberPath = [undefined, undefined, `QRPGLEREF`, undefined];
-
-      if (workingPath.length === 4) { //ASP not included
-        memberPath[1] = workingPath[1];
-        memberPath[2] = workingPath[2];
+      if (getPath.startsWith(`/`)) {
+        // usually a full path has already been formed.
+        finishedPath = getPath;
+        
       } else {
-        memberPath[0] = workingPath[1];
-        memberPath[1] = workingPath[2];
-        memberPath[2] = workingPath[3];
-      }
+        //Fetch member
+        const getLib = getPath.split(`/`);
+        const getMember = getLib[getLib.length-1].split(`,`);
+        const workingPath = workingUri.path.split(`/`);
+        memberPath = [undefined, undefined, `QRPGLEREF`, undefined];
 
-      switch (getMember.length) {
-      case 1:
-        memberPath[3] = getMember[0];
-        break;
-      case 2:
-        memberPath[2] = getMember[0];
-        memberPath[3] = getMember[1];
-      }
+        if (workingPath.length === 4) { //ASP not included
+          memberPath[1] = workingPath[1];
+          memberPath[2] = workingPath[2];
+        } else {
+          memberPath[0] = workingPath[1];
+          memberPath[1] = workingPath[2];
+          memberPath[2] = workingPath[3];
+        }
 
-      if (getLib.length === 2) {
-        memberPath[1] = getLib[0];
-      }
+        switch (getMember.length) {
+        case 1:
+          memberPath[3] = getMember[0];
+          break;
+        case 2:
+          memberPath[2] = getMember[0];
+          memberPath[3] = getMember[1];
+        }
 
-      if (memberPath[3].includes(`.`)) {
-        memberPath[3] = memberPath[3].substr(0, memberPath[3].lastIndexOf(`.`));
-      }
+        if (getLib.length === 2) {
+          memberPath[1] = getLib[0];
+        }
 
-      finishedPath = memberPath.join(`/`);
+        if (memberPath[3].includes(`.`)) {
+          memberPath[3] = memberPath[3].substr(0, memberPath[3].lastIndexOf(`.`));
+        }
 
-      if (workingPath.length === 5) {
-        finishedPath = `/${finishedPath}`.toUpperCase();
+        finishedPath = memberPath.join(`/`);
+
+        if (workingPath.length === 5) {
+          finishedPath = `/${finishedPath}`.toUpperCase();
+        }
       }
 
       type = `member`;

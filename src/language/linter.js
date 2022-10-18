@@ -240,6 +240,7 @@ module.exports = class Linter {
 
               const statement = Statement.parseStatement(currentStatement);
               let value;
+              let isEmbeddedSQL = false;
 
               if (statement.length >= 1) {
                 if (statement[0].type === `directive` && statement[0].value.toUpperCase() === `/EOF`) {
@@ -249,7 +250,7 @@ module.exports = class Linter {
 
                 switch (statement[0].type) {
                 case `format`:
-                  if (statement[0].value.toUpperCase() === `**CTDATA`) {
+                  if (lineNumber > 0 && statement[0].value.startsWith(`**`)) {
                     if (rules.NoCTDATA) {
                       errors.push({
                         range: new vscode.Range(
@@ -681,6 +682,7 @@ module.exports = class Linter {
                     }
                     break;
                   case `EXEC`:
+                    isEmbeddedSQL = true;
                     if (rules.NoSELECTAll) {
                       if (currentStatementUpper.includes(`SELECT *`)) {
                         errors.push({
@@ -756,7 +758,7 @@ module.exports = class Linter {
               let part;
 
               if (statement.length > 0 && [`declare`, `end`].includes(statement[0].type) === false) {
-                const isSQL = (statement[0].type === `word` && statement[0].value.toUpperCase() === `EXEC`);
+                // const isSQL = (statement[0].type === `word` && statement[0].value.toUpperCase() === `EXEC`);
 
                 for (let i = 0; i < statement.length; i++) {
                   part = statement[i];
@@ -833,7 +835,7 @@ module.exports = class Linter {
                         // Check the casing of the reference matches the definition
                         const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
                         if (definedName && definedName !== part.value) {
-                          if (isSQL === false || (isSQL && statement[i-1] && statement[i-1].type === `seperator`)) {
+                          if (isEmbeddedSQL === false || (isEmbeddedSQL && statement[i-1] && statement[i-1].type === `seperator`)) {
                             errors.push({
                               range: new vscode.Range(
                                 statementStart,
@@ -903,32 +905,34 @@ module.exports = class Linter {
                           if (defRef.keyword[`QUALIFIED`]) {
                             let nextPartIndex = i+1;
 
+                            if (statement[nextPartIndex]) {
                             // First, check if there is an array call here and skip over it
-                            if (statement[nextPartIndex].type === `openbracket`) {
-                              nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+                              if (statement[nextPartIndex].type === `openbracket`) {
+                                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
 
-                              if (nextPartIndex >= 0) nextPartIndex++;
-                            }
+                                if (nextPartIndex >= 0) nextPartIndex++;
+                              }
 
-                            // Check if the next part is a dot
-                            if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
-                              nextPartIndex++;
+                              // Check if the next part is a dot
+                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                                nextPartIndex++;
 
-                              // Check if the next part is a word
-                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
-                                const subItemPart = statement[nextPartIndex];
-                                const subItemName = subItemPart.value.toUpperCase();
+                                // Check if the next part is a word
+                                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                                  const subItemPart = statement[nextPartIndex];
+                                  const subItemName = subItemPart.value.toUpperCase();
 
-                                // Find the subitem
-                                const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
-                                if (subItemDef) {
-                                  subItemDef.references.push({
-                                    range: new vscode.Range(
-                                      statementStart,
-                                      statementEnd
-                                    ),
-                                    offset: {position: subItemPart.position, length: subItemPart.position + subItemPart.value.length},
-                                  });
+                                  // Find the subitem
+                                  const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                                  if (subItemDef) {
+                                    subItemDef.references.push({
+                                      range: new vscode.Range(
+                                        statementStart,
+                                        statementEnd
+                                      ),
+                                      offset: {position: subItemPart.position, length: subItemPart.position + subItemPart.value.length},
+                                    });
+                                  }
                                 }
                               }
                             }
@@ -938,7 +942,7 @@ module.exports = class Linter {
                       break;
 
                     case `string`:
-                      if (part.value.substring(1, part.value.length-1).trim() === `` && rules.RequireBlankSpecial) {
+                      if (part.value.substring(1, part.value.length-1).trim() === `` && rules.RequireBlankSpecial && !isEmbeddedSQL) {
                         errors.push({
                           range: new vscode.Range(
                             statementStart,
@@ -949,7 +953,7 @@ module.exports = class Linter {
                           newValue: `*BLANK`
                         });
   
-                      } else if (rules.StringLiteralDupe) {
+                      } else if (rules.StringLiteralDupe && !isEmbeddedSQL) {
                         let foundBefore = stringLiterals.find(literal => literal.value === part.value);
   
                         // If it does not exist on our list, we can add it

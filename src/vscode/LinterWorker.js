@@ -20,9 +20,12 @@ const lintFile = (scheme) => {
 module.exports = class LinterWorker {
   /**
    * @param {vscode.ExtensionContext} context
-   * @param {number} [waitTime]
+   * @param {{waitTime?: number, debug?: boolean}} options
    */
-  constructor(context, waitTime = 2000) {
+  constructor(context, options) {
+    this.debug = options.debug;
+    const waitTime = options.waitTime || 2000;
+
     this.linterDiagnostics = vscode.languages.createDiagnosticCollection(`Lint`);
 
     /** @type {{[spfPath: string]: object}} */
@@ -171,7 +174,7 @@ module.exports = class LinterWorker {
                 });
                 
                 const options = await this.getLinterOptions(document.uri);
-                const docs = await Parser.getDocs(document.uri, document.getText());
+                let docs = await Parser.getDocs(document.uri, document.getText());
 
                 // Define the rules 
                 const rules = {
@@ -212,6 +215,12 @@ module.exports = class LinterWorker {
                     increment: 2,
                   });
 
+                  // Need to fetch the docs again incase comments were added
+                  // as part of RequiresProcedureDescription
+                  docs = await Parser.getDocs(document.uri, document.getText(), {
+                    ignoreCache: true
+                  });
+
                   // Next up, let's fix all the other things!
                   const {errors} = Linter.getErrors({
                     uri: document.uri,
@@ -219,7 +228,6 @@ module.exports = class LinterWorker {
                   }, rules, docs);
 
                   const actions = LinterWorker.getActions(document, errors);
-                  let edits = [];
 
                   if (actions.length > 0) {
                     const linesChanged = [];
@@ -228,7 +236,6 @@ module.exports = class LinterWorker {
                       increment: (actions.length > 100 ? 2 : 100 - actions.length),
                     });
 
-                    // We only ever do the first one over and over.
                     /** @type {vscode.TextEdit[]} */
                     const edits = [];
 
@@ -237,6 +244,7 @@ module.exports = class LinterWorker {
                       for (const [uri, actionEdits] of entries) {
                         if (actionEdits.length > 0) {
                           const changedLine = actionEdits[0].range.start.line;
+                          // We play it safe and don't change the same line twice.
                           if (!linesChanged.includes(changedLine)) {
                             edits.push(...actionEdits);
                             linesChanged.push(changedLine);
@@ -345,6 +353,12 @@ module.exports = class LinterWorker {
           }
         }
       }),
+
+      vscode.workspace.onDidCloseTextDocument(async document => {
+        if (document && document.languageId === `rpgle`) {
+          this.clearDiagnostics(document.uri);
+        }
+      })
     )
     
   }
@@ -404,6 +418,13 @@ module.exports = class LinterWorker {
     return options;
   }
 
+  /**
+   * @param {vscode.Uri} uri 
+   */
+  clearDiagnostics(uri) {
+    this.linterDiagnostics.set(uri, []);
+  }
+
   /** 
    * @param {vscode.TextDocument} document 
    * @param {Cache} [docs]
@@ -431,6 +452,11 @@ module.exports = class LinterWorker {
       } catch (e) {
         Output.write(`Error linting ${document.uri.path}: ${e.message}`);
         Output.write(e.stack);
+
+        if (this.debug) {
+          Output.debugInfo(docs, text);
+        }
+
         return;
       }
 

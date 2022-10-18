@@ -68,7 +68,7 @@ module.exports = class Cache {
       ...this.subroutines.map(def => def.name), 
       ...this.variables.map(def => def.name),
       ...this.structs.map(def => def.name),
-    ]
+    ].filter(name => name);
   }
 
   /**
