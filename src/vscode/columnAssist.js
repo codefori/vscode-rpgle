@@ -1,7 +1,7 @@
 
 const vscode = require(`vscode`);
 
-const Configuration = require(`./configuration`);
+const Configuration = require(`../configuration`);
 
 const base = vscode.extensions.getExtension(`halcyontechltd.code-for-ibmi`);
 
@@ -15,29 +15,7 @@ const notCurrentArea = vscode.window.createTextEditorDecorationType({
   border: `1px solid grey`,
 });
 
-const specs = require(`./language/models/specs.js`);
-
-/**
- * @param {string} line 
- * @param {number} index 
- * @returns {{id, name, start, end}|undefined}
- */
-const getInfoFromLine = (line, index) => {
-  if (line.length < 6) return undefined;
-  if (line[6] === `*`) return undefined;
-
-  const specLetter = line[5].toUpperCase();
-  if (specs[specLetter]) {
-    const specification = specs[specLetter];
-
-    const item = specification.find(box => index >= box.start && index <= box.end);
-    if (item) {
-      return item;
-    }
-  }
-  
-  return undefined;
-}
+const specs = require(`../language/models/specs.js`);
 
 /**
  * @param {string} line 

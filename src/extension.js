@@ -5,7 +5,7 @@ const vscode = require(`vscode`);
 const LinterWorker = require(`./vscode/LinterWorker`);
 const LanguageWorker = require(`./vscode/LanguageWorker`);
 
-const { registerColumnAssist } = require(`./columnAssist`);
+const { registerColumnAssist } = require(`./vscode/columnAssist`);
 
 const Configuration = require(`./configuration`);
 const Output = require(`./output`);
