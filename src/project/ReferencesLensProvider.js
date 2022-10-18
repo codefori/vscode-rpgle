@@ -52,7 +52,7 @@ module.exports = class ReferencesLensProvider {
               new vscode.CodeLens(
                 currentLineRange,
                 {
-                  title: `Open implementation`,
+                  title: `Open implementation (program)`,
                   command: `vscode.open`,
                   arguments: [
                     vscode.Uri.from({
@@ -88,28 +88,30 @@ module.exports = class ReferencesLensProvider {
         if (actualName) {
           const implementation = findExportDefinition(actualName);
           if (implementation) {
-            const currentLineRange = new vscode.Range(
-              proc.position.line, 0, proc.position.line, 0
-            );
-            codeLens.push(
-              new vscode.CodeLens(
-                currentLineRange,
-                {
-                  title: `Open implementation`,
-                  command: `vscode.open`,
-                  arguments: [
-                    vscode.Uri.from({
-                      scheme: document.uri.scheme,
-                      path: implementation.path
-                    }), 
-                    {
-                      preview: true,
-                      selection: new vscode.Range(implementation.line, 0, implementation.line, 0)
-                    }
-                  ]
-                }
-              ),
-            )
+            if (implementation.path !== document.uri.path) {
+              const currentLineRange = new vscode.Range(
+                proc.position.line, 0, proc.position.line, 0
+              );
+              codeLens.push(
+                new vscode.CodeLens(
+                  currentLineRange,
+                  {
+                    title: `Open implementation (function)`,
+                    command: `vscode.open`,
+                    arguments: [
+                      vscode.Uri.from({
+                        scheme: document.uri.scheme,
+                        path: implementation.path
+                      }), 
+                      {
+                        preview: true,
+                        selection: new vscode.Range(implementation.line, 0, implementation.line, 0)
+                      }
+                    ]
+                  }
+                ),
+              )
+            }
           }
         }
       });
