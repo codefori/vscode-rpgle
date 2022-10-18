@@ -51,18 +51,17 @@ exports.findExportDefinition = (name) => {
   const upperName = name.toUpperCase();
   const parsedFiles = Object.keys(Parser.parsedCache);
 
-  parsedFiles.forEach(keyPath => {
+  for (const keyPath of parsedFiles) {
     const cache = Parser.getParsedCache(keyPath);
-
-    cache.procedures.forEach(proc => {
+    for (const proc of cache.procedures) {
       const keyword = proc.keyword[`EXPORT`];
       if (keyword) {
         if (proc.name.toUpperCase() === upperName) {
           return proc.position;
         }
       }
-    })
-  });
+    }
+  }
 }
 
 /**
@@ -91,7 +90,7 @@ exports.findOtherPrototypes = (type, name) => {
             addReference = true;
           }
         } else
-        if (trimQuotes(keyword).toUpperCase() === upperName) {
+        if (this.trimQuotes(keyword).toUpperCase() === upperName) {
           addReference = true;
         }
       }
@@ -117,7 +116,7 @@ exports.findOtherPrototypes = (type, name) => {
 /**
  * @param {string} input 
  */
-const trimQuotes = input => {
+exports.trimQuotes = input => {
   if (input[0] === `'`) input = input.substring(1);
   if (input[input.length - 1] === `'`) input = input.substring(0, input.length - 1);
   return input;
