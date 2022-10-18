@@ -201,20 +201,28 @@ module.exports = class Parser {
             if (memberParts.length === 1) {
               memberParts = [`qrpgleref`, memberParts[0]];
             }
-            getPath = memberParts.join(path.sep) + `*`
           }
   
           attemptedPath = getPath;
 
           if (this.localUris[getPath]) possibleFile = this.localUris[getPath];
           else {
-            const fileSearch = await vscode.workspace.findFiles(`**/${getPath}`, null, 1);
+            console.log(`finding: ${getPath}`)
+            const fileSearch = await vscode.workspace.findFiles(`**/${getPath}${getPath.includes(`.`) ? `` : `*`}`, null, 1);
             if (fileSearch.length > 0) { 
               possibleFile = fileSearch[0];
+            } else {
+              const upperPath = getPath.toUpperCase();
+              const possiblePath = Object.keys(this.parsedCache).find(keyPath => keyPath.toUpperCase().includes(upperPath));
+              if (possiblePath) {
+                possibleFile = vscode.Uri.from({
+                  scheme: workingUri.scheme,
+                  path: possiblePath
+                });
+              }
             }
           }
         }
-
 
         if (possibleFile) {
           doc = await vscode.workspace.openTextDocument(possibleFile);

@@ -7,7 +7,7 @@ exports.initialise = async () => {
   const hasWorkspace = vscode.workspace.workspaceFolders.length > 0;
 
   if (hasWorkspace) {
-    const sources = await vscode.workspace.findFiles(`**/*.{rpgle,sqlrpgle}`);
+    const sources = await vscode.workspace.findFiles(`**/*.{rpgle,RPGLE,sqlrpgle,SQLRPGLE,rpgleinc,RPGLEINC}`);
     this.parseUris(sources);
   }
 }
@@ -43,7 +43,7 @@ exports.parseUris = async (sources) => {
  */
 exports.findProgramFile = (name) => {
   const lowerName = name.toLowerCase() + `.pgm.`;
-  const foundUriKey = Object.keys(Parser.parsedCache).find(keyPath => keyPath.includes(lowerName));
+  const foundUriKey = Object.keys(Parser.parsedCache).find(keyPath => keyPath.toLowerCase().includes(lowerName));
 
   return foundUriKey;
 }
@@ -61,16 +61,20 @@ exports.findExportDefinition = (name) => {
   const upperName = name.toUpperCase();
   const parsedFiles = Object.keys(Parser.parsedCache);
 
-  for (const keyPath of parsedFiles) {
-    const cache = Parser.getParsedCache(keyPath);
-    for (const proc of cache.procedures) {
-      const keyword = proc.keyword[`EXPORT`];
-      if (keyword) {
-        if (proc.name.toUpperCase() === upperName) {
-          return proc.position;
+  try {
+    for (const keyPath of parsedFiles) {
+      const cache = Parser.getParsedCache(keyPath);
+      for (const proc of cache.procedures) {
+        const keyword = proc.keyword[`EXPORT`];
+        if (keyword) {
+          if (proc.name.toUpperCase() === upperName) {
+            return proc.position;
+          }
         }
       }
     }
+  } catch (e) {
+    console.log(e);
   }
 }
 
@@ -103,16 +107,14 @@ exports.findOtherPrototypes = (type, name) => {
         if (this.trimQuotes(keyword).toUpperCase() === upperName) {
           addReference = true;
         }
+      } else
+      if (type === `function`) {
+        // TOOD: add reference
       }
 
       if (addReference) {
-        if (keyPath === proc.position.path) {
-          // This means the PR is declared in the same source
-          references.push(proc.position);
-          references.push(...proc.references.map(ref => ({path: keyPath, line: ref.range.start.line})));
-        } else {
-          // This means the prototype is defined in an include
-          // TODO: review this later
+        // Don't add duplicates
+        if (!references.some(ref => ref.path === proc.position.path)) {
           references.push(proc.position);
           references.push(...proc.references.map(ref => ({path: keyPath, line: ref.range.start.line})));
         }
