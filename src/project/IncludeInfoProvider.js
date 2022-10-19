@@ -1,0 +1,32 @@
+
+const vscode = require(`vscode`);
+const { findOtherPrototypes, trimQuotes, findExportDefinition, findProgramFile, findIncludeReferences } = require(`./internals`);
+const { Parser } = require(`../parser`);
+
+const unsupportedSchemes = [`member`, `streamfile`]
+
+/**
+ * @param {vscode.ExtensionContext} context 
+ */
+exports.initialiseIncludeInfoFinder = (context) => {
+  context.subscriptions.push(
+    vscode.commands.registerCommand(`vscode-rpgle.project.showIncludeReferences`, () => {
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        const document = activeEditor.document;
+        const uri = document.uri;
+
+        if (document.languageId === `rpgle` && !unsupportedSchemes.includes(uri.path)) {
+          const locations = findIncludeReferences(uri);
+
+          vscode.commands.executeCommand(
+            `editor.action.showReferences`, 
+            document.uri, 
+            activeEditor.selection.start,
+            locations 
+          );
+        }
+      }
+    })
+  )
+}

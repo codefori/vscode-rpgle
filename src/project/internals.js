@@ -128,6 +128,38 @@ exports.findOtherPrototypes = (type, name) => {
 }
 
 /**
+ * @param {vscode.Uri} uri 
+ * @returns {vscode.Location[]}
+ */
+exports.findIncludeReferences = (uri) => {
+  const filePath = uri.path;
+  
+  /** @type {vscode.Location[]} */
+  const locations = [];
+
+  const parsedFiles = Object.keys(Parser.parsedCache);
+
+  for (const file of parsedFiles) {
+    const cache = Parser.getParsedCache(file);
+
+    const possibleIncludes = cache.includes
+      .filter(include => include.toPath === filePath)
+      .map(include => new vscode.Location(
+        vscode.Uri.from({ scheme: uri.scheme, path: file }),
+        new vscode.Range(include.line, 0, include.line, 0)
+      ));
+
+    locations.push(...possibleIncludes)
+  }
+
+  if (locations.length === 0) {
+    vscode.window.showInformationMessage(`No references to this source found.`)
+  }
+
+  return locations;
+}
+
+/**
  * @param {string} input 
  */
 exports.trimQuotes = input => {

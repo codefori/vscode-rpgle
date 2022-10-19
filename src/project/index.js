@@ -1,6 +1,7 @@
 
 const vscode = require(`vscode`);
 const {Parser} = require(`../parser`);
+const { initialiseIncludeInfoFinder } = require(`./IncludeInfoProvider`);
 const { initialise, parseUris } = require(`./internals`);
 const ReferencesLensProvider = require(`./ReferencesLensProvider`);
 
@@ -36,5 +37,7 @@ exports.startup = (context) => {
         new ReferencesLensProvider()
       )
     );
+    
+    initialiseIncludeInfoFinder(context);
   }
 }

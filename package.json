@@ -65,6 +65,13 @@
 				"command": "vscode-rpgle.fixAllErrors",
 				"title": "Fix all auto-fixable Problems",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.project.showIncludeReferences",
+				"title": "Show include references",
+				"category": "RPGLE Project",
+        "icon": "$(file-symlink-file)",
+        "enablement": "editorLangId == rpgle"
 			}
 		],
 		"menus": {
@@ -80,6 +87,13 @@
 					"when": "editorLangId == rpgle"
 				}
 			],
+      "editor/title": [
+        {
+					"command": "vscode-rpgle.project.showIncludeReferences",
+					"when": "editorLangId == rpgle",
+					"group": "navigation@10"
+				}
+      ],
 			"view/item/context": [
 				{
 					"command": "vscode-rpgle.openLintConfig",
