@@ -1,4 +1,5 @@
 
+const path = require(`path`);
 const vscode = require(`vscode`);
 
 const possibleTags = require(`../language/models/tags`);
@@ -12,6 +13,8 @@ const { Parser } = require(`../parser`);
 const Declaration = require(`../language/models/declaration`);
 
 const rpgLanguageid = `rpgle`;
+const IBMiSchemes = [`member`, `streamfile`];
+
 module.exports = class LanguageWorker {
   /**
    * @param {vscode.ExtensionContext} context
@@ -568,7 +571,7 @@ module.exports = class LanguageWorker {
       /**
        * Provides content assist when writing code
        */
-      vscode.languages.registerCompletionItemProvider({language: rpgLanguageid }, {
+      vscode.languages.registerCompletionItemProvider({ language: rpgLanguageid }, {
         provideCompletionItems: async (document, position, token, context) => {
           const text = document.getText();
           const lineNumber = position.line;
@@ -632,6 +635,7 @@ module.exports = class LanguageWorker {
             }
 
           } else {
+            const upperLine = currentLine.toUpperCase();
 
             if (currentLine.startsWith(`//`)) {
               for (const tag in possibleTags) {
@@ -640,6 +644,20 @@ module.exports = class LanguageWorker {
                 item.detail = possibleTags[tag];
                 items.push(item);
               }
+
+            } else
+            if (!IBMiSchemes.includes(document.uri.scheme) && upperLine.includes(`/COPY`) || upperLine.includes(`/INCLUDE`)) {
+              const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+              const localFiles = await vscode.workspace.findFiles(`**/*.{rpgleinc,RPGLEINC}`);
+              items.push(...localFiles.map(uri => {
+                const basename = path.basename(uri.path);
+                const rpgPath = path.relative(workspaceFolder.uri.path, uri.path);
+
+                item = new vscode.CompletionItem(basename, vscode.CompletionItemKind.File);
+                item.insertText = new vscode.SnippetString(`'${rpgPath}'`)
+                item.detail = rpgPath;
+                return item;
+              }));
 
             } else {
               /**
