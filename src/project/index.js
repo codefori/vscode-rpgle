@@ -1,6 +1,7 @@
 
 const vscode = require(`vscode`);
-const { initialise } = require(`./internals`);
+const {Parser} = require(`../parser`);
+const { initialise, parseUris } = require(`./internals`);
 const ReferencesLensProvider = require(`./ReferencesLensProvider`);
 
 /**
@@ -12,13 +13,28 @@ exports.startup = (context) => {
   if (hasWorkspace) {
     initialise();
 
+    const fsWatcher = vscode.workspace.createFileSystemWatcher(`**`);
+
+    const reparse = (uri) => {
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor && activeEditor.document.uri.path === uri.path) return;
+      parseUris([uri]);
+    }
+
+    fsWatcher.onDidChange(reparse);
+    fsWatcher.onDidCreate(reparse);
+    fsWatcher.onDidDelete(uri => {
+      Parser.clearParsedCache(uri.path);
+    });
+
     context.subscriptions.push(
+      fsWatcher,
       vscode.languages.registerCodeLensProvider(
         {
           language: `rpgle`,
         },
         new ReferencesLensProvider()
       )
-    )
+    );
   }
 }
