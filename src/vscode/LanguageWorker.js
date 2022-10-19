@@ -648,16 +648,20 @@ module.exports = class LanguageWorker {
             } else
             if (!IBMiSchemes.includes(document.uri.scheme) && upperLine.includes(`/COPY`) || upperLine.includes(`/INCLUDE`)) {
               const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-              const localFiles = await vscode.workspace.findFiles(`**/*.{rpgleinc,RPGLEINC}`);
-              items.push(...localFiles.map(uri => {
-                const basename = path.basename(uri.path);
-                const rpgPath = path.relative(workspaceFolder.uri.path, uri.path);
+              if (workspaceFolder) {
+                const relativeWorkspace = new vscode.RelativePattern(workspaceFolder, `**/*.{rpgleinc,RPGLEINC}`);
+                const localFiles = await vscode.workspace.findFiles(relativeWorkspace);
 
-                item = new vscode.CompletionItem(basename, vscode.CompletionItemKind.File);
-                item.insertText = new vscode.SnippetString(`'${rpgPath}'`)
-                item.detail = rpgPath;
-                return item;
-              }));
+                items.push(...localFiles.map(uri => {
+                  const basename = path.basename(uri.path);
+                  const rpgPath = path.relative(workspaceFolder.uri.path, uri.path);
+
+                  item = new vscode.CompletionItem(basename, vscode.CompletionItemKind.File);
+                  item.insertText = new vscode.SnippetString(`'${rpgPath}'`)
+                  item.detail = rpgPath;
+                  return item;
+                }));
+              }
 
             } else {
               /**
