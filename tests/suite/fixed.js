@@ -365,6 +365,7 @@ exports.fixed9 = async () => {
   const parser = new Parser();
   const cache = await parser.getDocs(uri, lines);
 
+  assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.procedures.length, 2);
 
   const Obj_Next = cache.find(`Obj_Next`);
@@ -407,6 +408,7 @@ exports.fixed9_2 = async () => {
   const parser = new Parser();
   const cache = await parser.getDocs(uri, lines);
 
+  assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.procedures.length, 2);
 
   const Obj_Next = cache.find(`Obj_Next`);
