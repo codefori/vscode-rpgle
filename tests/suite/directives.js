@@ -27,6 +27,7 @@ module.exports = {
       indent: 2
     }, cache);
 
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
     assert.strictEqual(indentErrors.length > 0, true, `Expect indent errors`);
   },
 
@@ -49,6 +50,7 @@ module.exports = {
       indent: 2
     }, cache);
 
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
     assert.strictEqual(indentErrors.length, 0, `Expect no indent errors`);
   },  
   
@@ -71,6 +73,7 @@ module.exports = {
       IncorrectVariableCase: true
     }, cache);
 
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
     assert.strictEqual(errors.length, 1, `Expect one errors`);
   },
 
@@ -177,6 +180,7 @@ module.exports = {
     const parser = new Parser();
     const cache = await parser.getDocs(uri, lines);
 
+    assert.strictEqual(cache.includes.length, 1);
     assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
 

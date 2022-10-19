@@ -2120,6 +2120,7 @@ exports.linter29 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
+  assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -2193,7 +2194,16 @@ exports.linter31 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
+  assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `IncludeMustBeRelative`,
+    range: new vscode.Range(
+      new vscode.Position(4, 0),
+      new vscode.Position(4, 17),
+    )
+  });
 }
 
 exports.linter32 = async () => {
@@ -2219,19 +2229,8 @@ exports.linter32 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-
-  assert.deepStrictEqual(errors[0], {
-    type: `IncludeMustBeRelative`,
-    range: new vscode.Range(
-      new vscode.Position(4, 0),
-      new vscode.Position(4, 31),
-    ),
-    offset: {
-      position: 6,
-      length: 31
-    }
-  });
+  assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(errors.length, 0);
 }
 
 
@@ -2258,7 +2257,20 @@ exports.linter33 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
+  assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `IncludeMustBeRelative`,
+    range: new vscode.Range(
+      new vscode.Position(4, 0),
+      new vscode.Position(4, 32),
+    ),
+    offset: {
+      position: 6,
+      length: 32
+    }
+  });
 }
 
 exports.linter34 = async () => {
@@ -2386,6 +2398,7 @@ exports.linter37 = async () => {
     UselessOperationCheck: true
   }, cache);
 
+  assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(errors.length, 1);
 
   assert.deepStrictEqual(errors[0], {
