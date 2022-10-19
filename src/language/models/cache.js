@@ -34,7 +34,7 @@ module.exports = class Cache {
     /** @type {Declaration[]} */
     this.indicators = cache.indicators || [...inds];
 
-    /** @type {string[]} vscode.Uri.fsPath */
+    /** @type {IncludeStatement[]} */
     this.includes = cache.includes || [];
   }
 

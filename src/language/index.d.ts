@@ -3,6 +3,12 @@ interface Keywords {
   [keyword]: string|true;
 }
 
+interface IncludeStatement {
+  /** vscode.Uri.path */
+  toPath: string;
+  line: number;
+}
+
 interface CacheProps {
   subroutines?: Declaration[];
   procedures?: Declaration[];
@@ -11,7 +17,7 @@ interface CacheProps {
   structs?: Declaration[];
   constants?: Declaration[];
   indicators?: Declaration[];
-  includes?: string[];
+  includes?: IncludeStatement[];
 }
 
 interface Rules {

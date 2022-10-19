@@ -181,6 +181,8 @@ module.exports = {
     const cache = await parser.getDocs(uri, lines);
 
     assert.strictEqual(cache.includes.length, 1);
+    assert.strictEqual(cache.includes[0].line, 4);
+    
     assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
     assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
 

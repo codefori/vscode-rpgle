@@ -2121,6 +2121,8 @@ exports.linter29 = async () => {
   }, cache);
 
   assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.includes[0].line, 4);
+
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -2195,6 +2197,8 @@ exports.linter31 = async () => {
   }, cache);
 
   assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.includes[0].line, 4);
+
   assert.strictEqual(errors.length, 1);
 
   assert.deepStrictEqual(errors[0], {
@@ -2230,6 +2234,8 @@ exports.linter32 = async () => {
   }, cache);
 
   assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.includes[0].line, 4);
+
   assert.strictEqual(errors.length, 0);
 }
 
@@ -2258,6 +2264,8 @@ exports.linter33 = async () => {
   }, cache);
 
   assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.includes[0].line, 4);
+
   assert.strictEqual(errors.length, 1);
 
   assert.deepStrictEqual(errors[0], {
@@ -2399,6 +2407,8 @@ exports.linter37 = async () => {
   }, cache);
 
   assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.includes[0].line, 4);
+
   assert.strictEqual(errors.length, 1);
 
   assert.deepStrictEqual(errors[0], {
