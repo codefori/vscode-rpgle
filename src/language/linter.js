@@ -300,8 +300,8 @@ module.exports = class Linter {
                           } else if (path.type === `string`) {
                             // /INCLUDE 'path/to/file'
                             const pathValue = path.value.substring(1, path.value.length - 1).trim();
-                            if (pathValue.startsWith(`/`) !== true && pathValue.startsWith(`.`) !== true) {
-                              // Bad. Path must be absolute or relative. Not inbetween.
+                            if (pathValue.startsWith(`/`) === true) {
+                              // Bad. Path must not be absolute.
                               errors.push({
                                 range: new vscode.Range(
                                   statementStart,
@@ -312,6 +312,15 @@ module.exports = class Linter {
                               });
                             }
                           }
+                        } else {
+                          // /INCLUDE or /COPY is way to long.
+                          errors.push({
+                            range: new vscode.Range(
+                              statementStart,
+                              statementEnd
+                            ),
+                            type: `IncludeMustBeRelative`,
+                          });
                         }
                       }
 

@@ -416,6 +416,10 @@ module.exports = class Parser {
           const include = (await this.getContent(workingUri, pieces[copyIndex+1]));
           if (include.found) {
             files[include.uri.fsPath] = include.lines;
+            scopes[0].includes.push({
+              toPath: include.uri.path,
+              line: i
+            });
           }
         }
       }
