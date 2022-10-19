@@ -29,66 +29,69 @@ module.exports = class ReferencesLensProvider {
       const cache = await Parser.getDocs(document.uri, document.getText());
 
       // EXTPGM prototype code lens
-      cache.procedures.filter(proc => proc.keyword[`EXTPGM`]).forEach(proc => {
-        let actualName;
-        const keyword = proc.keyword[`EXTPGM`];
+      cache.procedures
+        .filter(proc => proc.keyword[`EXTPGM`] && proc.position.path === document.uri.path)
+        .forEach(proc => {
+          let actualName;
+          const keyword = proc.keyword[`EXTPGM`];
 
-        if (keyword) {
-          if (keyword === true) {
-            actualName = proc.name;
-          } else
-          if (keyword !== proc.name) {
-            actualName = trimQuotes(keyword);
+          if (keyword) {
+            if (keyword === true) {
+              actualName = proc.name;
+            } else
+            if (keyword !== proc.name) {
+              actualName = trimQuotes(keyword);
+            }
           }
-        }
 
-        if (actualName) {
-          const possibleFile = findProgramFile(actualName)
-          if (possibleFile) {
-            const currentLineRange = new vscode.Range(
-              proc.position.line, 0, proc.position.line, 0
-            );
-            codeLens.push(
-              new vscode.CodeLens(
-                currentLineRange,
-                {
-                  title: `Open implementation (program)`,
-                  command: `vscode.open`,
-                  arguments: [
-                    vscode.Uri.from({
-                      scheme: document.uri.scheme,
-                      path: possibleFile
-                    }), 
-                    {
-                      preview: true
-                    }
-                  ]
-                }
-              ),
-            )
+          if (actualName) {
+            const possibleFile = findProgramFile(actualName)
+            if (possibleFile) {
+              const currentLineRange = new vscode.Range(
+                proc.position.line, 0, proc.position.line, 0
+              );
+              codeLens.push(
+                new vscode.CodeLens(
+                  currentLineRange,
+                  {
+                    title: `Open implementation (program)`,
+                    command: `vscode.open`,
+                    arguments: [
+                      vscode.Uri.from({
+                        scheme: document.uri.scheme,
+                        path: possibleFile
+                      }), 
+                      {
+                        preview: true
+                      }
+                    ]
+                  }
+                ),
+              )
+            }
           }
-        }
-      });
+        });
 
       // EXTPROC prototype code lens
       // TODO: write implementation provider
-      cache.procedures.filter(proc => proc.keyword[`EXTPROC`]).forEach(proc => {
-        let actualName;
-        const keyword = proc.keyword[`EXTPROC`];
+      cache.procedures
+        .filter(proc => proc.keyword[`EXTPROC`] && proc.position.path === document.uri.path)
+        .forEach(proc => {
+          let actualName;
+          const keyword = proc.keyword[`EXTPROC`];
 
-        if (keyword) {
-          if (keyword === true) {
-            actualName = proc.name;
-          } else
-          if (keyword !== proc.name) {
-            actualName = trimQuotes(keyword);
+          if (keyword) {
+            if (keyword === true) {
+              actualName = proc.name;
+            } else
+            if (keyword !== proc.name) {
+              actualName = trimQuotes(keyword);
+            }
           }
-        }
 
-        if (actualName) {
-          const implementation = findExportDefinition(actualName);
-          if (implementation) {
-            if (implementation.path !== document.uri.path) {
+          if (actualName) {
+            const implementation = findExportDefinition(actualName);
+            if (implementation) {
               const currentLineRange = new vscode.Range(
                 proc.position.line, 0, proc.position.line, 0
               );
@@ -113,8 +116,7 @@ module.exports = class ReferencesLensProvider {
               )
             }
           }
-        }
-      });
+        });
 
       // Export function code lens
       cache.procedures.filter(proc => proc.keyword[`EXPORT`]).forEach(proc => {
