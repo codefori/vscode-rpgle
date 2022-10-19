@@ -22,7 +22,7 @@ exports.initialiseIncludeInfoFinder = (context) => {
           vscode.commands.executeCommand(
             `editor.action.showReferences`, 
             document.uri, 
-            activeEditor.selection.start,
+            new vscode.Position(0, 0),
             locations 
           );
         }
