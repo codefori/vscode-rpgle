@@ -10,7 +10,7 @@ const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().pa
 module.exports = class Cache {
   /**
    * 
-   * @param {{subroutines?: Declaration[], procedures?: Declaration[], files?: Declaration[], variables?: Declaration[], structs?: Declaration[], constants?: Declaration[], indicators?: Declaration[]}} cache 
+   * @param {CacheProps} cache 
    */
   constructor(cache = {}) {
     /** @type {Declaration[]} */
@@ -33,6 +33,9 @@ module.exports = class Cache {
     
     /** @type {Declaration[]} */
     this.indicators = cache.indicators || [...inds];
+
+    /** @type {string[]} vscode.Uri.fsPath */
+    this.includes = cache.includes || [];
   }
 
   /**

@@ -3,6 +3,17 @@ interface Keywords {
   [keyword]: string|true;
 }
 
+interface CacheProps {
+  subroutines?: Declaration[];
+  procedures?: Declaration[];
+  files?: Declaration[];
+  variables?: Declaration[];
+  structs?: Declaration[];
+  constants?: Declaration[];
+  indicators?: Declaration[];
+  includes?: string[];
+}
+
 interface Rules {
   indent?: number;
   BlankStructNamesCheck?: boolean;
