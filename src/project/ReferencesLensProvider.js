@@ -75,11 +75,12 @@ module.exports = class ReferencesLensProvider {
       // EXTPROC prototype code lens
       // TODO: write implementation provider
       cache.procedures
-        .filter(proc => proc.keyword[`EXTPROC`] && proc.position.path === document.uri.path)
+        .filter(proc => !proc.keyword[`EXPORT`] && !proc.keyword[`EXTPGM`] && proc.position.path === document.uri.path)
         .forEach(proc => {
           let actualName;
           const keyword = proc.keyword[`EXTPROC`];
 
+          actualName = proc.name;
           if (keyword) {
             if (keyword === true) {
               actualName = proc.name;
