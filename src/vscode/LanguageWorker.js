@@ -65,29 +65,27 @@ module.exports = class LanguageWorker {
                 docs.procedures.find(proc => position >= proc.range.start && position <= proc.range.end);
   
               if (currentProcedure) {
-                if (currentProcedure.keyword[`EXPORT`]) {
-                  const keywords = Object.keys(currentProcedure.keyword)
-                    .filter(keyword => keyword !== `EXPORT`)
-                    .map(
-                      keyword => `${keyword.toLowerCase()}${currentProcedure.keyword[keyword] && currentProcedure.keyword[keyword] !== true ? `(${currentProcedure.keyword[keyword]})` : ``}`
-                    )
+                const keywords = Object.keys(currentProcedure.keyword)
+                  .filter(keyword => keyword !== `EXPORT`)
+                  .map(
+                    keyword => `${keyword.toLowerCase()}${currentProcedure.keyword[keyword] && currentProcedure.keyword[keyword] !== true ? `(${currentProcedure.keyword[keyword]})` : ``}`
+                  )
 
-                  keywords.push(`extproc`);
-                    
-                  let prototype = [
-                    `dcl-pr ${currentProcedure.name} ${keywords.join(` `)};`,
-                    ...currentProcedure.subItems.map(subItem => 
-                      `  ${subItem.name} ${subItem.keywords.join(` `)};`
-                    ),
-                    `dcl-pr;`
-                  ].join(`\n`);
-  
-                  vscode.env.clipboard.writeText(prototype);
-                  vscode.window.showInformationMessage(`Prototype for ${currentProcedure.name} copied to clipboard.`);
-  
-                } else {
-                  vscode.window.showErrorMessage(`Can only copy prototypes for export procedures.`);
+                if (!keywords.some(keyword => keyword.includes(`extproc`))) {
+                  keywords.push(`extproc`); 
                 }
+                    
+                let prototype = [
+                  `dcl-pr ${currentProcedure.name} ${keywords.join(` `)};`,
+                  ...currentProcedure.subItems.map(subItem => 
+                    `  ${subItem.name} ${subItem.keywords.join(` `)};`
+                  ),
+                  `dcl-pr;`
+                ].join(`\n`);
+  
+                vscode.env.clipboard.writeText(prototype);
+                vscode.window.showInformationMessage(`Prototype for ${currentProcedure.name} copied to clipboard.`);
+  
               } else {
                 vscode.window.showErrorMessage(`No procedure found.`);
               }
