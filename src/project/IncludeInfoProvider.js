@@ -1,7 +1,6 @@
 
 const vscode = require(`vscode`);
-const { findOtherPrototypes, trimQuotes, findExportDefinition, findProgramFile, findIncludeReferences } = require(`./internals`);
-const { Parser } = require(`../parser`);
+const { findIncludeReferences } = require(`./internals`);
 
 const unsupportedSchemes = [`member`, `streamfile`]
 

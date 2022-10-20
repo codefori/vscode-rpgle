@@ -139,6 +139,11 @@
 					"default": false,
 					"description": "Will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
 				},
+				"vscode-rpgle.rpgleProjectMode": {
+					"type": "boolean",
+					"default": false,
+					"description": "Project mode will scan and index the entire workspace to allow for advanced content assist. May decrease load time and use more memory. Requires language tools to be enabled. Reload after changing this setting."
+				},
 				"vscode-rpgle.enableDebugOutput": {
 					"type": "boolean",
 					"default": false,

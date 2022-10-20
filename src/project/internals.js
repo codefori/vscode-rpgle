@@ -1,15 +1,19 @@
 const vscode = require(`vscode`);
+const Output = require(`../output`);
 
 const Linter = require(`../language/linter`);
 const {Parser} = require(`../parser`);
 
-exports.initialise = async () => {
-  const hasWorkspace = vscode.workspace.workspaceFolders.length > 0;
+exports.scanWorkspace = async () => {
+  // Assumes that workspace exists.
+  Output.write(`Project mode: scanning workspace for rpgle, sqlrpgle and rpgleinc.`);
 
-  if (hasWorkspace) {
-    const sources = await vscode.workspace.findFiles(`**/*.{rpgle,RPGLE,sqlrpgle,SQLRPGLE,rpgleinc,RPGLEINC}`);
-    this.parseUris(sources);
-  }
+  const sources = await vscode.workspace.findFiles(`**/*.{rpgle,RPGLE,sqlrpgle,SQLRPGLE,rpgleinc,RPGLEINC}`);
+  this.parseUris(sources);
+
+  Output.write(`Project mode: Found sources: ${sources.length}`);
+
+  return sources.length > 0;
 }
 
 /**
@@ -61,20 +65,16 @@ exports.findExportDefinition = (name) => {
   const upperName = name.toUpperCase();
   const parsedFiles = Object.keys(Parser.parsedCache);
 
-  try {
-    for (const keyPath of parsedFiles) {
-      const cache = Parser.getParsedCache(keyPath);
-      for (const proc of cache.procedures) {
-        const keyword = proc.keyword[`EXPORT`];
-        if (keyword) {
-          if (proc.name.toUpperCase() === upperName) {
-            return proc.position;
-          }
+  for (const keyPath of parsedFiles) {
+    const cache = Parser.getParsedCache(keyPath);
+    for (const proc of cache.procedures) {
+      const keyword = proc.keyword[`EXPORT`];
+      if (keyword) {
+        if (proc.name.toUpperCase() === upperName) {
+          return proc.position;
         }
       }
     }
-  } catch (e) {
-    console.log(e);
   }
 }
 
