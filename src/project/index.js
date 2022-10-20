@@ -9,10 +9,14 @@ const { initialiseIncludeInfoFinder } = require(`./IncludeInfoProvider`);
 const { scanWorkspace: initialise, parseUris } = require(`./internals`);
 const ReferencesLensProvider = require(`./ReferencesLensProvider`);
 
+const projectFileName = `.ibmiproject`;
+
+exports.started = false;
+
 exports.canEnable = async () => {
   const hasWorkspace = vscode.workspace.workspaceFolders.length > 0;
-  const [projectFile] = await vscode.workspace.findFiles(`**/.vscode/.project`, null, 1);
-  Output.write(`Project mode: profile file: ${projectFile ? projectFile.path : `not found. (.vscode/.project)`}`);
+  const [projectFile] = await vscode.workspace.findFiles(`**/.vscode/${projectFileName}`, null, 1);
+  Output.write(`Project mode: profile file: ${projectFile ? projectFile.path : `not found. (.vscode/${projectFileName})`}`);
 
   return hasWorkspace && (Configuration.get(`rpgleProjectMode`) === true || projectFile !== undefined);
 }
@@ -52,5 +56,23 @@ exports.startup = async (context) => {
     );
     
     initialiseIncludeInfoFinder(context);
+    exports.started = true;
+  } else {
+    // We do this in case the ${projectFileName} file is created and isn't enabled already.
+    context.subscriptions.push(
+      vscode.workspace.onDidCreateFiles(async event => {
+        if (!exports.started) {
+          const newProjectFile = event.files.some(uri => uri.path.endsWith(projectFileName));
+          if (newProjectFile) {
+            Output.write(`Project mode: ${projectFileName} file created. Trying to start up.`);
+          
+            const canStart = await this.canEnable();
+            if (canStart) {
+              this.startup(context);
+            }
+          }
+        }
+      })
+    )
   }
 }
