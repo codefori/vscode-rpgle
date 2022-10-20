@@ -26,33 +26,6 @@ module.exports = class LanguageWorker {
     this.editTimeout = undefined;
 
     context.subscriptions.push(
-      vscode.commands.registerCommand(`vscode-rpgle.rpgleOpenInclude`, async () => {
-        const editor = vscode.window.activeTextEditor;
-          
-        if (editor) {
-          const document = editor.document;
-          const position = editor.selection.active;
-          if (document.languageId === rpgLanguageid) {
-            const linePieces = document.lineAt(position.line).text.trim().split(` `);
-            const copyIndex = linePieces.findIndex(piece => {
-              if (piece.includes(`*`)) return false; // Comment
-              const pieceUpper = piece.toUpperCase();
-              return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
-            });
-
-            if (copyIndex >= 0 && linePieces[copyIndex+1]) {
-              const {uri} = await Parser.getContent(document.uri, linePieces[copyIndex+1]);
-  
-              if (uri) {
-                vscode.workspace.openTextDocument(uri).then(doc => {
-                  vscode.window.showTextDocument(doc);
-                });
-              }
-            }
-          }
-        }
-      }), 
-
       vscode.commands.registerCommand(`vscode-rpgle.rpgleGetPrototype`, (procedureName) => {
         const editor = vscode.window.activeTextEditor;
           
@@ -148,7 +121,6 @@ module.exports = class LanguageWorker {
           const range = document.getWordRangeAtPosition(position);
           const word = document.getText(range).toUpperCase();
 
-          const linePieces = document.lineAt(position.line).text.trim().split(` `);
           const procedure = doc.procedures.find(proc => proc.name.toUpperCase() === word);
 
           if (procedure) {
@@ -216,18 +188,15 @@ module.exports = class LanguageWorker {
               )
 
             } else {
-              const copyIndex = linePieces.findIndex(piece => {
-                if (piece.includes(`*`)) return false; // Comment
-                const pieceUpper = piece.toUpperCase();
-                return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
-              });
+
+              const possiblePath = LanguageWorker.getIncludeFromDirective(document.lineAt(position.line).text);
               
-              if (copyIndex >= 0 && linePieces[copyIndex+1]) {
-                const include = await Parser.getContent(document.uri, linePieces[copyIndex+1]);
+              if (possiblePath) {
+                const include = await Parser.getContent(document.uri, possiblePath);
     
                 return new vscode.Hover(
                   new vscode.MarkdownString(
-                    (include.path ? `\`${include.path}\`` : linePieces[1]) + `(${include.type}${include.found ? `` : `, not found`})`
+                    (include.path ? `\`${include.path}\`` : possiblePath) + `(${include.type}${include.found ? `` : `, not found`})`
                   )
                 )
               }
@@ -461,6 +430,19 @@ module.exports = class LanguageWorker {
                 }
               }
             }
+          }
+
+          const possiblePath = LanguageWorker.getIncludeFromDirective(document.lineAt(line).text);
+          if (possiblePath) {
+            const {uri} = await Parser.getContent(document.uri, possiblePath);
+
+            if (uri) {
+              return new vscode.Location(
+                uri,
+                new vscode.Range(0, 0, 0, 0)
+              );
+            }
+
           }
         }}
       ),
@@ -822,6 +804,24 @@ module.exports = class LanguageWorker {
 
     if (globalDef) {
       return globalDef;
+    }
+  }
+
+  /**
+   * Parses a line to get include/copy path
+   * @param {string} line
+   * @returns {string|undefined}
+   */
+  static getIncludeFromDirective(line) {
+    const linePieces = line.trim().split(` `);
+    const copyIndex = linePieces.findIndex(piece => {
+      if (piece.includes(`*`)) return false; // Comment
+      const pieceUpper = piece.toUpperCase();
+      return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
+    });
+
+    if (copyIndex >= 0 && linePieces[copyIndex+1]) {
+      return linePieces[copyIndex+1];
     }
   }
 }

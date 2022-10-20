@@ -11,7 +11,7 @@
 	"repository": {
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
-	"version": "0.12.2",
+	"version": "0.13.0",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
@@ -103,12 +103,6 @@
 			]
 		},
 		"keybindings": [
-			{
-				"command": "vscode-rpgle.rpgleOpenInclude",
-				"key": "shift+f12",
-				"mac": "shift+f12",
-				"when": "editorLangId == rpgle"
-			},
 			{
 				"command": "vscode-rpgle.rpgleColumnAssistant",
 				"key": "shift+f4",
