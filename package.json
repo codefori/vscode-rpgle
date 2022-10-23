@@ -23,7 +23,6 @@
 		"onLanguage:rpgle"
 	],
 	"main": "./dist/extension.js",
-	"browser": "./dist/web.js",
 	"contributes": {
 		"snippets": [
 			{
@@ -40,113 +39,25 @@
 				"url": "./src/schemas/rpglint.json"
 			}
 		],
-		"commands": [
-			{
-				"command": "vscode-rpgle.openLintConfig",
-				"title": "Open RPGLE lint configuration",
-				"category": "RPGLE"
-			},
-			{
-				"command": "vscode-rpgle.rpgleColumnAssistant",
-				"title": "Launch Column Assistant",
-				"category": "RPGLE"
-			},
-			{
-				"command": "vscode-rpgle.rpgleOpenInclude",
-				"title": "Open include at cursor",
-				"category": "RPGLE"
-			},
-			{
-				"command": "vscode-rpgle.rpgleGetPrototype",
-				"title": "Copy prototype for procedure.",
-				"category": "RPGLE"
-			},
-			{
-				"command": "vscode-rpgle.fixAllErrors",
-				"title": "Fix all auto-fixable Problems",
-				"category": "RPGLE"
-			}
-		],
+		"commands": [],
 		"menus": {
-			"editor/context": [
-				{
-					"command": "vscode-rpgle.rpgleColumnAssistant",
-					"group": "1_rpgle",
-					"when": "editorLangId == rpgle"
-				},
-				{
-					"command": "vscode-rpgle.rpgleGetPrototype",
-					"group": "2_rpgle",
-					"when": "editorLangId == rpgle"
-				}
-			],
-			"view/item/context": [
-				{
-					"command": "vscode-rpgle.openLintConfig",
-					"when": "view == objectBrowser && viewItem == filter",
-					"group": "1_LibActions@2"
-				}
-			]
-		},
-		"keybindings": [
-			{
-				"command": "vscode-rpgle.rpgleColumnAssistant",
-				"key": "shift+f4",
-				"mac": "shift+f4",
-				"when": "editorLangId == rpgle"
-			}
-		],
-		"configuration": {
-			"title": "RPGLE language tools",
-			"properties": {
-				"vscode-rpgle.rpgleLanguageToolsEnabled": {
-					"type": "boolean",
-					"default": true,
-					"description": "Will provide VS Code language assistance for RPGLE sources. Supports total free RPG only."
-				},
-				"vscode-rpgle.rpgleLinterSupportEnabled": {
-					"type": "boolean",
-					"default": false,
-					"description": "Will provide warnings for RPGLE sources based on linter configuration. Supports total free RPG only. Reload after changing this setting."
-				},
-				"vscode-rpgle.rpgleLinterResponseTime": {
-					"type": "number",
-					"default": 2000,
-					"description": "How long (in MS) the extension should wait before running the linter on the active editor. Reload after changing this setting."
-				},
-				"vscode-rpgle.showFixedFormatOutline": {
-					"type": "boolean",
-					"default": false,
-					"description": "Will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
-				},
-				"vscode-rpgle.enableDebugOutput": {
-					"type": "boolean",
-					"default": false,
-					"description": "Provides useful information to track down bugs with this tool. Only enable when trying to track down a bug. Requires restart when enabled/disabled."
-				}
-			}
 		}
 	},
 	"scripts": {
-		"lint": "eslint .",
-		"pretest": "npm run lint",
-		"test": "node tests",
-		"package": "vsce package",
-		"vscode:prepublish": "webpack --mode production && webpack --mode production --env target=web",
-		"webpack": "webpack --mode development",
-		"webpack-web": "webpack --mode development --env target=web"
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
+		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+		"test": "sh ./scripts/e2e.sh"
 	},
 	"devDependencies": {
-		"@types/glob": "^7.1.3",
-		"@types/node": "14.x",
-		"@types/vscode": "^1.70.0",
-		"eslint": "^7.27.0",
-		"glob": "^7.2.0",
-		"vscode-uri": "^3.0.2",
-		"webpack": "^5.24.3",
-		"webpack-cli": "^4.5.0"
-	},
-	"dependencies": {
-		"path-browserify": "^1.0.1"
+		"@types/mocha": "^9.1.0",
+		"@types/node": "^16.11.7",
+		"@typescript-eslint/eslint-plugin": "^5.30.0",
+		"@typescript-eslint/parser": "^5.30.0",
+		"eslint": "^8.13.0",
+		"mocha": "^9.2.1",
+		"typescript": "^4.8.4"
 	}
 }
