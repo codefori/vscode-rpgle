@@ -1,3 +1,4 @@
+import path = require('path');
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
 import Parser from "../language/parser";
@@ -88,11 +89,12 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 					
 					if (includeDirective) {
 						const include = await parser.includeFileFetch(currentPath, includeDirective);
+						const displayName = include.uri ? path.basename(include.uri) : includeDirective;
 
 						return {
 							contents: {
 								kind: MarkupKind.Markdown,
-								value: (include.found ? `\`${include.uri}\`` : includeDirective) + ` (${include.found ? `` : `not found`})`
+								value: (include.found ? `\`${displayName}\`` : includeDirective) + ` (${include.found ? `found` : `not found`})`
 							}
 						};
 					}
