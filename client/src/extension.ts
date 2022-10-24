@@ -45,14 +45,14 @@ export function activate(context: ExtensionContext) {
 		],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
-			//fileEvents: workspace.createFileSystemWatcher('**/.clientrc'),
+			fileEvents: workspace.createFileSystemWatcher('**/rpglint.json'),
 		}
 	};
 
 	// Create the language client and start the client.
 	client = new LanguageClient(
-		'languageServerExample',
-		'Language Server Example',
+		'lsp-rpgle-client',
+		'RPGLE language client',
 		serverOptions,
 		clientOptions
 	);

@@ -1,6 +1,8 @@
 import { Diagnostic, DiagnosticSeverity, Range, _Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { connection } from '../connection';
+import { URI } from 'vscode-uri';
+import { findFile } from '.';
+import { connection, getFileRequest, validateUri } from '../connection';
 import { IssueRange } from '../language';
 import Linter from '../language/linter';
 import Cache from '../language/models/cache';
@@ -20,8 +22,57 @@ const calculateOffset = (document: TextDocument, error: IssueRange) => {
 	}
 };
 
+export async function getLintConfigUri(workingUri: string) {
+	const uri = URI.parse(workingUri);
+	let cleanString: string|undefined;
 
-export function refreshDiagnostics(document: TextDocument, docs: Cache) {
+	switch (uri.scheme) {
+		case `member`:
+			const [_, baseLibrary, baseSourceFile, basename] = uri.path.split(`/`);
+			cleanString = [
+				``,
+				baseLibrary,
+				`VSCODE`,
+				`RPGLINT.JSON`
+			].join(`/`);
+
+			cleanString = URI.from({
+				scheme: `member`,
+				path: cleanString
+			}).toString();
+
+			cleanString = await validateUri(cleanString);
+			break;
+
+		case `file`:
+			cleanString = await validateUri(`rpglint.json`, uri.scheme);
+			break;
+	}
+
+	return cleanString;
+}
+
+export async function getLintOptions(workingUri: string) {
+	const possibleUri = await getLintConfigUri(workingUri);
+	let result = {};
+	
+	if (possibleUri) {
+		try {
+			const fileContent = await getFileRequest(possibleUri);
+			if (fileContent) {
+				result = JSON.parse(fileContent);
+			}
+		} catch (e: any) {
+			// Maybe some default options?
+			console.log(`Error getting lint config for ${possibleUri}: ${e.message}`);
+			console.log(e.stack);
+		}
+	}
+
+	return result;
+}
+
+export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 	if (isFree) {
 		const text = document.getText();
@@ -29,12 +80,7 @@ export function refreshDiagnostics(document: TextDocument, docs: Cache) {
 		const indentDiags: Diagnostic[] = [];
 		const generalDiags: Diagnostic[] = [];
 
-		//const options = await this.getLinterOptions(document.uri);
-		const options = {
-			indent: 2,
-			IncorrectVariableCase: true,
-			NoUnreferenced: true
-		};
+		const options = await getLintOptions(document.uri);
 
 		let detail;
 

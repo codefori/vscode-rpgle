@@ -29,8 +29,7 @@ export async function getFileRequest(uri: string) {
 	// If not, then grab it from remote
 	const body: string|undefined = await connection.sendRequest("getFile", uri);
 	if (body) { 
-		// Gets cached automatically due to extension called `openTextDocument`
-		// which then stores into `documents` automatically due to the `listen`
+		// TODO.. cache it?
 		return body; 
 	}
 }
