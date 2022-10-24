@@ -17,7 +17,8 @@ import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
 import { connection, getFileRequest, validateUri } from "./connection";
-import { refreshDiagnostics } from './providers/lintProvider';
+import { refreshDiagnostics } from './providers/linter';
+import codeActionsProvider from './providers/linter/codeActions';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -50,6 +51,7 @@ connection.onInitialize((params: InitializeParams) => {
 				triggerCharacters: [` `, `.`, `:`]
 			},
 			hoverProvider: true,
+			codeActionProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -125,7 +127,7 @@ connection.onDocumentSymbol(documentSymbolProvider);
 connection.onDefinition(definitionProvider);
 connection.onCompletion(completionItemProvider);
 connection.onHover(hoverProvider);
-
+connection.onCodeAction(codeActionsProvider)
 
 documents.onDidChangeContent(handler => {
 	parser.getDocs(
