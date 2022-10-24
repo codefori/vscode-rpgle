@@ -1104,7 +1104,7 @@ export default class Linter {
             if (rules.NoExternalTo.includes(callLoc)) {
               errors.push({
                 type: `NoExternalTo`,
-                range: new Range(localDef.position.line, 0, localDef.position.line, 100),
+                range: Range.create(localDef.position.line, 0, localDef.position.line, 100),
               });
             }
           }
