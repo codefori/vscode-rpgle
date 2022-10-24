@@ -20,6 +20,7 @@ import { connection, getFileRequest, validateUri } from "./connection";
 import { refreshDiagnostics } from './providers/linter';
 import codeActionsProvider from './providers/linter/codeActions';
 import documentFormattingProvider from './providers/linter/documentFormatting';
+import { referenceProvider } from './providers/reference';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -55,7 +56,8 @@ connection.onInitialize((params: InitializeParams) => {
 			codeActionProvider: true,
 			documentFormattingProvider: {
 				workDoneProgress: true
-			}
+			},
+			referencesProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -132,6 +134,7 @@ connection.onDocumentSymbol(documentSymbolProvider);
 connection.onDefinition(definitionProvider);
 connection.onCompletion(completionItemProvider);
 connection.onHover(hoverProvider);
+connection.onReferences(referenceProvider);
 
 // Linter specific
 connection.onCodeAction(codeActionsProvider);

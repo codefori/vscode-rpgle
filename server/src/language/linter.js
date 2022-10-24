@@ -813,7 +813,7 @@ export default class Linter {
                               statementStart,
                               statementEnd
                             ),
-                            offset: {position: part.position, length: part.position + part.value.length},
+                            offset: {position: part.position, end: part.position + part.value.length},
                             type: null,
                           });
                         }
@@ -906,7 +906,7 @@ export default class Linter {
                                 statementStart,
                                 statementEnd
                               ),
-                              offset: {position: part.position, length: part.position + part.value.length},
+                              offset: {position: part.position, end: part.position + part.value.length},
                             });
                           }
 
@@ -938,7 +938,7 @@ export default class Linter {
                                         statementStart,
                                         statementEnd
                                       ),
-                                      offset: {position: subItemPart.position, length: subItemPart.position + subItemPart.value.length},
+                                      offset: {position: subItemPart.position, end: subItemPart.position + subItemPart.value.length},
                                     });
                                   }
                                 }
