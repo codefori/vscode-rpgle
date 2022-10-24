@@ -17,9 +17,7 @@ import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
 import { connection, getFileRequest, getObject as getObjectData, validateUri } from "./connection";
-import { refreshDiagnostics } from './providers/linter';
-import codeActionsProvider from './providers/linter/codeActions';
-import documentFormattingProvider from './providers/linter/documentFormatting';
+import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from './language/models/declaration';
 import { getPrettyType } from './language/models/fixed';
@@ -27,6 +25,8 @@ import { getPrettyType } from './language/models/fixed';
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+
+const linterEnabled = true;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -55,13 +55,17 @@ connection.onInitialize((params: InitializeParams) => {
 				triggerCharacters: [` `, `.`, `:`]
 			},
 			hoverProvider: true,
-			codeActionProvider: true,
-			documentFormattingProvider: {
-				workDoneProgress: true
-			},
-			referencesProvider: true
+			referencesProvider: true,
 		}
 	};
+
+	if (linterEnabled) {
+		result.capabilities.codeActionProvider = true;
+		result.capabilities.documentFormattingProvider = {
+			workDoneProgress: true
+		};
+	}
+
 	if (hasWorkspaceFolderCapability) {
 		result.capabilities.workspace = {
 			workspaceFolders: {
@@ -187,9 +191,7 @@ connection.onCompletion(completionItemProvider);
 connection.onHover(hoverProvider);
 connection.onReferences(referenceProvider);
 
-// Linter specific
-connection.onCodeAction(codeActionsProvider);
-connection.onDocumentFormatting(documentFormattingProvider);
+if (linterEnabled) Linter.initialise(connection);
 
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
@@ -201,8 +203,9 @@ documents.onDidChangeContent(handler => {
 			ignoreCache: true
 		}
 	).then(cache => {
-		if (cache)
-			refreshDiagnostics(handler.document, cache);
+		if (linterEnabled && cache) {
+			Linter.refreshDiagnostics(handler.document, cache);
+		}
 	});
 });
 

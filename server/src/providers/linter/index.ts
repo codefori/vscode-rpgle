@@ -1,10 +1,44 @@
-import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, Range, TextEdit, WorkspaceEdit, _Connection } from 'vscode-languageserver';
+import { json } from 'stream/consumers';
+import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, Range, TextDocumentChangeEvent, TextEdit, WorkspaceEdit, _Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
+import { documents } from '..';
 import { connection, getFileRequest, validateUri } from '../../connection';
 import { IssueRange } from '../../language/index';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
+import codeActionsProvider from './codeActions';
+import documentFormattingProvider from './documentFormatting';
+
+export let jsonCache: {[uri: string]: string} = {};
+
+export function initialise(connection: _Connection) {
+	connection.onCodeAction(codeActionsProvider);
+	connection.onDocumentFormatting(documentFormattingProvider);
+
+	connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
+		params.changes.forEach(file => {
+			const uri = file.uri;
+
+			if (uri.endsWith(`rpglint.json`)) {
+				Object
+					.keys(jsonCache)
+					.filter(uri => uri.toLowerCase().endsWith(`rpglint.json`))
+					.forEach(uri => delete jsonCache[uri])
+			}
+		})
+	});
+
+	documents.onDidClose(async (e: TextDocumentChangeEvent<TextDocument>) => {
+		const uri = e.document.uri;
+
+		const possibleUri = await getLintConfigUri(uri);
+
+		if (possibleUri && jsonCache[possibleUri]) {
+			delete jsonCache[possibleUri];
+		}
+	})
+}
 
 export function calculateOffset(document: TextDocument, error: IssueRange) {
 	const offset = error.offset;
@@ -40,6 +74,7 @@ export async function getLintConfigUri(workingUri: string) {
 				path: cleanString
 			}).toString();
 
+			if (jsonCache[cleanString]) return cleanString;
 			cleanString = await validateUri(cleanString);
 			break;
 
@@ -56,12 +91,16 @@ export async function getLintOptions(workingUri: string) {
 	let result = {};
 	
 	if (possibleUri) {
+		if (jsonCache[possibleUri]) return JSON.parse(jsonCache[possibleUri]);
 		try {
+			jsonCache[possibleUri] = `{}`;
 			const fileContent = await getFileRequest(possibleUri);
 			if (fileContent) {
 				result = JSON.parse(fileContent);
+				jsonCache[possibleUri] = fileContent;
 			}
 		} catch (e: any) {
+			delete jsonCache[possibleUri];
 			// Maybe some default options?
 			console.log(`Error getting lint config for ${possibleUri}: ${e.message}`);
 			console.log(e.stack);
