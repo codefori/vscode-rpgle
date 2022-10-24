@@ -6,7 +6,7 @@ import { IssueRange } from '../../language/index';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
 
-const calculateOffset = (document: TextDocument, error: IssueRange) => {
+export function calculateOffset(document: TextDocument, error: IssueRange) {
 	const offset = error.offset;
 
 	if (offset && offset.position !== undefined && offset.end !== undefined) {

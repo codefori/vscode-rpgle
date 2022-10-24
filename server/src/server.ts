@@ -19,6 +19,7 @@ import hoverProvider from './providers/hover';
 import { connection, getFileRequest, validateUri } from "./connection";
 import { refreshDiagnostics } from './providers/linter';
 import codeActionsProvider from './providers/linter/codeActions';
+import documentFormattingProvider from './providers/linter/documentFormatting';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -51,7 +52,10 @@ connection.onInitialize((params: InitializeParams) => {
 				triggerCharacters: [` `, `.`, `:`]
 			},
 			hoverProvider: true,
-			codeActionProvider: true
+			codeActionProvider: true,
+			documentFormattingProvider: {
+				workDoneProgress: true
+			}
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -123,12 +127,17 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	};
 });
 
+// regular language stuff
 connection.onDocumentSymbol(documentSymbolProvider);
 connection.onDefinition(definitionProvider);
 connection.onCompletion(completionItemProvider);
 connection.onHover(hoverProvider);
-connection.onCodeAction(codeActionsProvider)
 
+// Linter specific
+connection.onCodeAction(codeActionsProvider);
+connection.onDocumentFormatting(documentFormattingProvider);
+
+// Always get latest stuff
 documents.onDidChangeContent(handler => {
 	parser.getDocs(
 		handler.document.uri,
