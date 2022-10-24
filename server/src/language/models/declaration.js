@@ -1,6 +1,5 @@
 
 import Cache from "./cache";
-import { DefinitionPosition } from "..";
 
 export default class Declaration {
   /**

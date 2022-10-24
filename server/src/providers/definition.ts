@@ -1,4 +1,4 @@
-import { DefinitionParams, DocumentSymbol, Location, Definition, ProgressToken, Range } from 'vscode-languageserver';
+import { DefinitionParams, Location, Definition, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
 
 export default async function definitionProvider(handler: DefinitionParams): Promise<Definition|null> {

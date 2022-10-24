@@ -1,8 +1,6 @@
 /* eslint-disable no-case-declarations */
 
 import Cache from "./models/cache";
-import Declaration from "./models/declaration";
-import { IssueRange, Offset } from ".";
 import { parseStatement } from "./statement";
 import oneLineTriggers from "./models/oneLineTriggers";
 import { Range, Position } from "./models/DataPoints";

@@ -9,8 +9,6 @@ import { workspace, ExtensionContext, Uri } from 'vscode';
 import {
 	LanguageClient,
 	LanguageClientOptions,
-	NotificationType,
-	ProtocolNotificationType0,
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient/node';
@@ -77,6 +75,8 @@ export function activate(context: ExtensionContext) {
 					return possibleFile.toString();
 				}
 			}
+
+			return;
 		});
 		client.onRequest("getFile", async (stringUri: string) : Promise<string|undefined> => { 
 			// Always assumes URI is valid. Use getUri first
@@ -86,6 +86,8 @@ export function activate(context: ExtensionContext) {
 			if (doc) {
 				return doc.getText();
 			}
+
+			return;
 		});
 	});
 

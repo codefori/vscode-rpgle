@@ -1,9 +1,8 @@
 import { Diagnostic, DiagnosticSeverity, Range, _Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { findFile } from '.';
 import { connection, getFileRequest, validateUri } from '../connection';
-import { IssueRange } from '../language';
+import { IssueRange } from '../language/index';
 import Linter from '../language/linter';
 import Cache from '../language/models/cache';
 

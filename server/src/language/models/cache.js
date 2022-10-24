@@ -1,5 +1,4 @@
 import Declaration from "./declaration";
-import { DefinitionPosition } from "..";
 
 const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
   const indDef = new Declaration(`variable`);
@@ -127,22 +126,22 @@ export default class Cache {
     });
   }
 	
-	findDefinition(lineNumber, word) {
-		// If they're typing inside of a procedure, let's get the stuff from there too
-		const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+  findDefinition(lineNumber, word) {
+    // If they're typing inside of a procedure, let's get the stuff from there too
+    const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
-		if (currentProcedure && currentProcedure.scope) {
-			const localDef = currentProcedure.scope.find(word);
+    if (currentProcedure && currentProcedure.scope) {
+      const localDef = currentProcedure.scope.find(word);
 
-			if (localDef) {
-				return localDef;
-			}
-		}
+      if (localDef) {
+        return localDef;
+      }
+    }
 
-		const globalDef = this.find(word);
+    const globalDef = this.find(word);
 
-		if (globalDef) {
-			return globalDef;
-		}
-	}
+    if (globalDef) {
+      return globalDef;
+    }
+  }
 }

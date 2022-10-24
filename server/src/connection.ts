@@ -19,6 +19,8 @@ export async function validateUri(stringUri: string, scheme = ``) {
 	// Then reach out to the extension to find it
 	const uri: string|undefined = await connection.sendRequest("getUri", stringUri);
 	if (uri) return uri; 
+
+	return;
 }
 
 export async function getFileRequest(uri: string) {
@@ -32,4 +34,6 @@ export async function getFileRequest(uri: string) {
 		// TODO.. cache it?
 		return body; 
 	}
+
+	return;
 }

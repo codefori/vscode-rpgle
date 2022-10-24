@@ -4,32 +4,17 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import {
-	createConnection,
-	TextDocuments,
-	Diagnostic,
-	DiagnosticSeverity,
-	ProposedFeatures,
 	InitializeParams,
-	DidChangeConfigurationNotification,
-	CompletionItem,
-	CompletionItemKind,
-	TextDocumentPositionParams,
 	TextDocumentSyncKind,
 	InitializeResult,
-	DocumentSymbol,
-	Range
 } from 'vscode-languageserver/node';
 
 import documentSymbolProvider from './providers/documentSymbols';
-import { documents, findFile, parser } from './providers';
-import Linter from "./language/linter";
+import { documents, parser } from './providers';
 import definitionProvider from './providers/definition';
 import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
-import Cache from './language/models/cache';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { IssueRange } from './language';
 
 import { connection, getFileRequest, validateUri } from "./connection";
 import { refreshDiagnostics } from './providers/lintProvider';
