@@ -6,7 +6,8 @@
 		"outDir": "out",
 		"rootDir": "src",
 		"lib": [ "es2020" ],
-		"sourceMap": true
+		"sourceMap": true,
+		"composite": true
 	},
 	"include": [
 		"src"

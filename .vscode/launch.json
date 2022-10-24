@@ -6,12 +6,15 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"name": "Launch Client",
-			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
+			"sourceMaps": true,
+			"sourceMapPathOverrides": {
+				"webpack://client/./*": "${workspaceFolder}/client/*"
+			},
 			"preLaunchTask": {
 				"type": "npm",
-				"script": "compile"
+				"script": "webpack:dev"
 			}
 		},
 		{
@@ -20,7 +23,11 @@
 			"name": "Attach to Server",
 			"port": 6009,
 			"restart": true,
-			"outFiles": ["${workspaceRoot}/server/out/**/*.js"]
+			"sourceMaps": true,
+			"outFiles": ["${workspaceRoot}/server/out/**/*.js"],
+			"sourceMapPathOverrides": {
+				"webpack://server/./*": "${workspaceFolder}/server/*"
+			},
 		},
 		{
 			"name": "Language Server E2E Test",

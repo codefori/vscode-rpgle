@@ -1,5 +1,5 @@
 {
-	"name": "lsp-rpgle-client",
+	"name": "client",
 	"description": "VSCode client for RPGLE LSP",
 	"author": "Liam Allan",
 	"license": "MIT",

@@ -1,5 +1,5 @@
 {
-	"name": "vscode-rpgle",
+	"name": "server",
 	"description": "RPGLE language server",
 	"version": "1.0.0",
 	"author": "Liam Allan",
