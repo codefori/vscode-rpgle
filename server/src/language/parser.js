@@ -37,8 +37,8 @@ export default class Parser {
     /** @type {tablePromise} */
     this.tableFetch = undefined;
 
-		/** @type {includeFilePromise} */
-		this.includeFileFetch = undefined;
+    /** @type {includeFilePromise} */
+    this.includeFileFetch = undefined;
   }
 
   /**
@@ -48,12 +48,12 @@ export default class Parser {
     this.tableFetch = promise;
   }
 
-	/**
+  /**
 	 * @param {includeFilePromise} promise 
 	 */
-	setIncludeFileFetch(promise) {
-		this.includeFileFetch = promise;
-	}
+  setIncludeFileFetch(promise) {
+    this.includeFileFetch = promise;
+  }
 
   /**
    * @param {string} name 
@@ -117,11 +117,11 @@ export default class Parser {
     return this.parsedCache[path];
   }
 
-	/**
+  /**
 	 * @param {string} line 
 	 * @returns {string|undefined}
 	 */
-	static getIncludeFromDirective(line) {
+  static getIncludeFromDirective(line) {
     const linePieces = line.trim().split(` `);
     const copyIndex = linePieces.findIndex(piece => {
       if (piece.includes(`*`)) return false; // Comment
@@ -299,7 +299,7 @@ export default class Parser {
         });
 
         if (copyIndex >= 0 && pieces[copyIndex+1]) {
-					const include = await this.includeFileFetch(workingUri, pieces[copyIndex+1]);
+          const include = await this.includeFileFetch(workingUri, pieces[copyIndex+1]);
           if (include.found) {
             files[include.uri] = include.lines;
             scopes[0].includes.push({
@@ -424,8 +424,7 @@ export default class Parser {
 
               const objectName = getObjectName(parts[1], parts);
 
-              // const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
-							const recordFormats = [];
+              const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
 
               if (recordFormats.length > 0) {
                 const qualified = parts.includes(`QUALIFIED`);
@@ -506,7 +505,7 @@ export default class Parser {
               currentGroup = `structs`;
 
               // Expand the LIKEDS value if there is one.
-              //await expandDs(file, currentItem);
+              await expandDs(file, currentItem);
 
               // Does the keywords include a keyword that makes end-ds useless?
               if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
@@ -757,7 +756,7 @@ export default class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  //await expandDs(file, currentSub);
+                  await expandDs(file, currentSub);
                   currentSub.keyword = Parser.expandKeywords(currentSub.keywords);
 
                   currentItem.subItems.push(currentSub);
@@ -794,8 +793,7 @@ export default class Parser {
                 line: lineNumber
               };
 
-              //const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
-							const recordFormats = [];
+              const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
               if (recordFormats.length > 0) {
                 const qualified = fSpec.keywords.includes(`QUALIFIED`);
@@ -1047,7 +1045,7 @@ export default class Parser {
                     };
 
                     // If the parameter has likeds, add the subitems to make it a struct.
-                    //await expandDs(file, currentSub);
+                    await expandDs(file, currentSub);
                     currentSub.keyword = Parser.expandKeywords(currentSub.keywords);
 
                     currentItem.subItems.push(currentSub);

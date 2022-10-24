@@ -37,3 +37,7 @@ export async function getFileRequest(uri: string) {
 
 	return;
 }
+
+export function getObject(objectPath: string): Promise<object[]> {
+	return connection.sendRequest("getObject", objectPath);
+}

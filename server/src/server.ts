@@ -16,11 +16,13 @@ import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, getFileRequest, validateUri } from "./connection";
+import { connection, getFileRequest, getObject as getObjectData, validateUri } from "./connection";
 import { refreshDiagnostics } from './providers/linter';
 import codeActionsProvider from './providers/linter/codeActions';
 import documentFormattingProvider from './providers/linter/documentFormatting';
 import { referenceProvider } from './providers/reference';
+import Declaration from './language/models/declaration';
+import { getPrettyType } from './language/models/fixed';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -69,6 +71,55 @@ connection.onInitialize((params: InitializeParams) => {
 	}
 	return result;
 });
+
+parser.setTableFetch(async (table: string, aliases = false) => {
+	let recordFormats: {[name: string]: Declaration} = {};
+
+	const data = await getObjectData(table);
+
+	data.forEach((row: any) => {
+		const {
+			WHNAME: formatName,
+			WHFLDT: type,
+			WHFLDB: strLength, 
+			WHFLDD: digits,
+			WHFLDP: decimals,
+			WHFTXT: text,
+		} = row;
+
+		const name = aliases ? row.WHALIS || row.WHFLDE : row.WHFLDE;
+
+		if (name.trim() === ``) return;
+		if (name.startsWith(`*`)) return;
+
+		let recordFormat;
+		if (recordFormats[formatName]) {
+			recordFormat = recordFormats[formatName];
+		} else {
+			recordFormat = new Declaration(`struct`);
+			recordFormat.name = formatName;
+			recordFormats[formatName] = recordFormat;
+		}
+
+		const currentSubfield = new Declaration(`subitem`);
+		currentSubfield.name = name;
+		const keywords = [];
+
+		if (row.WHVARL === `Y`) keywords.push(`VARYING`);
+
+		currentSubfield.keywords = [getPrettyType({
+			type,
+			len: digits === 0 ? strLength : digits,
+			decimals: decimals,
+			keywords: [],
+		})];
+		currentSubfield.description = text.trim();
+
+		recordFormat.subItems.push(currentSubfield);
+	});
+
+	return Object.values(recordFormats);
+})
 
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);

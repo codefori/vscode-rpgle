@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, Uri } from 'vscode';
+import { workspace, ExtensionContext, Uri, commands } from 'vscode';
 
 import {
 	LanguageClient,
@@ -12,6 +12,8 @@ import {
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient/node';
+
+import getBase from './base';
 
 let client: LanguageClient;
 
@@ -78,6 +80,7 @@ export function activate(context: ExtensionContext) {
 
 			return;
 		});
+
 		client.onRequest("getFile", async (stringUri: string) : Promise<string|undefined> => { 
 			// Always assumes URI is valid. Use getUri first
 			const uri = Uri.parse(stringUri);
@@ -88,6 +91,52 @@ export function activate(context: ExtensionContext) {
 			}
 
 			return;
+		});
+
+		client.onRequest(`getObject`, async (table: string) => {
+			const instance = getBase();
+
+			if (instance) {
+				const connection = instance.getConnection();
+				if (connection) {
+					const content = instance.getContent();
+					const config = instance.getConfig();
+		
+					const dateStr = Date.now().toString().substr(-6);
+					const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
+					const fullPath = `${config.tempLibrary}/${randomFile}`;
+
+					console.log(`Temp OUTFILE: ${fullPath}`);
+
+					const parts = {
+						schema: `*LIBL`,
+						table: ``,
+					};
+		
+					if (table.includes(`/`)) {
+						const splitName = table.split(`/`);
+						if (splitName.length >= 2) parts.schema = splitName[splitName.length - 2];
+						if (splitName.length >= 1) parts.table = splitName[splitName.length - 1];
+					} else {
+						parts.table = table;
+					}
+
+					await commands.executeCommand(`code-for-ibmi.runCommand`, {
+						environment: `ile`,
+						command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
+					});
+
+					console.log(`Temp OUTFILE created.`);
+
+					const data: object[] = await content.getTable(config.tempLibrary, randomFile);
+
+					console.log(`Temp OUTFILE read. ${data.length} rows.`);
+
+					return data;
+				}
+			}
+
+			return [];
 		});
 	});
 
