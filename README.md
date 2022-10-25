@@ -9,25 +9,14 @@ Adds functionality to assist in writing accurate, readable and consistent RPGLE,
 * Linter, including indentation checking and reformatting (`**FREE` only)
 * Column assist for fixed-format RPGLE.
 
-Depends on the Code for IBM i extension due to source code living on the remote system.
+Depends on the Code for IBM i extension due to source code living on the remote system when developing with source members.
 
 ## FAQ
 
 1. **Does this only work with free-format?** The content assist and outline view works for all ILE versions of RPG, including fixed-format. The column assist is for fixed-format only. The linter is for `**FREE` format only.
-2. **My copybook is not opening or prototypes are not coming from my copybook.** Right now, it is an explicit path to your member or streamfile. For example, if you're editing `YOURLIB/QRPGLESRC/HELLOWORLD.rpgle` and your copybook path is `QRPGLEREF,PRTYPE`, then it will assume the library of `YOURLIB`. For streamfiles, it will be relative to your working directory. For local files, it will be your VS Code workspace.
-3. **Does this work with local projects?** Yes! But, your local RPGLE must be the IFS style path on your `copy` and `include` directives.
+2. **My copybook is not opening or prototypes are not coming from my copybook.** Right now, it is an explicit path to your member or streamfile. For example, if you're editing `YOURLIB/QRPGLESRC/HELLOWORLD.rpgle` and your copybook path is `QRPGLEREF,PRTYPE`, then it will assume the library of `YOURLIB`.
+3. **Does this work with local projects?** Yes! But, your local RPGLE must be the IFS style path on your `copy` and `include` directives. When developing locally, include paths are case insensitive.
 4. **Why am I getting indentation errors?** When the linter is enabled in the settings, you will start to get errors based on the lint rules configuration. Indentation errors are based on the indentation setting from VS Code (or the assumed indentation from the current file).
-## How to enable
-
-Enable these options in VS Code settings.
-
-![Settings](./assets/Settings_01.png)
-
-* `vscode-rpgle.rpgleLanguageToolsEnabled` - enabled by default
-   * Provides outline view, go to defintion and find references
-* `vscode-rpgle.rpgleLinterSupportEnabled` - disabled by default. See Linter below for more on linting.
-* `vscode-rpgle.showFixedFormatOutline` - column assist for RPGLE fixed-format.
-   * `vscode-rpgle.rpgleColumnAssistant` - Shift+F4 to launch it when on fixed-format line.
 
 # Outline
 
