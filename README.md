@@ -184,5 +184,5 @@ After you have auto-fixed problems, some auto-fixable problems may still exist. 
 2. `npm i`
 3. Run
    * `npm run test`
-   * Debug 'Run Extension'
-
+   * Debug 'Launch Client'
+	 * Debug 'Attach to Server'
