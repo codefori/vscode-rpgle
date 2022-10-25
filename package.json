@@ -39,8 +39,22 @@
 				"url": "./schemas/rpglint.json"
 			}
 		],
-		"commands": [],
-		"menus": {}
+		"commands": [
+			{
+				"command": "vscode-rpgle.openLintConfig",
+				"title": "Open RPGLE lint configuration",
+				"category": "RPGLE"
+			}
+		],
+		"menus": {
+			"view/item/context": [
+				{
+					"command": "vscode-rpgle.openLintConfig",
+					"when": "view == objectBrowser && viewItem == filter",
+					"group": "1_LibActions@2"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"test": "tsx tests",

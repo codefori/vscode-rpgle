@@ -5,6 +5,7 @@
 
 import * as path from 'path';
 import { workspace, ExtensionContext, Uri, commands } from 'vscode';
+import * as Linter from "./linter";
 
 import {
 	LanguageClient,
@@ -143,6 +144,7 @@ export function activate(context: ExtensionContext) {
 	// Start the client. This will also launch the server
 	client.start();
 
+	Linter.initialise(context);
 	console.log(`started`);
 }
 
