@@ -9,25 +9,14 @@ Adds functionality to assist in writing accurate, readable and consistent RPGLE,
 * Linter, including indentation checking and reformatting (`**FREE` only)
 * Column assist for fixed-format RPGLE.
 
-Depends on the Code for IBM i extension due to source code living on the remote system.
+Depends on the Code for IBM i extension due to source code living on the remote system when developing with source members.
 
 ## FAQ
 
 1. **Does this only work with free-format?** The content assist and outline view works for all ILE versions of RPG, including fixed-format. The column assist is for fixed-format only. The linter is for `**FREE` format only.
-2. **My copybook is not opening or prototypes are not coming from my copybook.** Right now, it is an explicit path to your member or streamfile. For example, if you're editing `YOURLIB/QRPGLESRC/HELLOWORLD.rpgle` and your copybook path is `QRPGLEREF,PRTYPE`, then it will assume the library of `YOURLIB`. For streamfiles, it will be relative to your working directory. For local files, it will be your VS Code workspace.
-3. **Does this work with local projects?** Yes! But, your local RPGLE must be the IFS style path on your `copy` and `include` directives.
+2. **My copybook is not opening or prototypes are not coming from my copybook.** Right now, it is an explicit path to your member or streamfile. For example, if you're editing `YOURLIB/QRPGLESRC/HELLOWORLD.rpgle` and your copybook path is `QRPGLEREF,PRTYPE`, then it will assume the library of `YOURLIB`.
+3. **Does this work with local projects?** Yes! But, your local RPGLE must be the IFS style path on your `copy` and `include` directives. When developing locally, include paths are case insensitive.
 4. **Why am I getting indentation errors?** When the linter is enabled in the settings, you will start to get errors based on the lint rules configuration. Indentation errors are based on the indentation setting from VS Code (or the assumed indentation from the current file).
-## How to enable
-
-Enable these options in VS Code settings.
-
-![Settings](./assets/Settings_01.png)
-
-* `vscode-rpgle.rpgleLanguageToolsEnabled` - enabled by default
-   * Provides outline view, go to defintion and find references
-* `vscode-rpgle.rpgleLinterSupportEnabled` - disabled by default. See Linter below for more on linting.
-* `vscode-rpgle.showFixedFormatOutline` - column assist for RPGLE fixed-format.
-   * `vscode-rpgle.rpgleColumnAssistant` - Shift+F4 to launch it when on fixed-format line.
 
 # Outline
 
@@ -81,6 +70,8 @@ Or you can right click on a library filter:
 
    This is not an opionated linter, but when a new linter rules configuration file is created, these defaults that we consider useful are provided:
 
+```json
+{
       "BlankStructNamesCheck": true,
       "QualifiedCheck": true,
       "PrototypeCheck": true,
@@ -96,10 +87,14 @@ Or you can right click on a library filter:
       "NoGlobalSubroutines": true,
       "NoLocalSubroutines": true,
       "UppercaseDirectives": true
+}
+```
 
 When a rule conflicts with your coding style it may be disabled by changing it to `false`. For example:
 
+```
       "PrototypeCheck": false,
+```
 
 You can get more information about a lint option by hovering over it:
 
@@ -119,14 +114,17 @@ This rule allows you to specify the casing required for any or all declares or B
 
 If you want all `DCL` to be lower case and all `BIF`s to be upper case, then it would be coded like this:
 
+```json
       "SpecificCasing":[
          {"operation": "*BIF","expected": "*upper"},
          {"operation": "*DECLARE", "expected": "*lower"}
       ]
+```
 
 
 If you wanted `%parms` and `%timestamp` to always be lower case, amd all other BIFs to be upper case, then it would be coded like this:
 
+```json
       "SpecificCasing": [
          {
             "operation": "%parms",
@@ -141,10 +139,13 @@ If you wanted `%parms` and `%timestamp` to always be lower case, amd all other B
             "expected": "*upper"
          }
       ]
+```
+
  Note: The order of entries above is important.
 
  Or, if for some reason, you wanted `%timestamp` to always be coded as `%TimeStamp` then it could be coded like this:
 
+```json
       "SpecificCasing": [
          {
             "operation": "%parms",
@@ -159,6 +160,7 @@ If you wanted `%parms` and `%timestamp` to always be lower case, amd all other B
             "expected": "*upper"
          }
       ]
+```
 
 ## Correcting Linter Errors Automatically
 
@@ -175,19 +177,6 @@ Errors fixed:
 After you have auto-fixed problems, some auto-fixable problems may still exist. Running another auto-fix pass may be needed.
 
 **Note:**  Undo (Ctrl + Z, or Cmd + Z) undoes only a single auto-fixed line. If you are anticipating extensive changes, you may want to save your file first. 
-
-# Column assist for fixed-format RPGLE
-
-If you are still coding in fixed format RPGLE, this feature helps you put code in the correct columns.
-
-The column assistant is invoked by right clicking on a line:
-![Col Assist right click](./assets/ColAssist_01.png)
-
-The column assistant then appears:
-
-![Col Assistant](./assets/ColAssist_02.png)
-
-You can also invoke the column assistant on the current line with Shift + F4.
  
 # Developing
 
