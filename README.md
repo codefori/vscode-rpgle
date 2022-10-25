@@ -81,6 +81,8 @@ Or you can right click on a library filter:
 
    This is not an opionated linter, but when a new linter rules configuration file is created, these defaults that we consider useful are provided:
 
+```json
+{
       "BlankStructNamesCheck": true,
       "QualifiedCheck": true,
       "PrototypeCheck": true,
@@ -96,10 +98,14 @@ Or you can right click on a library filter:
       "NoGlobalSubroutines": true,
       "NoLocalSubroutines": true,
       "UppercaseDirectives": true
+}
+```
 
 When a rule conflicts with your coding style it may be disabled by changing it to `false`. For example:
 
+```
       "PrototypeCheck": false,
+```
 
 You can get more information about a lint option by hovering over it:
 
@@ -119,14 +125,17 @@ This rule allows you to specify the casing required for any or all declares or B
 
 If you want all `DCL` to be lower case and all `BIF`s to be upper case, then it would be coded like this:
 
+```json
       "SpecificCasing":[
          {"operation": "*BIF","expected": "*upper"},
          {"operation": "*DECLARE", "expected": "*lower"}
       ]
+```
 
 
 If you wanted `%parms` and `%timestamp` to always be lower case, amd all other BIFs to be upper case, then it would be coded like this:
 
+```json
       "SpecificCasing": [
          {
             "operation": "%parms",
@@ -141,10 +150,13 @@ If you wanted `%parms` and `%timestamp` to always be lower case, amd all other B
             "expected": "*upper"
          }
       ]
+```
+
  Note: The order of entries above is important.
 
  Or, if for some reason, you wanted `%timestamp` to always be coded as `%TimeStamp` then it could be coded like this:
 
+```json
       "SpecificCasing": [
          {
             "operation": "%parms",
@@ -159,6 +171,7 @@ If you wanted `%parms` and `%timestamp` to always be lower case, amd all other B
             "expected": "*upper"
          }
       ]
+```
 
 ## Correcting Linter Errors Automatically
 
@@ -175,19 +188,6 @@ Errors fixed:
 After you have auto-fixed problems, some auto-fixable problems may still exist. Running another auto-fix pass may be needed.
 
 **Note:**  Undo (Ctrl + Z, or Cmd + Z) undoes only a single auto-fixed line. If you are anticipating extensive changes, you may want to save your file first. 
-
-# Column assist for fixed-format RPGLE
-
-If you are still coding in fixed format RPGLE, this feature helps you put code in the correct columns.
-
-The column assistant is invoked by right clicking on a line:
-![Col Assist right click](./assets/ColAssist_01.png)
-
-The column assistant then appears:
-
-![Col Assistant](./assets/ColAssist_02.png)
-
-You can also invoke the column assistant on the current line with Shift + F4.
  
 # Developing
 
