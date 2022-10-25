@@ -7,7 +7,7 @@
 			"request": "launch",
 			"name": "Launch Client",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
-			"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
+			"outFiles": ["${workspaceRoot}/out/**/*.js"],
 			"sourceMaps": true,
 			"sourceMapPathOverrides": {
 				"webpack://client/./*": "${workspaceFolder}/client/*"
@@ -24,7 +24,7 @@
 			"port": 6009,
 			"restart": true,
 			"sourceMaps": true,
-			"outFiles": ["${workspaceRoot}/server/out/**/*.js"],
+			"outFiles": ["${workspaceRoot}/out/**/*.js"],
 			"sourceMapPathOverrides": {
 				"webpack://server/./*": "${workspaceFolder}/server/*"
 			},
