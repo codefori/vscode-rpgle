@@ -5,7 +5,10 @@
 
 import * as path from 'path';
 import { workspace, ExtensionContext, Uri, commands } from 'vscode';
+
 import * as Linter from "./linter";
+import * as columnAssist from "./columnAssist";
+
 
 import {
 	LanguageClient,
@@ -145,6 +148,8 @@ export function activate(context: ExtensionContext) {
 	client.start();
 
 	Linter.initialise(context);
+	columnAssist.registerColumnAssist(context);
+	
 	console.log(`started`);
 }
 

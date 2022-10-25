@@ -24,6 +24,16 @@
 	],
 	"main": "./out/extension",
 	"contributes": {
+		"configuration": {
+			"title": "RPGLE language tools",
+			"properties": {
+				"vscode-rpgle.showFixedFormatOutline": {
+					"type": "boolean",
+					"default": false,
+					"description": "Will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
+				}
+			}
+		},
 		"snippets": [
 			{
 				"path": "./schemas/rpgle.code-snippets",
