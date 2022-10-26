@@ -69,3 +69,34 @@ exports.many_formats = async () => {
   assert.strictEqual(sflctl.name, `SFLCTL`);
   assert.strictEqual(sflctl.subItems.length, 1);
 };
+
+exports.ds_extname = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-Ds Employee ExtName('EMPLOYEE') Qualified;`,
+    `end-ds;`,
+    ``,
+    `Dsply Employee.empno;`,
+    ``,
+    `return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.files.length, 0);
+  assert.strictEqual(cache.structs.length, 1);
+
+  const structDef = cache.find(`employee`);
+  assert.strictEqual(structDef.name, `Employee`);
+  assert.strictEqual(structDef.subItems.length, 14);
+};
+
+exports.ds_extname_alias = async () => {
+  //TODO
+}
+
+exports.file_prefix = async () => {
+  
+}
