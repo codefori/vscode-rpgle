@@ -1,7 +1,9 @@
 import emps from './emps';
 import employee from './employee';
+import department from './department';
 
 export default {
 	'EMPS': emps,
-	'EMPLOYEE': employee
+	'EMPLOYEE': employee,
+	'DEPARTMENT': department
 };
