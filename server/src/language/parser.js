@@ -65,7 +65,7 @@ export default class Parser {
     if (name.trim() === ``) return [];
     if (!this.tableFetch) return [];
     const table = name.toUpperCase();
-    const existingVersion = table + keyVersion;
+    const existingVersion = table;
     const now = Date.now();
 
     if (this.tables[existingVersion]) {
@@ -95,6 +95,11 @@ export default class Parser {
         recordFormats: newDefs
       };
     } catch (e) {
+      // Failed. Don't fetch it again
+      this.tables[existingVersion] = {
+        fetched: now,
+        recordFormats: []
+      };
       newDefs = [];
     }
 
