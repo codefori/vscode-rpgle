@@ -4,4 +4,5 @@ module.exports = {
   ...require(`./fixed`),
   ...require(`./keywords`),
   ...require(`./linter`),
+  ...require(`./files`)
 }

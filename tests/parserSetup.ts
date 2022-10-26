@@ -46,8 +46,9 @@ export default function setupParser(): Parser {
 
 	parser.setTableFetch(async (table: string, aliases = false) => {
 		let recordFormats: {[name: string]: Declaration} = {};
+		const upperName = table.toUpperCase();
 		
-		const data = tables[table] ? tables[table] : [];
+		const data = tables[upperName] ? tables[upperName] : [];
 		
 		data.forEach((row: any) => {
 			const {
