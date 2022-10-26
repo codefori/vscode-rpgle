@@ -1,3 +1,9 @@
+client
+server
+.github/**
+assets/**
+node_modules
+scripts
 .vscode/**
 .vscode-test/**
 test/**

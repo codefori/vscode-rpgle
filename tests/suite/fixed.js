@@ -1,11 +1,9 @@
 
-  
-const vscode = require(`vscode`);
 const assert = require(`assert`);
 
-const Parser = require(`../../src/language/parser`);
+const {default: parserSetup} = require(`../parserSetup`);
 
-const uri = vscode.Uri.parse(`source.rpgle`);
+const uri = `source.rpgle`;
   
 exports.fixed1 = async () => {
   const lines = [
@@ -20,7 +18,7 @@ exports.fixed1 = async () => {
     `     C                   eval      *inlr = *on`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.files.length, 1);
@@ -61,7 +59,7 @@ exports.fixed2 = async () => {
     `     `,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 13, `Expect length of 13`);
@@ -89,7 +87,7 @@ exports.fixed3 = async () => {
     `     d  MsgQueNbr             25     28B 0`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -130,7 +128,7 @@ exports.fixed4 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
@@ -191,7 +189,7 @@ exports.fixed5 = async () => {
     `     d  InpRcdFmt             49     58`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
@@ -220,7 +218,7 @@ exports.fixed6 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 8, `Expect length of 8`);
@@ -267,7 +265,7 @@ exports.fixed7 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -333,7 +331,7 @@ exports.fixed8 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.subroutines.length, 2);
@@ -362,7 +360,7 @@ exports.fixed9 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.includes.length, 1);
@@ -405,7 +403,7 @@ exports.fixed9_2 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.includes.length, 1);
@@ -443,7 +441,7 @@ exports.fixed10 = async () => {
     `         return;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   const dataDs = cache.find(`data`);
@@ -520,7 +518,7 @@ exports.fixedfree1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 3);
@@ -562,7 +560,7 @@ exports.fixed11 = async () => {
     `     D  VIEW                          1A`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   const F4DATE = cache.find(`F4DATE`);
@@ -608,7 +606,7 @@ exports.columnFix = async () => {
     `       end-pr;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 3);
@@ -669,7 +667,7 @@ exports.comments1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 6);
@@ -770,7 +768,7 @@ exports.ranges = async () => {
     `     D*                                             Page Fault Count`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   const QUSLWT = cache.find(`QUSLWT`);
@@ -974,7 +972,7 @@ exports.def_ranges = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   const TYPEMST_T = cache.find(`TYPEMST_T`);

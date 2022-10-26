@@ -1,11 +1,11 @@
-const vscode = require(`vscode`);
+
 const assert = require(`assert`);
 const path = require(`path`);
 
-const Parser = require(`../../src/language/parser`);
-const Linter = require(`../../src/language/linter`);
+const {default: parserSetup} = require(`../parserSetup`);
+const {default: Linter} = require(`../../server/src/language/linter`);
 
-const uri = vscode.Uri.parse(`source.rpgle`);
+const uri = `source.rpgle`;
 
 exports.test1 = async () => {
   const lines = [
@@ -13,7 +13,7 @@ exports.test1 = async () => {
     `Dcl-s MyVariable CHAR(20);`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -31,7 +31,7 @@ exports.test2 = async () => {
     `Dcl-s MyVariable2 CHAR(20);`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
@@ -54,7 +54,7 @@ exports.test3 = async () => {
     `//Yes`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
@@ -86,7 +86,7 @@ exports.test4 = async () => {
     `Endsr;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -118,7 +118,7 @@ exports.test5 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -144,7 +144,7 @@ exports.test6 = async () => {
     `MyVariable2 = 'Hello world';`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -173,7 +173,7 @@ exports.test7 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -192,7 +192,7 @@ exports.test8 = async () => {
     `Dcl-C theConstant 'Hello world';`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -219,7 +219,7 @@ exports.test9 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -248,7 +248,7 @@ exports.test10 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.includes.length, 1);
@@ -279,7 +279,7 @@ exports.test10_local_fixedcopy = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.includes.length, 1);
@@ -316,7 +316,7 @@ exports.test11 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.includes.length, 2);
@@ -357,7 +357,7 @@ exports.test12 = async () => {
     ``
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.includes.length, 1);
@@ -402,7 +402,7 @@ exports.indicators1 = async () => {
     `Return;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   Linter.getErrors({uri, content: lines}, {
@@ -442,7 +442,7 @@ exports.subds1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.structs.length, 1);
@@ -489,7 +489,7 @@ exports.range1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.procedures.length, 2);
@@ -518,7 +518,7 @@ exports.range2 = async () => {
     `Dcl-S Eod          Ind;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2);
@@ -550,7 +550,7 @@ exports.inline_end_pi = async () => {
     `       end-proc getHandle;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   const getHandle = cache.find(`getHandle`);

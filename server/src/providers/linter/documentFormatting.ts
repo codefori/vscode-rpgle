@@ -1,0 +1,85 @@
+
+import { DocumentFormattingParams, ProgressToken, Range, TextEdit, WorkDoneProgress } from 'vscode-languageserver';
+import { calculateOffset, getActions, getLintOptions } from '.';
+import { documents, parser } from '..';
+import Linter from '../../language/linter';
+
+export default async function documentFormattingProvider(params: DocumentFormattingParams): Promise<TextEdit[]|undefined> {
+	const uri = params.textDocument.uri;
+	const document = documents.get(uri);
+
+	if (document) {
+		const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+		if (isFree) {
+			const options = await getLintOptions(document.uri);
+
+			if (options) {
+			let docs = await parser.getDocs(document.uri);
+			
+				if (docs) {
+					// Need to fetch the docs again incase comments were added
+					// as part of RequiresProcedureDescription
+					docs = await parser.getDocs(document.uri, document.getText(), {
+						ignoreCache: true
+					});
+
+					// Next up, let's fix all the other things!
+					const {errors} = Linter.getErrors({
+						uri: document.uri,
+						content: document.getText()
+					}, options, docs);
+
+					
+					const actions = getActions(
+						document, 
+						errors.filter(error => error.type !== `RequiresProcedureDescription`)
+					);
+
+					let linesChanged: number[] = [];
+					let skippedChanges: number = 0;
+
+					let fixes: TextEdit[] = [];
+
+					actions
+						.filter(action => action.edit)
+						.forEach(action => {
+							if (action.edit && action.edit.changes) {
+								const uris = action.edit.changes;
+								const suggestedEdits = uris[document.uri];
+								suggestedEdits.forEach(edit => {
+									const changedLine = edit.range.start.line;
+									// We play it safe and don't change the same line twice.
+									if (linesChanged.includes(changedLine)) {
+										skippedChanges += 1;
+									} else {
+										fixes.push(edit);
+										linesChanged.push(changedLine);
+									}
+								})
+							}
+						});
+
+
+					// First we do all the indentation fixes.
+					const { indentErrors } = Linter.getErrors({
+						uri: document.uri,
+						content: document.getText()
+					}, options, docs);
+
+					const indentFixes = indentErrors.map(error => {
+						const range = calculateOffset(document, {
+							range: Range.create(error.line, 0, error.line, error.currentIndent), 
+							offset: undefined,
+							type: undefined,
+							newValue: undefined,
+						});
+						return TextEdit.replace(range, ``.padEnd(error.expectedIndent, ` `));
+					});
+
+					return [...fixes, ...indentFixes];
+				}
+			}
+		}
+	}
+	return [];
+}

@@ -1,12 +1,12 @@
 
-const vscode = require(`vscode`);
 const assert = require(`assert`);
 
-const Parser = require(`../../src/language/parser`);
-const Linter = require(`../../src/language/linter`);
+const {default: parserSetup} = require(`../parserSetup`);
+const {default: Linter} = require(`../../server/src/language/linter`);
 const path = require(`path`);
+const { Range, Position } = require(`../../server/src/language/models/DataPoints`);
 
-const uri = vscode.Uri.parse(`source.rpgle`);
+const uri = `source.rpgle`;
 
 module.exports = {
   skip1: async () => {
@@ -21,7 +21,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
@@ -44,7 +44,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
@@ -67,7 +67,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
     const { errors } = Linter.getErrors({uri, content: lines}, {
       IncorrectVariableCase: true
@@ -94,7 +94,7 @@ module.exports = {
       `                      *OFF= Do not convert any characters other than A-Z.`,
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
 
     const uppercase = cache.find(`UPPERCASE`);
@@ -115,7 +115,7 @@ module.exports = {
       `     D   Escaped                       n   Const Options(*NoPass)`,
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
 
     assert.strictEqual(cache.procedures.length, 1);
@@ -152,7 +152,7 @@ module.exports = {
       `End-Proc;`,
     ].join(`\n`);
     
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
     const { errors } = Linter.getErrors({uri, content: lines}, {
       NoGlobalsInProcedures: true
@@ -177,7 +177,7 @@ module.exports = {
       `Return;`
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
 
     assert.strictEqual(cache.includes.length, 1);
@@ -204,7 +204,7 @@ module.exports = {
       `End-Proc;`
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
@@ -213,13 +213,13 @@ module.exports = {
 
     assert.deepStrictEqual(errors[0], {
       type: `UnexpectedEnd`,
-      range: new vscode.Range(
-        new vscode.Position(4, 0),
-        new vscode.Position(4, 8),
+      range: new Range(
+        new Position(4, 0),
+        new Position(4, 8),
       ),
       offset: {
         position: 0,
-        length: 8
+        end: 8
       },
     });
   },
@@ -251,7 +251,7 @@ module.exports = {
       `End-Ds;`,
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
 
     assert.strictEqual(cache.structs.length, 2);
@@ -291,7 +291,7 @@ module.exports = {
       `     d  ff                         1024a`,
     ].join(`\n`);
 
-    const parser = new Parser();
+    const parser = parserSetup();
     const cache = await parser.getDocs(uri, lines);
 
     assert.strictEqual(cache.structs.length, 1);

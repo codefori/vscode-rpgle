@@ -1,11 +1,10 @@
 
-const vscode = require(`vscode`);
 const assert = require(`assert`);
 
-const Parser = require(`../../src/language/parser`);
-const Linter = require(`../../src/language/linter`);
+const {default: parserSetup} = require(`../parserSetup`);
+const {default: Linter} = require(`../../server/src/language/linter`);
 
-const uri = vscode.Uri.parse(`source.rpgle`);
+const uri = `source.rpgle`;
 
 exports.qualified1 = async () => {
   const lines = [
@@ -18,7 +17,7 @@ exports.qualified1 = async () => {
     `Return`,
   ].join(`\n`);
   
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({uri, content: lines}, {
     QualifiedCheck: true,
@@ -91,7 +90,7 @@ exports.ctdata1 = async () => {
     `order by RMLPID ,LTID ,EFFDATE`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
     indent: 2
@@ -122,7 +121,7 @@ exports.ctdata2 = async () => {
     `Regina         12:33:00Vancouver      13:20:00`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 1);
@@ -150,7 +149,7 @@ exports.ctdata3 = async () => {
     `VVoluntary    Volntry`,
   ].join(`\n`);
   
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.files.length, 1);
@@ -170,7 +169,7 @@ exports.likeds1 = async () => {
     `//Yes`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2);
@@ -202,7 +201,7 @@ exports.likeds2 = async () => {
     `End-Proc;`
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   assert.strictEqual(cache.variables.length, 2);
@@ -246,7 +245,7 @@ exports.overload1 = async () => {
     `End-PR;`,
   ].join(`\n`);
 
-  const parser = new Parser();
+  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
