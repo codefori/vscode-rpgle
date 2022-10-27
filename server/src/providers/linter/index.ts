@@ -1,8 +1,9 @@
-import { json } from 'stream/consumers';
+import path = require('path');
+import { json, text } from 'stream/consumers';
 import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, Range, TextDocumentChangeEvent, TextEdit, WorkspaceEdit, _Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { documents } from '..';
+import { documents, parser } from '..';
 import { connection, getFileRequest, validateUri } from '../../connection';
 import { IssueRange } from '../../language/index';
 import Linter from '../../language/linter';
@@ -17,16 +18,41 @@ export function initialise(connection: _Connection) {
 	connection.onDocumentFormatting(documentFormattingProvider);
 
 	connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
+		let runLinter = false;
+
 		params.changes.forEach(file => {
 			const uri = file.uri;
+			const lowerUri = uri.toLowerCase();
+			const basename = path.basename(lowerUri);
 
-			if (uri.endsWith(`rpglint.json`)) {
-				Object
-					.keys(jsonCache)
-					.filter(uri => uri.toLowerCase().endsWith(`rpglint.json`))
-					.forEach(uri => delete jsonCache[uri])
+			if (basename === `rpglint.json`) {
+				const validKey = Object.keys(jsonCache).find(key => key.toLowerCase() === lowerUri);
+				if (validKey && jsonCache[validKey]) {
+					delete jsonCache[validKey];
+				}
+
+				runLinter = true;
 			}
-		})
+		});
+
+		if (runLinter) {
+			documents.all().forEach(document => {
+				if (document.languageId === `rpgle`) {
+					parser.getDocs(
+						document.uri,
+						document.getText(),
+						{
+							withIncludes: true,
+							ignoreCache: true
+						}
+					).then(cache => {
+						if (cache) {
+							refreshDiagnostics(document, cache);
+						}
+					});
+				}
+			});
+		}
 	});
 
 	documents.onDidClose(async (e: TextDocumentChangeEvent<TextDocument>) => {
