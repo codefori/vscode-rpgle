@@ -26,9 +26,9 @@ let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
-const languageToolsEnabled = true;
-const linterEnabled = true;
-const formattedEnabled = true;
+const languageToolsEnabled = process.env.LANGUAGE_TOOLS_ENABLED;
+const linterEnabled = process.env.LINTER_ENABLED;
+const formatterEnabled = process.env.FORMATTER_ENABLED;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -65,7 +65,7 @@ connection.onInitialize((params: InitializeParams) => {
 
 	if (linterEnabled) {
 		result.capabilities.codeActionProvider = true;
-		if (formattedEnabled) {
+		if (formatterEnabled) {
 			result.capabilities.documentFormattingProvider = {
 				workDoneProgress: true
 			};
