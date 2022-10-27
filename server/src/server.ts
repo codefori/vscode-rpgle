@@ -26,7 +26,9 @@ let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
+const languageToolsEnabled = true;
 const linterEnabled = true;
+const formattedEnabled = true;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -47,23 +49,27 @@ connection.onInitialize((params: InitializeParams) => {
 
 	const result: InitializeResult = {
 		capabilities: {
-			textDocumentSync: TextDocumentSyncKind.Incremental,
-			// Tell the client that this server supports code completion.
-			documentSymbolProvider: true,
-			definitionProvider: true,
-			completionProvider: {
-				triggerCharacters: [` `, `.`, `:`]
-			},
-			hoverProvider: true,
-			referencesProvider: true,
+			textDocumentSync: TextDocumentSyncKind.Incremental
 		}
 	};
 
+	if (languageToolsEnabled) {
+		result.capabilities.documentSymbolProvider = true;
+		result.capabilities.definitionProvider = true;
+		result.capabilities.completionProvider = {
+			triggerCharacters: [` `, `.`, `:`]
+		};
+		result.capabilities.hoverProvider = true;
+		result.capabilities.referencesProvider = true;
+	}
+
 	if (linterEnabled) {
 		result.capabilities.codeActionProvider = true;
-		result.capabilities.documentFormattingProvider = {
-			workDoneProgress: true
-		};
+		if (formattedEnabled) {
+			result.capabilities.documentFormattingProvider = {
+				workDoneProgress: true
+			};
+		}
 	}
 
 	if (hasWorkspaceFolderCapability) {
@@ -77,6 +83,8 @@ connection.onInitialize((params: InitializeParams) => {
 });
 
 parser.setTableFetch(async (table: string, aliases = false) => {
+	if (!languageToolsEnabled) return [];
+	
 	let recordFormats: {[name: string]: Declaration} = {};
 
 	const data = await getObjectData(table);
@@ -184,12 +192,14 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	};
 });
 
-// regular language stuff
-connection.onDocumentSymbol(documentSymbolProvider);
-connection.onDefinition(definitionProvider);
-connection.onCompletion(completionItemProvider);
-connection.onHover(hoverProvider);
-connection.onReferences(referenceProvider);
+if (languageToolsEnabled) {
+	// regular language stuff
+	connection.onDocumentSymbol(documentSymbolProvider);
+	connection.onDefinition(definitionProvider);
+	connection.onCompletion(completionItemProvider);
+	connection.onHover(hoverProvider);
+	connection.onReferences(referenceProvider);
+}
 
 if (linterEnabled) Linter.initialise(connection);
 
