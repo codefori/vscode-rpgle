@@ -148,7 +148,6 @@ exports.file_prefix = async () => {
     `**free`,
     ``,
     `Dcl-f display workstn usropn prefix(d);`,
-    `end-ds;`,
     ``,
     `Exfmt display;`,
     ``,
