@@ -8,7 +8,7 @@ import { Range, Position } from "./models/DataPoints";
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
   'QualifiedCheck': `Struct names must be qualified (\`QUALIFIED\`).`,
-  'PrototypeCheck': `Prototypes can only be defined with either \`EXT\`, \`EXTPGM\` or \`EXTPROC\``,
+  'PrototypeCheck': `Prototypes can only be defined with either \`EXTPGM\` or \`EXTPROC\``,
   'ForceOptionalParens': `Expressions must be surrounded by brackets.`,
   'NoOCCURS': `\`OCCURS\` is not allowed.`,
   'NoSELECTAll': `\`SELECT *\` is not allowed in Embedded SQL.`,
@@ -471,7 +471,7 @@ export default class Linter {
                     inPrototype = true;
                     if (rules.PrototypeCheck || rules.NoExtProgramVariable) {
                       
-                      const extIndex = statement.findIndex(part => part.value && part.value.toUpperCase().startsWith(`EXT`));
+                      const extIndex = statement.findIndex(part => part.value && [`EXTPGM`, `EXTPROC`].includes(part.value.toUpperCase()));
                       if (extIndex >= 0) {
                         if (rules.NoExtProgramVariable) {
 
