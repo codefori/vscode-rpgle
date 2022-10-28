@@ -84,7 +84,7 @@ export default function setupParser(): Parser {
 				type,
 				len: digits === 0 ? strLength : digits,
 				decimals: decimals,
-				keywords: [],
+				keywords,
 			})];
 			currentSubfield.description = text.trim();
 	

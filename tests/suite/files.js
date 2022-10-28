@@ -34,6 +34,7 @@ exports.simple_file = async () => {
 
   assert.strictEqual(empRdcFmt.name, `EMPLOYEE`);
 
+  assert.strictEqual(empRdcFmt.subItems[1].keywords[0], `VARCHAR(12)`);																	   
   // 14 fields inside of this record format
   assert.strictEqual(empRdcFmt.subItems.length, 14);
 };
