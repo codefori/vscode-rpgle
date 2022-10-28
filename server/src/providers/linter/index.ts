@@ -4,7 +4,7 @@ import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWa
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { documents, parser } from '..';
-import { connection, getFileRequest, validateUri } from '../../connection';
+import { connection, getFileRequest, validateUri, watchedFilesChangeEvent } from '../../connection';
 import { IssueRange } from '../../language/index';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
@@ -17,7 +17,7 @@ export function initialise(connection: _Connection) {
 	connection.onCodeAction(codeActionsProvider);
 	connection.onDocumentFormatting(documentFormattingProvider);
 
-	connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
+	watchedFilesChangeEvent.push((params: DidChangeWatchedFilesParams) => {
 		let runLinter = false;
 
 		params.changes.forEach(file => {

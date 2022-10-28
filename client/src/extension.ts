@@ -49,7 +49,10 @@ export function activate(context: ExtensionContext) {
 		],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher('**/rpglint.json'),
+			fileEvents: [
+				workspace.createFileSystemWatcher('**/rpglint.json'),
+				workspace.createFileSystemWatcher(`**/*.{rpgle,RPGLE,sqlrpgle,SQLRPGLE,rpgleinc,RPGLEINC}`),
+			]
 		}
 	};
 
