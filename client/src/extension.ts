@@ -125,18 +125,21 @@ export function activate(context: ExtensionContext) {
 						parts.table = table;
 					}
 
-					await commands.executeCommand(`code-for-ibmi.runCommand`, {
+					const outfileRes: any = await commands.executeCommand(`code-for-ibmi.runCommand`, {
 						environment: `ile`,
 						command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
 					});
 
-					console.log(`Temp OUTFILE created.`);
+					console.log(outfileRes);
+					const resultCode = outfileRes.code || 0;
 
-					const data: object[] = await content.getTable(config.tempLibrary, randomFile);
+					if (resultCode === 0) {
+						const data: object[] = await content.getTable(config.tempLibrary, randomFile);
 
-					console.log(`Temp OUTFILE read. ${data.length} rows.`);
+						console.log(`Temp OUTFILE read. ${data.length} rows.`);
 
-					return data;
+						return data;
+					}
 				}
 			}
 
