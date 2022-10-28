@@ -113,9 +113,9 @@ parser.setTableFetch(async (table: string, aliases = false) => {
 
 		currentSubfield.keywords = [getPrettyType({
 			type,
-			len: digits === 0 ? strLength : digits,
+			len: digits === `0` ? strLength : digits,
 			decimals: decimals,
-			keywords: [],
+			keywords,
 		})];
 		currentSubfield.description = text.trim();
 

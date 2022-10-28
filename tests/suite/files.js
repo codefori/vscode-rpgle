@@ -34,6 +34,7 @@ exports.simple_file = async () => {
 
   assert.strictEqual(empRdcFmt.name, `EMPLOYEE`);
 
+  assert.strictEqual(empRdcFmt.subItems[1].keywords[0], `VARCHAR(12)`);
   // 14 fields inside of this record format
   assert.strictEqual(empRdcFmt.subItems.length, 14);
 };
@@ -143,5 +144,21 @@ exports.ds_extname_alias = async () => {
   assert.strictEqual(dept.subItems[1].name, `DEPT_NAME`);
 }
 
-// exports.file_prefix = async () => {
-// }
+exports.file_prefix = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-f display workstn usropn prefix(d);`,
+    `end-ds;`,
+    ``,
+    `Exfmt display;`,
+    ``,
+    `return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  const disp = cache.find(`display`);
+  assert.strictEqual(disp.subItems[0].subItems[0].name, `DE1_OPTION`);
+}

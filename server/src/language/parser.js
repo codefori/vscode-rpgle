@@ -423,11 +423,11 @@ export default class Parser {
               };
 
               const objectName = getObjectName(parts[1], parts);
-			  let prefix = ``;
+			        let prefix = ``;
 
               parts.find(element => {
-                if (element.includes(`PREFIX`)) {
-                  prefix = element.substring(7, element.indexOf(`)`))
+                if (element.toUpperCase().includes(`PREFIX`)) {
+                  prefix = element.trim().substring(7, element.indexOf(`)`))
                   return true;
                 }
               });					  
@@ -805,7 +805,7 @@ export default class Parser {
                 line: lineNumber
               };
 			  
-			  let prefix = ``;
+			        let prefix = ``;
 
               fSpec.keywords.find(element => {
                 if (element.toUpperCase().includes(`PREFIX`)) {

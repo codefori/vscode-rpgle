@@ -106,6 +106,8 @@ export function getPrettyType(lineData) {
   case `A`:
     if (lineData.keywords.indexOf(`VARYING`) >= 0) {
       outType = `Varchar`;
+	  // For VARCHAR, the field defined will have a 2-byte integer field appended to the beginning of it that will contain the length of the data that is valid in the data portion of the field
+      length -= 2;
     } else {
       outType = `Char`;
     }
@@ -129,6 +131,9 @@ export function getPrettyType(lineData) {
     outType = `Ucs2` + `(` + lineData.len + `)`;
     break;  
   case `D`:
+    outType = `Date`;
+    break;
+  case `L`:
     outType = `Date`;
     break;
   case `F`:
@@ -192,6 +197,7 @@ export function getPrettyType(lineData) {
     break;
   case `Z`:
     outType = `Timestamp`;
+	  outType += `(` + length + `)`;							  
     break;
   case `*`:
     outType = `Pointer`;
