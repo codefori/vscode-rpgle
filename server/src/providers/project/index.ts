@@ -1,8 +1,10 @@
 import { getFileRequest, getProjectFiles, watchedFilesChangeEvent } from '../../connection';
-import { parser } from '..';
+import { documents, parser } from '..';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
-import { DidChangeWatchedFilesParams, FileChangeType } from 'vscode-languageserver';
+import { DidChangeWatchedFilesParams, FileChangeType, Location, Range } from 'vscode-languageserver';
+import Declaration from '../../language/models/declaration';
+import { calculateOffset } from '../linter';
 
 export let isEnabled = false;
 /**
@@ -55,4 +57,54 @@ async function loadFile(uri: string) {
 			}
 		});
 	}
+}
+
+export function findAllReferences(def: Declaration): Location[] {
+	let locations: Location[] = [];
+
+	if (isEnabled) {
+		const baseUri = def.position.path;
+
+		const parsedCache = Object.keys(parser.parsedCache);
+
+		parsedCache.forEach(uri => {
+			const document = documents.get(uri);
+			if (document) {
+				const cache = parser.getParsedCache(uri);
+
+				// If this cache include a copybook
+				const foundInclude = cache.includes.find(include => include.toPath === baseUri)
+				if (foundInclude) {
+					const possibleDef = cache.find(def.name);
+
+					// Okay, we found something with a similar name in another file...
+					if (possibleDef) {
+						if (def.type === `procedure`) {
+							// If it's a procedure definition, check it's got EXTPROC on it
+							if (possibleDef.type === `procedure` && possibleDef.keyword[`EXTPROC`]) {
+
+							}
+
+						} else {
+							if (possibleDef.position.path === def.position.path) {
+								locations.push(
+									// First, we push the copybook where it is brought in.
+									// We do this because we don't have references for non-**free
+									Location.create(uri, Range.create(foundInclude.line, 0, foundInclude.line, 0)),
+
+									// Then we push the references. Empty for non-**free
+									...possibleDef.references.map(ref => Location.create(
+										uri,
+										calculateOffset(document, ref)
+									))
+								);
+							}
+						}
+					}
+				}
+			}
+		})
+	}
+
+	return locations;
 }

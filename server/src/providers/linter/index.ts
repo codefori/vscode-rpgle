@@ -1,15 +1,16 @@
 import path = require('path');
-import { json, text } from 'stream/consumers';
 import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, Range, TextDocumentChangeEvent, TextEdit, WorkspaceEdit, _Connection } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { documents, parser } from '..';
 import { connection, getFileRequest, validateUri, watchedFilesChangeEvent } from '../../connection';
-import { IssueRange } from '../../language/index';
+import { IssueRange, Rules } from '../../language/index';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
 import codeActionsProvider from './codeActions';
 import documentFormattingProvider from './documentFormatting';
+
+import * as Project from "../project";
 
 export let jsonCache: {[uri: string]: string} = {};
 
@@ -144,9 +145,13 @@ export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
 		const indentDiags: Diagnostic[] = [];
 		const generalDiags: Diagnostic[] = [];
 
-		const options = await getLintOptions(document.uri);
+		const options: Rules = await getLintOptions(document.uri);
 
 		let detail;
+
+		if (Project.isEnabled) {
+			options.CollectReferences = true;
+		}
 
 		try {
 			detail = Linter.getErrors({
