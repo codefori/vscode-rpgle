@@ -123,7 +123,7 @@ parser.setTableFetch(async (table: string, aliases = false) => {
 			type,
 			len: digits === 0 ? strLength : digits,
 			decimals: decimals,
-			keywords: [],
+			keywords,
 		})];
 		currentSubfield.description = text.trim();
 
