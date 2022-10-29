@@ -144,5 +144,20 @@ exports.ds_extname_alias = async () => {
   assert.strictEqual(dept.subItems[1].name, `DEPT_NAME`);
 }
 
-// exports.file_prefix = async () => {
-// }
+exports.file_prefix = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-f display workstn usropn prefix(d);`,
+    ``,
+    `Exfmt display;`,
+    ``,
+    `return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  const disp = cache.find(`display`);
+  assert.strictEqual(disp.subItems[0].subItems[0].name, `DE1_OPTION`);
+}
