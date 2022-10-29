@@ -109,7 +109,7 @@ export function activate(context: ExtensionContext) {
 			}
 
 			return undefined;
-		})
+		});
 
 		client.onRequest(`getObject`, async (table: string) => {
 			const instance = getBase();

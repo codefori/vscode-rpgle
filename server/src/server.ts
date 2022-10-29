@@ -23,6 +23,7 @@ import Declaration from './language/models/declaration';
 import { getPrettyType } from './language/models/fixed';
 
 import * as Project from './providers/project';
+import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -31,6 +32,8 @@ let hasDiagnosticRelatedInformationCapability = false;
 const languageToolsEnabled = process.env.LANGUAGE_TOOLS_ENABLED;
 const linterEnabled = process.env.LINTER_ENABLED;
 const formatterEnabled = process.env.FORMATTER_ENABLED;
+
+let projectEnabled = false;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -86,11 +89,18 @@ connection.onInitialize((params: InitializeParams) => {
 		const workspaceFolders = params.workspaceFolders;
 
 		if (workspaceFolders && workspaceFolders.length > 0) {
-			Project.initialise();
+			projectEnabled = true;
+			result.capabilities.workspaceSymbolProvider = true;
 		}
 	}
 
 	return result;
+});
+
+connection.onInitialized(() => {
+	if (projectEnabled) {
+		Project.initialise();
+	}
 });
 
 parser.setTableFetch(async (table: string, aliases = false) => {
@@ -210,6 +220,7 @@ if (languageToolsEnabled) {
 	connection.onCompletion(completionItemProvider);
 	connection.onHover(hoverProvider);
 	connection.onReferences(referenceProvider);
+	connection.onWorkspaceSymbol(workspaceSymbolProvider);
 }
 
 if (linterEnabled) Linter.initialise(connection);
