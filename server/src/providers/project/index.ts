@@ -72,33 +72,25 @@ export function findAllReferences(def: Declaration): Location[] {
 			if (document) {
 				const cache = parser.getParsedCache(uri);
 
-				// If this cache include a copybook
+				// It's only a valid reference if it is imported somewhere else
 				const foundInclude = cache.includes.find(include => include.toPath === baseUri)
 				if (foundInclude) {
 					const possibleDef = cache.find(def.name);
 
 					// Okay, we found something with a similar name in another file...
 					if (possibleDef) {
-						if (def.type === `procedure`) {
-							// If it's a procedure definition, check it's got EXTPROC on it
-							if (possibleDef.type === `procedure` && possibleDef.keyword[`EXTPROC`]) {
+						if (possibleDef.position.path === def.position.path) {
+							locations.push(
+								// First, we push the copybook where it is brought in.
+								// We do this because we don't have references for non-**free
+								Location.create(uri, Range.create(foundInclude.line, 0, foundInclude.line, 0)),
 
-							}
-
-						} else {
-							if (possibleDef.position.path === def.position.path) {
-								locations.push(
-									// First, we push the copybook where it is brought in.
-									// We do this because we don't have references for non-**free
-									Location.create(uri, Range.create(foundInclude.line, 0, foundInclude.line, 0)),
-
-									// Then we push the references. Empty for non-**free
-									...possibleDef.references.map(ref => Location.create(
-										uri,
-										calculateOffset(document, ref)
-									))
-								);
-							}
+								// Then we push the references. Empty for non-**free
+								...possibleDef.references.map(ref => Location.create(
+									uri,
+									calculateOffset(document, ref)
+								))
+							);
 						}
 					}
 				}
