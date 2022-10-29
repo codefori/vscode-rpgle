@@ -428,7 +428,15 @@ export default class Parser {
               };
 
               const objectName = getObjectName(parts[1], parts);
+			        let prefix = ``;
 
+              parts.find(element => {
+                if (element.toUpperCase().includes(`PREFIX`)) {
+                  prefix = element.trim().substring(7, element.indexOf(`)`))
+                  return true;
+                }
+              });	
+			  
               const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
 
               if (recordFormats.length > 0) {
@@ -442,6 +450,10 @@ export default class Parser {
                   recordFormat.position = currentItem.position;
 
                   recordFormat.subItems.forEach(subItem => {
+                    // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
+                    if(prefix) {
+                      subItem.name = prefix + subItem.name;
+                    }
                     subItem.position = currentItem.position;
                   });
                 });
@@ -797,6 +809,15 @@ export default class Parser {
                 path: file,
                 line: lineNumber
               };
+			  
+			        let prefix = ``;
+
+              fSpec.keywords.find(element => {
+                if (element.toUpperCase().includes(`PREFIX`)) {
+                  prefix = element.substring(7, element.indexOf(`)`))
+                  return true;
+                }
+              });				 
 
               const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
@@ -811,6 +832,10 @@ export default class Parser {
                   recordFormat.position = currentItem.position;
 
                   recordFormat.subItems.forEach(subItem => {
+					          // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
+                    if(prefix) {
+                      subItem.name = prefix.toUpperCase() + subItem.name;
+                    }					 
                     subItem.position = currentItem.position;
                   });
                 });

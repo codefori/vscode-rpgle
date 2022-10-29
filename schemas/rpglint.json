@@ -23,7 +23,7 @@
 			"PrototypeCheck": {
 					"$id": "#/properties/PrototypeCheck",
 					"type": "boolean",
-					"description": "Prototypes can only be defined with either EXT, EXTPGM or EXTPROC"
+					"description": "Prototypes can only be defined with either EXTPGM or EXTPROC."
 			},
 			"ForceOptionalParens": {
 					"$id": "#/properties/ForceOptionalParens",

@@ -1783,10 +1783,6 @@ exports.linter21 = async () => {
   });
 }
 
-/**
-   * Test procedure length.
-   * When Procedure is defined, the prototype is overridden.
-   */
 exports.linter22 = async () => {
   const lines = [
     `**FREE`,
@@ -1819,6 +1815,26 @@ exports.linter22 = async () => {
       new Position(2, 19),
     ),
   });
+}
+
+exports.linter22_b = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Pr TheProcedure EXTPROC;`,
+    `  parmA CHAR(20);`,
+    `End-Pr`,
+    ``,
+    `Dcl-S theVar CHAR(20);`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    PrototypeCheck: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
 }
 
 exports.linter23 = async () => {

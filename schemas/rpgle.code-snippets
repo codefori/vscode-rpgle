@@ -12,6 +12,34 @@
 	// 	],
 	// 	"description": "Log output to console"
 	// }
+	"variable": {
+		"prefix": "dcl-s",
+		"description": "Declare variable",
+		"body": "dcl-s ${1:name} ${2|char,varchar,zoned,packed,ind,int,uns,like|}(${3:length}) ${4:keywords};$0"
+	},
+	"constant": {
+		"prefix": "dcl-c",
+		"description": "Declare constant",
+		"body": "dcl-c ${1:name} ${2:value};$0"
+	},
+	"struct": {
+		"prefix": "dcl-ds",
+		"description": "Declare structure",
+		"body": [
+			"dcl-ds ${1:name} ${2|qualified,likeds()|} ${3|dim,template|}${4};",
+			"  $0",
+			"end-ds;"
+		]
+	},
+	"struct-external": {
+		"prefix": "dcl-ds-ext",
+		"description": "Declare external structure",
+		"body": [
+			"dcl-ds ${1:name} ExtName('${2:object}') Qualified;",
+			"end-ds;",
+			"$0"
+		]
+	},
 	"%abs": {
 		"prefix": "%abs",
 		"body": [
