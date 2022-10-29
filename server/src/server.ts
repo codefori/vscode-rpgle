@@ -22,6 +22,8 @@ import { referenceProvider } from './providers/reference';
 import Declaration from './language/models/declaration';
 import { getPrettyType } from './language/models/fixed';
 
+import * as Project from './providers/project';
+
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
@@ -79,6 +81,15 @@ connection.onInitialize((params: InitializeParams) => {
 			},
 		};
 	}
+
+	if (languageToolsEnabled && hasWorkspaceFolderCapability) {
+		const workspaceFolders = params.workspaceFolders;
+
+		if (workspaceFolders && workspaceFolders.length > 0) {
+			Project.initialise();
+		}
+	}
+
 	return result;
 });
 
@@ -213,7 +224,7 @@ documents.onDidChangeContent(handler => {
 			ignoreCache: true
 		}
 	).then(cache => {
-		if (linterEnabled && cache) {
+		if (cache) {
 			Linter.refreshDiagnostics(handler.document, cache);
 		}
 	});

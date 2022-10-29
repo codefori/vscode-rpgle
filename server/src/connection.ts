@@ -48,3 +48,7 @@ export async function getFileRequest(uri: string) {
 export function getObject(objectPath: string): Promise<object[]> {
 	return connection.sendRequest("getObject", objectPath);
 }
+
+export function getProjectFiles(): Promise<string[]|undefined> {
+	return connection.sendRequest("getProjectFiles");
+}

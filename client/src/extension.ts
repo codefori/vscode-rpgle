@@ -21,6 +21,8 @@ import getBase from './base';
 
 let client: LanguageClient;
 
+const projectFilesGlob = `**/*.{rpgle,RPGLE,sqlrpgle,SQLRPGLE,rpgleinc,RPGLEINC}`;
+
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
 	const serverModule = context.asAbsolutePath(
@@ -51,7 +53,7 @@ export function activate(context: ExtensionContext) {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: [
 				workspace.createFileSystemWatcher('**/rpglint.json'),
-				workspace.createFileSystemWatcher(`**/*.{rpgle,RPGLE,sqlrpgle,SQLRPGLE,rpgleinc,RPGLEINC}`),
+				workspace.createFileSystemWatcher(projectFilesGlob),
 			]
 		}
 	};
@@ -99,6 +101,15 @@ export function activate(context: ExtensionContext) {
 
 			return;
 		});
+
+		client.onRequest(`getProjectFiles`, async (): Promise<string[]|undefined> => {
+			if (workspace.workspaceFolders) {
+				const uris = await workspace.findFiles(projectFilesGlob);
+				return uris.map(uri => uri.toString());
+			}
+
+			return undefined;
+		})
 
 		client.onRequest(`getObject`, async (table: string) => {
 			const instance = getBase();
