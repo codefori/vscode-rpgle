@@ -96,6 +96,8 @@ connection.onInitialize((params: InitializeParams) => {
 		}
 	}
 
+	console.log(`Project Mode enabled: ${projectEnabled}`);
+
 	return result;
 });
 

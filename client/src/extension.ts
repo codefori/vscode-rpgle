@@ -18,6 +18,7 @@ import {
 } from 'vscode-languageclient/node';
 
 import getBase from './base';
+import { initBuilder } from './builder';
 
 let client: LanguageClient;
 
@@ -166,6 +167,8 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
+
+	// context.subscriptions.push(...initBuilder(client));
 	
 	console.log(`started`);
 }

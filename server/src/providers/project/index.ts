@@ -1,4 +1,4 @@
-import { getFileRequest, getProjectFiles, watchedFilesChangeEvent } from '../../connection';
+import { connection, getFileRequest, getProjectFiles, watchedFilesChangeEvent } from '../../connection';
 import { documents, parser } from '..';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
@@ -28,6 +28,10 @@ export async function initialise() {
 					break;
 			}
 		})
+	});
+
+	connection.onRequest(`getCache`, (uri: string) => {
+		return parser.getParsedCache(uri);
 	});
 }
 
