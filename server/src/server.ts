@@ -22,6 +22,10 @@ import { referenceProvider } from './providers/reference';
 import Declaration from './language/models/declaration';
 import { getPrettyType } from './language/models/fixed';
 
+import * as Project from './providers/project';
+import workspaceSymbolProvider from './providers/project/workspaceSymbol';
+import implementationProvider from './providers/project/implementation';
+
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
@@ -29,6 +33,8 @@ let hasDiagnosticRelatedInformationCapability = false;
 const languageToolsEnabled = process.env.LANGUAGE_TOOLS_ENABLED;
 const linterEnabled = process.env.LINTER_ENABLED;
 const formatterEnabled = process.env.FORMATTER_ENABLED;
+
+let projectEnabled = false;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -79,7 +85,26 @@ connection.onInitialize((params: InitializeParams) => {
 			},
 		};
 	}
+
+	if (languageToolsEnabled && hasWorkspaceFolderCapability) {
+		const workspaceFolders = params.workspaceFolders;
+
+		if (workspaceFolders && workspaceFolders.length > 0) {
+			projectEnabled = true;
+			result.capabilities.workspaceSymbolProvider = true;
+			result.capabilities.implementationProvider = true;
+		}
+	}
+
+	console.log(`Project Mode enabled: ${projectEnabled}`);
+
 	return result;
+});
+
+connection.onInitialized(() => {
+	if (projectEnabled) {
+		Project.initialise();
+	}
 });
 
 parser.setTableFetch(async (table: string, aliases = false) => {
@@ -199,6 +224,10 @@ if (languageToolsEnabled) {
 	connection.onCompletion(completionItemProvider);
 	connection.onHover(hoverProvider);
 	connection.onReferences(referenceProvider);
+
+	// project specific
+	connection.onWorkspaceSymbol(workspaceSymbolProvider);
+	connection.onImplementation(implementationProvider)
 }
 
 if (linterEnabled) Linter.initialise(connection);
@@ -213,7 +242,7 @@ documents.onDidChangeContent(handler => {
 			ignoreCache: true
 		}
 	).then(cache => {
-		if (linterEnabled && cache) {
+		if (cache) {
 			Linter.refreshDiagnostics(handler.document, cache);
 		}
 	});

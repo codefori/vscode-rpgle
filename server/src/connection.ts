@@ -1,5 +1,7 @@
+import { connect } from 'http2';
 import {
 	createConnection,
+	DidChangeWatchedFilesParams,
 	ProposedFeatures,
 	_Connection
 } from 'vscode-languageserver/node';
@@ -10,6 +12,11 @@ import { documents, findFile } from './providers';
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 export const connection: _Connection = createConnection(ProposedFeatures.all);
+
+export let watchedFilesChangeEvent: ((params: DidChangeWatchedFilesParams) => void)[] = [];
+connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
+	watchedFilesChangeEvent.forEach(editEvent => editEvent(params));
+})
 
 export async function validateUri(stringUri: string, scheme = ``) {
 	// First, check local cache
@@ -40,4 +47,12 @@ export async function getFileRequest(uri: string) {
 
 export function getObject(objectPath: string): Promise<object[]> {
 	return connection.sendRequest("getObject", objectPath);
+}
+
+export function getProjectFiles(): Promise<string[]|undefined> {
+	return connection.sendRequest("getProjectFiles");
+}
+
+export function getIncludesUris(uri: string): Promise<{uri: string, relative: string}[]> {
+	return connection.sendRequest(`getIncludesUris`, uri);
 }
