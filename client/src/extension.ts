@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, Uri, commands } from 'vscode';
+import { workspace, ExtensionContext, Uri, commands, RelativePattern } from 'vscode';
 
 import * as Linter from "./linter";
 import * as columnAssist from "./columnAssist";
@@ -68,7 +68,7 @@ export function activate(context: ExtensionContext) {
 	);
 
 	client.onReady().then(() => {
-		client.onRequest("getUri", async (stringUri: string): Promise<string|undefined> => {
+		client.onRequest("getUri", async (stringUri: string): Promise<string | undefined> => {
 			const uri = Uri.parse(stringUri);
 			let doc;
 			try {
@@ -80,18 +80,18 @@ export function activate(context: ExtensionContext) {
 			if (doc) {
 				return doc.uri.toString();
 			} else
-			if (uri.scheme === `file`) {
-				const basename = path.basename(uri.path);
-				const [possibleFile] = await workspace.findFiles(`**/${basename}`, undefined, 1);
-				if (possibleFile) {
-					return possibleFile.toString();
+				if (uri.scheme === `file`) {
+					const basename = path.basename(uri.path);
+					const [possibleFile] = await workspace.findFiles(`**/${basename}`, undefined, 1);
+					if (possibleFile) {
+						return possibleFile.toString();
+					}
 				}
-			}
 
 			return;
 		});
 
-		client.onRequest("getFile", async (stringUri: string) : Promise<string|undefined> => { 
+		client.onRequest("getFile", async (stringUri: string): Promise<string | undefined> => {
 			// Always assumes URI is valid. Use getUri first
 			const uri = Uri.parse(stringUri);
 			const doc = await workspace.openTextDocument(uri);
@@ -103,13 +103,34 @@ export function activate(context: ExtensionContext) {
 			return;
 		});
 
-		client.onRequest(`getProjectFiles`, async (): Promise<string[]|undefined> => {
+		client.onRequest(`getProjectFiles`, async (): Promise<string[] | undefined> => {
 			if (workspace.workspaceFolders) {
 				const uris = await workspace.findFiles(projectFilesGlob);
 				return uris.map(uri => uri.toString());
 			}
 
 			return undefined;
+		});
+
+		client.onRequest(`getIncludesUris`, async (stringUri: string): Promise<{uri: string, relative: string}[]> => {
+			if (workspace.workspaceFolders) {
+				const uri = Uri.parse(stringUri);
+				const workspaceFolder = workspace.getWorkspaceFolder(uri);
+
+				if (workspaceFolder) {
+					const relativeWorkspace = new RelativePattern(workspaceFolder, `**/*.{rpgleinc,RPGLEINC}`);
+					const localFiles = await workspace.findFiles(relativeWorkspace);
+
+					return localFiles.map(localFile => {
+						return {
+							uri: localFile.toString(),
+							relative: path.relative(workspaceFolder.uri.path, localFile.path)
+						};
+					});
+				}
+			}
+
+			return [];
 		});
 
 		client.onRequest(`getObject`, async (table: string) => {
@@ -120,7 +141,7 @@ export function activate(context: ExtensionContext) {
 				if (connection) {
 					const content = instance.getContent();
 					const config = instance.getConfig();
-		
+
 					const dateStr = Date.now().toString().substr(-6);
 					const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
 					const fullPath = `${config.tempLibrary}/${randomFile}`;
@@ -131,7 +152,7 @@ export function activate(context: ExtensionContext) {
 						schema: `*LIBL`,
 						table: ``,
 					};
-		
+
 					if (table.includes(`/`)) {
 						const splitName = table.split(`/`);
 						if (splitName.length >= 2) parts.schema = splitName[splitName.length - 2];
@@ -169,7 +190,7 @@ export function activate(context: ExtensionContext) {
 	columnAssist.registerColumnAssist(context);
 
 	// context.subscriptions.push(...initBuilder(client));
-	
+
 	console.log(`started`);
 }
 

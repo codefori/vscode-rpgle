@@ -52,3 +52,7 @@ export function getObject(objectPath: string): Promise<object[]> {
 export function getProjectFiles(): Promise<string[]|undefined> {
 	return connection.sendRequest("getProjectFiles");
 }
+
+export function getIncludesUris(uri: string): Promise<{uri: string, relative: string}[]> {
+	return connection.sendRequest(`getIncludesUris`, uri);
+}
