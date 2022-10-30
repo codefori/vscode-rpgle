@@ -1,5 +1,5 @@
 import path = require('path');
-import { CompletionItem, CompletionItemKind, CompletionParams, Position, Range } from 'vscode-languageserver';
+import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
 import { getIncludesUris } from '../connection';
 import Cache from '../language/models/cache';
@@ -94,6 +94,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						for (const procedure of localCache.procedures) {
 							const item = CompletionItem.create(`${procedure.name}`);
 							item.kind = CompletionItemKind.Function;
+							item.insertTextFormat = InsertTextFormat.Snippet;
 							item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`;
 							item.detail = procedure.keywords.join(` `);
 							item.documentation = procedure.description;
