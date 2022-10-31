@@ -62,7 +62,7 @@ export default class Parser {
    * @returns {Promise<Declaration[]>}
    */
   async fetchTable(name, keyVersion = ``, aliases) {
-    if (name.trim() === ``) return [];
+    if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
     const table = name.toUpperCase();
     const existingVersion = table;
