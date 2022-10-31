@@ -31,19 +31,17 @@ export function initBuilder(client: LanguageClient) {
 							objectName = detail.name + `.MODULE`;
 						}
 
-						// Then add includes
-						// NOTE: we don't add includes as deps anymore
-						// const includes: any[] = cache.includes;
-						// includes.forEach(include => {
-						// 	const sourceDep = path.basename(include.toPath);
-						// 	deps.push(sourceDep);
-						// });
+						const includes: any[] = cache.includes;
+						includes.forEach(include => {
+							const sourceDep = path.basename(include.toPath);
+							deps.push(sourceDep);
+						});
 
 						// Look for file definitions
 						const files: any[] = cache.files;
 						const fileObjectSource = await Promise.all(files.map(file => {
 							const fileName = file.name.toLowerCase();
-							return workspace.findFiles(`**/{${fileName},${fileName.toUpperCase()}}.*`, undefined, 1);
+							return workspace.findFiles(`**/{${fileName},${fileName.toUpperCase()}}.*`, `**/${sourceName}`, 1);
 						}));
 						fileObjectSource.forEach(files => {
 							const foundFile = files[0];
@@ -58,7 +56,7 @@ export function initBuilder(client: LanguageClient) {
 						const otherFileObjectSource = await Promise.all(extStructs.map(struct => {
 							const keyword = struct.keyword;
 							const fileName = trimQuotes(keyword[`EXTNAME`]).toLowerCase();
-							return workspace.findFiles(`**/{${fileName},${fileName.toUpperCase()}}.*`, undefined, 1);
+							return workspace.findFiles(`**/{${fileName},${fileName.toUpperCase()}}.*`, `**/${sourceName}`, 1);
 						}));
 						otherFileObjectSource.forEach(files => {
 							const foundFile = files[0];
@@ -78,7 +76,7 @@ export function initBuilder(client: LanguageClient) {
 								if (extpgm === true) fileName = struct.name;
 								else fileName = trimQuotes(extpgm);
 							}
-							return workspace.findFiles(`**/{${fileName.toLowerCase()},${fileName.toUpperCase()}}.*`, undefined, 1);
+							return workspace.findFiles(`**/{${fileName.toLowerCase()},${fileName.toUpperCase()}}.*`, `**/${sourceName}`, 1);
 						}));
 						pgmSources.forEach(files => {
 							const foundFile = files[0];
