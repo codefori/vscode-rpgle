@@ -178,6 +178,9 @@ export default class Parser {
     /** @type {Declaration[]} Free format struct scopes. Used for free-format only */
     let dsScopes = [];
 
+    /** @type {string[]} */
+    let keywords = [];
+
     // Global scope bits
     scopes.push(new Cache());
 
@@ -365,7 +368,7 @@ export default class Parser {
               line = line.substring(7);
 
               lineIsFree = true;
-            } else if (![`D`, `P`, `C`, `F`].includes(spec)) {
+            } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
             } else {
               if (spec === `C`) {
@@ -415,6 +418,10 @@ export default class Parser {
           }
 
           switch (parts[0]) {
+          case `CTL-OPT`:
+            keywords.push(...parts.slice(1));
+            break;
+
           case `DCL-F`:
             if (currentItem === undefined) {
               currentItem = new Declaration(`file`);
@@ -796,6 +803,10 @@ export default class Parser {
           }
 
           switch (spec) {
+          case `H`:
+            keywords.push(line.substring(6));
+            break;
+
           case `F`:
             const fSpec = parseFLine(line);
             potentialName = getObjectName(fSpec.name, fSpec.keywords);
@@ -1119,6 +1130,8 @@ export default class Parser {
         }
       }
     }
+
+    scopes[0].keyword = Parser.expandKeywords(keywords);
 
     const parsedData = scopes[0];
 

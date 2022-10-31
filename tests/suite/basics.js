@@ -251,6 +251,8 @@ exports.test10 = async () => {
   const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
+  assert.strictEqual(Object.keys(cache.keyword).length, 1);
+  assert.strictEqual(cache.keyword[`DFTACTGRP`], `*NO`);
   assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);

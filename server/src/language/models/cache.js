@@ -13,6 +13,9 @@ export default class Cache {
    * @param {CacheProps} cache 
    */
   constructor(cache = {}) {
+    /** @type {Keywords} */
+    this.keyword = {};
+
     /** @type {Declaration[]} */
     this.subroutines = cache.subroutines || [];
 

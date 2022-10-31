@@ -1004,4 +1004,40 @@ exports.def_ranges = async () => {
     start: 45,
     end: 48
   });
-}
+};
+
+exports.ctl_opt_fixed = async () => {
+  const lines = [
+    `     H ALTSEQ(*EXT) CURSYM('$') DATEDIT(*MDY) DATFMT(*MDY/) DEBUG(*YES)`,
+    `     H DECEDIT('.') FORMSALIGN(*YES) FTRANS(*SRC) DFTNAME(name)`,
+    `     H TIMFMT(*ISO)`,
+    `     H COPYRIGHT('(C) Copyright ABC Programming - 1995')`,
+    ``,
+    `     d InType          s             10`,
+    ``,
+    `      *`,
+    `      * Date structure for retriving userspace info`,
+    `      *`,
+    `     d InputDs         DS`,
+    `     d  UserSpace              1     20`,
+    `     d  SpaceName              1     10`,
+    `     d  SpaceLib              11     20`,
+    `     d  InpFileLib            29     48`,
+    `     d  InpFFilNam            29     38`,
+    `     d  InpFFilLib            39     48`,
+    `     d  InpRcdFmt             49     58`,
+    `     d Worktype        s             10    inz('*OUTQ')`,
+    ``,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
+  assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
+
+  assert.strictEqual(Object.keys(cache.keyword).length, 11);
+  assert.strictEqual(cache.keyword[`FTRANS`], `*SRC`);
+  assert.strictEqual(cache.keyword[`DATFMT`], `*MDY/`);
+  assert.strictEqual(cache.keyword[`COPYRIGHT`], `'(C) Copyright ABC Programming - 1995'`);
+};

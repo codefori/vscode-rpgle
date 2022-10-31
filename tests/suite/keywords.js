@@ -124,6 +124,10 @@ exports.ctdata2 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
+  assert.strictEqual(Object.keys(cache.keyword).length, 2);
+  assert.strictEqual(cache.keyword[`DEBUG`], true);
+  assert.strictEqual(cache.keyword[`OPTION`], `*NODEBUGIO:*SRCSTMT`);
+
   assert.strictEqual(cache.variables.length, 1);
   assert.strictEqual(cache.structs.length, 1);
 }
