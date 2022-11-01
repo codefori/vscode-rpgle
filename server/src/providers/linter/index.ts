@@ -3,7 +3,6 @@ import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWa
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { documents, parser } from '..';
-import { connection, getFileRequest, validateUri, watchedFilesChangeEvent } from '../../connection';
 import { IssueRange, Rules } from '../../language/index';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
@@ -11,8 +10,9 @@ import codeActionsProvider from './codeActions';
 import documentFormattingProvider from './documentFormatting';
 
 import * as Project from "../project";
+import { connection, getFileRequest, validateUri, watchedFilesChangeEvent } from '../../connection';
 
-export let jsonCache: {[uri: string]: string} = {};
+export let jsonCache: { [uri: string]: string } = {};
 
 export function initialise(connection: _Connection) {
 	connection.onCodeAction(codeActionsProvider);
@@ -84,7 +84,7 @@ export function calculateOffset(document: TextDocument, error: IssueRange) {
 
 export async function getLintConfigUri(workingUri: string) {
 	const uri = URI.parse(workingUri);
-	let cleanString: string|undefined;
+	let cleanString: string | undefined;
 
 	switch (uri.scheme) {
 		case `member`:
@@ -116,7 +116,7 @@ export async function getLintConfigUri(workingUri: string) {
 export async function getLintOptions(workingUri: string) {
 	const possibleUri = await getLintConfigUri(workingUri);
 	let result = {};
-	
+
 	if (possibleUri) {
 		if (jsonCache[possibleUri]) return JSON.parse(jsonCache[possibleUri]);
 		try {
@@ -149,14 +149,18 @@ export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
 
 		let detail;
 
+		let availableIncludes: string[] | undefined;
 		if (Project.isEnabled) {
 			options.CollectReferences = true;
+			const headers = await Project.getIncludes(document.uri);
+			availableIncludes = headers.map(header => header.relative);
 		}
 
 		try {
 			detail = Linter.getErrors({
 				uri: document.uri,
 				content: text,
+				availableIncludes
 			}, options, docs);
 		} catch (e: any) {
 			console.log(`Error linting ${document.uri}: ${e.message}`);
@@ -172,10 +176,9 @@ export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
 			indentErrors.forEach(error => {
 				const range = Range.create(error.line, 0, error.line, error.currentIndent);
 
-
 				indentDiags.push(Diagnostic.create(
-					range, 
-					`Incorrect indentation. Expected ${error.expectedIndent}, got ${error.currentIndent}`, 
+					range,
+					`Incorrect indentation. Expected ${error.expectedIndent}, got ${error.currentIndent}`,
 					DiagnosticSeverity.Warning
 				));
 			});
@@ -186,8 +189,8 @@ export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
 				const range = calculateOffset(document, error);
 
 				const diagnostic = Diagnostic.create(
-					range, 
-					Linter.getErrorText(error.type), 
+					range,
+					Linter.getErrorText(error.type),
 					DiagnosticSeverity.Warning
 				);
 
@@ -196,6 +199,7 @@ export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
 		}
 
 		connection.sendDiagnostics({ uri: document.uri, diagnostics: [...indentDiags, ...generalDiags] });
+		return detail;
 	}
 }
 
@@ -217,115 +221,129 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 		let errorRange = calculateOffset(document, error);
 
 		switch (error.type) {
-		case `UppercaseConstants`:
-			if (error.newValue) {
-				action = CodeAction.create(`Convert constant name to uppercase`, CodeActionKind.QuickFix);
-				action.edit = {
-					changes: {
-						[document.uri]: [TextEdit.replace(errorRange, error.newValue)]
-					},
+			case `UppercaseConstants`:
+				if (error.newValue) {
+					action = CodeAction.create(`Convert constant name to uppercase`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [TextEdit.replace(errorRange, error.newValue)]
+						},
+					}
+					actions.push(action);
 				}
-				actions.push(action);
-			}
-			break;
+				break;
 
-		case `ForceOptionalParens`:
-			action = CodeAction.create(`Add brackets around expression`, CodeActionKind.QuickFix);
-			action.edit = {
-				changes: {
-					[document.uri]: [
-						TextEdit.insert(errorRange.end, `)`),
-						TextEdit.insert(errorRange.start, `(`),
-					]
-				},
-			}
-			actions.push(action);
-			break;
-
-		case `UselessOperationCheck`:
-			action = CodeAction.create(`Remove operation code`, CodeActionKind.QuickFix);
-			action.edit = {
-				changes: {
-					[document.uri]: [
-						TextEdit.del(errorRange),
-					]
-				},
-			}
-			actions.push(action);
-			break;
-
-		case `SpecificCasing`:
-		case `IncorrectVariableCase`:
-		case `UppercaseDirectives`:
-			if (error.newValue) {
-			action = CodeAction.create(`Correct casing to '${error.newValue}'`, CodeActionKind.QuickFix);
+			case `ForceOptionalParens`:
+				action = CodeAction.create(`Add brackets around expression`, CodeActionKind.QuickFix);
 				action.edit = {
 					changes: {
 						[document.uri]: [
-							TextEdit.replace(errorRange, error.newValue)
+							TextEdit.insert(errorRange.end, `)`),
+							TextEdit.insert(errorRange.start, `(`),
 						]
 					},
 				}
 				actions.push(action);
-			}
-			break;
+				break;
 
-		case `RequiresProcedureDescription`:
-			action = CodeAction.create(`Add title and description`, CodeActionKind.QuickFix);
-			action.edit = {
-				changes: {
-					[document.uri]: [
-						TextEdit.insert(errorRange.start, `///\n// Title\n// Description\n///\n`)
-					]
-				},
-			}
-			actions.push(action);
-			break;
-
-		case `RequireBlankSpecial`:
-			if (error.newValue) {
-				action = CodeAction.create(`Convert constant name to uppercase`, CodeActionKind.QuickFix);
+			case `UselessOperationCheck`:
+				action = CodeAction.create(`Remove operation code`, CodeActionKind.QuickFix);
 				action.edit = {
 					changes: {
 						[document.uri]: [
-							TextEdit.replace(errorRange, error.newValue)
+							TextEdit.del(errorRange),
 						]
 					},
 				}
 				actions.push(action);
-			}
-			break;
+				break;
 
-		case `SQLHostVarCheck`:
-		case `CopybookDirective`:
-		case `StringLiteralDupe`:
-		case `NoGlobalSubroutines`:
-			if (error.newValue) {
-				action = CodeAction.create(`Switch to '${error.newValue}'`, CodeActionKind.QuickFix);
+			case `SpecificCasing`:
+			case `IncorrectVariableCase`:
+			case `UppercaseDirectives`:
+				if (error.newValue) {
+					action = CodeAction.create(`Correct casing to '${error.newValue}'`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [
+								TextEdit.replace(errorRange, error.newValue)
+							]
+						},
+					}
+					actions.push(action);
+				}
+				break;
+
+			case `RequiresProcedureDescription`:
+				action = CodeAction.create(`Add title and description`, CodeActionKind.QuickFix);
 				action.edit = {
 					changes: {
 						[document.uri]: [
-							TextEdit.replace(errorRange, error.newValue)
+							TextEdit.insert(errorRange.start, `///\n// Title\n// Description\n///\n`)
 						]
 					},
 				}
 				actions.push(action);
-			}
-			break;
-		
-		case `PrettyComments`:
-			if (error.newValue) {
-				action = CodeAction.create(`Fix comment formatting`, CodeActionKind.QuickFix);
-				action.edit = {
-					changes: {
-						[document.uri]: [
-							TextEdit.replace(errorRange, error.newValue)
-						]
-					},
+				break;
+
+			case `RequireBlankSpecial`:
+				if (error.newValue) {
+					action = CodeAction.create(`Convert constant name to uppercase`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [
+								TextEdit.replace(errorRange, error.newValue)
+							]
+						},
+					}
+					actions.push(action);
 				}
-				actions.push(action);
-			}
-			break;
+				break;
+
+			case `SQLHostVarCheck`:
+			case `CopybookDirective`:
+			case `StringLiteralDupe`:
+			case `NoGlobalSubroutines`:
+				if (error.newValue) {
+					action = CodeAction.create(`Switch to '${error.newValue}'`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [
+								TextEdit.replace(errorRange, error.newValue)
+							]
+						},
+					}
+					actions.push(action);
+				}
+				break;
+
+			case `IncludeMustBeRelative`:
+				if (error.newValue) {
+					action = CodeAction.create(`Correct path to ${error.newValue}`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [
+								TextEdit.replace(errorRange, error.newValue)
+							]
+						},
+					}
+					actions.push(action);
+				}
+				break;
+
+			case `PrettyComments`:
+				if (error.newValue) {
+					action = CodeAction.create(`Fix comment formatting`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [
+								TextEdit.replace(errorRange, error.newValue)
+							]
+						},
+					}
+					actions.push(action);
+				}
+				break;
 		}
 	});
 
