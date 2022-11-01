@@ -11,10 +11,13 @@
 	"repository": {
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
-	"version": "0.15.2",
+	"version": "0.15.3",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
+	"keywords": [
+		"rpg", "rpgle", "ibmi", "iseries", "as400"
+	],
 	"categories": [
 		"Programming Languages"
 	],
