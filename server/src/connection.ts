@@ -53,6 +53,11 @@ export function getProjectFiles(): Promise<string[]|undefined> {
 	return connection.sendRequest("getProjectFiles");
 }
 
-export function getIncludesUris(uri: string): Promise<{uri: string, relative: string}[]> {
+export interface PossibleInclude {
+	uri: string;
+	relative: string
+};
+
+export function getIncludesUris(uri: string): Promise<PossibleInclude[]> {
 	return connection.sendRequest(`getIncludesUris`, uri);
 }

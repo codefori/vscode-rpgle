@@ -1,7 +1,6 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
-import { getIncludesUris } from '../connection';
 import Cache from '../language/models/cache';
 import Declaration from '../language/models/declaration';
 import * as Project from "./project";
@@ -77,7 +76,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 				// TODO: handle /COPY and /INCLUDE
 				const upperLine = currentLine.toUpperCase();
 				if (Project.isEnabled && (upperLine.includes(`/COPY`) || upperLine.includes(`/INCLUDE`))) {
-					const localFiles = await getIncludesUris(currentPath);
+					const localFiles = await Project.getIncludes(currentPath);
 
 					items.push(...localFiles.map(file => {
 						const basename = path.basename(file.uri);

@@ -44,7 +44,7 @@ export default class Linter {
   }
 
   /**
-   * @param {{uri: string, content: string}} data
+   * @param {{uri: string, content: string, availableIncludes?: string[]}} data
    * @param {Rules} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -288,6 +288,9 @@ export default class Linter {
                           if (path.type === `word`) {
                             // /INCLUDE MEMBER
                             // This is bad.
+                            const pathValue = path.value.substring(1, path.value.length - 1).trim().toUpperCase();
+                            const possibleValue = (data.availableIncludes && data.availableIncludes.length > 0) ? data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase())) : undefined;
+
                             errors.push({
                               range: new Range(
                                 statementStart,
@@ -295,10 +298,12 @@ export default class Linter {
                               ),
                               offset: {position: path.position, end: path.position + path.value.length},
                               type: `IncludeMustBeRelative`,
+                              newValue: possibleValue ? `'${possibleValue}'` : undefined
                             });
                           } else if (path.type === `string`) {
                             // /INCLUDE 'path/to/file'
                             const pathValue = path.value.substring(1, path.value.length - 1).trim();
+
                             if (pathValue.startsWith(`/`) === true) {
                               // Bad. Path must not be absolute.
                               errors.push({
@@ -307,8 +312,27 @@ export default class Linter {
                                   statementEnd
                                 ),
                                 offset: {position: path.position, end: path.position + path.value.length},
-                                type: `IncludeMustBeRelative`,
+                                type: `IncludeMustBeRelative`
                               });
+                            } else
+                            if (data.availableIncludes && data.availableIncludes.length > 0) {
+                              const possibleValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase()));
+                              if (possibleValue) {
+                                // This means there was a possible match
+                                if (pathValue !== possibleValue) {
+                                  // But if they're not the same, offer a fix
+                                  errors.push({
+                                    range: new Range(
+                                      statementStart,
+                                      statementEnd
+                                    ),
+                                    offset: {position: path.position, end: path.position + path.value.length},
+                                    type: `IncludeMustBeRelative`,
+                                    newValue: `'${possibleValue}'`
+                                  });
+                                }
+                              }
+                              // If there's no match, we can't complain incase they're using incdir or something...
                             }
                           }
                         } else {
