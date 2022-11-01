@@ -2185,7 +2185,8 @@ exports.linter30 = async () => {
     offset: {
       position: 6,
       end: 11
-    }
+    },
+    newValue: undefined
   });
 }
 
