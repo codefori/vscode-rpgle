@@ -39,7 +39,7 @@ async function loadWorkspace() {
 	const uris = await getProjectFiles();
 
 	if (uris) {
-		const documents = await Promise.allSettled(uris?.map(uri => loadFile(uri)));
+		await Promise.allSettled(uris?.map(uri => loadFile(uri)));
 	}
 }
 
