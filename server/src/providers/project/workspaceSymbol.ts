@@ -11,8 +11,9 @@ export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): 
 
 		parsedFiles.forEach(uri => {
 			const basename = path.basename(uri);
+			const baseNameLower = basename.toLowerCase();
 
-			if (uri.endsWith(`.rpgleinc`)) {
+			if (baseNameLower.endsWith(`.rpgleinc`)) {
 				symbols.push(
 					WorkspaceSymbol.create(
 						basename,
@@ -26,7 +27,20 @@ export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): 
 						)
 					)
 				)
-
+			} else if (baseNameLower.endsWith(`.pgm.rpgle`)) {
+				symbols.push(
+					WorkspaceSymbol.create(
+						basename,
+						SymbolKind.Method,
+						uri,
+						Range.create(
+							0,
+							0,
+							0,
+							0
+						)
+					)
+				)
 			} else {
 				const cache = parser.getParsedCache(uri);
 
