@@ -44,7 +44,7 @@ export default class Linter {
   }
 
   /**
-   * @param {{uri: string, content: string}} data
+   * @param {{uri: string, content: string, availableIncludes?: string[]}} data
    * @param {Rules} rules 
    * @param {Cache|null} [globalScope]
    */
@@ -309,6 +309,25 @@ export default class Linter {
                                 offset: {position: path.position, end: path.position + path.value.length},
                                 type: `IncludeMustBeRelative`,
                               });
+                            } else
+                            if (data.availableIncludes && data.availableIncludes.length > 0) {
+                              const correctValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase()));
+                              if (correctValue) {
+                                // This means there was a possible match
+                                if (pathValue !== correctValue) {
+                                  // But if they're not the same, offer a fix
+                                  errors.push({
+                                    range: new Range(
+                                      statementStart,
+                                      statementEnd
+                                    ),
+                                    offset: {position: path.position, end: path.position + path.value.length},
+                                    type: `IncludeMustBeRelative`,
+                                    newValue: `'${correctValue}'`
+                                  });
+                                }
+                              }
+                              // If there's no match, we can't complain incase they're using incdir or something...
                             }
                           }
                         } else {
