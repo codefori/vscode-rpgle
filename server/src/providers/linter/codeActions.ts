@@ -1,7 +1,6 @@
 import { CodeAction, CodeActionParams, Range } from 'vscode-languageserver';
-import { getActions, getLintOptions } from '.';
+import { getActions, refreshDiagnostics } from '.';
 import { documents, parser } from '..';
-import Linter from '../../language/linter';
 
 export default async function codeActionsProvider(params: CodeActionParams): Promise<CodeAction[]|undefined> {
 	const uri = params.textDocument.uri;
@@ -14,17 +13,13 @@ export default async function codeActionsProvider(params: CodeActionParams): Pro
 			const docs = await parser.getDocs(document.uri);
 
 			if (docs) {
-				const options = await getLintOptions(document.uri);
-				const text = document.getText();
-				const detail = Linter.getErrors({
-					uri: document.uri,
-					content: text
-				}, options, docs);
+				const detail = await refreshDiagnostics(document, docs);
+				if (detail) {
+					const fixErrors = detail.errors.filter(error => range.start.line === error.range.start.line );
 
-				const fixErrors = detail.errors.filter(error => range.start.line === error.range.start.line );
-
-				if (fixErrors.length > 0) {
-					return getActions(document, fixErrors);
+					if (fixErrors.length > 0) {
+						return getActions(document, fixErrors);
+					}
 				}
 			}
 		}
