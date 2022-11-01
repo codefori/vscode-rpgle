@@ -1,4 +1,4 @@
-import { connection, getFileRequest, getProjectFiles, watchedFilesChangeEvent } from '../../connection';
+import { connection, getFileRequest, getIncludesUris, getProjectFiles, PossibleInclude, watchedFilesChangeEvent } from '../../connection';
 import { documents, parser } from '..';
 import Linter from '../../language/linter';
 import Cache from '../../language/models/cache';
@@ -21,6 +21,10 @@ export async function initialise() {
 				case FileChangeType.Created:
 				case FileChangeType.Changed:
 					loadFile(fileEvent.uri);
+
+					if (fileEvent.uri.toLowerCase().endsWith(`.rpgleinc`)) {
+						currentIncludes = undefined;
+					}
 					break;
 
 				default:
@@ -61,6 +65,14 @@ async function loadFile(uri: string) {
 			}
 		});
 	}
+}
+
+let currentIncludes: PossibleInclude[]|undefined = [];
+
+export async function getIncludes(basePath: string) {
+	if (!currentIncludes || currentIncludes && currentIncludes.length === 0) currentIncludes = await getIncludesUris(basePath);
+
+	return currentIncludes;
 }
 
 export function findAllReferences(def: Declaration): Location[] {
