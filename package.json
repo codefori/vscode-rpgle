@@ -19,7 +19,8 @@
 		"rpg", "rpgle", "ibmi", "iseries", "as400"
 	],
 	"categories": [
-		"Programming Languages"
+		"Programming Languages",
+		"Formatters"
 	],
 	"activationEvents": [
 		"onStartupFinished",
