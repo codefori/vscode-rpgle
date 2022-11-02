@@ -25,6 +25,7 @@ import { getPrettyType } from './language/models/fixed';
 import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/project/implementation';
+import { dspffdToRecordFormats } from './data';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -107,55 +108,12 @@ connection.onInitialized(() => {
 	}
 });
 
-parser.setTableFetch(async (table: string, aliases = false) => {
+parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration[]> => {
 	if (!languageToolsEnabled) return [];
 	
-	let recordFormats: {[name: string]: Declaration} = {};
-
 	const data = await getObjectData(table);
 
-	data.forEach((row: any) => {
-		const {
-			WHNAME: formatName,
-			WHFLDT: type,
-			WHFLDB: strLength, 
-			WHFLDD: digits,
-			WHFLDP: decimals,
-			WHFTXT: text,
-		} = row;
-
-		const name = aliases ? row.WHALIS || row.WHFLDE : row.WHFLDE;
-
-		if (name.trim() === ``) return;
-		if (name.startsWith(`*`)) return;
-
-		let recordFormat;
-		if (recordFormats[formatName]) {
-			recordFormat = recordFormats[formatName];
-		} else {
-			recordFormat = new Declaration(`struct`);
-			recordFormat.name = formatName;
-			recordFormats[formatName] = recordFormat;
-		}
-
-		const currentSubfield = new Declaration(`subitem`);
-		currentSubfield.name = name;
-		const keywords = [];
-
-		if (row.WHVARL === `Y`) keywords.push(`VARYING`);
-
-		currentSubfield.keywords = [getPrettyType({
-			type,
-			len: digits === 0 ? strLength : digits,
-			decimals: decimals,
-			keywords,
-		})];
-		currentSubfield.description = text.trim();
-
-		recordFormat.subItems.push(currentSubfield);
-	});
-
-	return Object.values(recordFormats);
+	return dspffdToRecordFormats(data, aliases);
 })
 
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
