@@ -388,6 +388,9 @@ export default class Parser {
           }
         }
 
+        pieces = [];
+        parts = [];
+        
         if (isFullyFree || lineIsFree) {
           // Free format!
           line = line.trim();
@@ -910,7 +913,7 @@ export default class Parser {
 
                 if (potentialName) {
                   //We can overwrite it.. it might have been a PR before.
-                  const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
+                  const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === potentialName.toUpperCase());
 
                   // We found the PR... so we can overwrite it
                   if (existingProc >= 0) scope.procedures.splice(existingProc, 1);

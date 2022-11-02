@@ -8,7 +8,7 @@ export async function updateMakefile(baseUri: Uri, deps: string[]) {
 
 	if (workspaceFolder) {
 		const relativeFind = new RelativePattern(workspaceFolder, `**/makefile`);
-		const [makefile] = await workspace.findFiles(relativeFind, null, 1);
+		const [makefile] = await workspace.findFiles(relativeFind, `**/.git`, 1);
 
 		if (makefile) {
 			const document = await workspace.openTextDocument(makefile);

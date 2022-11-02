@@ -13,7 +13,7 @@ export function initialise(context: ExtensionContext) {
 			if (editor && ![`member`, `streamfile`].includes(editor.document.uri.scheme)) {
 				const workspaces = workspace.workspaceFolders;
 				if (workspaces && workspaces.length > 0) {
-					const linter = await workspace.findFiles(`**/.vscode/rpglint.json`, null, 1);
+					const linter = await workspace.findFiles(`**/.vscode/rpglint.json`, `**/.git`, 1);
 					let uri;
 					if (linter && linter.length > 0) {
 						uri = linter[0];

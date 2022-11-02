@@ -182,6 +182,33 @@ exports.test7 = async () => {
 }
 
 /**
+   * Test procedure length.
+   * When Procedure is defined, the prototype is overridden.
+   */
+exports.test7_fixed = async () => {
+  const lines = [
+    `     DGetArtDesc       PR            50A    extproc`,
+    `     D ARID                           6A    value`,
+    ``,
+    `     PGetArtDesc       B                     export`,
+    `     DGetArtDesc       PI                   like(ardesc)`,
+    `     D P_ARID                         6A    value`,
+    `      /free`,
+    `         chainARTICLE1(P_ARID`,
+    `               );`,
+    `         return ARDESC;`,
+    `      /end-free`,
+    `     pGetArtDesc       e`,
+  ].join(`\n`);
+
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+}
+
+/**
    * Constant definition test
    * */
 exports.test8 = async () => {

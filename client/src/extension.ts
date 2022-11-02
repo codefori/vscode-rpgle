@@ -82,7 +82,7 @@ export function activate(context: ExtensionContext) {
 			} else
 				if (uri.scheme === `file`) {
 					const basename = path.basename(uri.path);
-					const [possibleFile] = await workspace.findFiles(`**/${basename}`, undefined, 1);
+					const [possibleFile] = await workspace.findFiles(`**/${basename}`, `**/.git`, 1);
 					if (possibleFile) {
 						return possibleFile.toString();
 					}
@@ -105,7 +105,7 @@ export function activate(context: ExtensionContext) {
 
 		client.onRequest(`getProjectFiles`, async (): Promise<string[] | undefined> => {
 			if (workspace.workspaceFolders) {
-				const uris = await workspace.findFiles(projectFilesGlob);
+				const uris = await workspace.findFiles(projectFilesGlob, `**/.git`);
 				return uris.map(uri => uri.toString());
 			}
 
@@ -119,7 +119,7 @@ export function activate(context: ExtensionContext) {
 
 				if (workspaceFolder) {
 					const relativeWorkspace = new RelativePattern(workspaceFolder, `**/*.{rpgleinc,RPGLEINC}`);
-					const localFiles = await workspace.findFiles(relativeWorkspace);
+					const localFiles = await workspace.findFiles(relativeWorkspace, `**/.git`);
 
 					return localFiles.map(localFile => {
 						return {
