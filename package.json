@@ -1,7 +1,7 @@
 {
 	"name": "vscode-rpgle",
-	"displayName": "RPGLE language tools",
-	"description": "RPGLE content assist and linter for VS Code",
+	"displayName": "RPGLE",
+	"description": "RPGLE language tools and linter for VS Code",
 	"author": {
 		"name": "Halcyon Tech Ltd",
 		"url": "https://github.com/halcyon-tech"
