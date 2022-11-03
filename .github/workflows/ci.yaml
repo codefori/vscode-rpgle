@@ -7,16 +7,37 @@ jobs:
     name: Release and publish
     runs-on: ubuntu-latest
     steps:
+
+      # Setup prereqs
       - uses: actions/setup-node@v2
         with:
           node-version: '16'
       - uses: actions/checkout@v2
       - run: npm install
       - run: npm install -g vsce
+      
+      # Create and publish build to Marketplace
       - name: Publish to Marketplace
         run: vsce publish -p $PUBLISHER_TOKEN
         env:
           PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
 
+      # Create and publish build to OpenVSX
       - name: Publish to Open VSX
         run: npx ovsx publish -p ${{ secrets.OPENVSX_TOKEN }}
+
+      # Store normal build
+      - name: Upload build
+        uses: actions/upload-artifact@v2
+        with:
+          name: vscode-rpgle
+          path: ./*.vsix
+        
+      # Create linter only build
+      - name: Create linter only build (Merlin)
+        run: npm run package:linter
+      - name: Upload build
+        uses: actions/upload-artifact@v2
+        with:
+          name: vscode-rpgle-linter-only
+          path: ./*.vsix

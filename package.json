@@ -73,6 +73,7 @@
 	"scripts": {
 		"test": "tsx tests",
 		"package": "vsce package",
+		"package:linter": "LANGUAGE_TOOLS_ENABLED=\"false\" FORMATTER_ENABLED=\"false\" vsce package",
 		"vscode:prepublish": "npm run webpack",
 		"webpack": "npm run clean && webpack --mode production --config ./client/webpack.config.js && webpack --mode production --config ./server/webpack.config.js",
 		"webpack:dev": "npm run clean && webpack --mode none --config ./client/webpack.config.js && webpack --mode none --config ./server/webpack.config.js",
