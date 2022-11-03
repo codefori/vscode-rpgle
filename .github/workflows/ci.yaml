@@ -25,13 +25,6 @@ jobs:
       # Create and publish build to OpenVSX
       - name: Publish to Open VSX
         run: npx ovsx publish -p ${{ secrets.OPENVSX_TOKEN }}
-
-      # Store normal build
-      - name: Upload build
-        uses: actions/upload-artifact@v2
-        with:
-          name: vscode-rpgle
-          path: ./*.vsix
         
       # Create linter only build
       - name: Create linter only build (Merlin)
