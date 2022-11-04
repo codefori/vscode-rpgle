@@ -18,7 +18,6 @@ import {
 } from 'vscode-languageclient/node';
 
 import getBase from './base';
-import { initBuilder } from './builder';
 
 let client: LanguageClient;
 

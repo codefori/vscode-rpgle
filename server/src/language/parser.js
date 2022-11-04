@@ -565,7 +565,7 @@ export default class Parser {
         
           case `DCL-PR`:
             if (currentItem === undefined) {
-              if (!scope.procedures.find(proc => proc.name.toUpperCase() === parts[1])) {
+              if (!scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === parts[1])) {
                 currentGroup = `procedures`;
                 currentItem = new Declaration(`procedure`);
                 currentItem.name = partsLower[1];
@@ -608,7 +608,7 @@ export default class Parser {
           case `DCL-PROC`:
             //We can overwrite it.. it might have been a PR before.
             // eslint-disable-next-line no-case-declarations
-            const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === parts[1]);
+            const existingProc = scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === parts[1]);
 
             // We found the PR... so we can overwrite it
             if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
@@ -686,7 +686,7 @@ export default class Parser {
             break;
 
           case `BEGSR`:
-            if (!scope.subroutines.find(sub => sub.name.toUpperCase() === parts[1])) {
+            if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === parts[1])) {
               currentItem = new Declaration(`subroutine`);
               currentItem.name = partsLower[1];
               currentItem.description = currentDescription.join(` `);
@@ -871,7 +871,7 @@ export default class Parser {
 
             switch (cSpec.opcode) {
             case `BEGSR`:
-              if (!scope.subroutines.find(sub => sub.name.toUpperCase() === potentialName)) {
+              if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = potentialName;
                 currentItem.keywords = [`Subroutine`];
@@ -913,7 +913,7 @@ export default class Parser {
 
                 if (potentialName) {
                   //We can overwrite it.. it might have been a PR before.
-                  const existingProc = scope.procedures.findIndex(proc => proc.name.toUpperCase() === potentialName.toUpperCase());
+                  const existingProc = scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === potentialName.toUpperCase());
 
                   // We found the PR... so we can overwrite it
                   if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
@@ -1018,7 +1018,7 @@ export default class Parser {
 
               case `PR`:
                 // Only add a PR if it's not been defined
-                if (!scope.procedures.find(proc => proc.name.toUpperCase() === potentialName.toUpperCase())) {
+                if (!scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === potentialName.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = potentialName || `*N`;
                   currentItem.keywords = [getPrettyType(dSpec), ...dSpec.keywords];
