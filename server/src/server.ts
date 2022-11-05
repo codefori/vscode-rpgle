@@ -118,22 +118,33 @@ parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration
 
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
-	const [_, baseLibrary, baseSourceFile, basename] = currentUri.path.split(`/`);
+	const uriPath = currentUri.path;
 	let cleanString: string|undefined;
 
 	switch (currentUri.scheme) {
 		case `member`:
+			let possibleAsp = undefined;
+			let baseLibrary = `QSYSINC`;
+			const path = uriPath.startsWith(`/`) ? uriPath.substring(1).split(`/`) : uriPath.split(`/`);
+
+			// if (path.length > 0) result.basename = path[path.length - 1];
+			// if (path.length > 1) result.file = path[path.length - 2];
+			if (path.length > 2) baseLibrary = path[path.length - 3];
+			if (path.length > 3) possibleAsp = path[path.length - 4];
+
 			if (includeString.startsWith(`'`) && includeString.endsWith(`'`)) {
 				// IFS fetch
 				cleanString = includeString.substring(1, includeString.length - 1);
 				// TODO:....
 
 			} else {
+				
 				// Member fetch
 				// Split by /,
 				const parts = includeString.split(`/`).map(s => s.split(`,`)).flat();
 				cleanString = [
 					``,
+					...(possibleAsp ? [possibleAsp] : []),
 					parts[parts.length - 3] ? parts[parts.length - 3] : baseLibrary,
 					parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`,
 					parts[parts.length - 1] + `.rpgleinc`
