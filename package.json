@@ -11,7 +11,7 @@
 	"repository": {
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
-	"version": "0.15.5",
+	"version": "0.15.6",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
