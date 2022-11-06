@@ -4,7 +4,7 @@ import { calculateOffset, getActions, getLintOptions } from '.';
 import { documents, parser } from '..';
 import Linter from '../../language/linter';
 
-export default async function documentFormattingProvider(params: DocumentFormattingParams): Promise<TextEdit[]|undefined> {
+export default async function documentFormattingProvider(params: DocumentFormattingParams): Promise<TextEdit[] | undefined> {
 	const uri = params.textDocument.uri;
 	const document = documents.get(uri);
 
@@ -14,8 +14,8 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 			const options = await getLintOptions(document.uri);
 
 			if (options) {
-			let docs = await parser.getDocs(document.uri);
-			
+				let docs = await parser.getDocs(document.uri);
+
 				if (docs) {
 					// Need to fetch the docs again incase comments were added
 					// as part of RequiresProcedureDescription
@@ -24,14 +24,14 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 					});
 
 					// Next up, let's fix all the other things!
-					const {errors} = Linter.getErrors({
+					const { errors } = Linter.getErrors({
 						uri: document.uri,
 						content: document.getText()
 					}, options, docs);
 
-					
+
 					const actions = getActions(
-						document, 
+						document,
 						errors.filter(error => error.type !== `RequiresProcedureDescription`)
 					);
 
@@ -46,16 +46,19 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 							if (action.edit && action.edit.changes) {
 								const uris = action.edit.changes;
 								const suggestedEdits = uris[document.uri];
-								suggestedEdits.forEach(edit => {
-									const changedLine = edit.range.start.line;
-									// We play it safe and don't change the same line twice.
-									if (linesChanged.includes(changedLine)) {
-										skippedChanges += 1;
-									} else {
+								const editedLineBefore = suggestedEdits[0] ? linesChanged.includes(suggestedEdits[0].range.start.line) : false;
+								if (!editedLineBefore) {
+									suggestedEdits.forEach(edit => {
+										const changedLine = edit.range.start.line;
 										fixes.push(edit);
-										linesChanged.push(changedLine);
-									}
-								})
+
+										if (!linesChanged.includes(changedLine)) {
+											linesChanged.push(changedLine);
+										}
+									});
+								} else {
+									skippedChanges += 1;
+								}
 							}
 						});
 
@@ -68,7 +71,7 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 
 					const indentFixes = indentErrors.map(error => {
 						const range = calculateOffset(document, {
-							range: Range.create(error.line, 0, error.line, error.currentIndent), 
+							range: Range.create(error.line, 0, error.line, error.currentIndent),
 							offset: undefined,
 							type: undefined,
 							newValue: undefined,
