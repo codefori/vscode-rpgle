@@ -12,6 +12,54 @@
 	// 	],
 	// 	"description": "Log output to console"
 	// }
+	"if": {
+		"prefix": "if",
+		"description": "If block",
+		"body": [
+			"if (${1});",
+			"  $0",
+			"endif;"
+		]
+	},
+	"dow": {
+		"prefix": "dow",
+		"description": "Do while",
+		"body": [
+			"dow (${1});",
+			"  $0",
+			"enddo;"
+		]
+	},
+	"dou": {
+		"prefix": "dou",
+		"description": "Do until",
+		"body": [
+			"dou (${1});",
+			"  $0",
+			"enddo;"
+		]
+	},
+	"for": {
+		"prefix": "for",
+		"description": "For loop",
+		"body": [
+			"for ${1:index} = ${2:startingValue} ${3|to,downto|} ${4:endingValue};",
+			"  $0",
+			"endfor;"
+		]
+	},
+	"select": {
+		"prefix": "select",
+		"description": "Select block",
+		"body": [
+			"select;",
+			"  when (${1});",
+			"    $0",
+			"  other;",
+			"    // handle other conditions",
+			"endsl;"
+		]
+	},
 	"variable": {
 		"prefix": "dcl-s",
 		"description": "Declare variable",
