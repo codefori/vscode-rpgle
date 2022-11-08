@@ -16,8 +16,8 @@ const commonMatchers = [
     name: `DIRECTIVE`,
     match: [
       { type: `divide` },
-      { 
-        type: `word`, 
+      {
+        type: `word`,
         match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINED`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`, `CHARCOUNT`].includes(word.toUpperCase())
       },
     ],
@@ -40,8 +40,9 @@ const commonMatchers = [
     name: `IS_SPECIAL`,
     match: [
       { type: `asterisk` },
-      { type: `word`, match: (word) => 
-        [ `CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
+      {
+        type: `word`, match: (word) =>
+          [`CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
       }
     ],
     becomes: {
@@ -184,137 +185,137 @@ const types = {
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */
 export function parseStatement(statement) {
-	let inString = false;
+  let inString = false;
 
-	let result = [];
+  let result = [];
 
-	let startsAt = 0;
-	let currentText = ``;
+  let startsAt = 0;
+  let currentText = ``;
 
-	for (let i = 0; i < statement.length; i++) {
-		if (inString && statement[i] !== `'`) {
-			currentText += statement[i];
-		} else {
-			switch (statement[i]) {
-			case `'`:
-				if (inString) {
-					currentText += statement[i];
-					result.push({value: currentText, type: `string`, position: startsAt});
-					currentText = ``;
-				} else {
-					startsAt = i;
-					currentText += statement[i];
-				}
+  for (let i = 0; i < statement.length; i++) {
+    if (inString && statement[i] !== `'`) {
+      currentText += statement[i];
+    } else {
+      switch (statement[i]) {
+      case `'`:
+        if (inString) {
+          currentText += statement[i];
+          result.push({ value: currentText, type: `string`, position: startsAt });
+          currentText = ``;
+        } else {
+          startsAt = i;
+          currentText += statement[i];
+        }
 
-				inString = !inString;
-				break;
-			default:
-				if (splitParts.includes(statement[i]) && inString === false) {
-					if (currentText.trim() !== ``) {
-						result.push({value: currentText, type: `word`, position: startsAt});
-						currentText = ``;
-					}
+        inString = !inString;
+        break;
+      default:
+        if (splitParts.includes(statement[i]) && inString === false) {
+          if (currentText.trim() !== ``) {
+            result.push({ value: currentText, type: `word`, position: startsAt });
+            currentText = ``;
+          }
 
-					if (statement[i] !== ` `) {
-						result.push({value: statement[i], type: types[statement[i]], position: i});
-					}
+          if (statement[i] !== ` `) {
+            result.push({ value: statement[i], type: types[statement[i]], position: i });
+          }
 
-					startsAt = i + 1;
+          startsAt = i + 1;
 
-				} else {
-					currentText += statement[i];
-				}
-				break;
-			}
-		}
-	}
+        } else {
+          currentText += statement[i];
+        }
+        break;
+      }
+    }
+  }
 
-	if (currentText.trim() !== ``) {
-		result.push({value: currentText, type: `word`, position: startsAt});
-		currentText = ``;
-	}
+  if (currentText.trim() !== ``) {
+    result.push({ value: currentText, type: `word`, position: startsAt });
+    currentText = ``;
+  }
 
-	result = fixStatement(result);
-	//result = this.createBlocks(result);
+  result = fixStatement(result);
+  //result = this.createBlocks(result);
 
-	return result;
+  return result;
 }
 
 /**
  * @param {{value: string, type: string, position: number}[]} statement 
  */
 export function fixStatement(statement) {
-	for (let i = 0; i < statement.length; i++) {
-		for (let y = 0; y < commonMatchers.length; y++) {
-			const type = commonMatchers[y];
-			let goodMatch = true;
+  for (let i = 0; i < statement.length; i++) {
+    for (let y = 0; y < commonMatchers.length; y++) {
+      const type = commonMatchers[y];
+      let goodMatch = true;
 
-			for (let x = 0; x < type.match.length; x++) {
-				const match = type.match[x];
-				
-				if (statement[i+x]) {
-					if (statement[i+x].type === match.type) {
-						if (match.match) {
-							if (match.match(statement[i+x].value)) {
-								goodMatch = true;
-							} else {
-								goodMatch = false;
-								break;
-							}
-						} else {
-							goodMatch = true;
-						}
-					} else {
-						goodMatch = false;
-						break;
-					}
-				} else {
-					goodMatch = false;
-				}
-			}
+      for (let x = 0; x < type.match.length; x++) {
+        const match = type.match[x];
 
-			if (goodMatch) {
-				const value = statement.slice(i, i + type.match.length).map(x => x.value).join(``);
-				statement.splice(i, type.match.length, {
-					...type.becomes,
-					value,
-					position: statement[i].position
-				});
+        if (statement[i + x]) {
+          if (statement[i + x].type === match.type) {
+            if (match.match) {
+              if (match.match(statement[i + x].value)) {
+                goodMatch = true;
+              } else {
+                goodMatch = false;
+                break;
+              }
+            } else {
+              goodMatch = true;
+            }
+          } else {
+            goodMatch = false;
+            break;
+          }
+        } else {
+          goodMatch = false;
+        }
+      }
 
-				break;
-			}
-		}
-	}
+      if (goodMatch) {
+        const value = statement.slice(i, i + type.match.length).map(x => x.value).join(``);
+        statement.splice(i, type.match.length, {
+          ...type.becomes,
+          value,
+          position: statement[i].position
+        });
 
-	return statement;
+        break;
+      }
+    }
+  }
+
+  return statement;
 }
 
 export function createBlocks(statement) {
-	let start = 0;
-	let level = 0;
+  let start = 0;
+  let level = 0;
 
-	for (let i = 0; i < statement.length; i++) {
-		switch (statement[i].type) {
-		case `openbracket`:
-			if (level === 0) {
-				start = i;
-			}
-			level++;
-			break;
-		case `closebracket`:
-			level--;
+  for (let i = 0; i < statement.length; i++) {
+    switch (statement[i].type) {
+    case `openbracket`:
+      if (level === 0) {
+        start = i;
+      }
+      level++;
+      break;
+    case `closebracket`:
+      level--;
 
-			if (level === 0) {
-				statement.splice(start, i - start + 1, {
-					type: `block`,
-					block: createBlocks(statement.slice(start+1, i)),
-					position: statement[start].position
-				});
-				i = start;
-			}
-			break;
-		}
-	}
+      if (level === 0) {
+        statement.splice(start, i - start + 1, {
+          type: `block`,
+          block: createBlocks(statement.slice(start + 1, i)),
+          position: statement[start].position
+        });
+        i = start;
+      }
+      break;
+    }
+  }
 
-	return statement;
+  return statement;
 }

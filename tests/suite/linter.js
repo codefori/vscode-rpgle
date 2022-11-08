@@ -179,6 +179,51 @@ exports.linter2_indent =  async () => {
   assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
 };
 
+exports.linter2_indent_other =  async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `myVariable2 = *blank;`,
+    ``,
+    `If myVariable2 = *blank;`,
+    `  // Inside if`,
+    `MyVariable2 = 'Hello world';`,
+    `  Select;`,
+    `    When myVariable2 = *blank;`,
+    `      // First when`,
+    `      MyVariable2 = 'Still blank?';`,
+    `    When myVariable2 = 'YOYOYO';`,
+    `      // Second when`,
+    `        MyVariable2 = 'YOYOYO';`,
+    `    Other;`,
+    `      // Second when`,
+    `      MyVariable2 = 'YOYOYO';`,
+    `  Endsl;`,
+    `Endif;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+    indent: 2
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 2, `Expect length of 2`);
+
+  assert.strictEqual(indentErrors[0].line, 10, `Index of 9 expected`);
+  assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
+  assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
+
+  assert.strictEqual(indentErrors[1].line, 17, `Index of 14 expected`);
+  assert.strictEqual(indentErrors[1].currentIndent, 8, `Value of 8 expected`);
+  assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
+};
+
 exports.linter3_indent =  async () => {
   const lines = [
     `**FREE`,
@@ -2863,3 +2908,128 @@ exports.linter41 = async () => {
     newValue: undefined
   });
 }
+
+exports.linter42 =  async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `myVariable2 = *blank;`,
+    ``,
+    `If myVariable2 = *blank;`,
+    `  // Inside if`,
+    `  MyVariable2 = 'Hello world';`,
+    `  Select;`,
+    `    When myVariable2 = *blank;`,
+    `      // First when`,
+    `      MyVariable2 = 'Still blank?';`,
+    `    When myVariable2 = 'YOYOYO';`,
+    `      // Second when`,
+    `      MyVariable2 = 'YOYOYO';`,
+    `  Endsl;`,
+    `Endif;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequireOtherBlock: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    range: Range.create(11, 2, 11, 8),
+    type: `RequireOtherBlock`
+  });
+};
+
+exports.linter43 =  async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `myVariable2 = *blank;`,
+    ``,
+    `If myVariable2 = *blank;`,
+    `  // Inside if`,
+    `  MyVariable2 = 'Hello world';`,
+    `  Select;`,
+    `    When myVariable2 = *blank;`,
+    `      // First when`,
+    `      MyVariable2 = 'Still blank?';`,
+    `    When myVariable2 = 'YOYOYO';`,
+    `      // Second when`,
+    `      MyVariable2 = 'YOYOYO';`,
+    `    other;`,
+    `      // Other block`,
+    `      MyVariable2 = 'other';`,
+    `  Endsl;`,
+    `Endif;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequireOtherBlock: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+};
+
+exports.linter44 =  async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `myVariable2 = *blank;`,
+    ``,
+    `If myVariable2 = *blank;`,
+    `  // Inside if`,
+    `  MyVariable2 = 'Hello world';`,
+    `  Select;`,
+    `    When myVariable2 = *blank;`,
+    `      // First when`,
+    `      MyVariable2 = 'Still blank?';`,
+    `    When myVariable2 = 'YOYOYO';`,
+    `      // Second when`,
+    `      MyVariable2 = 'YOYOYO';`,
+    `      Select;`,
+    `        When myVariable2 = *blank;`,
+    `          // First when`,
+    `          MyVariable2 = 'Still blank?';`,
+    `        When myVariable2 = 'YOYOYO';`,
+    `          // Second when`,
+    `          MyVariable2 = 'YOYOYO';`,
+    `      Endsl;`,
+    `  Endsl;`,
+    `Endif;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({uri, content: lines}, {
+    RequireOtherBlock: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 2);
+  assert.deepStrictEqual(errors[0], {
+    range: Range.create(18, 6, 18, 12),
+    type: `RequireOtherBlock`
+  });
+  assert.deepStrictEqual(errors[1], {
+    range: Range.create(11, 2, 11, 8),
+    type: `RequireOtherBlock`
+  });
+};

@@ -53,6 +53,7 @@ interface Rules {
   NoExtProgramVariable?: boolean;
   IncludeMustBeRelative?: boolean;
   SQLHostVarCheck?: boolean;
+  RequireOtherBlock?: boolean;
 
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
@@ -78,6 +79,11 @@ interface IssueRange {
   "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"|
   "NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines"|"UnexpectedEnd"|
   "NoUnreferenced"|"NoExternalTo"|"NoExecuteImmediate"|"NoExtProgramVariable"|"IncludeMustBeRelative"|
-  "SQLHostVarCheck";
+  "SQLHostVarCheck"|"RequireOtherBlock";
   newValue?: string;
+}
+
+interface SelectBlock {
+  range: Range;
+  otherBlockExists: boolean;
 }

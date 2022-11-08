@@ -115,6 +115,9 @@ export default class Linter {
       rules.NoExternalTo = rules.NoExternalTo.map(val => val.toUpperCase());
     }
 
+    /** @type {import(".").SelectBlock[]} */
+    const selectBlocks = [];
+
     /** @type {{value: string, definition?: string, list: {range: Range, offset: Offset}[]}[]} */
     const stringLiterals = [];
 
@@ -762,6 +765,32 @@ export default class Linter {
                           }
                         }
                       });
+                    }
+                    break;
+
+                  case `SELECT`:
+                    selectBlocks.push({
+                      range: new Range(statementStart, statementEnd),
+                      otherBlockExists: false
+                    });
+                    break;
+                  case `OTHER`:
+                    if (selectBlocks.length > 0) {
+                      /** @type {import(".").SelectBlock} */
+                      const latestSelect = selectBlocks[selectBlocks.length-1];
+                      latestSelect.otherBlockExists = true;
+                    }
+                    // else - bad code?!
+                    break;
+                  case `ENDSL`:
+                    if (selectBlocks.length > 0) {
+                      const latestSelect = selectBlocks.pop();
+                      if (rules.RequireOtherBlock && latestSelect && !latestSelect.otherBlockExists) {
+                        errors.push({
+                          range: latestSelect.range,
+                          type: `RequireOtherBlock`,
+                        });
+                      }
                     }
                     break;
 
