@@ -90,6 +90,14 @@ export function activate(context: ExtensionContext) {
 			return;
 		});
 
+		client.onRequest("getWorkingDirectory", async (): Promise<string|undefined> => {
+			const instance = getBase();
+			if (instance && instance.getConnection()) {
+				const config = instance.getConfig();
+				return config.homeDirectory;
+			}
+		})
+
 		client.onRequest("getFile", async (stringUri: string): Promise<string | undefined> => {
 			// Always assumes URI is valid. Use getUri first
 			const uri = Uri.parse(stringUri);

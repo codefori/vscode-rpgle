@@ -10,7 +10,7 @@ import codeActionsProvider from './codeActions';
 import documentFormattingProvider from './documentFormatting';
 
 import * as Project from "../project";
-import { connection, getFileRequest, validateUri, watchedFilesChangeEvent } from '../../connection';
+import { connection, getFileRequest, getWorkingDirectory, validateUri, watchedFilesChangeEvent } from '../../connection';
 
 export let jsonCache: { [uri: string]: string } = {};
 
@@ -56,7 +56,7 @@ export function initialise(connection: _Connection) {
 		}
 	});
 
-	documents.onDidClose(async (e: TextDocumentChangeEvent<TextDocument>) => {
+	documents.onDidOpen(async e => {
 		const uri = e.document.uri;
 
 		const possibleUri = await getLintConfigUri(uri);
@@ -103,6 +103,18 @@ export async function getLintConfigUri(workingUri: string) {
 
 			if (jsonCache[cleanString]) return cleanString;
 			cleanString = await validateUri(cleanString);
+			break;
+		
+		case `streamfile`:
+			const workingDir = await getWorkingDirectory();
+			if (workingDir) {
+				cleanString = URI.from({
+					scheme: `streamfile`,
+					path: path.posix.join(workingDir, `.vscode`, `rpglint.json`)
+				}).toString();
+				
+				cleanString = await validateUri(cleanString, uri.scheme);
+			}
 			break;
 
 		case `file`:

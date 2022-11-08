@@ -45,6 +45,10 @@ export async function getFileRequest(uri: string) {
 	return;
 }
 
+export function getWorkingDirectory(): Promise<string|undefined> {
+	return connection.sendRequest("getWorkingDirectory");
+}
+
 export function getObject(objectPath: string): Promise<object[]> {
 	return connection.sendRequest("getObject", objectPath);
 }
