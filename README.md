@@ -22,4 +22,4 @@ Check out the [official documentation](https://halcyon-tech.github.io/docs/#/pag
 3. Run
    * `npm run test`
    * Debug 'Launch Client'
-	 * Debug 'Attach to Server'
+	* Debug 'Attach to Server'
