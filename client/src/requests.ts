@@ -2,9 +2,14 @@ import path = require('path');
 import { Uri, workspace, RelativePattern, commands } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import getBase from './base';
-import {projectFilesGlob} from "./configuration";
+import { projectFilesGlob } from "./configuration";
 
 export default function buildRequestHandlers(client: LanguageClient) {
+	/**
+	 * Validates a URI.
+	 * 1. Attemps to open a valid full path
+	 * 2. If running in a workspace, will search for the file by basename
+	 */
 	client.onRequest("getUri", async (stringUri: string): Promise<string | undefined> => {
 		const uri = Uri.parse(stringUri);
 		let doc;
@@ -28,7 +33,10 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return;
 	});
 
-	client.onRequest("getWorkingDirectory", async (): Promise<string|undefined> => {
+	/**
+	 * Returns the working directory from Code for IBM i.
+	 */
+	client.onRequest("getWorkingDirectory", async (): Promise<string | undefined> => {
 		const instance = getBase();
 		if (instance && instance.getConnection()) {
 			const config = instance.getConfig();
@@ -36,6 +44,9 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		}
 	})
 
+	/**
+	 * Gets the text content for a provided Uri
+	 */
 	client.onRequest("getFile", async (stringUri: string): Promise<string | undefined> => {
 		// Always assumes URI is valid. Use getUri first
 		const uri = Uri.parse(stringUri);
@@ -48,6 +59,9 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return;
 	});
 
+	/**
+	 * Returns all valid RPGLE files in the local workspace.
+	 */
 	client.onRequest(`getProjectFiles`, async (): Promise<string[] | undefined> => {
 		if (workspace.workspaceFolders) {
 			const uris = await workspace.findFiles(projectFilesGlob, `**/.git`);
@@ -57,7 +71,10 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return undefined;
 	});
 
-	client.onRequest(`getIncludesUris`, async (stringUri: string): Promise<{uri: string, relative: string}[]> => {
+	/**
+	 * Returns all valid rpgleinc files in the local workspace.
+	 */
+	client.onRequest(`getIncludesUris`, async (stringUri: string): Promise<{ uri: string, relative: string }[]> => {
 		if (workspace.workspaceFolders) {
 			const uri = Uri.parse(stringUri);
 			const workspaceFolder = workspace.getWorkspaceFolder(uri);
@@ -78,6 +95,9 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return [];
 	});
 
+	/**
+	 * Gets the column information for a provided file
+	 */
 	client.onRequest(`getObject`, async (table: string) => {
 		const instance = getBase();
 
@@ -126,4 +146,46 @@ export default function buildRequestHandlers(client: LanguageClient) {
 
 		return [];
 	});
+
+	client.onRequest(`symbolLookup`, async (data: { symbol: string, binders: { lib: string, name: string }[] }): Promise<string | undefined> => {
+		const { symbol, binders } = data;
+
+		const binderCondition = binders.map(binder => `(c.BINDING_DIRECTORY_LIBRARY = '${binder.lib.toUpperCase()}' and c.BINDING_DIRECTORY = '${binder.name.toUpperCase()}')`)
+		const statement = [
+			`select`,
+			`	b.SYMBOL_NAME,`,
+			`	c.ENTRY_LIBRARY as PGM_LIB,`,
+			`	c.ENTRY as PGM_NAME,`,
+			`	a.BOUND_MODULE_LIBRARY as MOD_LIB, `,
+			`	a.BOUND_MODULE as MOD_NAME, `,
+			`	a.SOURCE_FILE_LIBRARY as LIB, `,
+			`	a.SOURCE_FILE as SPF, `,
+			`	a.SOURCE_FILE_MEMBER as MBR`,
+			`from QSYS2.BOUND_MODULE_INFO as a`,
+			`right join QSYS2.PROGRAM_EXPORT_IMPORT_INFO as b`,
+			`	on a.PROGRAM_LIBRARY = b.PROGRAM_LIBRARY and a.PROGRAM_NAME = b.PROGRAM_NAME`,
+			`right join qsys2.BINDING_DIRECTORY_INFO as c`,
+			`	on c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY and c.ENTRY = b.PROGRAM_NAME`,
+			`where UPPER(b.SYMBOL_NAME) = '${symbol.toUpperCase()}'`,
+			`  and (${binderCondition.join(` or `)})`,
+			`  and a.SOURCE_FILE_MEMBER is not null`
+		].join(` `);
+
+		try {
+			const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
+
+			if (rows.length >= 1) {
+				const chosen = rows[0];
+				// TODO: support IFS results?
+
+				return Uri.from({
+					scheme: `member`,
+					path: [chosen.LIB, chosen.SPF, `${chosen.MBR}.${chosen.ATTR}`].join(`/`)
+				}).toString();
+			}
+		} catch (e) {
+			console.log(e);
+		}
+		return;
+	})
 }

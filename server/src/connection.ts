@@ -65,3 +65,15 @@ export interface PossibleInclude {
 export function getIncludesUris(uri: string): Promise<PossibleInclude[]> {
 	return connection.sendRequest(`getIncludesUris`, uri);
 }
+
+export interface BindingDirectory {
+	lib: string;
+	name: string;
+}
+
+export function symbolLookup(symbol: string, binders: BindingDirectory[]): Promise<string|undefined> {
+	return connection.sendRequest(`symbolLookup`, {
+		symbol,
+		binders
+	});
+}
