@@ -1,9 +1,9 @@
 import { Range, SymbolKind, WorkspaceSymbol, WorkspaceSymbolParams } from 'vscode-languageserver';
-import {parser} from '..';
+import { parser } from '..';
 import * as Project from '.';
 import path = require('path');
 
-export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): WorkspaceSymbol[]|undefined {
+export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): WorkspaceSymbol[] | undefined {
 	console.log(params.query);
 	if (Project.isEnabled) {
 		const parsedFiles = Object.keys(parser.parsedCache);
@@ -44,23 +44,25 @@ export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): 
 			} else {
 				const cache = parser.getParsedCache(uri);
 
-				cache.procedures.forEach(proc => {
-					if (proc.keyword[`EXPORT`]) {
-						symbols.push(
-							WorkspaceSymbol.create(
-								proc.name,
-								SymbolKind.Function,
-								uri,
-								Range.create(
-									proc.position.line,
-									0,
-									proc.position.line,
-									0
+				if (cache) {
+					cache.procedures.forEach(proc => {
+						if (proc.keyword[`EXPORT`]) {
+							symbols.push(
+								WorkspaceSymbol.create(
+									proc.name,
+									SymbolKind.Function,
+									uri,
+									Range.create(
+										proc.position.line,
+										0,
+										proc.position.line,
+										0
+									)
 								)
-							)
-						);
-					}
-				});
+							);
+						}
+					});
+				}
 			}
 		});
 
