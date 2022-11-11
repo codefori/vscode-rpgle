@@ -4,6 +4,9 @@ import { LanguageClient } from 'vscode-languageclient/node';
 import getBase from './base';
 import { projectFilesGlob } from "./configuration";
 
+let streamFileSupportChecked = false;
+let streamFileSupported = false;
+
 export default function buildRequestHandlers(client: LanguageClient) {
 	/**
 	 * Validates a URI.
@@ -104,6 +107,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		if (instance) {
 			const connection = instance.getConnection();
 			if (connection) {
+
 				const content = instance.getContent();
 				const config = instance.getConfig();
 
@@ -154,6 +158,24 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		if (instance) {
 			const connection = instance.getConnection();
 			if (connection) {
+
+				/**
+				 * We need to support 7.3 and above. SOURCE_STREAM_FILE_PATH does not exist in BOUND_MODULE_INFO
+				 * in 7.3, but it does exist from 7.4. We use this simple SQL statement to determine if the view
+				 * contains the column for streamfile support. If it does, we support it, if not, we don't.
+				 */
+
+				if (!streamFileSupportChecked) {
+					streamFileSupportChecked = true;
+					const statement = [
+						`select 'a' from qsys2.syscolumns`,
+						`where TABLE_SCHEMA = 'QSYS2' and TABLE_NAME = 'BOUND_MODULE_INFO' and COLUMN_NAME = 'SOURCE_STREAM_FILE_PATH'`,
+						`limit 1`
+					].join(` `);
+					const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
+					streamFileSupported = (rows.length >= 1);
+				}
+
 				const config = instance.getConfig();
 				const currentLibrary = config.currentLibrary;
 
@@ -165,6 +187,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					`	c.ENTRY as PGM_NAME,`,
 					`	a.BOUND_MODULE_LIBRARY as MOD_LIB, `,
 					`	a.BOUND_MODULE as MOD_NAME, `,
+					...(streamFileSupported ? [`a.SOURCE_STREAM_FILE_PATH as PATH,`] : []),
 					`	a.SOURCE_FILE_LIBRARY as LIB, `,
 					`	a.SOURCE_FILE as SPF, `,
 					`	a.SOURCE_FILE_MEMBER as MBR,`,
@@ -176,17 +199,25 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					`	on c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY and c.ENTRY = b.PROGRAM_NAME`,
 					`where UPPER(b.SYMBOL_NAME) = '${symbol.toUpperCase()}'`,
 					`  and (${binderCondition.join(` or `)})`,
-					`  and a.SOURCE_FILE_MEMBER is not null`
+					`  and ${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH` : `a.SOURCE_FILE_MEMBER`} is not null`
 				].join(` `);
 
 				try {
 					const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
 
 					return rows.map(row => {
-						return Uri.from({
-							scheme: `member`,
-							path: [``, row.LIB, row.SPF, `${row.MBR}.${row.ATTR}`].join(`/`)
-						}).toString();
+						// row.PATH is never null, but if row.MBR is null that means we likely have a streamfile
+						if (streamFileSupported && row.MBR === null) {
+							return Uri.from({
+								scheme: `streamfile`,
+								path: row.PATH
+							}).toString();
+						} else {
+							return Uri.from({
+								scheme: `member`,
+								path: [``, row.LIB, row.SPF, `${row.MBR}.${row.ATTR}`].join(`/`)
+							}).toString();
+						}
 					})
 				} catch (e) {
 					console.log(e);
