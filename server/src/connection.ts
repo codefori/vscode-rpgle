@@ -67,11 +67,11 @@ export function getIncludesUris(uri: string): Promise<PossibleInclude[]> {
 }
 
 export interface BindingDirectory {
-	lib: string;
+	lib?: string;
 	name: string;
 }
 
-export function symbolLookup(symbol: string, binders: BindingDirectory[]): Promise<string|undefined> {
+export function symbolLookup(symbol: string, binders: BindingDirectory[]): Promise<string[]|undefined> {
 	return connection.sendRequest(`symbolLookup`, {
 		symbol,
 		binders

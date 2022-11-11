@@ -147,44 +147,51 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return [];
 	});
 
-	client.onRequest(`symbolLookup`, async (data: { symbol: string, binders: { lib: string, name: string }[] }): Promise<string | undefined> => {
+	client.onRequest(`symbolLookup`, async (data: { symbol: string, binders: { lib?: string, name: string }[] }): Promise<string[] | undefined> => {
 		const { symbol, binders } = data;
+		const instance = getBase();
 
-		const binderCondition = binders.map(binder => `(c.BINDING_DIRECTORY_LIBRARY = '${binder.lib.toUpperCase()}' and c.BINDING_DIRECTORY = '${binder.name.toUpperCase()}')`)
-		const statement = [
-			`select`,
-			`	b.SYMBOL_NAME,`,
-			`	c.ENTRY_LIBRARY as PGM_LIB,`,
-			`	c.ENTRY as PGM_NAME,`,
-			`	a.BOUND_MODULE_LIBRARY as MOD_LIB, `,
-			`	a.BOUND_MODULE as MOD_NAME, `,
-			`	a.SOURCE_FILE_LIBRARY as LIB, `,
-			`	a.SOURCE_FILE as SPF, `,
-			`	a.SOURCE_FILE_MEMBER as MBR`,
-			`from QSYS2.BOUND_MODULE_INFO as a`,
-			`right join QSYS2.PROGRAM_EXPORT_IMPORT_INFO as b`,
-			`	on a.PROGRAM_LIBRARY = b.PROGRAM_LIBRARY and a.PROGRAM_NAME = b.PROGRAM_NAME`,
-			`right join qsys2.BINDING_DIRECTORY_INFO as c`,
-			`	on c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY and c.ENTRY = b.PROGRAM_NAME`,
-			`where UPPER(b.SYMBOL_NAME) = '${symbol.toUpperCase()}'`,
-			`  and (${binderCondition.join(` or `)})`,
-			`  and a.SOURCE_FILE_MEMBER is not null`
-		].join(` `);
+		if (instance) {
+			const connection = instance.getConnection();
+			if (connection) {
+				const config = instance.getConfig();
+				const currentLibrary = config.currentLibrary;
 
-		try {
-			const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
+				const binderCondition = binders.map(binder => `(c.BINDING_DIRECTORY_LIBRARY = '${(binder.lib || currentLibrary).toUpperCase()}' and c.BINDING_DIRECTORY = '${binder.name.toUpperCase()}')`)
+				const statement = [
+					`select`,
+					`	b.SYMBOL_NAME,`,
+					`	c.ENTRY_LIBRARY as PGM_LIB,`,
+					`	c.ENTRY as PGM_NAME,`,
+					`	a.BOUND_MODULE_LIBRARY as MOD_LIB, `,
+					`	a.BOUND_MODULE as MOD_NAME, `,
+					`	a.SOURCE_FILE_LIBRARY as LIB, `,
+					`	a.SOURCE_FILE as SPF, `,
+					`	a.SOURCE_FILE_MEMBER as MBR,`,
+					` a.MODULE_ATTRIBUTE as ATTR`,
+					`from QSYS2.BOUND_MODULE_INFO as a`,
+					`right join QSYS2.PROGRAM_EXPORT_IMPORT_INFO as b`,
+					`	on a.PROGRAM_LIBRARY = b.PROGRAM_LIBRARY and a.PROGRAM_NAME = b.PROGRAM_NAME`,
+					`right join qsys2.BINDING_DIRECTORY_INFO as c`,
+					`	on c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY and c.ENTRY = b.PROGRAM_NAME`,
+					`where UPPER(b.SYMBOL_NAME) = '${symbol.toUpperCase()}'`,
+					`  and (${binderCondition.join(` or `)})`,
+					`  and a.SOURCE_FILE_MEMBER is not null`
+				].join(` `);
 
-			if (rows.length >= 1) {
-				const chosen = rows[0];
-				// TODO: support IFS results?
+				try {
+					const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
 
-				return Uri.from({
-					scheme: `member`,
-					path: [chosen.LIB, chosen.SPF, `${chosen.MBR}.${chosen.ATTR}`].join(`/`)
-				}).toString();
+					return rows.map(row => {
+						return Uri.from({
+							scheme: `member`,
+							path: [``, row.LIB, row.SPF, `${row.MBR}.${row.ATTR}`].join(`/`)
+						}).toString();
+					})
+				} catch (e) {
+					console.log(e);
+				}
 			}
-		} catch (e) {
-			console.log(e);
 		}
 		return;
 	})
