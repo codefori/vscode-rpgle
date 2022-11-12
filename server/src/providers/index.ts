@@ -41,3 +41,9 @@ export function getWordRangeAtPosition(document: TextDocument, position: Positio
 	else
 		return document.getText(Range.create(line, Math.max(0, startChar), line, endChar+1));
 }
+
+export function trimQuotes(input: string) {
+	if (input[0] === `'`) input = input.substring(1);
+	if (input[input.length - 1] === `'`) input = input.substring(0, input.length - 1);
+	return input;
+}

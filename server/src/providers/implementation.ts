@@ -1,5 +1,6 @@
 import { Definition, ImplementationParams, Location, Range } from 'vscode-languageserver';
 import { documents, parser, getWordRangeAtPosition } from '.';
+import { getSymbolFiles, parseBnddir } from '../bindingDirectory';
 import { BindingDirectory, symbolLookup, validateUri } from '../connection';
 
 import * as Project from './project';
@@ -43,42 +44,25 @@ export default async function implementationProvider(params: ImplementationParam
 			if (cache) {
 				const bnddir: string | undefined = cache.keyword[`BNDDIR`];
 				if (bnddir) {
-					const objectStrings = bnddir.split(`:`).map(obj => trimQuotes(obj));
-					const binders: BindingDirectory[] = objectStrings.map(qualifiedPath => {
-						const parts = qualifiedPath.split(`/`);
-						return {
-							name: parts[parts.length - 1],
-							lib: parts[parts.length - 2]
-						}
-					});
+					const uris = await getSymbolFiles(bnddir, word);
+					if (uris) {
+						const validUris = await Promise.allSettled(uris.map(uri => validateUri(uri)));
+						// By this time, if they were valid, they are part of the cache.
 
-					const symbolFiles = await symbolLookup({
-						symbol: word,
-						binders
-					});
-
-					if (symbolFiles) {
-						const validSymbol = Object.keys(symbolFiles).find(symbol => symbol.toUpperCase() === word.toUpperCase());
-						if (validSymbol) {
-							const uris = symbolFiles[validSymbol];
-							const validUris = await Promise.allSettled(uris.map(uri => validateUri(uri)));
-							// By this time, if they were valid, they are part of the cache.
-
-							for (const possibleUri of validUris) {
-								if (possibleUri.status === `fulfilled` && possibleUri.value) {
-									const cache = parser.getParsedCache(possibleUri.value);
-									if (cache) {
-										const proc = cache.find(word);
-										return Location.create(
-											proc.position.path,
-											Range.create(
-												proc.position.line,
-												0,
-												proc.position.line,
-												0
-											)
-										);
-									}
+						for (const possibleUri of validUris) {
+							if (possibleUri.status === `fulfilled` && possibleUri.value) {
+								const cache = parser.getParsedCache(possibleUri.value);
+								if (cache) {
+									const proc = cache.find(word);
+									return Location.create(
+										proc.position.path,
+										Range.create(
+											proc.position.line,
+											0,
+											proc.position.line,
+											0
+										)
+									);
 								}
 							}
 						}
@@ -89,10 +73,4 @@ export default async function implementationProvider(params: ImplementationParam
 	}
 
 	return;
-}
-
-function trimQuotes(input: string) {
-	if (input[0] === `'`) input = input.substring(1);
-	if (input[input.length - 1] === `'`) input = input.substring(0, input.length - 1);
-	return input;
 }
