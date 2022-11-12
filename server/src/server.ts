@@ -9,18 +9,18 @@ import {
 	InitializeResult,
 } from 'vscode-languageserver/node';
 
+import { URI } from 'vscode-uri';
+
 import documentSymbolProvider from './providers/documentSymbols';
 import { documents, parser } from './providers';
 import definitionProvider from './providers/definition';
-import { URI } from 'vscode-uri';
-import completionItemProvider from './providers/completionItem';
+import {completionItemProvider} from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
 import { connection, getFileRequest, getObject as getObjectData, validateUri } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from './language/models/declaration';
-import { getPrettyType } from './language/models/fixed';
 
 import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';

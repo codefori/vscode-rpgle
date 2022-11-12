@@ -1,11 +1,12 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
+import { getSymbols } from '../bindingDirectory';
 import Cache from '../language/models/cache';
 import Declaration from '../language/models/declaration';
 import * as Project from "./project";
 
-export default async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
+export async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
 	const items: CompletionItem[] = [];
 	const lineNumber = handler.position.line;
 
@@ -87,7 +88,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						item.detail = file.relative;
 						return item;
 					}));
-					
+
 				} else {
 					const expandScope = (localCache: Cache) => {
 						for (const procedure of localCache.procedures) {
@@ -190,6 +191,25 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 						if (currentProcedure.scope) {
 							expandScope(currentProcedure.scope);
+						}
+					}
+
+					const bnddir = doc.keyword[`BNDDIR`];
+					if (bnddir) {
+						const possibleSymbols = await getSymbols(bnddir);
+
+						if (possibleSymbols) {
+							items.push(...
+								possibleSymbols
+									// Remove if symbol name is already defined in scope
+									.filter(symbol => !doc.procedures.some(proc => proc.name.toUpperCase() === symbol.toUpperCase()))
+									.map(symbol => {
+										const item = CompletionItem.create(symbol);
+										item.kind = CompletionItemKind.Interface;
+										item.detail = `(available export)`
+										return item;
+									})
+							)
 						}
 					}
 				}
