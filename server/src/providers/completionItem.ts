@@ -1,5 +1,5 @@
 import path = require('path');
-import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
+import { Command, CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
 import { getSymbols } from '../bindingDirectory';
 import Cache from '../language/models/cache';
@@ -206,7 +206,9 @@ export async function completionItemProvider(handler: CompletionParams): Promise
 									.map(symbol => {
 										const item = CompletionItem.create(symbol);
 										item.kind = CompletionItemKind.Interface;
-										item.detail = `(available export)`;
+										item.detail = `available import`;
+										item.documentation = `Found through binding directories defined in source.`
+										item.command = Command.create(`Open definition`, `editor.action.peekImplementation`, currentPath, handler.position);
 										return item;
 									})
 							)
@@ -218,9 +220,4 @@ export async function completionItemProvider(handler: CompletionParams): Promise
 	}
 
 	return items;
-}
-
-export async function completionItemResolver(item: CompletionItem): Promise<CompletionItem> {
-	console.log(item);
-	return item;
 }
