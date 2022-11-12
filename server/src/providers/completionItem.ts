@@ -206,7 +206,7 @@ export async function completionItemProvider(handler: CompletionParams): Promise
 									.map(symbol => {
 										const item = CompletionItem.create(symbol);
 										item.kind = CompletionItemKind.Interface;
-										item.detail = `(available export)`
+										item.detail = `(available export)`;
 										return item;
 									})
 							)
@@ -218,4 +218,9 @@ export async function completionItemProvider(handler: CompletionParams): Promise
 	}
 
 	return items;
+}
+
+export async function completionItemResolver(item: CompletionItem): Promise<CompletionItem> {
+	console.log(item);
+	return item;
 }

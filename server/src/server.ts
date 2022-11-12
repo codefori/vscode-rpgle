@@ -14,7 +14,7 @@ import { URI } from 'vscode-uri';
 import documentSymbolProvider from './providers/documentSymbols';
 import { documents, parser } from './providers';
 import definitionProvider from './providers/definition';
-import {completionItemProvider} from './providers/completionItem';
+import {completionItemProvider, completionItemResolver} from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
 import { connection, getFileRequest, getObject as getObjectData, validateUri } from "./connection";
@@ -64,7 +64,8 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.documentSymbolProvider = true;
 		result.capabilities.definitionProvider = true;
 		result.capabilities.completionProvider = {
-			triggerCharacters: [` `, `.`, `:`]
+			triggerCharacters: [` `, `.`, `:`],
+			resolveProvider: true
 		};
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
@@ -191,6 +192,7 @@ if (languageToolsEnabled) {
 	connection.onDocumentSymbol(documentSymbolProvider);
 	connection.onDefinition(definitionProvider);
 	connection.onCompletion(completionItemProvider);
+	connection.onCompletionResolve(completionItemResolver)
 	connection.onHover(hoverProvider);
 	connection.onReferences(referenceProvider);
 
