@@ -71,9 +71,6 @@ export interface BindingDirectory {
 	name: string;
 }
 
-export function symbolLookup(symbol: string, binders: BindingDirectory[]): Promise<string[]|undefined> {
-	return connection.sendRequest(`symbolLookup`, {
-		symbol,
-		binders
-	});
+export function symbolLookup(data: {symbol?: string, binders: BindingDirectory[]}): Promise<{[symbol: string]: string[]}|undefined> {
+	return connection.sendRequest(`symbolLookup`, data);
 }

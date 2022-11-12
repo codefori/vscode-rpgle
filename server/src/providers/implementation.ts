@@ -41,36 +41,44 @@ export default async function implementationProvider(params: ImplementationParam
 			// Then, we fall back to the server to see if we can find a reference or something?
 			const cache = parser.getParsedCache(currentPath);
 			if (cache) {
-				const bnddir: string|undefined = cache.keyword[`BNDDIR`];
+				const bnddir: string | undefined = cache.keyword[`BNDDIR`];
 				if (bnddir) {
 					const objectStrings = bnddir.split(`:`).map(obj => trimQuotes(obj));
-					const objects: BindingDirectory[] = objectStrings.map(qualifiedPath => {
+					const binders: BindingDirectory[] = objectStrings.map(qualifiedPath => {
 						const parts = qualifiedPath.split(`/`);
 						return {
 							name: parts[parts.length - 1],
 							lib: parts[parts.length - 2]
 						}
 					});
-					
-					const possibleUris = await symbolLookup(word, objects);
-					if (possibleUris) {
-						const validUris = await Promise.allSettled(possibleUris.map(uri => validateUri(uri)));
-						// By this time, if they were valid, they are part of the cache.
 
-						for (const possibleUri of validUris) {
-							if (possibleUri.status === `fulfilled` && possibleUri.value) {
-								const cache = parser.getParsedCache(possibleUri.value);
-								if (cache) {
-									const proc = cache.find(word);
-									return Location.create(
-										proc.position.path,
-										Range.create(
-											proc.position.line,
-											0,
-											proc.position.line,
-											0
-										)
-									);
+					const symbolFiles = await symbolLookup({
+						symbol: word,
+						binders
+					});
+
+					if (symbolFiles) {
+						const validSymbol = Object.keys(symbolFiles).find(symbol => symbol.toUpperCase() === word.toUpperCase());
+						if (validSymbol) {
+							const uris = symbolFiles[validSymbol];
+							const validUris = await Promise.allSettled(uris.map(uri => validateUri(uri)));
+							// By this time, if they were valid, they are part of the cache.
+
+							for (const possibleUri of validUris) {
+								if (possibleUri.status === `fulfilled` && possibleUri.value) {
+									const cache = parser.getParsedCache(possibleUri.value);
+									if (cache) {
+										const proc = cache.find(word);
+										return Location.create(
+											proc.position.path,
+											Range.create(
+												proc.position.line,
+												0,
+												proc.position.line,
+												0
+											)
+										);
+									}
 								}
 							}
 						}

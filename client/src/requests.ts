@@ -151,7 +151,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return [];
 	});
 
-	client.onRequest(`symbolLookup`, async (data: { symbol: string, binders: { lib?: string, name: string }[] }): Promise<string[] | undefined> => {
+	client.onRequest(`symbolLookup`, async (data: { symbol?: string, binders: { lib?: string, name: string }[] }): Promise<{[symbol: string]: string[]} | undefined> => {
 		const { symbol, binders } = data;
 		const instance = getBase();
 
@@ -178,6 +178,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 
 				const config = instance.getConfig();
 				const currentLibrary = config.currentLibrary;
+				const symbolClause = symbol ? `UPPER(b.SYMBOL_NAME) = '${symbol.toUpperCase()}' and` : ``;
 
 				const binderCondition = binders.map(binder => `(c.BINDING_DIRECTORY_LIBRARY = '${(binder.lib || currentLibrary).toUpperCase()}' and c.BINDING_DIRECTORY = '${binder.name.toUpperCase()}')`)
 				const statement = [
@@ -197,28 +198,39 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					`	on a.PROGRAM_LIBRARY = b.PROGRAM_LIBRARY and a.PROGRAM_NAME = b.PROGRAM_NAME`,
 					`right join qsys2.BINDING_DIRECTORY_INFO as c`,
 					`	on c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY and c.ENTRY = b.PROGRAM_NAME`,
-					`where UPPER(b.SYMBOL_NAME) = '${symbol.toUpperCase()}'`,
-					`  and (${binderCondition.join(` or `)})`,
-					`  and ${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH` : `a.SOURCE_FILE_MEMBER`} is not null`
+					`where ${symbolClause}`,
+					`  (${binderCondition.join(` or `)}) and`,
+					`  ${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH` : `a.SOURCE_FILE_MEMBER`} is not null`
 				].join(` `);
 
 				try {
 					const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
 
-					return rows.map(row => {
+					let symbolFiles: {[symbol: string]: string[]} = {};
+
+					rows.forEach(row => {
+						let uri;
 						// row.PATH is never null, but if row.MBR is null that means we likely have a streamfile
 						if (streamFileSupported && row.MBR === null) {
-							return Uri.from({
+							uri = Uri.from({
 								scheme: `streamfile`,
 								path: row.PATH
 							}).toString();
 						} else {
-							return Uri.from({
+							uri = Uri.from({
 								scheme: `member`,
 								path: [``, row.LIB, row.SPF, `${row.MBR}.${row.ATTR}`].join(`/`)
 							}).toString();
 						}
+
+						if (symbolFiles[row.SYMBOL_NAME]) {
+							symbolFiles[row.SYMBOL_NAME].push(uri);
+						} else {
+							symbolFiles[row.SYMBOL_NAME] = [uri];
+						}
 					})
+
+					return symbolFiles;
 				} catch (e) {
 					console.log(e);
 				}
