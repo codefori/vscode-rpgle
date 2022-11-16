@@ -1170,11 +1170,13 @@ export default class Parser {
       const keywordParts = createBlocks(parseStatement(parts.join(` `)));
 
       for (let i = 0; i < keywordParts.length; i++) {
-        if (keywordParts[i+1] && keywordParts[i+1].type === `block` && keywordParts[i].value) {
-          keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i+1].block.map(part => part.value).join(``);
-          i++; // Skip one for the block.
-        } else {
-          keyvalues[keywordParts[i].value.toUpperCase()] = true;
+        if (keywordParts[i].value) {
+          if (keywordParts[i+1] && keywordParts[i+1].type === `block`) {
+            keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i+1].block.map(part => part.value).join(``);
+            i++; // Skip one for the block.
+          } else {
+            keyvalues[keywordParts[i].value.toUpperCase()] = true;
+          }
         }
       }
     }
