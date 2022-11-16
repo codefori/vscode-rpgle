@@ -30,7 +30,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
-				let currentPosition = Position.create(handler.position.line, handler.position.character - 1);
+				let currentPosition = Position.create(handler.position.line, handler.position.character - 2);
 				let preWord = getWordRangeAtPosition(document, currentPosition);
 
 				// Uh oh! Maybe we found dim struct?
@@ -49,15 +49,15 @@ export default async function completionItemProvider(handler: CompletionParams):
 					if (currentProcedure && currentProcedure.scope) {
 						const procScop = currentProcedure.scope;
 
-						possibleStruct = currentProcedure.subItems.find(subitem => subitem.name.toUpperCase() === word && subitem.subItems.length > 0);
+						possibleStruct = currentProcedure.subItems.find(subitem => subitem.name.toUpperCase() === preWord && subitem.subItems.length > 0);
 
 						if (!possibleStruct) {
-							possibleStruct = procScop.structs.find(struct => struct.name.toUpperCase() === word);
+							possibleStruct = procScop.structs.find(struct => struct.name.toUpperCase() === preWord);
 						}
 					}
 
 					if (!possibleStruct) {
-						possibleStruct = doc.structs.find(struct => struct.name.toUpperCase() === word);
+						possibleStruct = doc.structs.find(struct => struct.name.toUpperCase() === preWord);
 					}
 
 					if (possibleStruct && possibleStruct.keyword[`QUALIFIED`]) {
