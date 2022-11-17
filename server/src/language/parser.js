@@ -690,12 +690,14 @@ export default class Parser {
 
           case `END-PROC`:
             //Procedures can only exist in the global scope.
-            currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+            if (scopes.length > 1) {
+              currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
-            if (currentItem && currentItem.type === `procedure`) {
-              currentItem.scope = scopes.pop();
-              currentItem.range.end = lineNumber;
-              resetDefinition = true;
+              if (currentItem && currentItem.type === `procedure`) {
+                currentItem.scope = scopes.pop();
+                currentItem.range.end = lineNumber;
+                resetDefinition = true;
+              }
             }
             break;
 
@@ -956,13 +958,15 @@ export default class Parser {
                   scopes.push(new Cache());
                 }
               } else {
-                //Procedures can only exist in the global scope.
-                currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+                if (scopes.length > 1) {
+                  //Procedures can only exist in the global scope.
+                  currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
-                if (currentItem && currentItem.type === `procedure`) {
-                  currentItem.scope = scopes.pop();
-                  currentItem.range.end = lineNumber;
-                  resetDefinition = true;
+                  if (currentItem && currentItem.type === `procedure`) {
+                    currentItem.scope = scopes.pop();
+                    currentItem.range.end = lineNumber;
+                    resetDefinition = true;
+                  }
                 }
               }
             }
@@ -1150,7 +1154,9 @@ export default class Parser {
       }
     }
 
-    scopes[0].keyword = Parser.expandKeywords(keywords);
+    if (scopes.length > 0) {
+      scopes[0].keyword = Parser.expandKeywords(keywords);
+    }
 
     const parsedData = scopes[0];
 
