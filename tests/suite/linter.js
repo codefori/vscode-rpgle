@@ -1,8 +1,8 @@
 
 const assert = require(`assert`);
 
-const {default: parserSetup} = require(`../parserSetup`);
-const {default: Linter} = require(`../../server/src/language/linter`);
+const { default: parserSetup } = require(`../parserSetup`);
+const { default: Linter } = require(`../../server/src/language/linter`);
 const path = require(`path`);
 const { Range, Position } = require(`../../server/src/language/models/DataPoints`);
 
@@ -33,13 +33,13 @@ exports.linter_indent_multi_1 = async () => {
     `Endsr;`,
     `Return;`
   ].join(`\n`);
- 
+
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
-  
+
   assert.strictEqual(indentErrors.length, 0, `There should be no errors`);
 };
 
@@ -55,13 +55,13 @@ exports.linter_indent_multi_2 = async () => {
     `Endsr;`,
     `Return;`
   ].join(`\n`);
- 
+
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
-  
+
   assert.strictEqual(indentErrors.length, 2, `There should be 2 errors`);
 
   assert.strictEqual(indentErrors[0].line, 3, `First error should be index 3`);
@@ -93,7 +93,7 @@ exports.linter1_indent = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
@@ -106,7 +106,7 @@ exports.linter1_indent = async () => {
 /**
    * Testing spaces before the EOL
    */
-exports.linter1_1_indent =  async () => {
+exports.linter1_1_indent = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -130,14 +130,14 @@ exports.linter1_1_indent =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
   assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
 };
 
-exports.linter2_indent =  async () => {
+exports.linter2_indent = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -164,7 +164,7 @@ exports.linter2_indent =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
@@ -179,7 +179,7 @@ exports.linter2_indent =  async () => {
   assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
 };
 
-exports.linter2_indent_other =  async () => {
+exports.linter2_indent_other = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -209,7 +209,7 @@ exports.linter2_indent_other =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
@@ -224,7 +224,7 @@ exports.linter2_indent_other =  async () => {
   assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
 };
 
-exports.linter3_indent =  async () => {
+exports.linter3_indent = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -250,12 +250,12 @@ exports.linter3_indent =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
   assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
-    
+
   assert.strictEqual(indentErrors[0].line, 9, `Index of 9 expected`);
   assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
   assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
@@ -269,7 +269,7 @@ exports.linter3_indent =  async () => {
   assert.strictEqual(indentErrors[2].expectedIndent, 0, `Value of 0 expected`);
 };
 
-exports.linter4 =  async () => {
+exports.linter4 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -287,7 +287,7 @@ exports.linter4 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireBlankSpecial: true
   }, cache);
 
@@ -306,7 +306,7 @@ exports.linter4 =  async () => {
   assert.strictEqual(errors[1].newValue, `*BLANK`, `Value of *BLANK expected`);
 };
 
-exports.linter5 =  async () => {
+exports.linter5 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -326,12 +326,12 @@ exports.linter5 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
   assert.strictEqual(errors.length, 2, `Expect length of 2`);
-    
+
   assert.strictEqual(errors[0].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
   assert.strictEqual(errors[0].range.start.line, 6, `Index of 6 expected`);
   assert.strictEqual(errors[0].range.start.character, 0, `Index of 0 expected`);
@@ -349,7 +349,7 @@ exports.linter5 =  async () => {
   assert.strictEqual(errors[1].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
 };
 
-exports.linter6 =  async () => {
+exports.linter6 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -373,7 +373,7 @@ exports.linter6 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true
   }, cache);
 
@@ -392,7 +392,7 @@ exports.linter6 =  async () => {
   assert.strictEqual(errors[1].offset.end, 22, `Index of 22 expected`);
 };
 
-exports.linter6_lf =  async () => {
+exports.linter6_lf = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -406,7 +406,7 @@ exports.linter6_lf =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true,
     IncorrectVariableCase: true
   }, cache);
@@ -437,7 +437,7 @@ exports.linter6_lf =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter6_crlf =  async () => {
+exports.linter6_crlf = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -453,7 +453,7 @@ exports.linter6_crlf =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true,
     IncorrectVariableCase: true
   }, cache);
@@ -472,7 +472,7 @@ exports.linter6_crlf =  async () => {
   assert.deepStrictEqual(errors[1], {
     range: line,
     offset: { position: 6, end: 21 },
-    type: `StringLiteralDupe`, 
+    type: `StringLiteralDupe`,
     newValue: undefined,
   }, `Error not as expected`);
 
@@ -484,7 +484,7 @@ exports.linter6_crlf =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter7_casing1 =  async () => {
+exports.linter7_casing1 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -508,7 +508,7 @@ exports.linter7_casing1 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `if`, expected: `If` },
       { operation: `endif`, expected: `Endif` },
@@ -529,7 +529,7 @@ exports.linter7_casing1 =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter7_casing2 =  async () => {
+exports.linter7_casing2 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -553,7 +553,7 @@ exports.linter7_casing2 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-OPT` },
     ]
@@ -572,7 +572,7 @@ exports.linter7_casing2 =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter7_casing3 =  async () => {
+exports.linter7_casing3 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -596,7 +596,7 @@ exports.linter7_casing3 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `dcl-s`, expected: `DCL-S` },
     ]
@@ -615,7 +615,7 @@ exports.linter7_casing3 =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter7_casing4 =  async () => {
+exports.linter7_casing4 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -634,7 +634,7 @@ exports.linter7_casing4 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `%trim`, expected: `%trim` },
     ]
@@ -653,7 +653,7 @@ exports.linter7_casing4 =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter7_casing5 =  async () => {
+exports.linter7_casing5 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -677,7 +677,7 @@ exports.linter7_casing5 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `dcl-s`, expected: `Dcl-S` },
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
@@ -687,7 +687,7 @@ exports.linter7_casing5 =  async () => {
   assert.strictEqual(errors.length, 0, `Expect length of 0`);
 };
 
-exports.linter7_casing6 =  async () => {
+exports.linter7_casing6 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -706,7 +706,7 @@ exports.linter7_casing6 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `*declare`, expected: `*upper` },
     ]
@@ -718,7 +718,7 @@ exports.linter7_casing6 =  async () => {
   assert.strictEqual(errors[2].newValue, `DCL-S`);
 };
 
-exports.linter7_casing7 =  async () => {
+exports.linter7_casing7 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -737,7 +737,7 @@ exports.linter7_casing7 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
       { operation: `*declare`, expected: `*upper` },
@@ -749,7 +749,7 @@ exports.linter7_casing7 =  async () => {
   assert.strictEqual(errors[1].newValue, `DCL-S`);
 };
 
-exports.linter7_casing8 =  async () => {
+exports.linter7_casing8 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -768,7 +768,7 @@ exports.linter7_casing8 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
       { operation: `*declare`, expected: `*LOWER` },
@@ -780,7 +780,7 @@ exports.linter7_casing8 =  async () => {
   assert.strictEqual(errors[1].newValue, `dcl-s`);
 };
 
-exports.linter7_casing9 =  async () => {
+exports.linter7_casing9 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -799,7 +799,7 @@ exports.linter7_casing9 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `*bif`, expected: `*lower` },
     ]
@@ -809,7 +809,7 @@ exports.linter7_casing9 =  async () => {
   assert.strictEqual(errors[0].newValue, `%trim`);
 };
 
-exports.linter7_casing10 =  async () => {
+exports.linter7_casing10 = async () => {
   const lines = [
     `**free`,
     ``,
@@ -832,7 +832,7 @@ exports.linter7_casing10 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
@@ -844,7 +844,7 @@ exports.linter7_casing10 =  async () => {
   assert.strictEqual(errors[0].newValue, `sFirstName`)
 };
 
-exports.linter7_casing11 =  async () => {
+exports.linter7_casing11 = async () => {
   const lines = [
     `**free`,
     ``,
@@ -867,7 +867,7 @@ exports.linter7_casing11 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
@@ -931,14 +931,14 @@ exports.linter7_casing12 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
   assert.strictEqual(errors.length, 0);
 }
 
-exports.linter8 =  async () => {
+exports.linter8 = async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
@@ -957,7 +957,7 @@ exports.linter8 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresParameter: true
   }, cache);
 
@@ -975,7 +975,7 @@ exports.linter8 =  async () => {
 /**
    * Check that local variables are not in global scope
    */
-exports.linter9 =  async () => {
+exports.linter9 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -994,13 +994,13 @@ exports.linter9 =  async () => {
     `  Myvariable2 = localvar;`,
     `End-Proc;`,
   ].join(`\n`);
-  
+
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
-  
+
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -1039,7 +1039,7 @@ exports.linter9 =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter10 =  async () => {
+exports.linter10 = async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug option(*nodebugio: *srcstmt);`,
@@ -1063,7 +1063,7 @@ exports.linter10 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoCTDATA: true
   }, cache);
 
@@ -1087,7 +1087,7 @@ exports.linter10 =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter11 =  async () => {
+exports.linter11 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1099,24 +1099,24 @@ exports.linter11 =  async () => {
     `    + 'oioi';`,
     `    `
   ].join(`\n`);
-  
+
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true
   }, cache);
-  
+
   assert.strictEqual(errors.length, 2, `Expect length of 2`);
-  
+
   const line = new Range(new Position(5, 0), new Position(7, 12));
-  
+
   assert.deepStrictEqual(errors[0], {
     range: line,
     offset: { position: 6, end: 21 },
     type: `StringLiteralDupe`,
     newValue: `HELLO`,
   }, `Error not as expected`);
-  
+
   assert.deepStrictEqual(errors[1], {
     range: line,
     offset: { position: 30, end: 45 },
@@ -1125,7 +1125,7 @@ exports.linter11 =  async () => {
   }, `Error not as expected`);
 };
 
-exports.linter12 =  async () => {
+exports.linter12 = async () => {
   const lines = [
     `**free`,
     `If 2 = 2;`,
@@ -1139,14 +1139,14 @@ exports.linter12 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
   assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
 };
 
-exports.linter13 =  async () => {
+exports.linter13 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1175,14 +1175,14 @@ exports.linter13 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
   assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
 };
 
-exports.linter13_commentIndent =  async () => {
+exports.linter13_commentIndent = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1211,7 +1211,7 @@ exports.linter13_commentIndent =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true,
     indent: 2
   }, cache);
@@ -1237,7 +1237,7 @@ exports.linter13_commentIndent =  async () => {
   });
 };
 
-exports.linter14 =  async () => {
+exports.linter14 = async () => {
   const lines = [
     `**FREE`,
     `//--------------------------------------------------------------------------------------------------`,
@@ -1279,14 +1279,14 @@ exports.linter14 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
   assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
 };
 
-exports.linter15 =  async () => {
+exports.linter15 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1316,7 +1316,7 @@ exports.linter15 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true
   }, cache);
 
@@ -1371,7 +1371,7 @@ exports.linter15 =  async () => {
 /**
    * Subroutine check test
    * */
-exports.linter16 =  async () => {
+exports.linter16 = async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 Char(20);`,
@@ -1386,7 +1386,7 @@ exports.linter16 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalSubroutines: true
   }, cache);
 
@@ -1428,7 +1428,7 @@ exports.linter16 =  async () => {
   });
 };
 
-exports.linter16_with_leavesr =  async () => {
+exports.linter16_with_leavesr = async () => {
   const lines = [
     `**FREE`,
     `Dcl-s SomeNum int(5);`,
@@ -1448,7 +1448,7 @@ exports.linter16_with_leavesr =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalSubroutines: true
   }, cache);
 
@@ -1498,11 +1498,11 @@ exports.linter16_with_leavesr =  async () => {
     }
   });
 };
-  
+
 /**
    * Subroutine in procedure check test
    * */
-exports.linter17 =  async () => {
+exports.linter17 = async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 Char(20);`,
@@ -1517,15 +1517,15 @@ exports.linter17 =  async () => {
     `  Endsr;`,
     `End-Proc;`,
   ].join(`\n`);
-  
+
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoLocalSubroutines: true
   }, cache);
-  
+
   assert.strictEqual(errors.length, 1, `Expect length of 1`);
-  
+
   assert.deepStrictEqual(errors[0], {
     type: `NoLocalSubroutines`,
     range: new Range(
@@ -1549,13 +1549,13 @@ exports.linter18 = async () => {
     `  mylocal = Myvariable2;`,
     `End-Proc;`,
   ].join(`\n`);
-  
+
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalsInProcedures: true
   }, cache);
-  
+
   assert.strictEqual(errors.length, 2, `Expect length of 2`);
 
   assert.deepStrictEqual(errors[0], {
@@ -1660,12 +1660,12 @@ exports.linter19 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
 
   assert.strictEqual(errors.length, 11);
-  
+
   assert.deepStrictEqual(errors[0], {
     type: `NoUnreferenced`,
     range: new Range(
@@ -1755,7 +1755,7 @@ exports.linter19 = async () => {
   });
 }
 
-exports.linter20 =  async () => {
+exports.linter20 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1768,12 +1768,12 @@ exports.linter20 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
   assert.strictEqual(errors.length, 1);
-    
+
   assert.strictEqual(errors[0].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
   assert.strictEqual(errors[0].range.start.line, 4);
   assert.strictEqual(errors[0].range.end.line, 6);
@@ -1814,7 +1814,7 @@ exports.linter21 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
 
@@ -1848,7 +1848,7 @@ exports.linter22 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrototypeCheck: true
   }, cache);
 
@@ -1875,7 +1875,7 @@ exports.linter22_b = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrototypeCheck: true
   }, cache);
 
@@ -1905,7 +1905,7 @@ exports.linter23 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
 
@@ -1962,7 +1962,7 @@ exports.linter24 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExternalTo: [
       `QSYGETPH`
     ]
@@ -2032,7 +2032,7 @@ exports.linter25 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExternalTo: [
       `QSYGETPH`,
       `QSYRLSPH`
@@ -2076,7 +2076,7 @@ exports.linter26 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
 
@@ -2100,10 +2100,10 @@ exports.linter27 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExecuteImmediate: true
   }, cache);
-  
+
   assert.strictEqual(errors.length, 1);
   assert.deepStrictEqual(errors[0], {
     type: `NoExecuteImmediate`,
@@ -2127,10 +2127,10 @@ exports.linter28 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExtProgramVariable: true
   }, cache);
-  
+
   assert.strictEqual(errors.length, 2);
 
   assert.deepStrictEqual(errors[0], {
@@ -2177,7 +2177,7 @@ exports.linter29 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2215,7 +2215,7 @@ exports.linter30 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2254,7 +2254,7 @@ exports.linter31 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2291,7 +2291,7 @@ exports.linter32 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2321,7 +2321,7 @@ exports.linter32_b = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({
-    uri, 
+    uri,
     content: lines,
     availableIncludes: [`tests/rpgle/copy1.rpgle`]
   }, {
@@ -2366,7 +2366,7 @@ exports.linter33 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2411,7 +2411,7 @@ exports.linter34 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     SQLHostVarCheck: true
   }, cache);
 
@@ -2453,7 +2453,7 @@ exports.linter35 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     ForceOptionalParens: true
   }, cache);
 
@@ -2482,7 +2482,7 @@ exports.linter36 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     ForceOptionalParens: true
   }, cache);
 
@@ -2509,7 +2509,7 @@ exports.linter37 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     UselessOperationCheck: true
   }, cache);
 
@@ -2616,7 +2616,7 @@ exports.linter38_subrefs = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  Linter.getErrors({uri, content: lines}, {
+  Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
   }, cache);
 
@@ -2694,7 +2694,7 @@ exports.linter38_subrefs = async () => {
 
   const qualDimStructYup = cache.find(`qualDimStructYup`);
   assert.strictEqual(qualDimStructYup.references.length, 3)
-  
+
   assert.deepStrictEqual(qualDimStructYup.references[0], {
     range: Range.create(38, 0, 38, 31),
     offset: {
@@ -2748,7 +2748,7 @@ exports.linter38_subrefs = async () => {
   });
 }
 
-exports.linter39 =  async () => {
+exports.linter39 = async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
@@ -2767,7 +2767,7 @@ exports.linter39 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresProcedureDescription: true
   }, cache);
 
@@ -2778,7 +2778,7 @@ exports.linter39 =  async () => {
   });
 };
 
-exports.linter40 =  async () => {
+exports.linter40 = async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
@@ -2801,7 +2801,7 @@ exports.linter40 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresProcedureDescription: true
   }, cache);
 
@@ -2844,10 +2844,10 @@ exports.linter40_return = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  Linter.getErrors({uri, content: lines}, {
+  Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
   }, cache);
-  
+
   const procedure = cache.find(`InputIsValid`);
   const validationResult = procedure.scope.find(`validationResult`);
 
@@ -2871,13 +2871,13 @@ exports.linter41 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireBlankSpecial: true,
     StringLiteralDupe: true
   }, cache);
 
   assert.strictEqual(errors.length, 3);
-  
+
   assert.deepStrictEqual(errors[0], {
     range: Range.create(5, 0, 5, 8),
     offset: {
@@ -2909,7 +2909,7 @@ exports.linter41 = async () => {
   });
 }
 
-exports.linter42 =  async () => {
+exports.linter42 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2936,7 +2936,7 @@ exports.linter42 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireOtherBlock: true
   }, cache);
 
@@ -2947,7 +2947,7 @@ exports.linter42 =  async () => {
   });
 };
 
-exports.linter43 =  async () => {
+exports.linter43 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2977,14 +2977,14 @@ exports.linter43 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireOtherBlock: true
   }, cache);
 
   assert.strictEqual(errors.length, 0);
 };
 
-exports.linter44 =  async () => {
+exports.linter44 = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -3019,7 +3019,7 @@ exports.linter44 =  async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireOtherBlock: true
   }, cache);
 
@@ -3033,3 +3033,41 @@ exports.linter44 =  async () => {
     type: `RequireOtherBlock`
   });
 };
+
+exports.issue_170 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Ds Myds;`,
+    `  MyDsField Char(1);`,
+    `End-Ds;`,
+    ``,
+    `dcl-s Date8 packed(8);`,
+    `dcl-s Msgpgm char(10);`,
+    ``,
+    `Stn = Stn;`,
+    `Bat = Bat;`,
+    `Wedat = Wedat;`,
+    ``,
+    `MyDsField = 'A';`,
+    ``,
+    `*INLR = *ON;`,
+    `Return;`,
+    ``,
+    `//----------------------------------------------------------------`,
+    `//Initialization routine`,
+    `//----------------------------------------------------------------`,
+    `Begsr *INZSR;`,
+    `  Date8 = *DATE;`,
+    `  Msgpgm = Pgmnam;`,
+    `Endsr;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  assert.deepStrictEqual(errors.length, 0);
+}
