@@ -39,5 +39,5 @@ export function getWordRangeAtPosition(document: TextDocument, position: Positio
 	if (startChar === endChar)
 		return undefined;
 	else
-		return document.getText(Range.create(line, Math.max(0, startChar), line, endChar+1));
+		return document.getText(Range.create(line, Math.max(0, startChar), line, endChar+1)).replace(/(\r\n|\n|\r)/gm, "");
 }

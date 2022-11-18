@@ -11,6 +11,7 @@ import documentFormattingProvider from './documentFormatting';
 
 import * as Project from "../project";
 import { connection, getFileRequest, getWorkingDirectory, validateUri, watchedFilesChangeEvent } from '../../connection';
+import { parseMemberUri } from '../../data';
 
 export let jsonCache: { [uri: string]: string } = {};
 
@@ -88,10 +89,10 @@ export async function getLintConfigUri(workingUri: string) {
 
 	switch (uri.scheme) {
 		case `member`:
-			const [_, baseLibrary, baseSourceFile, basename] = uri.path.split(`/`);
+			const memberPath = parseMemberUri(uri.path);
 			cleanString = [
 				``,
-				baseLibrary,
+				memberPath.library,
 				`VSCODE`,
 				`RPGLINT.JSON`
 			].join(`/`);

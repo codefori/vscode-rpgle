@@ -2,8 +2,8 @@
 const assert = require(`assert`);
 const path = require(`path`);
 
-const {default: parserSetup} = require(`../parserSetup`);
-const {default: Linter} = require(`../../server/src/language/linter`);
+const { default: parserSetup } = require(`../parserSetup`);
+const { default: Linter } = require(`../../server/src/language/linter`);
 
 const uri = `source.rpgle`;
 
@@ -59,7 +59,7 @@ exports.test3 = async () => {
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
-    
+
   assert.strictEqual(cache.structs[0].subItems.length, 2, `Expect length of 2 subitems`);
 
   assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
@@ -99,7 +99,7 @@ exports.test4 = async () => {
 
 /**
    * Variable and procedure definition test
-   */ 
+   */
 exports.test5 = async () => {
   const lines = [
     `**FREE`,
@@ -139,7 +139,7 @@ exports.test6 = async () => {
     ``,
     `Dcl-Pr TheProcedure;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `MyVariable2 = 'Hello world';`,
   ].join(`\n`);
@@ -161,7 +161,7 @@ exports.test7 = async () => {
     ``,
     `Dcl-Pr TheProcedure;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `Dcl-S theVar CHAR(20);`,
     ``,
@@ -434,7 +434,7 @@ exports.indicators1 = async () => {
   const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
-  Linter.getErrors({uri, content: lines}, {
+  Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
   }, cache);
 
@@ -583,7 +583,126 @@ exports.inline_end_pi = async () => {
   const cache = await parser.getDocs(uri, lines);
 
   const getHandle = cache.find(`getHandle`);
-  
+
   assert.strictEqual(getHandle.keyword[`LIKE`], `HANDLE_T`);
   assert.strictEqual(getHandle.keyword[`END-PI`], undefined);
+}
+
+exports.issue_168 = async () => {
+  const lines = [
+    `**free`,
+    `Ctl-opt datfmt(*iso) timfmt(*iso) alwnull(*usrctl) debug;`,
+    ``,
+    `Dcl-F TESTFILE3 Keyed Usage(*Update :*Delete);`,
+    ``,
+    `Dcl-Pr TESTCHAIN1 ExtPgm('TESTCHAIN1');`,
+    `  Parm1 Char(1);`,
+    `End-Pr TESTCHAIN1;`,
+    ``,
+    `Dcl-Pi TESTCHAIN1;`,
+    `  Parm1 Char(1);`,
+    `End-Pi TESTCHAIN1;`,
+    ``,
+    `Dcl-DS AAA;`,
+    `  a Char(10);`,
+    `End-D AAA;`,
+    ``,
+    `If (Parm1 = 'N');`,
+    `  Chain ('CHIAVE' :1) TESTFILE3;`,
+    `Else;`,
+    `  Chain ('CHIAVE' :1) TESTFILE3;`,
+    `EndIf; `,
+    ``,
+    `job_name = 'TESTFILE1';`,
+    ``,
+    `Update TESTREC;`,
+    ``,
+    `Return; `,
+  ].join(`\n`);
+
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+}
+
+exports.issues_168a = async () => {
+  const lines = [
+    `**free`,
+    `Ctl-opt datfmt(*iso) timfmt(*iso) alwnull(*usrctl) debug;`,
+    ``,
+    `Dcl-F TESTFILE3 Keyed Usage(*Update :*Delete);`,
+    ``,
+    `Dcl-Pr TESTCHAIN1 ExtPgm('TESTCHAIN1');`,
+    `Parm1 Char(1);`,
+    `End-Pr TESTCHAIN1;`,
+    ``,
+    `Dcl-Pi TESTCHAIN1;`,
+    `Parm1 Char(1);`,
+    `End-Pi TESTCHAIN1;`,
+    ``,
+    `Dcl-DS AAA;`,
+    `a Char(10);`,
+    `Dcl-ds a;`,
+    `End-ds a;`,
+    `End-Ds AAA;`,
+    ``,
+    `If (Parm1 = 'N');`,
+    `Chain ('CHIAVE' :1) TESTFILE3;`,
+    `Else;`,
+    `Chain ('CHIAVE' :1) TESTFILE3;`,
+    `EndIf;`,
+    ``,
+    `job_name = 'TESTFILE1';`,
+    ``,
+    `Update TESTREC;`,
+    ``,
+    `Return;`,
+    ``,
+    `// ____________________________________________________________________________`,
+    `Dcl-Proc aaa;`,
+    ``,
+    `Dcl-Pi aaa;`,
+    `end-proc;`,
+    `End-Pi aaa;`,
+    `// ____________________________________________________________________________`,
+    ``,
+    `End-Proc aaa;`,
+  ].join(`\n`);
+
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+}
+
+exports.issues_170b = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-DS WkStnInd;`,
+    `  ProcessSCF     Ind        Pos(21);`,
+    `  ReprintScf     Ind        Pos(22);`,
+    `  Error         `,
+    `   Ind      `,
+    `     Pos(25);`,
+    `  PageDown       Ind      `,
+    `    Pos(30);`,
+    `  PageUp         Ind        Pos(31);`,
+    `  SflEnd         Ind        Pos(40);`,
+    `  SflBegin       Ind        Pos(41);`,
+    `  NoRecord       Ind        Pos(60);`,
+    `  SflDspCtl      Ind        Pos(85);`,
+    `  SflClr         Ind        Pos(75);`,
+    `  SflDsp         Ind        Pos(95);`,
+    `End-DS;`,
+  ].join(`\n`);
+
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  const WkStnInd = cache.find(`WkStnInd`);
+  assert.strictEqual(WkStnInd.name, `WkStnInd`);
+  assert.strictEqual(WkStnInd.subItems.length, 11);
+
+  const error = cache.find(`Error`);
+  assert.strictEqual(error.name, `Error`);
+  assert.strictEqual(error.keyword[`IND`], true);
+  assert.strictEqual(error.keyword[`POS`], `25`);
 }

@@ -1,6 +1,16 @@
 import Declaration from './language/models/declaration';
 import { getPrettyType } from './language/models/fixed';
 
+export function parseMemberUri(path: string): {asp?: string, library?: string, file?: string, name: string} {
+	const parts = path.split(`/`).map(s => s.split(`,`)).flat().filter(s => s.length >= 1);
+	return {
+		name: parts[parts.length - 1],
+		file: parts[parts.length - 2],
+		library: parts[parts.length - 3],
+		asp: parts[parts.length - 4]
+	}
+};
+
 export function dspffdToRecordFormats(data: any, aliases = false): Declaration[] {
 	let recordFormats: {[name: string]: Declaration} = {};
 

@@ -61,9 +61,9 @@ export function initialise(context: ExtensionContext) {
 
 					switch (type) {
 						case `member`:
-							const [_, baseLibrary, baseSourceFile, basename] = editor.document.uri.path.split(`/`);
+							const memberPath = parseMemberUri(editor.document.uri.path);
 							const cleanString = [
-								baseLibrary,
+								memberPath.library,
 								`VSCODE`,
 								`RPGLINT.JSON`
 							].join(`/`);
@@ -157,3 +157,13 @@ export function initialise(context: ExtensionContext) {
 		}),
 	)
 }
+
+function parseMemberUri(path: string): {asp?: string, library?: string, file?: string, name: string} {
+	const parts = path.split(`/`).map(s => s.split(`,`)).flat().filter(s => s.length >= 1);
+	return {
+		name: parts[parts.length - 1],
+		file: parts[parts.length - 2],
+		library: parts[parts.length - 3],
+		asp: parts[parts.length - 4]
+	}
+};
