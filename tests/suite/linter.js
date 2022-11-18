@@ -3070,4 +3070,28 @@ exports.issue_170 = async () => {
   }, cache);
 
   assert.deepStrictEqual(errors.length, 0);
+};
+
+exports.issue_170a = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Ds SBM_DS;`,
+    `  Move1  Char(128)  Inz('WSBMJOB JOB(CRTBATC*) REPLACE(xxx) -`,
+    `  CMD(CALL PRP04A PARM(''SSS''  ''DDDDDDDD'')) -`,
+    `  MSGQ(*NONE)')`,
+    `  ;`,
+    `End-Ds;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  assert.deepStrictEqual(errors.length, 1);
 }

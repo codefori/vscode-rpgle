@@ -336,6 +336,9 @@ export default class Parser {
       isFullyFree = files[file][0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
 
+      /** @type {string|undefined} */
+      let currentStatement;
+
       let directIfScope = 0;
 
       for (let line of files[file]) {
@@ -345,9 +348,11 @@ export default class Parser {
         lineIsFree = false;
         lineNumber += 1;
 
-        // After compile time data, we're done
-        if (lineNumber > 0 && line.startsWith(`**`)) {
-          break;
+        if (line.startsWith(`**`)) {
+          // Usually is **FREE
+          if (lineNumber === 0) continue;
+          // After compile time data, we're done
+          else break;
         }
 
         if (isFullyFree === false && line.length > 6) {
@@ -401,23 +406,54 @@ export default class Parser {
           parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
           partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
 
-          if (parts[0] === `/EOF` && directIfScope === 0) {
-            // End of parsing for this file
-            break;
-          } else
-          if (parts[0] === `/IF`) {
-            // Directive IF
-            directIfScope += 1;
-            continue;
-          } else
-          if (parts[0] === `/ENDIF`) {
-            // Directive ENDIF
-            directIfScope -= 1;
-            continue;
-          } else
-          if (directIfScope > 0) {
-            // Ignore lines inside the IF scope.
-            continue;
+          const lineIsComment = line.startsWith(`//`);
+
+          if (!lineIsComment) {
+            if (parts[0] === `/EOF` && directIfScope === 0) {
+              // End of parsing for this file
+              break;
+            } else
+            if (parts[0] === `/IF`) {
+              // Directive IF
+              directIfScope += 1;
+              continue;
+            } else
+            if (parts[0] === `/ENDIF`) {
+              // Directive ENDIF
+              directIfScope -= 1;
+              continue;
+            } else
+            if (directIfScope > 0) {
+              // Ignore lines inside the IF scope.
+              continue;
+            } else
+            if (line.startsWith(`/`)) {
+              continue;
+            }
+          }
+
+          if (pieces.length > 1 && pieces[1].includes(`//`)) line = pieces[0] + `;`;
+
+          if (!lineIsComment) {
+            if (line.endsWith(`;`)) {
+              if (currentStatement) {
+                // This means the line is just part of the end of the last statement as well.
+                line = currentStatement + line;
+                currentStatement = undefined;
+
+                pieces = line.split(`;`);
+                parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
+                partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
+              }
+
+            } else if (!line.endsWith(`;`)) {
+              currentStatement = (currentStatement || ``) + line.trim();
+              if (currentStatement.endsWith(`-`)) {
+                currentStatement = currentStatement.substring(0, currentStatement.length - 1);
+              }
+
+              continue;
+            }
           }
 
           switch (parts[0]) {
@@ -743,7 +779,7 @@ export default class Parser {
             break;
 
           default:
-            if (line.startsWith(`//`)) {
+            if (lineIsComment) {
               if (docs) {
                 const content = line.substring(2).trim();
                 if (content.length > 0) {

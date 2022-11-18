@@ -139,7 +139,7 @@ exports.test6 = async () => {
     ``,
     `Dcl-Pr TheProcedure;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `MyVariable2 = 'Hello world';`,
   ].join(`\n`);
@@ -161,7 +161,7 @@ exports.test7 = async () => {
     ``,
     `Dcl-Pr TheProcedure;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `Dcl-S theVar CHAR(20);`,
     ``,
