@@ -177,10 +177,14 @@ export default function buildRequestHandlers(client: LanguageClient) {
 				}
 
 				const config = instance.getConfig();
-				const currentLibrary = config.currentLibrary;
+				const libraryList = [config.currentLibrary, ...config.libraryList];
 				const symbolClause = symbol ? `UPPER(b.SYMBOL_NAME) = '${symbol.toUpperCase()}' and` : ``;
 
-				const binderCondition = binders.map(binder => `(c.BINDING_DIRECTORY_LIBRARY = '${(binder.lib || currentLibrary).toUpperCase()}' and c.BINDING_DIRECTORY = '${binder.name.toUpperCase()}')`)
+				const libraryInList = libraryList.map(lib => `'${lib.toUpperCase()}'`).join(`, `);
+
+				const binderCondition = binders.map(binder => {
+					return `(c.BINDING_DIRECTORY_LIBRARY ${binder.lib ? `= '${binder.lib}'` : `in (${libraryInList})`} and c.BINDING_DIRECTORY = '${binder.name.toUpperCase()}')`;
+				})
 				const statement = [
 					`select`,
 					`	b.SYMBOL_NAME,`,
