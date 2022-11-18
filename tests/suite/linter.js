@@ -3093,5 +3093,19 @@ exports.issue_170a = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.deepStrictEqual(errors.length, 1);
+  assert.strictEqual(cache.structs.length, 1);
+
+  const SBM_DS = cache.find(`SBM_DS`);
+  assert.strictEqual(SBM_DS.name, `SBM_DS`);
+  assert.strictEqual(SBM_DS.subItems.length, 1);
+  assert.strictEqual(SBM_DS.position.line, 2);
+  assert.strictEqual(SBM_DS.references.length, 0);
+
+  const Move1 = SBM_DS.subItems[0];
+  assert.strictEqual(Move1.name, `Move1`);
+  assert.strictEqual(Object.keys(Move1.keyword).length, 2);
+  assert.strictEqual(Move1.position.line, 3);
+  assert.strictEqual(Move1.references.length, 0);
+  
+  assert.deepStrictEqual(errors.length, 2);
 }

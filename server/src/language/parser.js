@@ -338,6 +338,8 @@ export default class Parser {
 
       /** @type {string|undefined} */
       let currentStatement;
+      /** @type {number|undefined} */
+      let statementStartingLine;
 
       let directIfScope = 0;
 
@@ -434,6 +436,8 @@ export default class Parser {
 
           if (pieces.length > 1 && pieces[1].includes(`//`)) line = pieces[0] + `;`;
 
+          if (!currentStatement) statementStartingLine = lineNumber;
+
           if (!lineIsComment) {
             if (line.endsWith(`;`)) {
               if (currentStatement) {
@@ -447,6 +451,7 @@ export default class Parser {
               }
 
             } else if (!line.endsWith(`;`)) {
+
               currentStatement = (currentStatement || ``) + line.trim();
               if (currentStatement.endsWith(`-`)) {
                 currentStatement = currentStatement.substring(0, currentStatement.length - 1);
@@ -524,7 +529,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: statementStartingLine
                 };
 
                 scope.constants.push(currentItem);
@@ -544,7 +549,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: statementStartingLine
                 };
 
                 scope.variables.push(currentItem);
@@ -564,12 +569,12 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: statementStartingLine
                 };
 
                 currentItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
+                  start: statementStartingLine,
+                  end: statementStartingLine
                 };
 
                 currentGroup = `structs`;
@@ -579,7 +584,7 @@ export default class Parser {
 
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                  currentItem.range.end = lineNumber;
+                  currentItem.range.end = statementStartingLine;
                   scope.structs.push(currentItem);
                 } else {
                   currentItem.readParms = true;
@@ -596,7 +601,7 @@ export default class Parser {
           case `END-DS`:
             if (dsScopes.length > 0) {
               const currentDs = dsScopes[dsScopes.length - 1];
-              currentDs.range.end = lineNumber;
+              currentDs.range.end = statementStartingLine;
             }
 
             if (dsScopes.length === 1) {
@@ -620,19 +625,19 @@ export default class Parser {
 
                   currentItem.position = {
                     path: file,
-                    line: lineNumber
+                    line: statementStartingLine
                   };
 
                   currentItem.readParms = true;
 
                   currentItem.range = {
-                    start: lineNumber,
-                    end: lineNumber
+                    start: statementStartingLine,
+                    end: statementStartingLine
                   };
 
                   // Does the keywords include a keyword that makes end-ds useless?
                   if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
-                    currentItem.range.end = lineNumber;
+                    currentItem.range.end = statementStartingLine;
                     scope.procedures.push(currentItem);
                     resetDefinition = true;
                   }
@@ -645,7 +650,7 @@ export default class Parser {
 
           case `END-PR`:
             if (currentItem && currentItem.type === `procedure`) {
-              currentItem.range.end = lineNumber;
+              currentItem.range.end = statementStartingLine;
               scope.procedures.push(currentItem);
               resetDefinition = true;
             }
@@ -670,14 +675,14 @@ export default class Parser {
 
               currentItem.position = {
                 path: file,
-                line: lineNumber
+                line: statementStartingLine
               };
 
               currentItem.readParms = false;
 
               currentItem.range = {
-                start: lineNumber,
-                end: lineNumber
+                start: statementStartingLine,
+                end: statementStartingLine
               };
 
               scope.procedures.push(currentItem);
@@ -731,7 +736,7 @@ export default class Parser {
 
               if (currentItem && currentItem.type === `procedure`) {
                 currentItem.scope = scopes.pop();
-                currentItem.range.end = lineNumber;
+                currentItem.range.end = statementStartingLine;
                 resetDefinition = true;
               }
             }
@@ -746,12 +751,12 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: lineNumber
+                  line: statementStartingLine
                 };
 
                 currentItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
+                  start: statementStartingLine,
+                  end: statementStartingLine
                 };
 
                 currentDescription = [];
@@ -761,7 +766,7 @@ export default class Parser {
     
           case `ENDSR`:
             if (currentItem && currentItem.type === `subroutine`) {
-              currentItem.range.end = lineNumber;
+              currentItem.range.end = statementStartingLine;
               scope.subroutines.push(currentItem);
               resetDefinition = true;
             }
@@ -826,7 +831,7 @@ export default class Parser {
 
                   currentSub.position = {
                     path: file,
-                    line: lineNumber
+                    line: statementStartingLine
                   };
 
                   // Add comments from the tags
