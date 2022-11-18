@@ -188,7 +188,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 				const statement = [
 					`select`,
 					`	b.SYMBOL_NAME,`,
-					`	c.ENTRY_LIBRARY as PGM_LIB,`,
+					`	b.PROGRAM_LIBRARY as PGM_LIB,`,
 					`	c.ENTRY as PGM_NAME,`,
 					`	a.BOUND_MODULE_LIBRARY as MOD_LIB, `,
 					`	a.BOUND_MODULE as MOD_NAME, `,
@@ -204,8 +204,8 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					`	on c.ENTRY = b.PROGRAM_NAME`,
 					`where ${symbolClause}`,
 					`  (${binderCondition.join(` or `)}) and`,
-					`  (c.ENTRY_LIBRARY = '*LIBL' or b.PROGRAM_LIBRARY in (${libraryInList})) and`,
-					`  ${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH` : `a.SOURCE_FILE_MEMBER`} is not null`
+					`  ((c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY) or (c.ENTRY_LIBRARY = '*LIBL' and b.PROGRAM_LIBRARY in (${libraryInList}))) and`,
+					`  (${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH is not null or` : ``} a.SOURCE_FILE_MEMBER is not null)`
 				].join(` `);
 
 				try {
