@@ -987,6 +987,8 @@ exports.def_ranges = async () => {
     end: 39
   });
 
+  console.log(TYPEMST_Ds.keyword);
+
   const TYPEMST_F = cache.find(`TYPEMST_F`);
   assert.deepStrictEqual(TYPEMST_F.range, {
     start: 41,
