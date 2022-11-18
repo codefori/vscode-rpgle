@@ -139,7 +139,7 @@ exports.test6 = async () => {
     ``,
     `Dcl-Pr TheProcedure;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `MyVariable2 = 'Hello world';`,
   ].join(`\n`);
@@ -161,7 +161,7 @@ exports.test7 = async () => {
     ``,
     `Dcl-Pr TheProcedure;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `Dcl-S theVar CHAR(20);`,
     ``,
@@ -670,4 +670,39 @@ exports.issues_168a = async () => {
 
   const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines);
+}
+
+exports.issues_170b = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-DS WkStnInd;`,
+    `  ProcessSCF     Ind        Pos(21);`,
+    `  ReprintScf     Ind        Pos(22);`,
+    `  Error         `,
+    `   Ind      `,
+    `     Pos(25);`,
+    `  PageDown       Ind      `,
+    `    Pos(30);`,
+    `  PageUp         Ind        Pos(31);`,
+    `  SflEnd         Ind        Pos(40);`,
+    `  SflBegin       Ind        Pos(41);`,
+    `  NoRecord       Ind        Pos(60);`,
+    `  SflDspCtl      Ind        Pos(85);`,
+    `  SflClr         Ind        Pos(75);`,
+    `  SflDsp         Ind        Pos(95);`,
+    `End-DS;`,
+  ].join(`\n`);
+
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  const WkStnInd = cache.find(`WkStnInd`);
+  assert.strictEqual(WkStnInd.name, `WkStnInd`);
+  assert.strictEqual(WkStnInd.subItems.length, 11);
+
+  const error = cache.find(`Error`);
+  assert.strictEqual(error.name, `Error`);
+  assert.strictEqual(error.keyword[`IND`], true);
+  assert.strictEqual(error.keyword[`POS`], `25`);
 }

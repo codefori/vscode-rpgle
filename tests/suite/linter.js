@@ -3070,4 +3070,42 @@ exports.issue_170 = async () => {
   }, cache);
 
   assert.deepStrictEqual(errors.length, 0);
+};
+
+exports.issue_170a = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Ds SBM_DS;`,
+    `  Move1  Char(128)  Inz('WSBMJOB JOB(CRTBATC*) REPLACE(xxx) -`,
+    `  CMD(CALL PRP04A PARM(''SSS''  ''DDDDDDDD'')) -`,
+    `  MSGQ(*NONE)')`,
+    `  ;`,
+    `End-Ds;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  assert.strictEqual(cache.structs.length, 1);
+
+  const SBM_DS = cache.find(`SBM_DS`);
+  assert.strictEqual(SBM_DS.name, `SBM_DS`);
+  assert.strictEqual(SBM_DS.subItems.length, 1);
+  assert.strictEqual(SBM_DS.position.line, 2);
+  assert.strictEqual(SBM_DS.references.length, 0);
+
+  const Move1 = SBM_DS.subItems[0];
+  assert.strictEqual(Move1.name, `Move1`);
+  assert.strictEqual(Object.keys(Move1.keyword).length, 2);
+  assert.strictEqual(Move1.position.line, 3);
+  assert.strictEqual(Move1.references.length, 0);
+  
+  assert.deepStrictEqual(errors.length, 2);
 }
