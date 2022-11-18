@@ -201,9 +201,10 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					`right join QSYS2.PROGRAM_EXPORT_IMPORT_INFO as b`,
 					`	on a.PROGRAM_LIBRARY = b.PROGRAM_LIBRARY and a.PROGRAM_NAME = b.PROGRAM_NAME`,
 					`right join qsys2.BINDING_DIRECTORY_INFO as c`,
-					`	on c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY and c.ENTRY = b.PROGRAM_NAME`,
+					`	on c.ENTRY = b.PROGRAM_NAME`,
 					`where ${symbolClause}`,
 					`  (${binderCondition.join(` or `)}) and`,
+					`  (c.ENTRY_LIBRARY = '*LIBL' or b.PROGRAM_LIBRARY in (${libraryInList})) and`,
 					`  ${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH` : `a.SOURCE_FILE_MEMBER`} is not null`
 				].join(` `);
 
