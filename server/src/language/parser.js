@@ -453,9 +453,10 @@ export default class Parser {
             } else if (!line.endsWith(`;`)) {
 
               currentStatement = (currentStatement || ``) + line.trim();
-              if (currentStatement.endsWith(`-`)) {
+              if (currentStatement.endsWith(`-`)) 
                 currentStatement = currentStatement.substring(0, currentStatement.length - 1);
-              }
+              else
+                currentStatement += ` `;
 
               continue;
             }
