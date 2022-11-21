@@ -7,6 +7,7 @@ import {
 	InitializeParams,
 	TextDocumentSyncKind,
 	InitializeResult,
+	WorkspaceFolder,
 } from 'vscode-languageserver/node';
 
 import documentSymbolProvider from './providers/documentSymbols';
@@ -26,6 +27,8 @@ import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/project/implementation';
 import { dspffdToRecordFormats } from './data';
+import path = require('path');
+import { existsSync } from 'fs';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -110,7 +113,7 @@ connection.onInitialized(() => {
 
 parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration[]> => {
 	if (!languageToolsEnabled) return [];
-	
+
 	const data = await getObjectData(table);
 
 	return dspffdToRecordFormats(data, aliases);
@@ -119,18 +122,20 @@ parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
 	const uriPath = currentUri.path;
-	let cleanString: string|undefined;
+
+	let cleanString: string | undefined;
+	let validUri: string | undefined;
 
 	switch (currentUri.scheme) {
 		case `member`:
 			let possibleAsp = undefined;
 			let baseLibrary = `QSYSINC`;
-			const path = uriPath.startsWith(`/`) ? uriPath.substring(1).split(`/`) : uriPath.split(`/`);
+			const memberPath = uriPath.startsWith(`/`) ? uriPath.substring(1).split(`/`) : uriPath.split(`/`);
 
 			// if (path.length > 0) result.basename = path[path.length - 1];
 			// if (path.length > 1) result.file = path[path.length - 2];
-			if (path.length > 2) baseLibrary = path[path.length - 3];
-			if (path.length > 3) possibleAsp = path[path.length - 4];
+			if (memberPath.length > 2) baseLibrary = memberPath[memberPath.length - 3];
+			if (memberPath.length > 3) possibleAsp = memberPath[memberPath.length - 4];
 
 			if (includeString.startsWith(`'`) && includeString.endsWith(`'`)) {
 				// IFS fetch
@@ -138,7 +143,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// TODO:....
 
 			} else {
-				
+
 				// Member fetch
 				// Split by /,
 				const parts = includeString.split(`/`).map(s => s.split(`,`)).flat();
@@ -155,34 +160,56 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					path: cleanString
 				}).toString();
 			}
+			validUri = await validateUri(cleanString, currentUri.scheme);
 			break;
 
 		case `file`:
+			const workspaceFolders = await connection.workspace.getWorkspaceFolders();
+			let workspaceFolder: WorkspaceFolder | undefined;
+			if (workspaceFolders) {
+				workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).path))
+			}
+
 			cleanString = includeString;
-			
+
 			if (cleanString.startsWith(`'`) && cleanString.endsWith(`'`)) {
 				cleanString = cleanString.substring(1, cleanString.length - 1);
+			}
+
+			if (Project.isEnabled) {
+				// Project mode is enable. Let's do a search for the path.
+				validUri = await validateUri(cleanString, currentUri.scheme);
+
+			} else {
+				// Because project mode is disabled, likely due to the large workspace, we don't search
+				if (workspaceFolder) {
+					cleanString = path.posix.join(URI.parse(workspaceFolder.uri).path, cleanString)
+				}
+
+				validUri = existsSync(cleanString) ? 
+					URI.from({
+						scheme: currentUri.scheme,
+						path: cleanString
+					}).toString()
+				: undefined;
 			}
 			break;
 	}
 
-	if (cleanString) {
-		const validUri = await validateUri(cleanString, currentUri.scheme);
-
-		if (validUri) {
-			const validSource = await getFileRequest(validUri);
-			if (validSource) {
-				return {
-					found: true,
-					uri: validUri,
-					lines: validSource.split(`\n`)
-				};
-			}
+	if (validUri) {
+		const validSource = await getFileRequest(validUri);
+		if (validSource) {
+			return {
+				found: true,
+				uri: validUri,
+				lines: validSource.split(`\n`)
+			};
 		}
 	}
 
 	return {
-		found: false
+		found: false,
+		uri: validUri
 	};
 });
 

@@ -55,14 +55,14 @@ async function loadWorkspace() {
 		workspaces.forEach((workspaceUri => {
 			const folderPath = URI.parse(workspaceUri.uri).path;
 
-			console.log(`starting glob on: ${folderPath}`);
+			console.log(`Starting search of: ${folderPath}`);
 			const files = glob.sync(projectFilesGlob, {
 				cwd: folderPath,
 				absolute: true,
 				nocase: true,
 			});
 
-			console.log(`found files: ${files.length}`);
+			console.log(`Found RPGLE files: ${files.length}`);
 
 			uris.push(...files.map(file => URI.from({
 				scheme: `file`,
@@ -70,10 +70,13 @@ async function loadWorkspace() {
 			}).toString()))
 		}));
 
-		if (uris) {
+		if (uris.length < 1000) {
 			for (const uri of uris) {
 				await loadLocalFile(uri);
 			}
+		} else {
+			console.log(`Disabling project mode for large project.`);
+			isEnabled = false;
 		}
 	}
 }

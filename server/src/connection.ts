@@ -21,7 +21,6 @@ connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
 })
 
 export async function validateUri(stringUri: string, scheme = ``) {
-
 	// First, check local cache
 	const possibleCachedFile = findFile(stringUri, scheme);
 	if (possibleCachedFile) return possibleCachedFile;
@@ -34,18 +33,9 @@ export async function validateUri(stringUri: string, scheme = ``) {
 }
 
 export async function getFileRequest(uri: string) {
-	const parsedUri = URI.parse(uri);
-
 	// First, check if it's local
 	const localCacheDoc = documents.get(uri);
 	if (localCacheDoc) return localCacheDoc.getText();
-
-	if (parsedUri.scheme === `file`) {
-		try {
-			const body = await readFile(parsedUri.path, {encoding: `utf-8`});
-			return body;
-		} catch (e) {}
-	}
 
 	// If not, then grab it from remote
 	const body: string|undefined = await connection.sendRequest("getFile", uri);
