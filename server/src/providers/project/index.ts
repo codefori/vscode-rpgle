@@ -1,10 +1,15 @@
-import { connection, getFileRequest, getIncludesUris, getProjectFiles, PossibleInclude, watchedFilesChangeEvent } from '../../connection';
+import * as fs from "fs/promises";
+
+import { connection, getFileRequest, getIncludesUris, PossibleInclude, watchedFilesChangeEvent } from '../../connection';
 import { documents, parser } from '..';
 import Linter from '../../language/linter';
-import Cache from '../../language/models/cache';
 import { DidChangeWatchedFilesParams, FileChangeType, Location, Range } from 'vscode-languageserver';
 import Declaration from '../../language/models/declaration';
 import { calculateOffset } from '../linter';
+import { URI } from 'vscode-uri';
+
+import { glob } from "glob";
+const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
 
 export let isEnabled = false;
 /**
@@ -20,7 +25,7 @@ export async function initialise() {
 			switch (fileEvent.type) {
 				case FileChangeType.Created:
 				case FileChangeType.Changed:
-					loadFile(fileEvent.uri);
+					loadLocalFile(fileEvent.uri);
 
 					if (fileEvent.uri.toLowerCase().endsWith(`.rpgleinc`)) {
 						currentIncludes = undefined;
@@ -40,34 +45,57 @@ export async function initialise() {
 }
 
 async function loadWorkspace() {
-	const uris = await getProjectFiles();
+	const workspaces = await connection.workspace.getWorkspaceFolders();
 
-	if (uris) {
-		await Promise.allSettled(uris?.map(uri => loadFile(uri)));
-	}
-}
+	console.log(workspaces);
 
-async function loadFile(uri: string) {
-	const content = await getFileRequest(uri);
+	if (workspaces) {
+		let uris: string[] = [];
 
-	if (content) {
-		parser.getDocs(uri, content).then(cache => {
-			// Linter / reference collector only works on free-format.
-			if (cache) {
-				if (content.length >= 6 && content.substring(0, 6).toUpperCase() === `**FREE`) {
-					Linter.getErrors({
-						uri,
-						content,
-					}, {
-						CollectReferences: true
-					}, cache);
-				}
+		workspaces.forEach((workspaceUri => {
+			const folderPath = URI.parse(workspaceUri.uri).path;
+
+			console.log(`starting glob on: ${folderPath}`);
+			const files = glob.sync(projectFilesGlob, {
+				cwd: folderPath,
+				absolute: true,
+				nocase: true,
+			});
+
+			console.log(`found files: ${files.length}`);
+
+			uris.push(...files.map(file => URI.from({
+				scheme: `file`,
+				path: file
+			}).toString()))
+		}));
+
+		if (uris) {
+			for (const uri of uris) {
+				await loadLocalFile(uri);
 			}
-		});
+		}
 	}
 }
 
-let currentIncludes: PossibleInclude[]|undefined = [];
+async function loadLocalFile(uri: string) {
+	const validPath = URI.parse(uri).path;
+	const content = await fs.readFile(validPath, { encoding: `utf-8` });
+
+	const cache = await parser.getDocs(uri, content, {withIncludes: false});
+	if (cache) {
+		if (content.length >= 6 && content.substring(0, 6).toUpperCase() === `**FREE`) {
+			Linter.getErrors({
+				uri,
+				content,
+			}, {
+				CollectReferences: true
+			}, cache);
+		}
+	}
+}
+
+let currentIncludes: PossibleInclude[] | undefined = [];
 
 export async function getIncludes(basePath: string) {
 	if (!currentIncludes || currentIncludes && currentIncludes.length === 0) currentIncludes = await getIncludesUris(basePath);

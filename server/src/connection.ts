@@ -1,10 +1,12 @@
-import { connect } from 'http2';
+import { readFile } from 'fs/promises';
+
 import {
 	createConnection,
 	DidChangeWatchedFilesParams,
 	ProposedFeatures,
 	_Connection
 } from 'vscode-languageserver/node';
+import { URI } from 'vscode-uri';
 
 
 import { documents, findFile } from './providers';
@@ -19,6 +21,7 @@ connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
 })
 
 export async function validateUri(stringUri: string, scheme = ``) {
+
 	// First, check local cache
 	const possibleCachedFile = findFile(stringUri, scheme);
 	if (possibleCachedFile) return possibleCachedFile;
@@ -31,13 +34,22 @@ export async function validateUri(stringUri: string, scheme = ``) {
 }
 
 export async function getFileRequest(uri: string) {
+	const parsedUri = URI.parse(uri);
+
 	// First, check if it's local
 	const localCacheDoc = documents.get(uri);
 	if (localCacheDoc) return localCacheDoc.getText();
 
+	if (parsedUri.scheme === `file`) {
+		try {
+			const body = await readFile(parsedUri.path, {encoding: `utf-8`});
+			return body;
+		} catch (e) {}
+	}
+
 	// If not, then grab it from remote
 	const body: string|undefined = await connection.sendRequest("getFile", uri);
-	if (body) { 
+	if (body) {
 		// TODO.. cache it?
 		return body; 
 	}
@@ -51,10 +63,6 @@ export function getWorkingDirectory(): Promise<string|undefined> {
 
 export function getObject(objectPath: string): Promise<object[]> {
 	return connection.sendRequest("getObject", objectPath);
-}
-
-export function getProjectFiles(): Promise<string[]|undefined> {
-	return connection.sendRequest("getProjectFiles");
 }
 
 export interface PossibleInclude {

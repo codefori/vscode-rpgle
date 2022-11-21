@@ -110,15 +110,6 @@ export function activate(context: ExtensionContext) {
 			return;
 		});
 
-		client.onRequest(`getProjectFiles`, async (): Promise<string[] | undefined> => {
-			if (workspace.workspaceFolders) {
-				const uris = await workspace.findFiles(projectFilesGlob, `**/.git`);
-				return uris.map(uri => uri.toString());
-			}
-
-			return undefined;
-		});
-
 		client.onRequest(`getIncludesUris`, async (stringUri: string): Promise<{uri: string, relative: string}[]> => {
 			if (workspace.workspaceFolders) {
 				const uri = Uri.parse(stringUri);
