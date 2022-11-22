@@ -31,8 +31,8 @@ export default async function completionItemProvider(handler: CompletionParams):
 			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
 				let currentPosition = Position.create(handler.position.line, handler.position.character - 2);
-				let preWord = getWordRangeAtPosition(document, currentPosition);
-
+				let preWord = getWordRangeAtPosition(document, currentPosition)?.toUpperCase();
+				
 				// Uh oh! Maybe we found dim struct?
 				if (!preWord) {
 					const startBracket = currentLine.lastIndexOf(`(`, currentPosition.character);
