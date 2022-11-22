@@ -50,14 +50,16 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	/**
 	 * Gets the text content for a provided Uri
 	 */
-	client.onRequest("getFile", async (stringUri: string): Promise<string | undefined> => {
+	 client.onRequest("getFile", async (stringUri: string): Promise<string | undefined> => {
 		// Always assumes URI is valid. Use getUri first
 		const uri = Uri.parse(stringUri);
-		const doc = await workspace.openTextDocument(uri);
+		try {
+			const doc = await workspace.openTextDocument(uri);
 
-		if (doc) {
-			return doc.getText();
-		}
+			if (doc) {
+				return doc.getText();
+			}
+		} catch (e) {}
 
 		return;
 	});
