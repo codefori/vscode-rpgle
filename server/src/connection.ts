@@ -1,10 +1,12 @@
-import { connect } from 'http2';
+import { readFile } from 'fs/promises';
+
 import {
 	createConnection,
 	DidChangeWatchedFilesParams,
 	ProposedFeatures,
 	_Connection
 } from 'vscode-languageserver/node';
+import { URI } from 'vscode-uri';
 
 
 import { documents, findFile } from './providers';
@@ -37,7 +39,7 @@ export async function getFileRequest(uri: string) {
 
 	// If not, then grab it from remote
 	const body: string|undefined = await connection.sendRequest("getFile", uri);
-	if (body) { 
+	if (body) {
 		// TODO.. cache it?
 		return body; 
 	}
@@ -51,10 +53,6 @@ export function getWorkingDirectory(): Promise<string|undefined> {
 
 export function getObject(objectPath: string): Promise<object[]> {
 	return connection.sendRequest("getObject", objectPath);
-}
-
-export function getProjectFiles(): Promise<string[]|undefined> {
-	return connection.sendRequest("getProjectFiles");
 }
 
 export interface PossibleInclude {

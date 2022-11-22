@@ -24,7 +24,6 @@
 		"Formatters"
 	],
 	"activationEvents": [
-		"onStartupFinished",
 		"onLanguage:rpgle"
 	],
 	"main": "./out/extension",
