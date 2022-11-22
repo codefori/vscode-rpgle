@@ -25,7 +25,7 @@ import { getPrettyType } from './language/models/fixed';
 
 import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
-import implementationProvider from './providers/project/implementation';
+import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats } from './data';
 import path = require('path');
 import { existsSync } from 'fs';
@@ -71,6 +71,7 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
+		result.capabilities.implementationProvider = true;
 	}
 
 	if (linterEnabled) {
@@ -96,7 +97,6 @@ connection.onInitialize((params: InitializeParams) => {
 		if (workspaceFolders && workspaceFolders.length > 0) {
 			projectEnabled = true;
 			result.capabilities.workspaceSymbolProvider = true;
-			result.capabilities.implementationProvider = true;
 		}
 	}
 
