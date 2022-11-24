@@ -224,6 +224,100 @@ module.exports = {
     });
   },
 
+  incorrectEnd2: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `dcl-proc *inzsr;`,
+      `  dsply 'hello world';`,
+      `endsr;`,
+    ].join(`\n`);
+
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+
+    const { errors } = Linter.getErrors({uri, content: lines}, {
+      PrettyComments: true
+    }, cache);
+
+    assert.deepStrictEqual(errors[0], {
+      type: `UnexpectedEnd`,
+      range: new Range(
+        new Position(4, 0),
+        new Position(4, 5),
+      ),
+      offset: {
+        position: 0,
+        end: 5
+      },
+    });
+  },
+
+  incorrectEnd3: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `begsr hello;`,
+      `  dsply 'hello world';`,
+      `end-proc;`,
+    ].join(`\n`);
+
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+
+    const { errors } = Linter.getErrors({uri, content: lines}, {
+      PrettyComments: true
+    }, cache);
+
+    assert.deepStrictEqual(errors[0], {
+      type: `UnexpectedEnd`,
+      range: new Range(
+        new Position(4, 0),
+        new Position(4, 8),
+      ),
+      offset: {
+        position: 0,
+        end: 8
+      },
+    });
+  },
+
+  incorrectEnd4: async () => {
+    const lines = [
+      `**FREE`,
+      `Dcl-s MyVariable2 Char(20);`,
+      ``,
+      `theProcedure();`,
+      `Dsply MyVariable2;`,
+      ``,
+      `Dcl-Proc theProcedure;`,
+      `  Exsr theSubroutine;`,
+      `  Begsr theSubroutine;`,
+      `    MyVariable2 = 'Hello world';`,
+      `    // Endsr;`,
+      `End-Proc;`,
+    ].join(`\n`);
+
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+
+    const { errors } = Linter.getErrors({uri, content: lines}, {
+      PrettyComments: true
+    }, cache);
+
+    assert.deepStrictEqual(errors[0], {
+      type: `UnexpectedEnd`,
+      range: new Range(
+        new Position(11, 0),
+        new Position(11, 8),
+      ),
+      offset: {
+        position: 0,
+        end: 8
+      },
+    });
+  },
+
   if1: async () => {
     const lines = [
       `**FREE`,

@@ -29,7 +29,7 @@ const errorText = {
   'PrettyComments': `Comments must be correctly formatted.`,
   'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
   'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
-  'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\``,
+  'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\`/\`BEG..\``,
   'NoUnreferenced': `No reference to definition.`,
   'NoExternalTo': `Cannot declare prototype to this external API.`,
   'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`,
@@ -67,6 +67,7 @@ export default class Linter {
     const globalProcs = globalScope.procedures;
 
     let inProcedure = false;
+    let inSubroutine = false;
     let inPrototype = false;
     let inOnExit = false;
 
@@ -413,6 +414,19 @@ export default class Linter {
 
                   switch (statement[0].value.toUpperCase()) {
                   case `BEGSR`:
+                    if (inSubroutine) {
+                      errors.push({
+                        range: new Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        offset: { position: statement[0].position, end: statement[0].position + statement[0].value.length },
+                        type: `UnexpectedEnd`,
+                      });
+                    }
+
+                    inSubroutine = true;
+
                     if (inProcedure) {
                       if (rules.NoLocalSubroutines) {
                         errors.push({
@@ -438,6 +452,17 @@ export default class Linter {
                     }
                     break;
                   case `DCL-PROC`:
+                    if (inSubroutine || inProcedure) {
+                      errors.push({
+                        range: new Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        offset: { position: statement[0].position, end: statement[0].position + statement[0].value.length },
+                        type: `UnexpectedEnd`,
+                      });
+                    }
+
                     inProcedure = true;
                     if (statement.length < 2) break;
                     if (rules.RequiresProcedureDescription) {
@@ -598,6 +623,19 @@ export default class Linter {
 
                   switch (value) {
                   case `ENDSR`:
+                    if (!inSubroutine) {
+                      errors.push({
+                        range: new Range(
+                          statementStart,
+                          statementEnd
+                        ),
+                        offset: { position: statement[0].position, end: statement[0].position + statement[0].value.length },
+                        type: `UnexpectedEnd`,
+                      });
+                    } else {
+                      inSubroutine = false;
+                    }
+
                     if (inProcedure === false) {
                       if (rules.NoGlobalSubroutines) {
                         errors.push({
@@ -613,7 +651,7 @@ export default class Linter {
                     }
                     break;
                   case `END-PROC`:
-                    if (inProcedure === false) {
+                    if (inProcedure === false || inSubroutine) {
                       errors.push({
                         range: new Range(
                           statementStart,
