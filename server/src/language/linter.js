@@ -857,7 +857,7 @@ export default class Linter {
 
               let part;
 
-              if (statement.length > 0 && [`declare`, `end`].includes(statement[0].type) === false) {
+              if (statement.length > 0) {
                 // const isSQL = (statement[0].type === `word` && statement[0].value.toUpperCase() === `EXEC`);
 
                 for (let i = 0; i < statement.length; i++) {
@@ -949,89 +949,91 @@ export default class Linter {
                         }
                       }
 
-                      if (rules.RequiresParameter && !inPrototype) {
-                        // Check the procedure reference has a block following it
-                        const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
-                        if (definedProcedure) {
-                          let requiresBlock = false;
-                          if (statement.length <= i + 1) {
-                            requiresBlock = true;
-                          } else if (statement[i + 1].type !== `openbracket`) {
-                            requiresBlock = true;
-                          }
+                      const isDeclare = [`declare`, `end`].includes(statement[0].type);
+                      if ((isDeclare && i >= 2) || !isDeclare) {
+                        if (rules.RequiresParameter && !inPrototype) {
 
-                          if (requiresBlock) {
-                            errors.push({
-                              range: new Range(
-                                statementStart,
-                                statementEnd
-                              ),
-                              offset: { position: part.position, end: part.position + part.value.length },
-                              type: `RequiresParameter`,
-                            });
+                          // Check the procedure reference has a block following it
+                          const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
+                          if (definedProcedure) {
+                            let requiresBlock = false;
+                            if (statement.length <= i + 1) {
+                              requiresBlock = true;
+                            } else if (statement[i + 1].type !== `openbracket`) {
+                              requiresBlock = true;
+                            }
+
+                            if (requiresBlock) {
+                              errors.push({
+                                range: new Range(
+                                  statementStart,
+                                  statementEnd
+                                ),
+                                offset: { position: part.position, end: part.position + part.value.length },
+                                type: `RequiresParameter`,
+                              });
+                            }
                           }
                         }
-                      }
 
-                      if (rules.CollectReferences) {
-                        if (statement[i - 1] && statement[i - 1].type === `dot`) {
-                          break;
-                        }
+                        if (rules.CollectReferences) {
+                          if (statement[i - 1] && statement[i - 1].type === `dot`) break;
 
-                        let defRef;
-                        if (currentProcedure && currentProcedure.scope) {
-                          defRef = currentProcedure.scope.find(upperName);
+                          let defRef;
+                          if (currentProcedure && currentProcedure.scope) {
+                            defRef = currentProcedure.scope.find(upperName);
+
+                            if (!defRef) {
+                              defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === upperName);
+                            }
+                          }
 
                           if (!defRef) {
-                            defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === upperName);
-                          }
-                        }
-
-                        if (!defRef) {
-                          defRef = globalScope.find(upperName);
-                        }
-
-                        if (defRef) {
-                          if (defRef.position.line !== statementStart.line) {
-                            defRef.references.push({
-                              range: new Range(
-                                statementStart,
-                                statementEnd
-                              ),
-                              offset: { position: part.position, end: part.position + part.value.length },
-                            });
+                            defRef = globalScope.find(upperName);
                           }
 
-                          if (defRef.keyword[`QUALIFIED`]) {
-                            let nextPartIndex = i + 1;
+                          if (defRef) {
+                            if (defRef.position.line !== statementStart.line) {
+                              defRef.references.push({
+                                range: new Range(
+                                  statementStart,
+                                  statementEnd
+                                ),
+                                offset: { position: part.position, end: part.position + part.value.length },
+                              });
+                            }
 
-                            if (statement[nextPartIndex]) {
-                              // First, check if there is an array call here and skip over it
-                              if (statement[nextPartIndex].type === `openbracket`) {
-                                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+                            if (defRef.keyword[`QUALIFIED`]) {
+                              let nextPartIndex = i + 1;
 
-                                if (nextPartIndex >= 0) nextPartIndex++;
-                              }
+                              if (statement[nextPartIndex]) {
+                                // First, check if there is an array call here and skip over it
+                                if (statement[nextPartIndex].type === `openbracket`) {
+                                  nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
 
-                              // Check if the next part is a dot
-                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
-                                nextPartIndex++;
+                                  if (nextPartIndex >= 0) nextPartIndex++;
+                                }
 
-                                // Check if the next part is a word
-                                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
-                                  const subItemPart = statement[nextPartIndex];
-                                  const subItemName = subItemPart.value.toUpperCase();
+                                // Check if the next part is a dot
+                                if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                                  nextPartIndex++;
 
-                                  // Find the subitem
-                                  const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
-                                  if (subItemDef) {
-                                    subItemDef.references.push({
-                                      range: new Range(
-                                        statementStart,
-                                        statementEnd
-                                      ),
-                                      offset: { position: subItemPart.position, end: subItemPart.position + subItemPart.value.length },
-                                    });
+                                  // Check if the next part is a word
+                                  if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                                    const subItemPart = statement[nextPartIndex];
+                                    const subItemName = subItemPart.value.toUpperCase();
+
+                                    // Find the subitem
+                                    const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                                    if (subItemDef) {
+                                      subItemDef.references.push({
+                                        range: new Range(
+                                          statementStart,
+                                          statementEnd
+                                        ),
+                                        offset: { position: subItemPart.position, end: subItemPart.position + subItemPart.value.length },
+                                      });
+                                    }
                                   }
                                 }
                               }
@@ -1053,7 +1055,7 @@ export default class Linter {
                           newValue: `*BLANK`
                         });
 
-                      } else if (rules.StringLiteralDupe && !isEmbeddedSQL) {
+                      } else if (rules.StringLiteralDupe && !isEmbeddedSQL && statement[0].type !== `declare`) {
                         let foundBefore = stringLiterals.find(literal => literal.value === part.value);
 
                         // If it does not exist on our list, we can add it

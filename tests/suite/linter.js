@@ -2851,7 +2851,7 @@ exports.linter40_return = async () => {
   const procedure = cache.find(`InputIsValid`);
   const validationResult = procedure.scope.find(`validationResult`);
 
-  assert.strictEqual(validationResult.references.length, 5);
+  assert.strictEqual(validationResult.references.length, 6);
 }
 
 exports.linter41 = async () => {
@@ -3108,4 +3108,35 @@ exports.issue_170a = async () => {
   assert.strictEqual(Move1.references.length, 0);
   
   assert.deepStrictEqual(errors.length, 2);
+}
+
+exports.linter40_keywordrefs = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-C  RANDOMLEN    286;`,
+    `Dcl-s  somevar      Int(10) inz(randomLen);`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true,
+    IncorrectVariableCase: true
+  }, cache);
+
+  const RANDOMLEN = cache.find(`RANDOMLEN`);
+
+  assert.strictEqual(RANDOMLEN.references.length, 1);
+  assert.deepStrictEqual(RANDOMLEN.references[0], {
+    range: Range.create(2, 0, 2, 42),
+    offset: { position: 32, end: 41 },
+  });
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    range: Range.create(2, 0, 2, 42),
+    offset: { position: 32, end: 41 },
+    type: `IncorrectVariableCase`,
+    newValue: `RANDOMLEN`,
+  });
 }
