@@ -53,7 +53,7 @@ async function loadWorkspace() {
 		let uris: string[] = [];
 
 		workspaces.forEach((workspaceUri => {
-			const folderPath = URI.parse(workspaceUri.uri).path;
+			const folderPath = URI.parse(workspaceUri.uri).fsPath;
 
 			console.log(`Starting search of: ${folderPath}`);
 			const files = glob.sync(projectFilesGlob, {
@@ -82,7 +82,7 @@ async function loadWorkspace() {
 }
 
 async function loadLocalFile(uri: string) {
-	const validPath = URI.parse(uri).path;
+	const validPath = URI.parse(uri).fsPath;
 	const content = await fs.readFile(validPath, { encoding: `utf-8` });
 
 	const cache = await parser.getDocs(uri, content, {withIncludes: false});
