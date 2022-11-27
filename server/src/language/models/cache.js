@@ -30,10 +30,10 @@ export default class Cache {
 
     /** @type {Declaration[]} */
     this.structs = cache.structs || [];
-    
+
     /** @type {Declaration[]} */
     this.constants = cache.constants || [];
-    
+
     /** @type {Declaration[]} */
     this.indicators = cache.indicators || [...inds];
 
@@ -71,10 +71,29 @@ export default class Cache {
       ...this.procedures.map(def => def.name),
       ...this.files.map(def => def.name),
       ...fileStructNames,
-      ...this.subroutines.map(def => def.name), 
+      ...this.subroutines.map(def => def.name),
       ...this.variables.map(def => def.name),
       ...this.structs.map(def => def.name),
     ].filter(name => name);
+  }
+
+  /**
+   * Returns 0-indexed line number where definition block starts for current scope
+   * @param {string} fsPath Path to check
+   * @returns {number} Line number
+   */
+  getDefinitionBlockEnd(fsPath) {
+    const lasts = [
+      this.procedures.filter(d => d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined).pop(),
+      this.structs.filter(d => d.position.path === fsPath).pop(),
+      this.variables.filter(d => d.position.path === fsPath).pop(),
+      this.constants.filter(d => d.position.path === fsPath).pop(),
+      this.files.filter(d => d.position.path === fsPath).pop()
+    ].filter(d => d !== undefined);
+
+    const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.line).sort((a, b) => b - a);
+
+    return (lines.length >= 1 ? lines[0] : 0);
   }
 
   /**
@@ -88,8 +107,8 @@ export default class Cache {
     const allStructs = [...fileStructs, ...this.structs];
 
     const possibles = [
-      ...this.constants.filter(def => def.name.toUpperCase() === name), 
-      ...this.procedures.filter(def => def.name.toUpperCase() === name), 
+      ...this.constants.filter(def => def.name.toUpperCase() === name),
+      ...this.procedures.filter(def => def.name.toUpperCase() === name),
       ...this.files.filter(def => def.name.toUpperCase() === name),
       ...allStructs.filter(def => def.name.toUpperCase() === name),
       ...this.subroutines.filter(def => def.name.toUpperCase() === name),
@@ -128,7 +147,7 @@ export default class Cache {
       struct.subItems.forEach(sub => sub.references = []);
     });
   }
-	
+
   findDefinition(lineNumber, word) {
     // If they're typing inside of a procedure, let's get the stuff from there too
     const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);

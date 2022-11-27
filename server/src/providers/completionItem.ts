@@ -3,7 +3,15 @@ import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat,
 import { documents, getWordRangeAtPosition, parser } from '.';
 import Cache from '../language/models/cache';
 import Declaration from '../language/models/declaration';
+import * as ileExports from './apis';
 import * as Project from "./project";
+
+const completionKind = {
+  function: CompletionItemKind.Function,
+  struct: CompletionItemKind.Struct
+};
+
+const eol = `\n`;
 
 export default async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
 	const items: CompletionItem[] = [];
@@ -14,9 +22,9 @@ export default async function completionItemProvider(handler: CompletionParams):
 	const document = documents.get(currentPath);
 
 	if (document) {
-		const word = getWordRangeAtPosition(document, handler.position);
 		const doc = await parser.getDocs(currentPath, document.getText());
 		if (doc) {
+			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
 			// If they're typing inside of a procedure, let's get the stuff from there too
 			const currentProcedure = doc.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
@@ -32,7 +40,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 			if (trigger === `.`) {
 				let currentPosition = Position.create(handler.position.line, handler.position.character - 2);
 				let preWord = getWordRangeAtPosition(document, currentPosition)?.toUpperCase();
-				
+
 				// Uh oh! Maybe we found dim struct?
 				if (!preWord) {
 					const startBracket = currentLine.lastIndexOf(`(`, currentPosition.character);
@@ -87,7 +95,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						item.detail = file.relative;
 						return item;
 					}));
-					
+
 				} else {
 					const expandScope = (localCache: Cache) => {
 						for (const procedure of localCache.procedures) {
@@ -191,6 +199,57 @@ export default async function completionItemProvider(handler: CompletionParams):
 						if (currentProcedure.scope) {
 							expandScope(currentProcedure.scope);
 						}
+					}
+
+					// Next, we're going to make some import suggestions for system APIs
+					// TODO: support not free
+					if (isFree) {
+						const insertAt = doc.getDefinitionBlockEnd(document.uri) + 1;
+						const insertRange = Range.create(insertAt, 0, insertAt, 0);
+
+						ileExports.names.filter(
+							// Check the prototype doesn't exist
+							apiName => !doc.procedures.some(proc => {
+								const apiNameUpper = apiName.toUpperCase();
+								if (proc.name.toUpperCase() === apiNameUpper) return true;
+
+								let possibleExternalName = proc.keyword[`EXTPROC`] || proc.keyword[`EXTPGM`];
+
+								if (typeof possibleExternalName === `string`) {
+									if (possibleExternalName.startsWith(`'`)) possibleExternalName = possibleExternalName.substring(1);
+									if (possibleExternalName.endsWith(`'`)) possibleExternalName = possibleExternalName.substring(0, possibleExternalName.length - 1);
+									if (possibleExternalName.toUpperCase() === apiNameUpper) return true;
+								}
+							}) &&
+
+								// And also the struct hasn't been defined with the same name
+								!doc.structs.some(struct => struct.name.toUpperCase() === apiName.toUpperCase())
+						).forEach(apiName => {
+							const currentExport = ileExports.bodies[apiName];
+
+							const item = CompletionItem.create(apiName);
+							item.kind = completionKind[currentExport.type];
+							item.insertTextFormat = InsertTextFormat.Snippet;
+							item.insertText = currentExport.insertText;
+							item.detail = `${currentExport.detail} (auto-import)`;
+
+							item.documentation = {
+								kind: `markdown`,
+								value: [
+									currentExport.description,
+									(currentExport.example ? 
+										[`---`, '', '```rpgle', currentExport.example.join(eol), '```'].join(eol)
+										: undefined)
+								].filter(v => v).join(eol + eol)
+							};
+
+							item.additionalTextEdits = [{
+								range: insertRange,
+								newText: eol + currentExport.prototype.join(eol) + eol
+							}];
+
+							items.push(item);
+						})
 					}
 				}
 			}
