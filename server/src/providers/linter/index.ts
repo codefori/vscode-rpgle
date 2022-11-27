@@ -150,7 +150,7 @@ export async function getLintOptions(workingUri: string) {
 	return result;
 }
 
-export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
+export async function refreshDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 	if (isFree) {
 		const text = document.getText();
@@ -211,7 +211,9 @@ export async function refreshDiagnostics(document: TextDocument, docs: Cache) {
 			});
 		}
 
-		connection.sendDiagnostics({ uri: document.uri, diagnostics: [...indentDiags, ...generalDiags] });
+		if (updateDiagnostics) {
+			connection.sendDiagnostics({ uri: document.uri, diagnostics: [...indentDiags, ...generalDiags] });
+		}
 		return detail;
 	}
 }
