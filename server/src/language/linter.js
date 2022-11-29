@@ -1224,7 +1224,7 @@ export default class Linter {
           });
 
         dec.subroutines
-          .filter(def => def.position.path === data.uri && def.name && def.name.toUpperCase() !== `*INZSR`)
+          .filter(def => def.position.path === data.uri && def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
           .forEach(def => {
             if (def.references.length === 0) {
               // Add an error to def
