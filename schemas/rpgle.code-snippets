@@ -137,6 +137,13 @@
 		],
 		"description": "%BITXOR returns the bit-wise exclusive ORing of the bits of the two arguments. That is, the result bit is ON when just one of the corresponding bits in the arguments are ON, and OFF otherwise."
 	},
+	"%charcount": {
+		"prefix": "%charcount",
+		"body": [
+			"%charcount(${1:character, graphic or UCS2})"
+		],
+		"description": "%CHARCOUNT returns the number of natural characters in the alphanumeric, graphic, or UCS-2 expression. This may be different from the number of bytes or double bytes that is returned by %LEN."
+	},
 	"%char-character-graphic-UCS2": {
 		"prefix": "%char-character-graphic-UCS2",
 		"body": [
