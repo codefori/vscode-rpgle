@@ -179,6 +179,20 @@
 		],
 		"description": "%CHECKR returns the last position of the string base that contains a character that does not appear in string comparator. If all of the characters in base also appear in comparator, the function returns 0."
 	},
+	"%concat": {
+		"prefix": "%concat",
+		"body": [
+			"%concat(${1:separator|*none|} : ${2:string1} : ${3:string2} : ${4:string3 ...} : ${5|*natural,*stdcharsize|})"
+		],
+		"description": "%CONCAT returns the concatenation of string1, string2, string3, and so on, separated by the separator operand."
+	},
+	"%concatarr": {
+		"prefix": "%concatarr",
+		"body": [
+			"%concatarr(${1:separator} : ${2:array} : ${3|*natural,*stdcharsize|})"
+		],
+		"description": "%CONCATARR returns the concatenation of the elements of the array operand separated by the separator operand."
+	},
 	"%data": {
 		"prefix": "%data",
 		"body": [
