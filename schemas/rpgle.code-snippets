@@ -161,14 +161,14 @@
 	"%check": {
 		"prefix": "%check",
 		"body": [
-			"%check(${1:comparator} :${2:base} :${3:(optional) start})"
+			"%check(${1:comparator} :${2:base} :${3:(optional) start} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%CHECK returns the first position of the string base that contains a character that does not appear in string comparator. If all of the characters in base also appear in comparator, the function returns 0."
 	},
 	"%checkr": {
 		"prefix": "%checkr",
 		"body": [
-			"%checkr(${1:comparator} :${2:base} :${3:(optional) start})"
+			"%checkr(${1:comparator} :${2:base} :${3:(optional) start} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%CHECKR returns the last position of the string base that contains a character that does not appear in string comparator. If all of the characters in base also appear in comparator, the function returns 0."
 	},
