@@ -20,6 +20,16 @@ Check out the [official documentation](https://halcyon-tech.github.io/docs/#/pag
 1. Fork & clone
 2. `npm i`
 3. Run
-   * `npm run test`
-   * Debug 'Launch Client'
-	* Debug 'Attach to Server'
+    * `npm run test`
+    * Debug 'Launch Client'
+    * Debug 'Attach to Server'
+
+# Previous contributors
+
+Thanks so much to everyone [who has contributed](https://github.com/halcyon-tech/vscode-rpgle/graphs/contributors).
+
+* [@worksofliam](https://github.com/worksofliam)
+* [@SJLennon](https://github.com/SJLennon)
+* [@sebCIL](https://github.com/sebCIL)
+* [@p-behr](https://github.com/p-behr)
+* [@chrjorgensen](https://github.com/chrjorgensen)
