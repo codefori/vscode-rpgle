@@ -17,12 +17,40 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 		const getScopeVars = (scope: Cache) => {
 			const currentScopeDefs: DocumentSymbol[] = [];
 
+			scope.procedures
+				.filter(proc => proc.position && proc.position.path === currentPath)
+				.forEach(proc => {
+					const procDef = DocumentSymbol.create(
+						proc.name,
+						proc.keywords.join(` `).trim(),
+						SymbolKind.Function,
+						Range.create(proc.range.start, 0, proc.range.end, 0),
+						Range.create(proc.range.start, 0, proc.range.start, 0),
+					);
+
+					procDef.children = proc.subItems
+						.filter(subitem => subitem.position && subitem.position.path === currentPath)
+						.map(subitem => DocumentSymbol.create(
+							subitem.name,
+							subitem.keywords.join(` `).trim(),
+							SymbolKind.Property,
+							Range.create(subitem.position.line, 0, subitem.position.line, 0),
+							Range.create(subitem.position.line, 0, subitem.position.line, 0)
+						));
+
+					if (proc.scope && procDef.children) {
+						procDef.children.push(...getScopeVars(proc.scope));
+					}
+
+					symbols.push(procDef);
+				});
+
 			currentScopeDefs.push(
 				...scope.subroutines.filter(sub => sub.position && sub.position.path === currentPath)
 					.filter(def => def.range.start)
 					.map(def => DocumentSymbol.create(
 						def.name,
-						def.keywords.join(` `).trim(), 
+						def.keywords.join(` `).trim(),
 						SymbolKind.Function,
 						Range.create(def.range.start, 0, def.range.end, 0),
 						Range.create(def.range.start, 0, def.range.start, 0),
@@ -31,8 +59,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				...scope.variables
 					.filter(variable => variable.position && variable.position.path === currentPath)
 					.map(def => DocumentSymbol.create(
-						def.name, 
-						def.keywords.join(` `).trim(), 
+						def.name,
+						def.keywords.join(` `).trim(),
 						SymbolKind.Variable,
 						Range.create(def.position.line, 0, def.position.line, 0),
 						Range.create(def.position.line, 0, def.position.line, 0)
@@ -41,8 +69,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				...scope.constants
 					.filter(constant => constant.position && constant.position.path === currentPath)
 					.map(def => DocumentSymbol.create(
-						def.name, 
-						def.keywords.join(` `).trim(), 
+						def.name,
+						def.keywords.join(` `).trim(),
 						SymbolKind.Constant,
 						Range.create(def.position.line, 0, def.position.line, 0),
 						Range.create(def.position.line, 0, def.position.line, 0)
@@ -122,34 +150,6 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			symbols.push(
 				...getScopeVars(doc),
 			);
-
-			doc.procedures
-				.filter(proc => proc.position && proc.position.path === currentPath)
-				.forEach(proc => {
-					const procDef = DocumentSymbol.create(
-						proc.name,
-						proc.keywords.join(` `).trim(),
-						SymbolKind.Function,
-						Range.create(proc.range.start, 0, proc.range.end, 0),
-						Range.create(proc.range.start, 0, proc.range.start, 0),
-					);
-
-					procDef.children = proc.subItems
-						.filter(subitem => subitem.position && subitem.position.path === currentPath)
-						.map(subitem => DocumentSymbol.create(
-							subitem.name,
-							subitem.keywords.join(` `).trim(),
-							SymbolKind.Property,
-							Range.create(subitem.position.line, 0, subitem.position.line, 0),
-							Range.create(subitem.position.line, 0, subitem.position.line, 0)
-						));
-
-					if (proc.scope && procDef.children) {
-						procDef.children = getScopeVars(proc.scope);
-					}
-
-					symbols.push(procDef);
-				});
 		}
 	}
 
