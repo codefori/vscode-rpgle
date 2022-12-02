@@ -212,12 +212,12 @@ exports.likeds2 = async () => {
   assert.strictEqual(cache.structs.length, 1);
   assert.strictEqual(cache.procedures.length, 1);
 
-  const MyOtherStruct = cache.find(`myprocedure`);
-  assert.strictEqual(MyOtherStruct.name, `myprocedure`);
-  assert.strictEqual(MyOtherStruct.position.line, 9);
-  assert.strictEqual(MyOtherStruct.subItems.length, 1);
+  const myProc = cache.find(`myprocedure`);
+  assert.strictEqual(myProc.name, `myprocedure`);
+  assert.strictEqual(myProc.position.line, 9);
+  assert.strictEqual(myProc.subItems.length, 1);
 
-  const parmInputDs = MyOtherStruct.subItems[0];
+  const parmInputDs = myProc.subItems[0];
   assert.strictEqual(parmInputDs.name, `inputDS`);
   assert.strictEqual(parmInputDs.position.line, 11);
   assert.strictEqual(parmInputDs.subItems.length, 2);
