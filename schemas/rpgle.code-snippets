@@ -182,7 +182,7 @@
 	"%concat": {
 		"prefix": "%concat",
 		"body": [
-			"%concat(${1:separator|*none|} : ${2:string1} : ${3:string2} : ${4:string3 ...} : ${5|*natural,*stdcharsize|})"
+			"%concat(${1:separator} : ${2:string1} : ${3:string2} : ${4:string3 ...} : ${5|*natural,*stdcharsize|})"
 		],
 		"description": "%CONCAT returns the concatenation of string1, string2, string3, and so on, separated by the separator operand."
 	},
@@ -466,12 +466,26 @@
 		],
 		"description": "%MAX returns the maximum value of its operands."
 	},
+	"%maxarr": {
+		"prefix": "%maxarr",
+		"body": [
+			"%maxarr(${1:array} :${2:(optional) start} :${3:(optional) number-of-elements})"
+		],
+		"description": "%MAXARR returns the index of the maximum value in the array, or the subsection of the array identified by the start-element operand and the number-of-elements operand."
+	},
 	"%min": {
 		"prefix": "%min",
 		"body": [
 			"%min(${1:item} :${2:item} :${3:(optional) item}...)"
 		],
 		"description": "%MIN returns the minimum value of its operands."
+	},
+	"%minarr": {
+		"prefix": "%minarr",
+		"body": [
+			"%minarr(${1:array} :${2:(optional) start} :${3:(optional) number-of-elements})"
+		],
+		"description": "%MINARR returns the index of the minimum value in the array, or the subsection of the array identified by the start-element operand and the number-of-elements operand."
 	},
 	"%minutes": {
 		"prefix": "%minutes",
