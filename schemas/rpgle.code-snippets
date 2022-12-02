@@ -508,6 +508,13 @@
 		],
 		"description": "%MSECONDS converts a number into a duration that can be added to a time or timestamp value. %MSECONDS can only follow the plus or minus sign in an addition or subtraction expression. The value before the plus or minus sign must be a time or timestamp. The result is a time or timestamp value with the appropriate number of microseconds added or subtracted. For a time, the resulting value is in *ISO format."
 	},
+	"%msg": {
+		"prefix": "%msg",
+		"body": [
+			"%msg(${1:message-id} :${2:message-file} :${3:(optional) replacement-text})"
+		],
+		"description": "%MSG is used as the second operand of the SND-MSG operation. %MSG does not return a value, and it cannot be specified anywhere other than for the SND-MSG operation."
+	},
 	"%nullind": {
 		"prefix": "%nullind",
 		"body": [
@@ -683,6 +690,13 @@
 			"%subst(${1:string} :${2:start position} :${3:(optional) length})"
 		],
 		"description": "%SUBST returns a portion of argument string."
+	},
+	"%target": {
+		"prefix": "%target",
+		"body": [
+			"%target(${1:program-or-procedure} :${2:(optional) offset})"
+		],
+		"description": "%TARGET is used as the third operand of the SND-MSG operation. %TARGET does not return a value, and it cannot be specified anywhere other than for the SND-MSG operation."
 	},
 	"%this": {
 		"prefix": "%this",
