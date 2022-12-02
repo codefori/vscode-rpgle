@@ -455,7 +455,7 @@
 	"%lower": {
 		"prefix": "%lower",
 		"body": [
-			"%lower(${1:string} :${2:(optional) start} :${3:(optional) length})"
+			"%lower(${1:string} :${2:(optional) start} :${3:(optional) length} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%LOWER returns the string operand converted to lower case."
 	},
@@ -595,28 +595,28 @@
 	"%replace": {
 		"prefix": "%replace",
 		"body": [
-			"%replace(${1:replacement string} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to replace})"
+			"%replace(${1:replacement string} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to replace} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%REPLACE returns the character string produced by inserting a replacement string into the source string, starting at the start position and replacing the specified number of characters."
 	},
 	"%scan": {
 		"prefix": "%scan",
 		"body": [
-			"%scan(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan})"
+			"%scan(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%SCAN returns the first position of the search argument in the source string, or 0 if it was not found."
 	},
 	"%scanr": {
 		"prefix": "%scanr",
 		"body": [
-			"%scanr(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan})"
+			"%scanr(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%SCANR returns the last position of the search argument in the source string, or 0 if it was not found."
 	},
 	"%scanrpl": {
 		"prefix": "%scanrpl",
 		"body": [
-			"%scanrpl(${1:search argument} :${2:replacement string} :${3:source string} :${4:(optional) start position} :${5:(optional) source length to scan})"
+			"%scanrpl(${1:search argument} :${2:replacement string} :${3:source string} :${4:(optional) start position} :${5:(optional) source length to scan} :${6|*natural,*stdcharsize|})"
 		],
 		"description": "%SCANRPL returns the string produced by replacing all occurrences of the scan string in the source string with the replacement string."
 	},
@@ -644,7 +644,7 @@
 	"%split": {
 		"prefix": "%split",
 		"body": [
-			"%split(${1:string} :${2:(optional) separators})"
+			"%split(${1:string} :${2:(optional) separators} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%SPLIT splits a string into an array of substrings.If no separators are specified then it is split on blanks."
 	},
@@ -687,7 +687,7 @@
 	"%subst": {
 		"prefix": "%subst",
 		"body": [
-			"%subst(${1:string} :${2:start position} :${3:(optional) length})"
+			"%subst(${1:string} :${2:start position} :${3:(optional) length} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%SUBST returns a portion of argument string."
 	},
@@ -785,21 +785,21 @@
 	"%trim": {
 		"prefix": "%trim",
 		"body": [
-			"%trim(${1:string} :${2:(optional) characters to trim})"
+			"%trim(${1:string} :${2:(optional) characters to trim} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%TRIM with only one parameter returns the given string with any leading and trailing blanks removed. %TRIM with two parameters returns the given string with any leading and trailing characters that are in the characters to trim parameter removed."
 	},
 	"%triml": {
 		"prefix": "%triml",
 		"body": [
-			"%triml(${1:string} :${2:(optional) characters to trim})"
+			"%triml(${1:string} :${2:(optional) characters to trim} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%TRIML with only one parameter returns the given string with any leading removed. %TRIML with two parameters returns the given string with any leading characters that are in the characters to trim parameter removed."
 	},
 	"%trimr": {
 		"prefix": "%trimr",
 		"body": [
-			"%trimr(${1:string} :${2:(optional) characters to trim})"
+			"%trimr(${1:string} :${2:(optional) characters to trim} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%TRIMR with only one parameter returns the given string with any trailing removed. %TRIMR with two parameters returns the given string with any trailing characters that are in the characters to trim parameter removed."
 	},
@@ -827,7 +827,7 @@
 	"%upper": {
 		"prefix": "%upper",
 		"body": [
-			"%upper(${1:string} :${2:(optional) start} :${3:(optional) length})"
+			"%upper(${1:string} :${2:(optional) start} :${3:(optional) length} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%UPPER returns the string operand converted to upper case."
 	},
@@ -841,7 +841,7 @@
 	"%xlate": {
 		"prefix": "%xlate",
 		"body": [
-			"%xfoot(${1:from characters} :${2:to characters} :${3:source string} :${4:(optional) start position})"
+			"%xfoot(${1:from characters} :${2:to characters} :${3:source string} :${4:(optional) start position} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%XLATE translates source string according to the values of from characters, to characters, and start position."
 	},
