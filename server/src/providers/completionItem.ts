@@ -14,7 +14,6 @@ export default async function completionItemProvider(handler: CompletionParams):
 	const document = documents.get(currentPath);
 
 	if (document) {
-		const word = getWordRangeAtPosition(document, handler.position);
 		const doc = await parser.getDocs(currentPath, document.getText());
 		if (doc) {
 
@@ -32,7 +31,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 			if (trigger === `.`) {
 				let currentPosition = Position.create(handler.position.line, handler.position.character - 2);
 				let preWord = getWordRangeAtPosition(document, currentPosition)?.toUpperCase();
-				
+
 				// Uh oh! Maybe we found dim struct?
 				if (!preWord) {
 					const startBracket = currentLine.lastIndexOf(`(`, currentPosition.character);
@@ -87,19 +86,9 @@ export default async function completionItemProvider(handler: CompletionParams):
 						item.detail = file.relative;
 						return item;
 					}));
-					
+
 				} else {
 					const expandScope = (localCache: Cache) => {
-						for (const procedure of localCache.procedures) {
-							const item = CompletionItem.create(`${procedure.name}`);
-							item.kind = CompletionItemKind.Function;
-							item.insertTextFormat = InsertTextFormat.Snippet;
-							item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`;
-							item.detail = procedure.keywords.join(` `);
-							item.documentation = procedure.description;
-							items.push(item);
-						}
-
 						for (const subroutine of localCache.subroutines) {
 							const item = CompletionItem.create(`${subroutine.name}`);
 							item.kind = CompletionItemKind.Function;
@@ -178,6 +167,23 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					expandScope(doc);
 
+					for (const procedure of doc.procedures) {
+						const item = CompletionItem.create(`${procedure.name}`);
+						item.kind = CompletionItemKind.Function;
+						item.insertTextFormat = InsertTextFormat.Snippet;
+						item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => {
+							const possibleParms = getPossibleMatches(
+								currentProcedure && currentProcedure.scope ? [currentProcedure.scope, doc] : [doc],
+								parm
+							);
+
+							return `\${${index + 1}|${possibleParms.join(`,`)}|}`;
+						}).join(`:`)})\$0`;
+						item.detail = procedure.keywords.join(` `);
+						item.documentation = procedure.description;
+						items.push(item);
+					}
+
 					if (currentProcedure) {
 						for (const subItem of currentProcedure.subItems) {
 							const item = CompletionItem.create(`${subItem.name}`);
@@ -198,4 +204,46 @@ export default async function completionItemProvider(handler: CompletionParams):
 	}
 
 	return items;
+}
+
+const primitives: { [keyword: string]: string } = {
+	CHAR: `string`,
+	VARCHAR: `string`,
+	INT: `number`,
+	UNS: `number`,
+	PACKED: `number`,
+	ZONED: `number`,
+	IND: `boolean`
+};
+
+const possibleTypes = Object.keys(primitives);
+
+function getPossibleMatches(scopes: Cache[], currentParameter: Declaration): string[] {
+	const resultValues: string[] = [];
+	const keywords = Object.keys(currentParameter.keyword);
+	const isByValue = keywords.includes(`CONST`) || keywords.includes(`VALUE`);
+	const parameterType = keywords.find(keyword => possibleTypes.includes(keyword));
+
+	if (parameterType && primitives[parameterType]) {
+		const basePrimitive = primitives[parameterType];
+
+		scopes.forEach(scope => {
+			scope.variables.forEach(def => {
+				const defType = Object.keys(def.keyword).find(keyword => possibleTypes.includes(keyword));
+
+				if (defType) {
+					if (isByValue && primitives[defType] === basePrimitive) {
+						resultValues.push(def.name);
+					} else
+						if (parameterType === defType && currentParameter.keyword[defType] === def.keyword[defType]) {
+							resultValues.push(def.name)
+						}
+				}
+			});
+		});
+
+		return resultValues;
+	}
+
+	return [currentParameter.name];
 }
