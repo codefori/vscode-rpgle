@@ -213,7 +213,8 @@ const primitives: { [keyword: string]: string } = {
 	UNS: `number`,
 	PACKED: `number`,
 	ZONED: `number`,
-	IND: `boolean`
+	IND: `boolean`,
+	LIKEDS: `object`,
 };
 
 const possibleTypes = Object.keys(primitives);
@@ -225,25 +226,37 @@ function getPossibleMatches(scopes: Cache[], currentParameter: Declaration): str
 	const parameterType = keywords.find(keyword => possibleTypes.includes(keyword));
 
 	if (parameterType && primitives[parameterType]) {
-		const basePrimitive = primitives[parameterType];
-
 		scopes.forEach(scope => {
-			scope.variables.forEach(def => {
-				const defType = Object.keys(def.keyword).find(keyword => possibleTypes.includes(keyword));
+			if (parameterType === `LIKEDS`) {
+				scope.structs.forEach(def => {
+					if (def.keyword[`TEMPLATE`] === undefined) {
+						const defType = Object.keys(def.keyword).find(keyword => possibleTypes.includes(keyword));
 
-				if (defType) {
-					if (isByValue && primitives[defType] === basePrimitive) {
-						resultValues.push(def.name);
-					} else
+						const likeDsValue = currentParameter.keyword[parameterType];
 						if (parameterType === defType && currentParameter.keyword[defType] === def.keyword[defType]) {
-							resultValues.push(def.name)
+							resultValues.push(def.name);
+						} else
+						if (typeof likeDsValue === `string` && likeDsValue.toUpperCase() === def.name.toUpperCase()) {
+							resultValues.push(def.name);
 						}
-				}
-			});
-		});
+					}
+				});
+			} else {
+				scope.variables.forEach(def => {
+					const defType = Object.keys(def.keyword).find(keyword => possibleTypes.includes(keyword));
 
-		return resultValues;
+					if (defType) {
+						if (isByValue && primitives[defType] === primitives[parameterType]) {
+							resultValues.push(def.name);
+						} else
+							if (parameterType === defType && currentParameter.keyword[defType] === def.keyword[defType]) {
+								resultValues.push(def.name);
+							}
+					}
+				});
+			}
+		});
 	}
 
-	return [currentParameter.name];
+	return resultValues.length > 0 ? resultValues : [currentParameter.name];
 }
