@@ -137,6 +137,13 @@
 		],
 		"description": "%BITXOR returns the bit-wise exclusive ORing of the bits of the two arguments. That is, the result bit is ON when just one of the corresponding bits in the arguments are ON, and OFF otherwise."
 	},
+	"%charcount": {
+		"prefix": "%charcount",
+		"body": [
+			"%charcount(${1:character, graphic or UCS2})"
+		],
+		"description": "%CHARCOUNT returns the number of natural characters in the alphanumeric, graphic, or UCS-2 expression. This may be different from the number of bytes or double bytes that is returned by %LEN."
+	},
 	"%char-character-graphic-UCS2": {
 		"prefix": "%char-character-graphic-UCS2",
 		"body": [
@@ -161,16 +168,30 @@
 	"%check": {
 		"prefix": "%check",
 		"body": [
-			"%check(${1:comparator} :${2:base} :${3:(optional) start})"
+			"%check(${1:comparator} :${2:base} :${3:(optional) start} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%CHECK returns the first position of the string base that contains a character that does not appear in string comparator. If all of the characters in base also appear in comparator, the function returns 0."
 	},
 	"%checkr": {
 		"prefix": "%checkr",
 		"body": [
-			"%checkr(${1:comparator} :${2:base} :${3:(optional) start})"
+			"%checkr(${1:comparator} :${2:base} :${3:(optional) start} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%CHECKR returns the last position of the string base that contains a character that does not appear in string comparator. If all of the characters in base also appear in comparator, the function returns 0."
+	},
+	"%concat": {
+		"prefix": "%concat",
+		"body": [
+			"%concat(${1:separator} : ${2:string1} : ${3:string2} : ${4:string3 ...} : ${5|*natural,*stdcharsize|})"
+		],
+		"description": "%CONCAT returns the concatenation of string1, string2, string3, and so on, separated by the separator operand."
+	},
+	"%concatarr": {
+		"prefix": "%concatarr",
+		"body": [
+			"%concatarr(${1:separator} : ${2:array} : ${3|*natural,*stdcharsize|})"
+		],
+		"description": "%CONCATARR returns the concatenation of the elements of the array operand separated by the separator operand."
 	},
 	"%data": {
 		"prefix": "%data",
@@ -434,7 +455,7 @@
 	"%lower": {
 		"prefix": "%lower",
 		"body": [
-			"%lower(${1:string} :${2:(optional) start} :${3:(optional) length})"
+			"%lower(${1:string} :${2:(optional) start} :${3:(optional) length} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%LOWER returns the string operand converted to lower case."
 	},
@@ -445,12 +466,26 @@
 		],
 		"description": "%MAX returns the maximum value of its operands."
 	},
+	"%maxarr": {
+		"prefix": "%maxarr",
+		"body": [
+			"%maxarr(${1:array} :${2:(optional) start} :${3:(optional) number-of-elements})"
+		],
+		"description": "%MAXARR returns the index of the maximum value in the array, or the subsection of the array identified by the start-element operand and the number-of-elements operand."
+	},
 	"%min": {
 		"prefix": "%min",
 		"body": [
 			"%min(${1:item} :${2:item} :${3:(optional) item}...)"
 		],
 		"description": "%MIN returns the minimum value of its operands."
+	},
+	"%minarr": {
+		"prefix": "%minarr",
+		"body": [
+			"%minarr(${1:array} :${2:(optional) start} :${3:(optional) number-of-elements})"
+		],
+		"description": "%MINARR returns the index of the minimum value in the array, or the subsection of the array identified by the start-element operand and the number-of-elements operand."
 	},
 	"%minutes": {
 		"prefix": "%minutes",
@@ -472,6 +507,13 @@
 			"%mseconds(${1:number})"
 		],
 		"description": "%MSECONDS converts a number into a duration that can be added to a time or timestamp value. %MSECONDS can only follow the plus or minus sign in an addition or subtraction expression. The value before the plus or minus sign must be a time or timestamp. The result is a time or timestamp value with the appropriate number of microseconds added or subtracted. For a time, the resulting value is in *ISO format."
+	},
+	"%msg": {
+		"prefix": "%msg",
+		"body": [
+			"%msg(${1:message-id} :${2:message-file} :${3:(optional) replacement-text})"
+		],
+		"description": "%MSG is used as the second operand of the SND-MSG operation. %MSG does not return a value, and it cannot be specified anywhere other than for the SND-MSG operation."
 	},
 	"%nullind": {
 		"prefix": "%nullind",
@@ -553,28 +595,28 @@
 	"%replace": {
 		"prefix": "%replace",
 		"body": [
-			"%replace(${1:replacement string} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to replace})"
+			"%replace(${1:replacement string} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to replace} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%REPLACE returns the character string produced by inserting a replacement string into the source string, starting at the start position and replacing the specified number of characters."
 	},
 	"%scan": {
 		"prefix": "%scan",
 		"body": [
-			"%scan(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan})"
+			"%scan(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%SCAN returns the first position of the search argument in the source string, or 0 if it was not found."
 	},
 	"%scanr": {
 		"prefix": "%scanr",
 		"body": [
-			"%scanr(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan})"
+			"%scanr(${1:search argument} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to scan} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%SCANR returns the last position of the search argument in the source string, or 0 if it was not found."
 	},
 	"%scanrpl": {
 		"prefix": "%scanrpl",
 		"body": [
-			"%scanrpl(${1:search argument} :${2:replacement string} :${3:source string} :${4:(optional) start position} :${5:(optional) source length to scan})"
+			"%scanrpl(${1:search argument} :${2:replacement string} :${3:source string} :${4:(optional) start position} :${5:(optional) source length to scan} :${6|*natural,*stdcharsize|})"
 		],
 		"description": "%SCANRPL returns the string produced by replacing all occurrences of the scan string in the source string with the replacement string."
 	},
@@ -602,7 +644,7 @@
 	"%split": {
 		"prefix": "%split",
 		"body": [
-			"%split(${1:string} :${2:(optional) separators})"
+			"%split(${1:string} :${2:(optional) separators} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%SPLIT splits a string into an array of substrings.If no separators are specified then it is split on blanks."
 	},
@@ -645,9 +687,16 @@
 	"%subst": {
 		"prefix": "%subst",
 		"body": [
-			"%subst(${1:string} :${2:start position} :${3:(optional) length})"
+			"%subst(${1:string} :${2:start position} :${3:(optional) length} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%SUBST returns a portion of argument string."
+	},
+	"%target": {
+		"prefix": "%target",
+		"body": [
+			"%target(${1:program-or-procedure} :${2:(optional) offset})"
+		],
+		"description": "%TARGET is used as the third operand of the SND-MSG operation. %TARGET does not return a value, and it cannot be specified anywhere other than for the SND-MSG operation."
 	},
 	"%this": {
 		"prefix": "%this",
@@ -670,21 +719,20 @@
 		],
 		"description": "%TIMESTAMP returns the current system timestamp, accurate to microsecond precision."
 	},
-	// "%timestamp-expression": {
-
-	// 	"prefix": "%timestamp-expression",
-	// 	"body": [
-	// 		"%timestamp(${1:character or numeric expression} :${2|*ISO,*ISO0|} :${3:(optional) fractional seconds})"
-	// 	],
-	// 	"description": "%TIMESTAMP returns the a timestamp of the character or numeric expression in *ISO format. The second parameter specifies the format of the first parameter. The optional third parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
-	// },
-	// "%timestamp-date-timestamp-expression": {
-	// 	"prefix": "%timestamp-date-timestamp-expression",
-	// 	"body": [
-	// 		"%timestamp(${1:date or timestamp expression} :${2:(optional) fractional seconds})"
-	// 	],
-	// 	"description": "%TIMESTAMP returns the a timestamp of the date or timestamp expression. The optional second parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
-	// },
+	"%timestamp-expression": {
+		"prefix": "%timestamp-expression",
+		"body": [
+			"%timestamp(${1:character or numeric expression} :${2|*ISO,*ISO0|} :${3:(optional) fractional seconds})"
+		],
+		"description": "%TIMESTAMP returns the a timestamp of the character or numeric expression in *ISO format. The second parameter specifies the format of the first parameter. The optional third parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
+	},
+	"%timestamp-date-timestamp-expression": {
+		"prefix": "%timestamp-date-timestamp-expression",
+		"body": [
+			"%timestamp(${1:date or timestamp expression} :${2:(optional) fractional seconds})"
+		],
+		"description": "%TIMESTAMP returns the a timestamp of the date or timestamp expression. The optional second parameter is the number of fractional seconds in the returned timestamp. The number of fractional seconds can be between 0 and 12. It defaults to 6 fractional seconds."
+	},
 	"%timestamp-sys": {
 		"prefix": "%timestamp-sys",
 		"body": [
@@ -737,21 +785,21 @@
 	"%trim": {
 		"prefix": "%trim",
 		"body": [
-			"%trim(${1:string} :${2:(optional) characters to trim})"
+			"%trim(${1:string} :${2:(optional) characters to trim} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%TRIM with only one parameter returns the given string with any leading and trailing blanks removed. %TRIM with two parameters returns the given string with any leading and trailing characters that are in the characters to trim parameter removed."
 	},
 	"%triml": {
 		"prefix": "%triml",
 		"body": [
-			"%triml(${1:string} :${2:(optional) characters to trim})"
+			"%triml(${1:string} :${2:(optional) characters to trim} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%TRIML with only one parameter returns the given string with any leading removed. %TRIML with two parameters returns the given string with any leading characters that are in the characters to trim parameter removed."
 	},
 	"%trimr": {
 		"prefix": "%trimr",
 		"body": [
-			"%trimr(${1:string} :${2:(optional) characters to trim})"
+			"%trimr(${1:string} :${2:(optional) characters to trim} :${3|*natural,*stdcharsize|})"
 		],
 		"description": "%TRIMR with only one parameter returns the given string with any trailing removed. %TRIMR with two parameters returns the given string with any trailing characters that are in the characters to trim parameter removed."
 	},
@@ -779,7 +827,7 @@
 	"%upper": {
 		"prefix": "%upper",
 		"body": [
-			"%upper(${1:string} :${2:(optional) start} :${3:(optional) length})"
+			"%upper(${1:string} :${2:(optional) start} :${3:(optional) length} :${4|*natural,*stdcharsize|})"
 		],
 		"description": "%UPPER returns the string operand converted to upper case."
 	},
@@ -793,7 +841,7 @@
 	"%xlate": {
 		"prefix": "%xlate",
 		"body": [
-			"%xfoot(${1:from characters} :${2:to characters} :${3:source string} :${4:(optional) start position})"
+			"%xfoot(${1:from characters} :${2:to characters} :${3:source string} :${4:(optional) start position} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%XLATE translates source string according to the values of from characters, to characters, and start position."
 	},
