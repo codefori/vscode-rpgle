@@ -195,6 +195,41 @@ module.exports = {
     assert.strictEqual(uppercase.position.line, 0, `Index of 0 expected`);
   },
 
+
+  /**
+   * EOF inside of IF directive
+   */
+  eof5_issue181: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `/IF DEFINED(ABCEEF)`,
+      `/eof`,
+      `/EndIf`,
+      `/DEFINE ABCEEF`,
+
+      `CallP THEPROCEDURE2;`,
+      ``,
+      `Dcl-Proc theProcedure2;`,
+      `  Dcl-S mylocal char(20);`,
+      `  MyVariable2 = 'Hello world';`,
+      `  mylocal = Myvariable2;`,
+      `End-Proc;`,
+    ].join(`\n`);
+    
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+    const { errors } = Linter.getErrors({uri, content: lines}, {
+      IncorrectVariableCase: true
+    }, cache);
+
+    assert.strictEqual(cache.procedures.length, 1);
+    const theProcedure2 = cache.find(`theProcedure2`);
+    assert.strictEqual(theProcedure2.name, `theProcedure2`);
+
+    assert.strictEqual(errors.length, 1);
+  },
+
   incorrectEnd1: async () => {
     const lines = [
       `Dcl-S Text Char(52);`,
