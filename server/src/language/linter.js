@@ -993,7 +993,8 @@ export default class Linter {
                           }
 
                           if (defRef) {
-                            if (defRef.position.line !== statementStart.line) {
+                            // `defRef.position` is usually undefined for predefined indicators (INXX)
+                            if (defRef.position === undefined || (defRef.position && defRef.position.line !== statementStart.line)) {
                               defRef.references.push({
                                 range: new Range(
                                   statementStart,
