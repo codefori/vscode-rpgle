@@ -3183,3 +3183,43 @@ exports.issue_175 = async () => {
 
   assert.deepStrictEqual(errors.length, 0);
 };
+
+exports.issue180 = async () => {
+  const lines = [
+    `**free`,
+    `Begsr Checkemp;`,
+    ``,
+    `  In91 = *OFF;`,
+    `  In92 = *OFF;`,
+    ``,
+    `  S0Issues = Rs.Wiiss_Seq;`,
+    `  If S0Issues = 1;`,
+    `    S0Err = Rs.Wiissmsg;`,
+    `    If S0Err = *BLANKS;`,
+    `      Clear S0Issues;`,
+    `    Endif;`,
+    `    If Rs.Wirvsts = 'Y';`,
+    `      %SUBST( S0Err :( %SIZE( S0Err ) -2) :3) = '(R)';`,
+    `    Endif;`,
+    `  Elseif S0Issues > 1;`,
+    `    S0Err = 'Multiple Issues exist (' +%CHAR( S0Issues ) +')';`,
+    `  Else;`,
+    `    S0Err = ' ';`,
+    `  Endif;`,
+    `  S0Isssvty = Rs.Wiisssvty;`,
+    `  // Mark as error for all issue that need correction`,
+    `  If S0Isssvty >= 31;`,
+    `    In92 = *ON;`,
+    `    Emperrs = *ON;`,
+    `  Endif;`,
+    ``,
+    `Endsr;`,
+  ].join(`\n`);
+  
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true,
+  }, cache);
+}
