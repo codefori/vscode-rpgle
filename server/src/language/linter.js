@@ -122,6 +122,8 @@ export default class Linter {
     /** @type {{value: string, definition?: string, list: {range: Range, offset: Offset}[]}[]} */
     const stringLiterals = [];
 
+    let directiveScope = 0;
+
     for (lineNumber = 0; lineNumber < lines.length; lineNumber++) {
       const currentLine = lines[lineNumber];
       currentIndent = currentLine.search(/\S/);
@@ -247,9 +249,22 @@ export default class Linter {
               let isEmbeddedSQL = false;
 
               if (statement.length >= 1) {
-                if (statement[0].type === `directive` && statement[0].value.toUpperCase() === `/EOF`) {
-                  // End of file
-                  break;
+
+                if (statement[0].type === `directive`) {
+                  const directive = statement[0].value.toUpperCase();
+                  // We only want to process the EOF if it is not inside an IF scope
+                  if (directive === `/EOF` && directiveScope === 0) {
+                    // End of parsing for this file
+                    break;
+                  } else
+                  if (directive === `/IF`) {
+                    // Directive IF
+                    directiveScope += 1;
+                  } else
+                  if (directive === `/ENDIF`) {
+                    // Directive ENDIF
+                    directiveScope -= 1;
+                  }
                 }
 
                 switch (statement[0].type) {
@@ -993,7 +1008,8 @@ export default class Linter {
                           }
 
                           if (defRef) {
-                            if (defRef.position.line !== statementStart.line) {
+                            // `defRef.position` is usually undefined for predefined indicators (INXX)
+                            if (defRef.position === undefined || (defRef.position && defRef.position.line !== statementStart.line)) {
                               defRef.references.push({
                                 range: new Range(
                                   statementStart,
@@ -1224,7 +1240,7 @@ export default class Linter {
           });
 
         dec.subroutines
-          .filter(def => def.position.path === data.uri && def.name && def.name.toUpperCase() !== `*INZSR`)
+          .filter(def => def.position.path === data.uri && def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
           .forEach(def => {
             if (def.references.length === 0) {
               // Add an error to def

@@ -706,3 +706,28 @@ exports.issues_170b = async () => {
   assert.strictEqual(error.keyword[`IND`], true);
   assert.strictEqual(error.keyword[`POS`], `25`);
 }
+
+exports.issues_dcl_subf = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds inputsYo;`,
+    `  dcl-subf boop_Addr1 char(30);`,
+    `  dcl-subf boop_Addr2 char(30);`,
+    `  dcl-subf boop_City char(18);`,
+    `  dcl-subf boop_State char(2);`,
+    `  dcl-subf boop_Zip char(15);`,
+    `  dcl-subf boop_Cntry char(4);`,
+    `  dcl-subf boop_Foreign char(1);`,
+    `end-ds;`,
+  ].join(`\n`);
+
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  const inputsYo = cache.find(`inputsYo`);
+  assert.strictEqual(inputsYo.subItems.length, 7);
+
+  const boop_Addr1 = inputsYo.subItems[0];
+  assert.strictEqual(boop_Addr1.name, `boop_Addr1`);
+}

@@ -3140,3 +3140,86 @@ exports.linter40_keywordrefs = async () => {
     newValue: `RANDOMLEN`,
   });
 }
+
+exports.issue_175 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-S Field Char(1);`,
+    ``,
+    `Field = SubProc('A');`,
+    ``,
+    `*INLR = *ON;`,
+    `Return;`,
+    ``,
+    `  ///`,
+    `  // SubProc`,
+    `  // Description of SubProc()`,
+    `  // Description can be multiline`,
+    `  // @param Parm_A`,
+    `  // @return Return_1`,
+    `  ///`,
+    `Dcl-Proc SubProc;`,
+    `  Dcl-Pi *N Like( ReturnValue );`,
+    `    PP_PARM1 Char(1);`,
+    `  End-Pi;`,
+    `  Dcl-S ReturnValue Char(1);`,
+    `  // Your code goes here`,
+    `  ReturnValue = PP_PARM1;`,
+    `  ReturnValue= 'Q';`,
+    `  Return ReturnValue;`,
+    `  Begsr *PSSR;`,
+    `    *INLR = *ON;`,
+    `    Return;`,
+    `  Endsr;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  assert.deepStrictEqual(errors.length, 0);
+};
+
+exports.issue180 = async () => {
+  const lines = [
+    `**free`,
+    `Begsr Checkemp;`,
+    ``,
+    `  In91 = *OFF;`,
+    `  In92 = *OFF;`,
+    ``,
+    `  S0Issues = Rs.Wiiss_Seq;`,
+    `  If S0Issues = 1;`,
+    `    S0Err = Rs.Wiissmsg;`,
+    `    If S0Err = *BLANKS;`,
+    `      Clear S0Issues;`,
+    `    Endif;`,
+    `    If Rs.Wirvsts = 'Y';`,
+    `      %SUBST( S0Err :( %SIZE( S0Err ) -2) :3) = '(R)';`,
+    `    Endif;`,
+    `  Elseif S0Issues > 1;`,
+    `    S0Err = 'Multiple Issues exist (' +%CHAR( S0Issues ) +')';`,
+    `  Else;`,
+    `    S0Err = ' ';`,
+    `  Endif;`,
+    `  S0Isssvty = Rs.Wiisssvty;`,
+    `  // Mark as error for all issue that need correction`,
+    `  If S0Isssvty >= 31;`,
+    `    In92 = *ON;`,
+    `    Emperrs = *ON;`,
+    `  Endif;`,
+    ``,
+    `Endsr;`,
+  ].join(`\n`);
+  
+  const parser = await parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true,
+  }, cache);
+}

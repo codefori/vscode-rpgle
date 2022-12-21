@@ -823,8 +823,10 @@ export default class Parser {
 
               if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
                 if (currentItem.readParms && parts.length > 0) {
-                  if (parts[0].startsWith(`DCL`))
+                  if (parts[0].startsWith(`DCL`)) {
                     parts.slice(1);
+                    partsLower = partsLower.splice(1);
+                  }
 
                   currentSub = new Declaration(`subitem`);
                   currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;

@@ -13,7 +13,7 @@ export default async function codeActionsProvider(params: CodeActionParams): Pro
 			const docs = await parser.getDocs(document.uri);
 
 			if (docs) {
-				const detail = await refreshDiagnostics(document, docs);
+				const detail = await refreshDiagnostics(document, docs, false);
 				if (detail) {
 					const fixErrors = detail.errors.filter(error => range.start.line === error.range.start.line );
 
