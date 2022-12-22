@@ -13,7 +13,7 @@ const errorText = {
   'ForceOptionalParens': `Expressions must be surrounded by brackets.`,
   'NoOCCURS': `\`OCCURS\` is not allowed.`,
   'NoSELECTAll': `\`SELECT *\` is not allowed in Embedded SQL.`,
-  'UselessOperationCheck': `Redundant operation codes (EVAL, CALLP) not allowed.`,
+  'UselessOperationCheck': `Redundant operation codes (EVAL, CALLP, DCL-PARM, DCL-SUBF) not allowed.`,
   'UppercaseConstants': `Constants must be in uppercase.`,
   'SpecificCasing': `Does not match required case.`,
   'InvalidDeclareNumber': `Variable names cannot start with a number`,
