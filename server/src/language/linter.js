@@ -607,6 +607,7 @@ export default class Linter {
 
 
                   case `DCL-SUBF`:
+                  case `DCL-PARM`:
                     if (rules.UselessOperationCheck) {
                       if (statement[1] && statement[1].value) {
                         const name = statement[1].value.toUpperCase();

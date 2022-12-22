@@ -3260,11 +3260,55 @@ exports.dcl_subf_issue184 = async () => {
   });
 
   const selectVar = cache.find(`select`);
-  assert.deepEqual(selectVar.name, `select`);
+  assert.strictEqual(selectVar.name, `select`);
 
   const nameVar = cache.find(`name`);
-  assert.deepEqual(nameVar.name, `name`);
+  assert.strictEqual(nameVar.name, `name`);
 
   const addressVar = cache.find(`address`);
-  assert.deepEqual(addressVar.name, `address`);
+  assert.strictEqual(addressVar.name, `address`);
+}
+
+exports.dcl_parm_issue184 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `DCL-PR myProc;`,
+    `   DCL-PARM select CHAR(10);`,
+    `   name CHAR(10);`,
+    `   DCL-PARM address CHAR(25);`,
+    `END-PR;`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    UselessOperationCheck: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `UselessOperationCheck`,
+    range: new Range(
+      new Position(7, 3),
+      new Position(7, 28),
+    ),
+    offset: {
+      position: 0,
+      end: 8
+    }
+  });
+
+  const myProc = cache.find(`myProc`);
+  assert.strictEqual(myProc.name, `myProc`);
+
+  const parms = myProc.subItems;
+  assert.strictEqual(parms[0].name, `select`);
+  assert.strictEqual(parms[1].name, `name`);
+  assert.strictEqual(parms[2].name, `address`);
 }
