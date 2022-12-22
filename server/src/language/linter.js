@@ -4,6 +4,7 @@ import Cache from "./models/cache";
 import { parseStatement } from "./statement";
 import oneLineTriggers from "./models/oneLineTriggers";
 import { Range, Position } from "./models/DataPoints";
+import opcodes from "./models/opcodes";
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -12,7 +13,7 @@ const errorText = {
   'ForceOptionalParens': `Expressions must be surrounded by brackets.`,
   'NoOCCURS': `\`OCCURS\` is not allowed.`,
   'NoSELECTAll': `\`SELECT *\` is not allowed in Embedded SQL.`,
-  'UselessOperationCheck': `Redundant operation codes (EVAL, CALLP) not allowed.`,
+  'UselessOperationCheck': `Redundant operation codes (EVAL, CALLP, DCL-PARM, DCL-SUBF) not allowed.`,
   'UppercaseConstants': `Constants must be in uppercase.`,
   'SpecificCasing': `Does not match required case.`,
   'InvalidDeclareNumber': `Variable names cannot start with a number`,
@@ -615,6 +616,26 @@ export default class Linter {
                           range: new Range(statementStart, statementEnd),
                           type: `NoCTDATA`,
                         });
+                      }
+                    }
+                    break;
+
+
+                  case `DCL-SUBF`:
+                  case `DCL-PARM`:
+                    if (rules.UselessOperationCheck) {
+                      if (statement[1] && statement[1].value) {
+                        const name = statement[1].value.toUpperCase();
+                        if (!opcodes.includes(name)) {
+                          errors.push({
+                            range: new Range(
+                              statementStart,
+                              statementEnd
+                            ),
+                            offset: { position: statement[0].position, end: statement[0].position + value.length + 1 },
+                            type: `UselessOperationCheck`,
+                          });
+                        }
                       }
                     }
                     break;

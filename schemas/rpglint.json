@@ -43,7 +43,7 @@
 		"UselessOperationCheck": {
 			"$id": "#/properties/UselessOperationCheck",
 			"type": "boolean",
-			"description": "Redundant operation codes (EVAL, CALLP) not allowed."
+			"description": "Redundant operation codes (EVAL, CALLP, DCL-PARM, DCL-SUBF) not allowed."
 		},
 		"UppercaseConstants": {
 			"$id": "#/properties/UppercaseConstants",
