@@ -4,6 +4,7 @@ import Cache from "./models/cache";
 import { parseStatement } from "./statement";
 import oneLineTriggers from "./models/oneLineTriggers";
 import { Range, Position } from "./models/DataPoints";
+import opcodes from "./models/opcodes";
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -600,6 +601,25 @@ export default class Linter {
                           range: new Range(statementStart, statementEnd),
                           type: `NoCTDATA`,
                         });
+                      }
+                    }
+                    break;
+
+
+                  case `DCL-SUBF`:
+                    if (rules.UselessOperationCheck) {
+                      if (statement[1] && statement[1].value) {
+                        const name = statement[1].value.toUpperCase();
+                        if (!opcodes.includes(name)) {
+                          errors.push({
+                            range: new Range(
+                              statementStart,
+                              statementEnd
+                            ),
+                            offset: { position: statement[0].position, end: statement[0].position + value.length + 1 },
+                            type: `UselessOperationCheck`,
+                          });
+                        }
                       }
                     }
                     break;

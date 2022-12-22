@@ -3223,3 +3223,48 @@ exports.issue180 = async () => {
     CollectReferences: true,
   }, cache);
 }
+
+exports.dcl_subf_issue184 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `DCL-DS *N;`,
+    `   DCL-SUBF select CHAR(10);`,
+    `   name CHAR(10);`,
+    `   DCL-SUBF address CHAR(25);`,
+    `END-DS;`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    UselessOperationCheck: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `UselessOperationCheck`,
+    range: new Range(
+      new Position(7, 3),
+      new Position(7, 28),
+    ),
+    offset: {
+      position: 0,
+      end: 8
+    }
+  });
+
+  const selectVar = cache.find(`select`);
+  assert.deepEqual(selectVar.name, `select`);
+
+  const nameVar = cache.find(`name`);
+  assert.deepEqual(nameVar.name, `name`);
+
+  const addressVar = cache.find(`address`);
+  assert.deepEqual(addressVar.name, `address`);
+}
