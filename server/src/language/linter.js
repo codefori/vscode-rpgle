@@ -39,6 +39,13 @@ const errorText = {
   'RequireOtherBlock': `OTHER block missing from SELECT block.`
 };
 
+const skipRules = {
+  none: 0,
+  single: 1, // Skips all checking
+  singleIndent: 2, // Skips indent check
+  singleRules: 3, // Skips rule check
+};
+
 export default class Linter {
   static getErrorText(error) {
     return errorText[error];
@@ -123,6 +130,7 @@ export default class Linter {
     const stringLiterals = [];
 
     let directiveScope = 0;
+    let currentRule = skipRules.none;
 
     for (lineNumber = 0; lineNumber < lines.length; lineNumber++) {
       const currentLine = lines[lineNumber];
@@ -190,8 +198,15 @@ export default class Linter {
           }
 
           // Special comment check
-          if (comment.trim() === `@rpglint-skip`) {
-            lineNumber += 1;
+          switch (comment.trim()) {
+          case `@rpglint-skip`:
+            currentRule = skipRules.single;
+            continue;
+          case `@rpglint-skip-indent`:
+            currentRule = skipRules.singleIndent;
+            continue;
+          case `@rpglint-skip-rules`:
+            currentRule = skipRules.singleRules;
             continue;
           }
         }
@@ -234,7 +249,7 @@ export default class Linter {
 
           // Linter checking
           if (continuedStatement === false && currentStatement.length > 0) {
-            if (ruleCount > 0) {
+            if (ruleCount > 0 && ![skipRules.single, skipRules.singleRules].includes(currentRule)) {
               const currentStatementUpper = currentStatement.toUpperCase();
               currentStatement = currentStatement.trim();
 
@@ -1119,6 +1134,11 @@ export default class Linter {
           deferredIndent = false;
         }
 
+        if (!skipIndentCheck) {
+          // Check if this line should be skipped.
+          skipIndentCheck = [skipRules.singleIndent, skipRules.single].includes(currentRule);
+        }
+
         if (indentEnabled && skipIndentCheck === false) {
           pieces = upperLine.split(` `).filter(piece => piece !== ``);
           opcode = pieces[0];
@@ -1176,6 +1196,9 @@ export default class Linter {
       } else if (continuedStatement === true) {
         currentStatement += currentLine + ``.padEnd(newLineLength, ` `);
       }
+
+      // Reset the rule back.
+      currentRule = skipRules.none;
     }
 
     if (stringLiterals.length > 0) {
