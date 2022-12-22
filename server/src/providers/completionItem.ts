@@ -3,6 +3,7 @@ import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat,
 import { documents, getWordRangeAtPosition, parser } from '.';
 import Cache from '../language/models/cache';
 import Declaration from '../language/models/declaration';
+import skipRules from './linter/skipRules';
 import * as Project from "./project";
 
 export default async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
@@ -14,7 +15,6 @@ export default async function completionItemProvider(handler: CompletionParams):
 	const document = documents.get(currentPath);
 
 	if (document) {
-		const word = getWordRangeAtPosition(document, handler.position);
 		const doc = await parser.getDocs(currentPath, document.getText());
 		if (doc) {
 
@@ -73,7 +73,6 @@ export default async function completionItemProvider(handler: CompletionParams):
 				}
 			} else {
 				// Normal defines and all that.....
-				// TODO: handle /COPY and /INCLUDE
 				const upperLine = currentLine.toUpperCase();
 				if (Project.isEnabled && (upperLine.includes(`/COPY`) || upperLine.includes(`/INCLUDE`))) {
 					const localFiles = await Project.getIncludes(currentPath);
@@ -87,7 +86,9 @@ export default async function completionItemProvider(handler: CompletionParams):
 						item.detail = file.relative;
 						return item;
 					}));
-					
+				} else if (currentLine.trimStart().startsWith(`//`)) {
+					items.push(...skipRules);
+				
 				} else {
 					const expandScope = (localCache: Cache) => {
 						for (const procedure of localCache.procedures) {
