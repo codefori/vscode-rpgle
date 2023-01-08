@@ -1008,7 +1008,10 @@ export default class Linter {
                           const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
                           if (definedProcedure) {
                             let requiresBlock = false;
-                            if (statement.length <= i + 1) {
+                            // Don't require parms for procedures found in Ctl-Opt
+                            if (statement[0].value.toUpperCase() === `CTL-OPT`) {
+                              // do nothing
+                            } else if (statement.length <= i + 1) {
                               requiresBlock = true;
                             } else if (statement[i + 1].type !== `openbracket`) {
                               requiresBlock = true;
