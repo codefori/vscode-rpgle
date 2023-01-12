@@ -141,7 +141,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 				const resultCode = outfileRes.code || 0;
 
 				if (resultCode === 0) {
-					const data: object[] = await content.getTable(config.tempLibrary, randomFile);
+					const data: object[] = await content.getTable(config.tempLibrary, randomFile, randomFile, true);
 
 					console.log(`Temp OUTFILE read. ${data.length} rows.`);
 
