@@ -22,7 +22,7 @@ export const bodies: {[name: string]: APIInterface} = {
       `// Print to standard out`,
       `// @param String value pointer`,
       `///`,
-      `dcl-pr printf int(10) extproc;`,
+      `dcl-pr printf int(10) extproc('printf');`,
       `  format pointer value options(*string);`,
       `end-pr;`
     ],
