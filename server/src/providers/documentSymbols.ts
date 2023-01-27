@@ -42,7 +42,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						procDef.children.push(...getScopeVars(proc.scope));
 					}
 
-					symbols.push(procDef);
+					currentScopeDefs.push(procDef);
 				});
 
 			currentScopeDefs.push(
