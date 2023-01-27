@@ -731,3 +731,97 @@ exports.issues_dcl_subf = async () => {
   const boop_Addr1 = inputsYo.subItems[0];
   assert.strictEqual(boop_Addr1.name, `boop_Addr1`);
 }
+
+exports.issue_195a = async () => {
+  const lines = [
+    `**free`,
+    `//***********************************************************************`,
+    `//*** Scompone la stringa per sql ***`,
+    `//***********************************************************************`,
+    `Dcl-Proc ScomponiStringa;`,
+    ``,
+    `Dcl-Pi ScomponiStringa varchar(2000);`,
+    `pstringa varchar(999);`,
+    `pLunghezza zoned(3);`,
+    `End-Pr;`,
+    `dcl-s lStringa varchar(2000);`,
+    `dcl-s linizio zoned(4);`,
+    `lInizio = 1;`,
+    `Dow pStringa(lInizio:pLunghezza)<>*blank;`,
+    `lStringa +=sQuote+ pstringa(linizio:pLunghezza)+sQuote;`,
+    `linizio=linizio+pLunghezza`,
+    `If pstringa(linizio:1) <> *blank;`,
+    `lStringa +=pstringa(linizio:1);`,
+    `EndIf;`,
+    `linizio+=1;`,
+    `EndDo;`,
+    `Return lStringa;`,
+    `End-Proc ScomponiStringa;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  cache.clearReferences();
+}
+
+exports.issue_195b = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-Pi AUTH;`,
+    `  pUserID   Char(10);`,
+    `  pPassword Char(32);`,
+    `  Result    Char(1);`,
+    `End-Pi;`,
+    ``,
+    `DoProfileStuff();`,
+    ``,
+    `*InLR = *On;`,
+    `Return;`,
+    ``,
+    `Dcl-Proc DoProfileStuff;`,
+    `  Dcl-PR GetProfile  ExtPgm('QSYGETPH');`,
+    `    UserID         Char(10)   const;`,
+    `    Password       Char(32767) const options(*varsize);`,
+    `    Handle         Char(12);`,
+    `    ErrorCode      Char(256)  Options(*Varsize : *NoPass);`,
+    `    PswLength      Int(10)    const Options(*NoPass);`,
+    `    CCSIDCode      Int(10)    const Options(*NoPass);`,
+    `  End-PR;`,
+    `  `,
+    `  Dcl-Pr CloseProfile ExtPgm('QSYRLSPH');`,
+    `    Handle         Char(12);`,
+    `  End-Pr;`,
+    `  `,
+    `  Dcl-S ResultHandle Char(12);`,
+    `  `,
+    `  Dcl-S errorOut Char(256);`,
+    `  Dcl-S pwLength Int(3);`,
+    `  `,
+    `  pwLength = %Len(%Trim(pPassword));`,
+    `  `,
+    `  //pPassword = %Trim(pPassword);`,
+    `  ResultHandle = '';`,
+    `  Result = *Off;`,
+    `  `,
+    `  GetProfile(pUserID:pPassword:ResultHandle:errorOut:pwLength:37);`,
+    `  `,
+    `  //Indicates is incorrect`,
+    `  If ResultHandle <> x'000000000000000000000000';`,
+    `    Result = *On;`,
+    `    //We don't want to keep handles open`,
+    `    `,
+    `    CloseProfile(ResultHandle);`,
+    `  Endif;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.procedures.length, 1);
+
+  const DoProfileStuff = cache.find(`DoProfileStuff`);
+  assert.strictEqual(DoProfileStuff.scope.procedures.length, 2);
+}

@@ -652,7 +652,14 @@ export default class Parser {
           case `END-PR`:
             if (currentItem && currentItem.type === `procedure`) {
               currentItem.range.end = statementStartingLine;
-              scope.procedures.push(currentItem);
+
+              const isDefinedGlobally = scopes[0].procedures.some(proc => proc.name.toUpperCase() === currentItem.name.toUpperCase());
+
+              // Don't re-add self. This can happens when `END-PR` is used in the wrong place.
+              if (!isDefinedGlobally) {
+                scope.procedures.push(currentItem);
+              }
+
               resetDefinition = true;
             }
             break;
