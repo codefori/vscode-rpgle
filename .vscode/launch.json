@@ -30,22 +30,18 @@
 			},
 		},
 		{
-			"name": "Language Server E2E Test",
-			"type": "extensionHost",
+			"name": "Debug Tests",
+			"type": "node",
 			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"--extensionTestsPath=${workspaceRoot}/client/out/test/index",
-				"${workspaceRoot}/client/testFixture"
-			],
-			"outFiles": ["${workspaceRoot}/client/out/test/**/*.js"]
-		}
-	],
-	"compounds": [
-		{
-			"name": "Client + Server",
-			"configurations": ["Launch Client", "Attach to Server"]
+			"program": "${workspaceRoot}/out/tests/tests/index.js",
+			"sourceMaps": true,
+			"preLaunchTask": {
+				"type": "npm",
+				"script": "testbuild"
+			},
+			"env": {
+				"INCLUDE_DIR": "${workspaceFolder}"
+			}
 		}
 	]
 }

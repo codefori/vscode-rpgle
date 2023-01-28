@@ -1,5 +1,4 @@
 import Parser from '../server/src/language/parser';
-import Declaration from '../server/src/language/models/declaration';
 
 import glob from "glob";
 import path from 'path';
@@ -8,6 +7,8 @@ import { readFile } from 'fs/promises';
 
 import tables from './tables';
 import { dspffdToRecordFormats } from '../server/src/data';
+
+const includeDir = process.env.INCLUDE_DIR || path.join(__dirname, `..`);
 
 export default function setupParser(): Parser {
 	const parser = new Parser();
@@ -23,7 +24,7 @@ export default function setupParser(): Parser {
 
 		const globPath = path.join(`**`, includeFile);
 		const files = glob.sync(globPath, {
-			cwd: path.join(__dirname, `..`),
+			cwd: includeDir,
 			absolute: true,
 			nocase: true,
 		});

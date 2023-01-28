@@ -20,9 +20,18 @@ Check out the [official documentation](https://halcyon-tech.github.io/docs/#/pag
 1. Fork & clone
 2. `npm i`
 3. Run
-    * `npm run test`
-    * Debug 'Launch Client'
-    * Debug 'Attach to Server'
+
+## Debugging
+
+To run the tests, you have two options:
+
+1. `npm run test` from the command line
+2. 'Debug Tests' from the VS Code debugger
+
+To run debug the extension and server, from the VS Code debugger:
+
+1. Debug 'Launch Client'
+2. Debug 'Attach to Server'
 
 # Previous contributors
 
