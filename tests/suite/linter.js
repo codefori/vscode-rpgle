@@ -3179,6 +3179,27 @@ exports.linter40_keywordrefs = async () => {
   });
 }
 
+exports.linter_casing_on_error_not_a_variable = async () => {
+  const lines = [
+    `**free`,
+    `dcl-c  ERROR  -1;`,
+    `monitor;`,
+    `  callSomething();`,
+    `on-error;`,
+    `  result = ERROR;`,
+    `endmon;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true,
+    IncorrectVariableCase: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0, `on-error should not throw a variable casing error`);
+}
+
 exports.issue_175 = async () => {
   const lines = [
     `**FREE`,
