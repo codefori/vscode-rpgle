@@ -161,6 +161,17 @@ const commonMatchers = [
     becomes: {
       type: `builtin`
     }
+  },
+  {
+    name: `ON-ERROR`,
+    match: [
+      { type: `word`, match: (word) => word.toUpperCase() === `ON` },
+      { type: `minus` },
+      { type: `word`, match: (word) => word.toUpperCase() === `ERROR` },
+    ],
+    becomes: {
+      type: `word`
+    }
   }
 ];
 
