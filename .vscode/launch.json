@@ -37,7 +37,7 @@
 			"sourceMaps": true,
 			"preLaunchTask": {
 				"type": "npm",
-				"script": "testbuild"
+				"script": "compile:tests"
 			},
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"

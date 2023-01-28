@@ -79,6 +79,7 @@
 		"webpack:dev": "npm run clean && webpack --mode none --config ./client/webpack.config.js && webpack --mode none --config ./server/webpack.config.js",
 		"clean": "rimraf out && rimraf client/out && rimraf server/out",
 		"compile": "tsc -b",
+		"compile:tests": "tsc -b ./tests/tsconfig.json",
 		"compile:client": "tsc -b ./client/tsconfig.json",
 		"compile:server": "tsc -b ./server/tsconfig.json",
 		"watch": "tsc -b -w",
