@@ -990,6 +990,26 @@ exports.linter_Do_Not_Require_Parameters_For_Control_Options = async () => {
   assert.strictEqual(errors.length, 0, `Unexpected RequiresParamters error`);
 };
 
+exports.linter_Do_Not_Require_Parameters_For_Compile_Directives = async () => {
+  const lines = [
+    `**FREE`,
+    `/if defined(MYPROCEDURE);`,
+    `/eof;`,
+    `/endif;`,
+    `/define ;`,
+    `dcl-pr MYPROCEDURE;`,
+    `end-pr;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    RequiresParameter: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0, `Unexpected RequiresParamters error`);
+};
+
 /**
    * Check that local variables are not in global scope
    */

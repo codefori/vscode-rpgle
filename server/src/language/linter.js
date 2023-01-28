@@ -1009,7 +1009,7 @@ export default class Linter {
                           if (definedProcedure) {
                             let requiresBlock = false;
                             // Don't require parms for procedures found in Ctl-Opt
-                            if (statement[0].value.toUpperCase() === `CTL-OPT`) {
+                            if (statement[0].value.toUpperCase() === `CTL-OPT` || statement[0].type === `directive`) {
                               // do nothing
                             } else if (statement.length <= i + 1) {
                               requiresBlock = true;
