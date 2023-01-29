@@ -16,6 +16,7 @@ async function main() {
 
 	let cwd = process.cwd();
 	let scanGlob = `**/*.{SQLRPGLE,sqlrpgle,RPGLE,rpgle}`;
+	let maxErrors: number|undefined;
 
 	for (let i = 0; i < parms.length; i++) {
 		switch (parms[0]) {
@@ -29,6 +30,35 @@ async function main() {
 			case `--cwd`:
 				cwd = parms[i + 1];
 				i++;
+				break;
+
+			case `-m`:
+			case `--max`:
+				maxErrors = Number(parms[i + 1]);
+				i++;
+				break;
+
+			case `-h`:
+			case `--help`:
+				console.log(`rpglint (derived from vscode-rpgle).`);
+				console.log(``);
+				console.log(`See who's contributed: https://github.com/halcyon-tech/vscode-rpgle/graphs/contributors`);
+				console.log();
+				console.log(`Rules are inherited from the 'rpglint.json' found in the working directory.`);
+				console.log(`This configuration file usually lives in '.vscode/rpglint.json'.`);
+				console.log();
+				console.log(`\t-d`)
+				console.log(`\t--cwd\tTo see the directory of where source code lives.`);
+				console.log(`\t\tThe default is the current working directory.`);
+				console.log();
+				console.log(`\t-f`);
+				console.log(`\t--files\tGlob used to search for sources in the working directory.`);
+				console.log(`\t\tDefaults to '${scanGlob}'`);
+				console.log();
+				console.log(`\t-m`);
+				console.log(`\t--max\tThe max limit of errored files before the process ends itself.`);
+				console.log();
+				process.exit(0);
 				break;
 		}
 	}
@@ -55,7 +85,21 @@ async function main() {
 
 	let totalFailures = 0;
 
+	console.log(`Linting ${files.length} file${files.length > 1 ? `s` : ``}.`);
+
+	if (files.length > 500) {
+		console.log(`Looks like you are linting a lot of files! It might be worth checking out the '--max' parameter to limit the amount of errors that will be produced. This is useful to end the lint process after so many issues.`);
+	}
+
+	console.log();
+
 	for (const filePath of files) {
+		if (maxErrors && totalFailures >= maxErrors) {
+			console.log();
+			console.log(`Max errors of ${maxErrors} has been reached. Ending.`);
+			break;
+		}
+
 		try {
 			const content = readFileSync(filePath, { encoding: `utf-8` });
 
@@ -82,13 +126,13 @@ async function main() {
 					console.log(`${filePath}: ${totalErrors} error${totalErrors > 1 ? `s` : ``}.`);
 					if (lintResult.indentErrors.length) {
 						lintResult.indentErrors.forEach(indentError => {
-							console.log(`\t\tLine ${indentError.line + 1}: expected indent of ${indentError.expectedIndent}, got ${indentError.currentIndent}`);
+							console.log(`\tLine ${indentError.line + 1}: expected indent of ${indentError.expectedIndent}, got ${indentError.currentIndent}`);
 						});
 					}
 
 					if (lintResult.errors.length) {
 						lintResult.errors.forEach(error => {
-							console.log(`\t\tLine ${error.range.start.line + 1}, column ${error.range.start.character}: ${Linter.getErrorText(error.type)}`);
+							console.log(`\tLine ${error.range.start.line + 1}, column ${error.range.start.character}: ${Linter.getErrorText(error.type)}`);
 						});
 					}
 				}
