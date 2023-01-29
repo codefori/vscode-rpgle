@@ -1,0 +1,28 @@
+{
+  "name": "@halcyontech/rpglint",
+  "version": "0.17.4",
+  "description": "rpglint CLI tool",
+  "bin": {
+    "rpglint": "./dist/index.js"
+  },
+  "scripts": {
+    "webpack:dev": "webpack --mode none --config ./webpack.config.js",
+    "webpack": "webpack --mode production --config ./webpack.config.js",
+    "local": "npm i -g",
+    "deploy": "npm i && npm publish --access public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/halcyon-tech/vscode-rpgle.git"
+  },
+  "keywords": [
+    "rpgle",
+    "ibmi"
+  ],
+  "author": "Halcyon Tech",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/halcyon-tech/vscode-rpgle/issues"
+  },
+  "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme"
+}
