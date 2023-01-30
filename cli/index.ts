@@ -72,14 +72,14 @@ async function main() {
 		parser = setupParser(cwd, scanGlob);
 		files = getFiles(cwd, scanGlob);
 	} catch (e) {
-		console.log(e.message || e);
-		process.exit();
+		error(e.message || e);
+		process.exit(1);
 	}
 
 	const ruleCount = Object.keys(rules).length;
 
 	if (ruleCount === 0) {
-		console.log(`rpglint.json does not have any rules. Exiting.`);
+		error(`rpglint.json does not have any rules. Exiting.`);
 		process.exit();
 	}
 
@@ -139,8 +139,8 @@ async function main() {
 			}
 
 		} catch (e) {
-			console.log(`Failed to lint ${filePath}: ${e.message || e}`);
-			console.log(`Report this issue to us with an example: github.com/halcyon-tech/vscode-rpgle/issues`);
+			error(`Failed to lint ${filePath}: ${e.message || e}`);
+			error(`Report this issue to us with an example: github.com/halcyon-tech/vscode-rpgle/issues`);
 		}
 	}
 
@@ -172,6 +172,10 @@ function getFiles(cwd: string, globPath: string): string[] {
 		absolute: true,
 		nocase: true,
 	});
+}
+
+function error(line: string) {
+	process.stdout.write(line + `\n`);
 }
 
 function setupParser(cwd: string, globPath: string): Parser {
