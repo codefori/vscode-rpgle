@@ -8,8 +8,8 @@
   "scripts": {
     "webpack:dev": "webpack --mode none --config ./webpack.config.js",
     "webpack": "webpack --mode production --config ./webpack.config.js",
-    "local": "npm i -g",
-    "deploy": "npm i && npm publish --access public"
+    "local": "npm run webpack:dev && npm i -g",
+    "deploy": "npm run webpack && npm i && npm publish --access public"
   },
   "repository": {
     "type": "git",

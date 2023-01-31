@@ -8,6 +8,9 @@ import { readFileSync } from 'fs';
 import Parser from '../server/src/language/parser';
 import Linter from '../server/src/language/linter';
 import { Rules } from '../server/src/language';
+import path from 'path';
+
+type FormatTypes = "standard" | "flc";
 
 main();
 
@@ -17,6 +20,7 @@ async function main() {
 	let cwd = process.cwd();
 	let scanGlob = `**/*.{SQLRPGLE,sqlrpgle,RPGLE,rpgle}`;
 	let maxErrors: number|undefined;
+	let outputType: FormatTypes;
 
 	for (let i = 0; i < parms.length; i++) {
 		switch (parms[0]) {
@@ -37,6 +41,12 @@ async function main() {
 				maxErrors = Number(parms[i + 1]);
 				i++;
 				break;
+			
+			case `-o`:
+			case `--output`:
+				outputType = (parms[i+1] as FormatTypes);
+				i++;
+				break;
 
 			case `-h`:
 			case `--help`:
@@ -48,18 +58,21 @@ async function main() {
 				console.log(`This configuration file usually lives in '.vscode/rpglint.json'.`);
 				console.log();
 				console.log(`\t-d`)
-				console.log(`\t--cwd\tTo see the directory of where source code lives.`);
-				console.log(`\t\tThe default is the current working directory.`);
+				console.log(`\t--cwd\t\tTo see the directory of where source code lives.`);
+				console.log(`\t\t\tThe default is the current working directory.`);
 				console.log();
 				console.log(`\t-f`);
-				console.log(`\t--files\tGlob used to search for sources in the working directory.`);
-				console.log(`\t\tDefaults to '${scanGlob}'`);
+				console.log(`\t--files\t\tGlob used to search for sources in the working directory.`);
+				console.log(`\t\t\tDefaults to '${scanGlob}'`);
 				console.log();
 				console.log(`\t-m`);
-				console.log(`\t--max\tThe max limit of errored files before the process ends itself.`);
+				console.log(`\t--max\t\tThe max limit of errored files before the process ends itself.`);
+				console.log();
+				console.log(`\t-f`);
+				console.log(`\t--format\tFormat of the lint errors in standard out.`);
+				console.log(`\t\t\tDefaults to standard. Available: standard, flc`);
 				console.log();
 				process.exit(0);
-				break;
 		}
 	}
 
@@ -85,7 +98,7 @@ async function main() {
 
 	let totalFailures = 0;
 
-	console.log(`Linting ${files.length} file${files.length > 1 ? `s` : ``}.`);
+	console.log(`Linting ${files.length} file${files.length !== 1 ? `s` : ``}.`);
 
 	if (files.length > 500) {
 		console.log(`Looks like you are linting a lot of files! It might be worth checking out the '--max' parameter to limit the amount of errors that will be produced. This is useful to end the lint process after so many issues.`);
@@ -122,18 +135,37 @@ async function main() {
 				if (totalErrors) {
 					totalFailures += 1;
 
-					console.log();
-					console.log(`${filePath}: ${totalErrors} error${totalErrors > 1 ? `s` : ``}.`);
-					if (lintResult.indentErrors.length) {
-						lintResult.indentErrors.forEach(indentError => {
-							console.log(`\tLine ${indentError.line + 1}: expected indent of ${indentError.expectedIndent}, got ${indentError.currentIndent}`);
-						});
-					}
+					switch (outputType) {
+						case `flc`:
+							if (lintResult.indentErrors.length) {
+								lintResult.indentErrors.forEach(indentError => {
+									console.log(`${filePath}:${indentError.line + 1}:${indentError.currentIndent}:Expected indent of ${indentError.expectedIndent}`);
+								});
+							}
+		
+							if (lintResult.errors.length) {
+								lintResult.errors.forEach(error => {
+									console.log(`${filePath}:${error.range.start.line + 1}:${error.range.start.character}:${Linter.getErrorText(error.type)}`);
+								});
+							}
+							break;
 
-					if (lintResult.errors.length) {
-						lintResult.errors.forEach(error => {
-							console.log(`\tLine ${error.range.start.line + 1}, column ${error.range.start.character}: ${Linter.getErrorText(error.type)}`);
-						});
+						case `standard`:
+						default:
+							const relative = path.relative(cwd, filePath);
+							console.log(`${relative}: ${totalErrors} error${totalErrors !== 1 ? `s` : ``}.`);
+							if (lintResult.indentErrors.length) {
+								lintResult.indentErrors.forEach(indentError => {
+									console.log(`\tLine ${indentError.line + 1}: expected indent of ${indentError.expectedIndent}, got ${indentError.currentIndent}`);
+								});
+							}
+		
+							if (lintResult.errors.length) {
+								lintResult.errors.forEach(error => {
+									console.log(`\tLine ${error.range.start.line + 1}, column ${error.range.start.character}: ${Linter.getErrorText(error.type)}`);
+								});
+							}
+							break;
 					}
 				}
 			}
