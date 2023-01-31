@@ -1358,18 +1358,9 @@ exports.linter15 = async () => {
     PrettyComments: true
   }, cache);
 
-  assert.strictEqual(errors.length, 5, `Expect length of 5`);
+  assert.strictEqual(errors.length, 2, `Expect length of 5`);
 
   assert.deepStrictEqual(errors[0], {
-    type: `PrettyComments`,
-    newValue: ``,
-    range: new Range(
-      new Position(4, 0),
-      new Position(4, 2),
-    ),
-  });
-
-  assert.deepStrictEqual(errors[1], {
     type: `PrettyComments`,
     newValue: `// `,
     range: new Range(
@@ -1378,30 +1369,12 @@ exports.linter15 = async () => {
     ),
   });
 
-  assert.deepStrictEqual(errors[2], {
-    type: `PrettyComments`,
-    newValue: ``,
-    range: new Range(
-      new Position(6, 0),
-      new Position(6, 2),
-    ),
-  });
-
-  assert.deepStrictEqual(errors[3], {
+  assert.deepStrictEqual(errors[1], {
     type: `PrettyComments`,
     newValue: `// `,
     range: new Range(
       new Position(14, 2),
       new Position(14, 4),
-    ),
-  });
-
-  assert.deepStrictEqual(errors[4], {
-    type: `PrettyComments`,
-    newValue: ``,
-    range: new Range(
-      new Position(16, 2),
-      new Position(16, 4),
     ),
   });
 };
@@ -3371,3 +3344,36 @@ exports.dcl_parm_issue184 = async () => {
   assert.strictEqual(parms[1].name, `name`);
   assert.strictEqual(parms[2].name, `address`);
 }
+
+exports.prettyCommentsChange = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `// my constant`,
+    `//`,
+    `// second line`,
+    `Dcl-C theConstant 'Hello world';`,
+    `//comment with bad indent`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    PrettyComments: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `PrettyComments`,
+    newValue: `// `,
+    range: new Range(
+      new Position(10, 0),
+      new Position(10, 2),
+    ),
+  });
+};

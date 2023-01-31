@@ -168,30 +168,19 @@ export default class Linter {
         if (isLineComment) {
           const comment = line.substring(currentIndent + 2).trimEnd();
           if (rules.PrettyComments) {
-            if (comment === ``) {
-              errors.push({
-                range: new Range(
-                  new Position(lineNumber, currentIndent),
-                  new Position(lineNumber, currentIndent + 2)
-                ),
-                type: `PrettyComments`,
-                newValue: ``
-              });
-            } else {
-              // We check for the slash because the documentation requires ///.
-              if (comment !== `/`) {
-                const startSpaces = comment.search(/\S/);
+            // We check for the slash because the documentation requires ///.
+            if (comment !== `/`) {
+              const startSpaces = comment.search(/\S/);
 
-                if (startSpaces === 0) {
-                  errors.push({
-                    range: new Range(
-                      new Position(lineNumber, currentIndent),
-                      new Position(lineNumber, currentIndent + 2)
-                    ),
-                    type: `PrettyComments`,
-                    newValue: `// `,
-                  });
-                }
+              if (startSpaces === 0) {
+                errors.push({
+                  range: new Range(
+                    new Position(lineNumber, currentIndent),
+                    new Position(lineNumber, currentIndent + 2)
+                  ),
+                  type: `PrettyComments`,
+                  newValue: `// `,
+                });
               }
             }
           } else {
