@@ -221,8 +221,9 @@ function setupParser(cwd: string, globPath: string): Parser {
 		if (includeFile.includes(`,`)) {
 			includeFile = includeFile.split(`,`).join(`/`) + `.*`;
 		}
-
-		const files = glob.sync(globPath, {
+		
+		includeFile = path.join(`**`, includeFile);
+		const files = glob.sync(includeFile, {
 			cwd,
 			absolute: true,
 			nocase: true,
