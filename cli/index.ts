@@ -68,8 +68,8 @@ async function main() {
 				console.log(`\t-m`);
 				console.log(`\t--max\t\tThe max limit of errored files before the process ends itself.`);
 				console.log();
-				console.log(`\t-f`);
-				console.log(`\t--format\tFormat of the lint errors in standard out.`);
+				console.log(`\t-o`);
+				console.log(`\t--output\tFormat of the lint errors in standard out.`);
 				console.log(`\t\t\tDefaults to standard. Available: standard, flc`);
 				console.log();
 				process.exit(0);
