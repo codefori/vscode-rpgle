@@ -43,7 +43,8 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 					markdown += `${procedure.description}\n\n`;
 
 				// Params
-				markdown += procedure.subItems.map(parm => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${parm.description}`).join(`\n\n`);
+				const paramTags = procedure.tags.filter(tag => tag.tag === `param`);
+				markdown += procedure.subItems.map((parm, i) => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${paramTags[i] ? paramTags[i].content : parm.description}`).join(`\n\n`);
 
 				// Return value
 				if (returnTag) {
