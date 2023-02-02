@@ -845,10 +845,12 @@ export default class Parser {
                   };
 
                   // Add comments from the tags
-                  const paramTags = currentTags.filter(tag => tag.tag === `param`);
-                  const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
-                  if (paramTag) {
-                    currentSub.description = paramTag.content;
+                  if (currentItem.type === `procedure`) {
+                    const paramTags = currentItem.tags.filter(tag => tag.tag === `param`);
+                    const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
+                    if (paramTag) {
+                      currentSub.description = paramTag.content;
+                    }
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.

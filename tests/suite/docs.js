@@ -40,4 +40,7 @@ exports.issue_202 = async () => {
     tag: `return`,
     content: `The lowercase value`
   });
+
+  const stringInParam = toLower.subItems[0];
+  assert.strictEqual(stringInParam.description, `The string`);
 }
