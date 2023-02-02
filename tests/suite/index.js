@@ -5,5 +5,6 @@ module.exports = {
   ...require(`./keywords`),
   ...require(`./linter`),
   ...require(`./files`),
-  ...require(`./editing`)
+  ...require(`./editing`),
+  ...require(`./docs`)
 }
