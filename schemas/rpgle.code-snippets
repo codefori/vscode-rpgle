@@ -867,5 +867,19 @@
 		],
 		"description": "%YEARS converts a number into a duration that can be added to a time or timestamp value. %YEARS can only follow the plus or minus sign in an addition or subtraction expression. The value before the plus or minus sign must be a time or timestamp. The result is a time or timestamp value with the appropriate number of years added or subtracted. For a time, the resulting value is in *ISO format."
 	},
-
+	"Main": {
+		"prefix": "main",
+		"body":[
+			"**FREE",
+			"Ctl-Opt Main(${1:${TM_FILENAME_BASE/([^\\.]+).*/${1:/upcase}/}});",
+			"",
+			"Dcl-Proc $1;",
+			"  Dcl-Pi *N EXTPGM;",
+			"  End-Pi;",
+			"",
+			"  $0",
+			"End-Proc;"
+		],
+		"description":"No cycle RPGLE program template"
+  }
 }
