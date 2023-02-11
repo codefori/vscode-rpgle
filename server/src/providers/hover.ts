@@ -51,7 +51,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 					markdown += `\n\n*@returns* ${returnTag.content}`;
 				}
 
-				if (procedure.position) {
+				if (procedure.position && currentPath !== procedure.position.path) {
 					markdown += `\n\n*@file* \`${procedure.position.path}:${procedure.position.line+1}\``;
 				}
 				
@@ -76,10 +76,16 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 
 				if (theVariable) {
 					// Variable definition found
+					let markdown = `\`${theVariable.name}\`: \`${theVariable.keywords.join(` `).trim()}\``;
+
+					if (theVariable.position && currentPath !== theVariable.position.path) {
+						markdown += `\n\n*@file* \`${theVariable.position.path}:${theVariable.position.line+1}\``;
+					}
+
 					return {
 						contents: {
 							kind: MarkupKind.Markdown,
-							value: `\`${theVariable.name}\`: \`${theVariable.keywords.join(` `).trim()}\``
+							value: markdown
 						}
 					};
 
