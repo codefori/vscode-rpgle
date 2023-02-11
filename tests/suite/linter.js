@@ -3463,5 +3463,4 @@ exports.issue_204 = async () => {
   assert.strictEqual(PERSON_printNice.references.length, 1);
   const printNice_person = PERSON_printNice.scope.find(`person`);
   assert.strictEqual(printNice_person.references.length, 2);
-
 }

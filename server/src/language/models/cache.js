@@ -179,9 +179,8 @@ export default class Cache {
   fixProcedures() {
     if (this.procedures.length > 0) {
       this.procedures.forEach(proc => {
-        if (proc.scope) {
+        if (proc.scope && proc.subItems.length > 0) {
           proc.scope.parameters = [...proc.subItems];
-          proc.subItems = [];
           proc.scope.fixProcedures();
         }
       })
