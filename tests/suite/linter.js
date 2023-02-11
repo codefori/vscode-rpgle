@@ -3456,6 +3456,7 @@ exports.issue_204 = async () => {
   assert.strictEqual(PERSON_New.references.length, 1);
   const PERSON_New_person = PERSON_New.scope.find(`person`);
   assert.strictEqual(PERSON_New_person.references.length, 3);
+  assert.strictEqual(PERSON_New_person.subItems.length, 2);
 
   // Proc B checks
 
@@ -3463,4 +3464,5 @@ exports.issue_204 = async () => {
   assert.strictEqual(PERSON_printNice.references.length, 1);
   const printNice_person = PERSON_printNice.scope.find(`person`);
   assert.strictEqual(printNice_person.references.length, 2);
+  assert.strictEqual(printNice_person.subItems.length, 2);
 }
