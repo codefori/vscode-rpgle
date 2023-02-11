@@ -3377,3 +3377,92 @@ exports.prettyCommentsChange = async () => {
     ),
   });
 };
+
+exports.issue_204 = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `ctl-opt dftactgrp(*no);`,
+    ``,
+    `///`,
+    `// printf`,
+    `// Print to standard out`,
+    `// @param String value pointer`,
+    `///`,
+    `dcl-pr printf int(10) extproc('printf');`,
+    `  format pointer value options(*string);`,
+    `end-pr;`,
+    ``,
+    `dcl-ds person_t qualified template;`,
+    `  name  int(10);`,
+    `  age   char(50);`,
+    `end-ds;`,
+    ``,
+    `dcl-ds myperson likeds(person_t);`,
+    ``,
+    `myperson = PERSON_New();`,
+    `myperson.name = 'Liam Barry';`,
+    `myperson.age = 25;`,
+    `PERSON_printNice(myperson);`,
+    ``,
+    `return;`,
+    ``,
+    `dcl-proc PERSON_New;`,
+    `  dcl-pi *n LikeDS(person_t) end-pi;`,
+    `  // This is the constructor`,
+    `  // Maybe parameters to set the defaults?`,
+    ``,
+    `  dcl-ds person likeds(person_t);`,
+    ``,
+    `  // Set defaults`,
+    `  person.name = '';`,
+    `  person.age = 0;`,
+    ``,
+    `  return person;`,
+    `end-proc;`,
+    ``,
+    `dcl-proc PERSON_printNice;`,
+    `  dcl-pi *n;`,
+    `    person likeds(person_t);`,
+    `  end-pi;`,
+    ``,
+    `  printf(%trim(person.name) + ' ' + %char(person.age));`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true,
+  }, cache);
+
+  // Global checks
+
+  const printf = cache.find(`printf`);
+  assert.strictEqual(printf.references.length, 1);
+
+  const person_t = cache.find(`person_t`);
+  assert.strictEqual(person_t.references.length, 4);
+
+  const myperson = cache.find(`myperson`);
+  assert.strictEqual(myperson.references.length, 4);
+
+  const global_person = cache.find(`person`);
+  assert.strictEqual(global_person, null);
+
+  // Proc A checks
+
+  const PERSON_New = cache.find(`PERSON_New`);
+  assert.strictEqual(PERSON_New.references.length, 1);
+  const PERSON_New_person = PERSON_New.scope.find(`person`);
+  assert.strictEqual(PERSON_New_person.references.length, 3);
+  assert.strictEqual(PERSON_New_person.subItems.length, 2);
+
+  // Proc B checks
+
+  const PERSON_printNice = cache.find(`PERSON_printNice`);
+  assert.strictEqual(PERSON_printNice.references.length, 1);
+  const printNice_person = PERSON_printNice.scope.find(`person`);
+  assert.strictEqual(printNice_person.references.length, 2);
+  assert.strictEqual(printNice_person.subItems.length, 2);
+}

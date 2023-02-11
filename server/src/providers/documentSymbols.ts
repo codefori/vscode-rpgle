@@ -28,7 +28,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						Range.create(proc.range.start, 0, proc.range.start, 0),
 					);
 
-					procDef.children = proc.subItems
+					if (proc.scope) {
+						procDef.children = proc.subItems
 						.filter(subitem => subitem.position && subitem.position.path === currentPath)
 						.map(subitem => DocumentSymbol.create(
 							subitem.name,
@@ -37,8 +38,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 							Range.create(subitem.position.line, 0, subitem.position.line, 0),
 							Range.create(subitem.position.line, 0, subitem.position.line, 0)
 						));
-
-					if (proc.scope && procDef.children) {
+						
 						procDef.children.push(...getScopeVars(proc.scope));
 					}
 

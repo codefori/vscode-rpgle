@@ -28,7 +28,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
 			// If they're typing inside of a procedure, let's get the stuff from there too
-			const currentProcedure = doc.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+			const currentProcedure = doc.procedures.find((proc, index) => 
+				lineNumber >= proc.range.start && 
+				(lineNumber <= proc.range.end+1 || index === doc.procedures.length-1)
+			);
 
 			const currentLine = document.getText(Range.create(
 				handler.position.line,
@@ -52,21 +55,19 @@ export default async function completionItemProvider(handler: CompletionParams):
 					}
 				}
 
+				// Ok, we have a 'preWord' (the name of the struct?)
 				if (preWord) {
 					let possibleStruct: Declaration | undefined;
 
 					if (currentProcedure && currentProcedure.scope) {
-						const procScop = currentProcedure.scope;
+						const procScope = currentProcedure.scope;
 
-						possibleStruct = currentProcedure.subItems.find(subitem => subitem.name.toUpperCase() === preWord && subitem.subItems.length > 0);
-
-						if (!possibleStruct) {
-							possibleStruct = procScop.structs.find(struct => struct.name.toUpperCase() === preWord);
-						}
-					}
-
-					if (!possibleStruct) {
-						possibleStruct = doc.structs.find(struct => struct.name.toUpperCase() === preWord);
+						// Look at the parms or existing structs to find a possible reference
+						possibleStruct = [
+							procScope.parameters.find(parm => parm.name.toUpperCase() === preWord && parm.subItems.length > 0),
+							procScope.structs.find(struct => struct.name.toUpperCase() === preWord),
+							doc.structs.find(struct => struct.name.toUpperCase() === preWord)
+						].find(x => x); // find the first non-undefined item
 					}
 
 					if (possibleStruct && possibleStruct.keyword[`QUALIFIED`]) {
@@ -101,6 +102,15 @@ export default async function completionItemProvider(handler: CompletionParams):
 				
 				} else {
 					const expandScope = (localCache: Cache) => {
+						for (const subItem of localCache.parameters) {
+							const item = CompletionItem.create(`${subItem.name}`);
+							item.kind = CompletionItemKind.Variable;
+							item.insertText = subItem.name;
+							item.detail = [`parameter`, ...subItem.keywords].join(` `);
+							item.documentation = subItem.description;
+							items.push(item);
+						}
+
 						for (const procedure of localCache.procedures) {
 							const item = CompletionItem.create(`${procedure.name}`);
 							item.kind = CompletionItemKind.Function;
@@ -189,19 +199,8 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					expandScope(doc);
 
-					if (currentProcedure) {
-						for (const subItem of currentProcedure.subItems) {
-							const item = CompletionItem.create(`${subItem.name}`);
-							item.kind = CompletionItemKind.Variable;
-							item.insertText = subItem.name;
-							item.detail = [`parameter`, ...subItem.keywords].join(` `);
-							item.documentation = subItem.description;
-							items.push(item);
-						}
-
-						if (currentProcedure.scope) {
-							expandScope(currentProcedure.scope);
-						}
+					if (currentProcedure && currentProcedure.scope) {
+						expandScope(currentProcedure.scope);
 					}
 
 					// Next, we're going to make some import suggestions for system APIs
