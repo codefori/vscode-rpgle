@@ -1,7 +1,5 @@
 /* eslint-disable no-case-declarations */
 
-import { parse } from "path";
-
 import { createBlocks, parseStatement } from "./statement";
 
 import Cache from "./models/cache";
@@ -1210,6 +1208,8 @@ export default class Parser {
     if (scopes.length > 0) {
       scopes[0].keyword = Parser.expandKeywords(keywords);
     }
+
+    scopes[0].fixProcedures();    
 
     const parsedData = scopes[0];
 

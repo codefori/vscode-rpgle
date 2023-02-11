@@ -41,7 +41,8 @@
 			},
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
-			}
+			},
+			"args": ["issue_204"]
 		}
 	]
 }

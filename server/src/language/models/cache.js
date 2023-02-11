@@ -17,6 +17,9 @@ export default class Cache {
     this.keyword = {};
 
     /** @type {Declaration[]} */
+    this.parameters = cache.parameters || [];
+
+    /** @type {Declaration[]} */
     this.subroutines = cache.subroutines || [];
 
     /** @type {Declaration[]} */
@@ -48,6 +51,7 @@ export default class Cache {
   merge(second) {
     if (second) {
       return new Cache({
+        parameters: [...this.parameters, ...second.parameters],
         subroutines: [...this.subroutines, ...second.subroutines],
         procedures: [...this.procedures, ...second.procedures],
         variables: [...this.variables, ...second.variables],
@@ -67,6 +71,7 @@ export default class Cache {
   getNames() {
     const fileStructNames = this.files.map(file => file.subItems.map(sub => sub.name)).flat();
     return [
+      ...this.parameters.map(def => def.name),
       ...this.constants.map(def => def.name),
       ...this.procedures.map(def => def.name),
       ...this.files.map(def => def.name),
@@ -107,6 +112,7 @@ export default class Cache {
     const allStructs = [...fileStructs, ...this.structs];
 
     const possibles = [
+      ...this.parameters.filter(def => def.name.toUpperCase() === name),
       ...this.constants.filter(def => def.name.toUpperCase() === name),
       ...this.procedures.filter(def => def.name.toUpperCase() === name),
       ...this.files.filter(def => def.name.toUpperCase() === name),
@@ -130,7 +136,7 @@ export default class Cache {
   }
 
   clearReferences() {
-    [...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
+    [...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
       def.references = [];
     });
 
@@ -164,6 +170,21 @@ export default class Cache {
 
     if (globalDef) {
       return globalDef;
+    }
+  }
+
+  /**
+   * Move all procedure subItems (the paramaters) into the cache
+   */
+  fixProcedures() {
+    if (this.procedures.length > 0) {
+      this.procedures.forEach(proc => {
+        if (proc.scope) {
+          proc.scope.parameters = [...proc.subItems];
+          proc.subItems = [];
+          proc.scope.fixProcedures();
+        }
+      })
     }
   }
 }
