@@ -89,6 +89,28 @@
 			"$0"
 		]
 	},
+  "prototype": {
+		"prefix": "dcl-pr",
+		"body": [
+			"dcl-pr $1 extpgm('$2');",
+			"\t$3;",
+			"end-pr;",
+			"$4"
+		],
+		"description": "Create prototype for external program"
+	},
+	"procedure": {
+		"prefix": "dcl-proc",
+		"body": [
+			"dcl-proc $1;",
+			"\tdcl-pi *n ;",
+			"\tend-pi;",
+			"  $0",
+			"end-proc;",
+			"$4"
+		],
+		"description": "Create prototype for external program"
+	},
 	"%abs": {
 		"prefix": "%abs",
 		"body": [
