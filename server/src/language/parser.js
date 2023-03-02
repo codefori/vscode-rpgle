@@ -826,6 +826,97 @@ export default class Parser {
                 }
               }
 
+              // Find position in variables
+              let findPosition = false;
+              partsLower.forEach(part => {
+                findPosition = false;
+                part = part.replace(`:`, ``);
+                part = part.replace(`;`, ``);
+                const indexOpenBracket = part.indexOf(`(`);
+                if (indexOpenBracket >= 0){
+                  part = part.substring(indexOpenBracket+1);
+                }
+                const indexCloseBracket = part.indexOf(`)`);
+                if (indexCloseBracket >= 0){
+                  part = part.substring(0, indexCloseBracket);
+                }
+                const indexVariable = scope.variables.findIndex(el => el.name === part);
+                if (indexVariable >= 0) {
+                  findPosition = true;
+                  const varPosition = {position: {
+                    path: file,
+                    line: statementStartingLine
+                  }};
+                  scope.variables[indexVariable].positions.push(varPosition);
+                }
+
+                if (!findPosition) {
+                  // Find position in constants
+                  const indexVariable = scope.constants.findIndex(el => el.name === part);
+                  if (indexVariable >= 0) {
+                    findPosition = true;
+                    const constantPosition = {position: {
+                      path: file,
+                      line: statementStartingLine
+                    }};
+                    scope.constants[indexVariable].positions.push(constantPosition);
+                  }
+                }
+
+                // NOT HERE ! Need to re-scan the source because scope.structs is empty
+                // // Find position in structures
+                // if(!findPosition) {
+                //   // @todo: Rechercher dans structs
+                //   partsLower.forEach(part => {
+                //     part = part.replace(`:`, ``);
+                //     const indexVariable = scope.structs.findIndex(el => el.name === part);
+                //     if (indexVariable > 0) {
+                //       findPosition = true;
+                //       const structPosition = {position: {
+                //         path: file,
+                //         line: statementStartingLine
+                //       }};
+                //       scope.structs[indexVariable].positions.push(structPosition);
+                //     }}
+                //   );
+                // }
+
+                // // Find position in procedures
+                // if(!findPosition) {
+                //   // @todo: Rechercher dans procedures
+                //   partsLower.forEach(part => {
+                //     part = part.replace(`:`, ``);
+                //     const indexVariable = scope.procedures.findIndex(el => el.name === part);
+                //     if (indexVariable > 0) {
+                //       findPosition = true;
+                //       const proceduresPosition = {position: {
+                //         path: file,
+                //         line: statementStartingLine
+                //       }};
+                //       scope.procedures[indexVariable].positions.push(proceduresPosition);
+                //     }}
+                //   );
+                // }
+
+                // // Find position in subroutines
+                // if(!findPosition) {
+                //   // @todo: Rechercher dans subroutines
+                //   partsLower.forEach(part => {
+                //     part = part.replace(`:`, ``);
+                //     const indexVariable = scope.subroutines.findIndex(el => el.name === part);
+                //     if (indexVariable > 0) {
+                //       findPosition = true;
+                //       const subroutinesPosition = {position: {
+                //         path: file,
+                //         line: statementStartingLine
+                //       }};
+                //       scope.subroutines[indexVariable].positions.push(subroutinesPosition);
+                //     }}
+                //   );
+                // }  
+
+              });
+
               if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
                 if (currentItem.readParms && parts.length > 0) {
                   if (parts[0].startsWith(`DCL`)) {

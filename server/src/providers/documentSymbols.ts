@@ -1,4 +1,4 @@
-import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-languageserver';
+import { DocumentSymbol, DocumentSymbolParams, integer, Range, SymbolKind } from 'vscode-languageserver';
 import { documents, parser } from '.';
 import Cache from '../language/models/cache';
 
@@ -56,26 +56,55 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						Range.create(def.range.start, 0, def.range.start, 0),
 					)),
 
-				...scope.variables
-					.filter(variable => variable.position && variable.position.path === currentPath)
-					.map(def => DocumentSymbol.create(
-						def.name,
-						def.keywords.join(` `).trim(),
-						SymbolKind.Variable,
-						Range.create(def.position.line, 0, def.position.line, 0),
-						Range.create(def.position.line, 0, def.position.line, 0)
-					)),
-
-				...scope.constants
-					.filter(constant => constant.position && constant.position.path === currentPath)
-					.map(def => DocumentSymbol.create(
-						def.name,
-						def.keywords.join(` `).trim(),
-						SymbolKind.Constant,
-						Range.create(def.position.line, 0, def.position.line, 0),
-						Range.create(def.position.line, 0, def.position.line, 0)
-					))
 			);
+
+			scope.variables
+				.filter(variable => variable.position && variable.position.path === currentPath)
+				.forEach(variable => {
+					const varDef = DocumentSymbol.create(
+						variable.name,
+						variable.keywords.join(` `).trim(),
+						SymbolKind.Variable,
+						Range.create(variable.position.line, 0, variable.position.line, 0),
+						Range.create(variable.position.line, 0, variable.position.line, 0)
+					);
+
+					varDef.children = variable.positions
+						.filter(subitem => subitem.position.path === currentPath)
+						.map(subitem => DocumentSymbol.create(
+              subitem.position.line+1+'',
+							`position`,
+							SymbolKind.Property,
+							Range.create(subitem.position.line, 0, subitem.position.line, 0),
+							Range.create(subitem.position.line, 0, subitem.position.line, 0)
+						));
+
+					currentScopeDefs.push(varDef);
+				});
+
+      scope.constants
+				.filter(constant => constant.position && constant.position.path === currentPath)
+				.forEach(constant => {
+					const varDef = DocumentSymbol.create(
+						constant.name,
+						constant.keywords.join(` `).trim(),
+						SymbolKind.Variable,
+						Range.create(constant.position.line, 0, constant.position.line, 0),
+						Range.create(constant.position.line, 0, constant.position.line, 0)
+					);
+
+					varDef.children = constant.positions
+						.filter(subitem => subitem.position.path === currentPath)
+						.map(subitem => DocumentSymbol.create(
+              subitem.position.line+1+'',
+							`position`,
+							SymbolKind.Property,
+							Range.create(subitem.position.line, 0, subitem.position.line, 0),
+							Range.create(subitem.position.line, 0, subitem.position.line, 0)
+						));
+
+					currentScopeDefs.push(varDef);
+				});
 
 			scope.files
 				.filter(struct => struct.position && struct.position.path === currentPath)

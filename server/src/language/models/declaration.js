@@ -24,6 +24,9 @@ export default class Declaration {
     /** @type {DefinitionPosition} */
     this.position = undefined;
 
+    /** @type {{position: DefinitionPosition}[]} */
+    this.positions = [];
+
     /** @type {IssueRange[]} */
     this.references = [];
 

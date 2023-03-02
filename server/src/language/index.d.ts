@@ -64,6 +64,9 @@ interface DefinitionPosition {
   line: number;
 }
 
+interface DefinitionPositions {
+  positions: DefinitionPosition[];
+}
 interface Offset {
   position?: number,
   end?: number
