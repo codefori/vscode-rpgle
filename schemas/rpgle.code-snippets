@@ -22,6 +22,17 @@
 			"endif;"
 		]
 	},
+  "ifelse": {
+		"prefix": "ifelse",
+		"description": "If else block",
+		"body": [
+			"if (${1});",
+			"  $0",
+      "else;",
+      " ",
+			"endif;"
+		]
+	},
 	"dow": {
 		"prefix": "dow",
 		"description": "Do while",
@@ -49,9 +60,18 @@
 			"endfor;"
 		]
 	},
+  "foreach": {
+		"prefix": "foreach",
+		"description": "The FOR-EACH operation begins a group of operations to process the items in the array, sub-array, or %LIST one at a time.",
+		"body": [
+			"for-each ${1:variable} in %list('':'');",
+			"  $0",
+			"endfor;"
+		]
+	},
 	"select": {
 		"prefix": "select",
-		"description": "Select block",
+		"description": "The select group conditionally processes one of several alternative sequences of operations.",
 		"body": [
 			"select;",
 			"  when (${1});",
@@ -110,6 +130,23 @@
 			"$4"
 		],
 		"description": "Create prototype for external program"
+	},
+  "monitor": {
+		"prefix": "monitor",
+		"body": [
+			"monitor;",
+			"on-excp '';",
+			"on-error;",
+			"endmon;"
+		],
+		"description": "The monitor group performs conditional error handling based on the exception message or status code."
+	},
+  "snd-msg": {
+		"prefix": "snd-msg",
+		"body": [
+			"snd-msg ${1|*INFO,*ESCAPE|} ${2:%TARGET(${3|*SELF,*CALLER,program-or-procedure|})) };"
+		],
+		"description": "The SND-MSG operation sends an informational message or an exception message. The message can be sent to any procedure on the call stack, including the current procedure. The message appears in the joblog after it is sent."
 	},
 	"%abs": {
 		"prefix": "%abs",
