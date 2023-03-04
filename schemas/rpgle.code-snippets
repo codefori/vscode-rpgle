@@ -131,6 +131,15 @@
 		],
 		"description": "Create prototype for external program"
 	},
+  "subroutine": {
+		"prefix": "begsr",
+		"body": [
+			"begsr $1;",
+			"  $0",
+			"endsr;"
+		],
+		"description": "Create subroutine."
+	},
   "monitor": {
 		"prefix": "monitor",
 		"body": [
