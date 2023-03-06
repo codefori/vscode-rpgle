@@ -780,7 +780,6 @@ export default class Parser {
             }
             break;
 
-
           case `EXEC`:
             if (parts[1] === `SQL`) {
               const indexDeclare = parts.findIndex(el => el === `DECLARE`);
@@ -996,6 +995,7 @@ export default class Parser {
             }
 
             break;
+            
           case `P`:
             const pSpec = parsePLine(line);
 
@@ -1212,6 +1212,31 @@ export default class Parser {
               potentialName = undefined;
             }
             break;
+
+          case `EXEC`:
+            if (parts[1] === `SQL`) {
+              const indexDeclare = parts.findIndex(el => el === `DECLARE`);
+              const indexCursor = parts.findIndex(el => el === `CURSOR`);
+              let indexCursorName = 0;
+              if (indexCursor-1 == indexDeclare+1) {
+                indexCursorName = indexCursor-1;
+              }
+              if (currentCursor === undefined 
+               && indexDeclare >=0 
+               &&  indexCursor >= 0) {
+                currentCursor = new Declaration(`cursor`);
+                currentCursor.name = parts[indexCursorName];
+                currentCursor.position = {
+                  path: file,
+                  line: statementStartingLine
+                };
+                currentCursor.keywords.push(`CURSOR`);
+
+                scope.cursor.push(currentCursor);
+                currentCursor = undefined;
+              }
+              break;
+            }
           }
         }
 
