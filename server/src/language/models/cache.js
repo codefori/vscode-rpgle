@@ -42,6 +42,10 @@ export default class Cache {
 
     /** @type {IncludeStatement[]} */
     this.includes = cache.includes || [];
+
+    /** @type {Declaration[]} */
+    this.cursor = cache.cursor || [];
+
   }
 
   /**
