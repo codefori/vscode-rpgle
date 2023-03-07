@@ -382,7 +382,7 @@ export default class Parser {
                 // We don't want to waste precious time parsing all C specs, so we make sure it's got
                 // BEGSR or ENDSR in it first.
                 const upperLine = line.toUpperCase();
-                if ([`BEGSR`, `ENDSR`].some(v => upperLine.includes(v)) === false) {
+                if ([`BEGSR`, `ENDSR`, `CURSOR`].some(v => upperLine.includes(v)) === false) {
                   continue;
                 }
               }
@@ -802,8 +802,8 @@ export default class Parser {
                 scope.cursor.push(currentCursor);
                 currentCursor = undefined;
               }
-              break;
             }
+            break;
 
           case `///`:
             docs = !docs;
@@ -961,37 +961,62 @@ export default class Parser {
             break;
 
           case `C`:
-            const cSpec = parseCLine(line);
-
-            potentialName = cSpec.factor1;
-
-            switch (cSpec.opcode) {
-            case `BEGSR`:
-              if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
-                currentItem = new Declaration(`subroutine`);
-                currentItem.name = potentialName;
-                currentItem.keywords = [`Subroutine`];
-  
-                currentItem.position = {
+            if (line.substring(5, 7) === `C+`) {
+              pieces = line.split(`;`);
+              parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
+              const indexDeclare = parts.findIndex(el => el === `DECLARE`);
+              const indexCursor = parts.findIndex(el => el === `CURSOR`);
+              let indexCursorName = 0;
+              if (indexCursor-1 == indexDeclare+1) {
+                indexCursorName = indexCursor-1;
+              }
+              if (currentCursor === undefined 
+               && indexDeclare >=0 
+               &&  indexCursor >= 0) {
+                currentCursor = new Declaration(`cursor`);
+                currentCursor.name = parts[indexCursorName];
+                currentCursor.position = {
                   path: file,
                   line: lineNumber
                 };
-  
-                currentItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
-                };
-  
-                currentDescription = [];
+                currentCursor.keywords.push(`CURSOR`);
+
+                scope.cursor.push(currentCursor);
+                currentCursor = undefined;
               }
-              break;
-            case `ENDSR`:
-              if (currentItem && currentItem.type === `subroutine`) {
-                currentItem.range.end = lineNumber;
-                scope.subroutines.push(currentItem);
-                resetDefinition = true;
+            } else {
+              const cSpec = parseCLine(line);
+
+              potentialName = cSpec.factor1;
+
+              switch (cSpec.opcode) {
+              case `BEGSR`:
+                if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
+                  currentItem = new Declaration(`subroutine`);
+                  currentItem.name = potentialName;
+                  currentItem.keywords = [`Subroutine`];
+    
+                  currentItem.position = {
+                    path: file,
+                    line: lineNumber
+                  };
+    
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+    
+                  currentDescription = [];
+                }
+                break;
+              case `ENDSR`:
+                if (currentItem && currentItem.type === `subroutine`) {
+                  currentItem.range.end = lineNumber;
+                  scope.subroutines.push(currentItem);
+                  resetDefinition = true;
+                }
+                break;
               }
-              break;
             }
 
             break;
@@ -1213,30 +1238,6 @@ export default class Parser {
             }
             break;
 
-          case `EXEC`:
-            if (parts[1] === `SQL`) {
-              const indexDeclare = parts.findIndex(el => el === `DECLARE`);
-              const indexCursor = parts.findIndex(el => el === `CURSOR`);
-              let indexCursorName = 0;
-              if (indexCursor-1 == indexDeclare+1) {
-                indexCursorName = indexCursor-1;
-              }
-              if (currentCursor === undefined 
-               && indexDeclare >=0 
-               &&  indexCursor >= 0) {
-                currentCursor = new Declaration(`cursor`);
-                currentCursor.name = parts[indexCursorName];
-                currentCursor.position = {
-                  path: file,
-                  line: statementStartingLine
-                };
-                currentCursor.keywords.push(`CURSOR`);
-
-                scope.cursor.push(currentCursor);
-                currentCursor = undefined;
-              }
-              break;
-            }
           }
         }
 
