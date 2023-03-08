@@ -506,5 +506,33 @@ module.exports = {
     
     const someDs = cache.find(`someDs`);
     assert.strictEqual(someDs.keyword[`BASED`], undefined);
+  },
+
+  exec_sql: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `EXEC SQL`,
+      ` select count(*) into :NB_LIG`,
+      ` from DEPARTMENT`,
+      ` where DEPTNAME = 'A'`,
+      `EXEC SQL`,
+      `  DECLARE C1 CURSOR FOR`,
+      `  select *`,
+      `  from DEPARTMENT`,
+      `  where DEPTNAME = 'A';`,
+      `exec sql`,
+      ` OPEN C1`,
+      `exec sql`,
+      `   Fetch C1 INTO :DEPARTMENT`,
+      `exec sql`,
+      ` CLOSE C1`,
+    ].join(`\n`);
+  
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+  
+    assert.strictEqual(cache.cursor.length, 1);
+    assert.strictEqual(cache.cursor[0].name, `C1`);
   }
 }

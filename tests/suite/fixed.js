@@ -1041,3 +1041,34 @@ exports.ctl_opt_fixed = async () => {
   assert.strictEqual(cache.keyword[`DATFMT`], `*MDY/`);
   assert.strictEqual(cache.keyword[`COPYRIGHT`], `'(C) Copyright ABC Programming - 1995'`);
 };
+
+exports.fixedfree2 = async () => {
+  const lines = [
+    `     C/exec sql`,
+    `     C+ select count(*) into :NB_LIG`,
+    `     C+ from DEPARTMENT`,
+    `     C+ where DEPTNAME = 'A'`,
+    `     C/end-exec`,
+    `     C/exec sql`,
+    `     C+  DECLARE C1 CURSOR FOR`,
+    `     C+  select *`,
+    `     C+  from DEPARTMENT`,
+    `     C+  where DEPTNAME = 'A'`,
+    `     C/end-exec`,
+    `     C/exec sql`,
+    `     C+ OPEN C1`,
+    `     C/end-exec`,
+    `     C/exec sql`,
+    `     C+   Fetch C1 INTO :DEPARTMENT`,
+    `     C/end-exec`,
+    `     C/exec sql`,
+    `     C+ CLOSE C1`,
+    `     C/end-exec`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.cursor.length, 1);
+  assert.strictEqual(cache.cursor[0].name, `C1`);
+};
