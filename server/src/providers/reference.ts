@@ -13,9 +13,14 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 	if (document) {
 		const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
-		const word = getWordRangeAtPosition(document, position);
+		let word = getWordRangeAtPosition(document, position)?.trim();
 
 		if (word) {
+      if (word.endsWith(`;`)) {
+        const pieces = word.split(`;`);
+        word = pieces[0];
+      }
+
 			const doc = await parser.getDocs(uri, document.getText());
 
 			if (doc) {
