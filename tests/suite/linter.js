@@ -2426,20 +2426,46 @@ exports.linter34 = async () => {
     SQLHostVarCheck: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
+  assert.strictEqual(errors.length, 3);
 
-  assert.deepStrictEqual(errors[0], {
-    type: `SQLHostVarCheck`,
-    range: new Range(
-      new Position(7, 0),
-      new Position(10, 28),
-    ),
-    offset: {
-      position: 117,
-      end: 124
+  assert.deepStrictEqual(errors, [
+    {
+      range: new Range(
+        new Position(7, 0),
+        new Position(10, 28),
+      ),
+      offset: {
+        position: 17,
+        end: 24
+      },
+      type: `SQLHostVarCheck`,
+      newValue: `:empCurA`
     },
-    newValue: `:Deptnum`
-  });
+    {
+      type: `SQLHostVarCheck`,
+      newValue: `:Deptnum`,
+      range: new Range(
+        new Position(7, 0),
+        new Position(10, 28),
+      ),
+      offset: {
+        position: 117,
+        end: 124
+      },
+    },
+    {
+      range: new Range(
+        new Position(12, 0),
+        new Position(16, 29),
+      ),
+      offset: {
+        position: 17,
+        end: 24
+      },
+      type: `SQLHostVarCheck`,
+      newValue: `:empCurB`
+    }
+  ]);
 }
 
 exports.linter35 = async () => {
