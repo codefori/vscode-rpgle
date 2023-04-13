@@ -2246,7 +2246,7 @@ exports.linter30 = async () => {
   });
 }
 
-exports.linter31 = async () => {
+exports.linter31_a = async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2272,6 +2272,39 @@ exports.linter31 = async () => {
   assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.includes[0].line, 4);
 
+  assert.strictEqual(errors.length, 0);
+}
+
+exports.linter31_b = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy rpgle,copy1`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `CallP theExtProcedure(myVariable);`,
+    ``,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ 
+    uri, 
+    content: lines,
+    availableIncludes: [`tests/rpgle/copy1.rpgle`]
+  }, {
+    IncludeMustBeRelative: true,
+  }, cache);
+
+  assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.includes[0].line, 4);
+
   assert.strictEqual(errors.length, 1);
 
   assert.deepStrictEqual(errors[0], {
@@ -2279,7 +2312,9 @@ exports.linter31 = async () => {
     range: new Range(
       new Position(4, 0),
       new Position(4, 17),
-    )
+    ),
+    offset: { position: 6, end: 17 },
+    newValue: `'tests/rpgle/copy1.rpgle'`
   });
 }
 

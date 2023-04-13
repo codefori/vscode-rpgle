@@ -360,6 +360,34 @@ export default class Linter {
                               // If there's no match, we can't complain incase they're using incdir or something...
                             }
                           }
+                        } else if (statement.length === 4 && statement[2].type === `comma`) {
+                          // /COPY FILE/MEMBER
+
+                          // We only make this suggestion if it exists locally
+                          // Technically, even though we're developing in the IFS/locally,
+                          // we can still include members.
+
+                          if (data.availableIncludes && data.availableIncludes.length > 0) {
+                            const pathValue = `${statement[1].value}/${statement[3].value}`.toUpperCase();
+                            const possibleValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue));
+                            if (possibleValue) {
+                              // This means there was a possible match
+                              if (pathValue !== possibleValue) {
+                                // But if they're not the same, offer a fix
+                                errors.push({
+                                  range: new Range(
+                                    statementStart,
+                                    statementEnd
+                                  ),
+                                  offset: { position: statement[1].position, end: statement[3].position + statement[3].value.length },
+                                  type: `IncludeMustBeRelative`,
+                                  newValue: `'${possibleValue}'`
+                                });
+                              }
+                            }
+                            // If there's no match, we can't complain incase they're using incdir or something...
+                          }
+
                         } else {
                           // /INCLUDE or /COPY is way to long.
                           errors.push({
