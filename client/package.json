@@ -12,6 +12,7 @@
 		"vscode-languageclient": "^7.0.0"
 	},
 	"devDependencies": {
+		"@halcyontech/vscode-ibmi-types": "^1.8.0",
 		"@types/vscode": "^1.63.0",
 		"@vscode/test-electron": "^2.1.2"
 	}

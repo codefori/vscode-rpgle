@@ -17,7 +17,6 @@ import {
 	TransportKind
 } from 'vscode-languageclient/node';
 
-import getBase from './base';
 import { projectFilesGlob } from './configuration';
 import buildRequestHandlers from './requests';
 

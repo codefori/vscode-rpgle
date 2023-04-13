@@ -1,7 +1,7 @@
 import path = require('path');
 import { Uri, workspace, RelativePattern, commands } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import getBase from './base';
+import {getInstance} from './base';
 import { projectFilesGlob } from "./configuration";
 
 let streamFileSupportChecked = false;
@@ -40,7 +40,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	 * Returns the working directory from Code for IBM i.
 	 */
 	client.onRequest("getWorkingDirectory", async (): Promise<string | undefined> => {
-		const instance = getBase();
+		const instance = getInstance();
 		if (instance && instance.getConnection()) {
 			const config = instance.getConfig();
 			return config.homeDirectory;
@@ -104,7 +104,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	 * Gets the column information for a provided file
 	 */
 	client.onRequest(`getObject`, async (table: string) => {
-		const instance = getBase();
+		const instance = getInstance();
 
 		if (instance) {
 			const connection = instance.getConnection();
@@ -132,7 +132,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					parts.table = table;
 				}
 
-				const outfileRes: any = await commands.executeCommand(`code-for-ibmi.runCommand`, {
+				const outfileRes: any = await connection.runCommand({
 					environment: `ile`,
 					command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
 				});
@@ -155,11 +155,13 @@ export default function buildRequestHandlers(client: LanguageClient) {
 
 	client.onRequest(`symbolLookup`, async (data: { symbol?: string, binders: { lib?: string, name: string }[] }): Promise<{[symbol: string]: string[]} | undefined> => {
 		const { symbol, binders } = data;
-		const instance = getBase();
+		const instance = getInstance();
 
 		if (instance) {
 			const connection = instance.getConnection();
 			if (connection) {
+
+				const content = instance.getContent();
 
 				/**
 				 * We need to support 7.3 and above. SOURCE_STREAM_FILE_PATH does not exist in BOUND_MODULE_INFO
@@ -174,7 +176,8 @@ export default function buildRequestHandlers(client: LanguageClient) {
 						`where TABLE_SCHEMA = 'QSYS2' and TABLE_NAME = 'BOUND_MODULE_INFO' and COLUMN_NAME = 'SOURCE_STREAM_FILE_PATH'`,
 						`limit 1`
 					].join(` `);
-					const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
+					
+					const rows: any[] = await content.runSQL(statement);
 					streamFileSupported = (rows.length >= 1);
 				}
 
@@ -211,7 +214,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 				].join(` `);
 
 				try {
-					const rows: any[] = await commands.executeCommand(`code-for-ibmi.runQuery`, statement);
+					const rows: any[] = await content.runSQL(statement);
 
 					let symbolFiles: {[symbol: string]: string[]} = {};
 

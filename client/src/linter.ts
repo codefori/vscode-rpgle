@@ -1,13 +1,13 @@
 import path = require('path');
 import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from 'vscode';
-import getBase from './base';
+import {getInstance} from './base';
 
 import * as defaultConfig from "./schemas/default";
 
 export function initialise(context: ExtensionContext) {
 	context.subscriptions.push(
 		commands.registerCommand(`vscode-rpgle.openLintConfig`, async (filter) => {
-			const instance = getBase();
+			const instance = getInstance();
 			const editor = window.activeTextEditor;
 
 			if (editor && ![`member`, `streamfile`].includes(editor.document.uri.scheme)) {
@@ -93,6 +93,7 @@ export function initialise(context: ExtensionContext) {
 					const exists = await commands.executeCommand(`code-for-ibmi.openEditable`, configPath, 1);
 
 					if (!exists) {
+						const connection = instance.getConnection();
 						const content = instance.getContent();
 
 						window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${configPath}?`, `Yes`, `No`).then
@@ -106,16 +107,14 @@ export function initialise(context: ExtensionContext) {
 												const memberPath = configPath.split(`/`);
 
 												// Will not crash, even if it fails
-												await commands.executeCommand(
-													`code-for-ibmi.runCommand`,
+												await connection.runCommand(
 													{
 														'command': `CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
 													}
 												);
 
 												// Will not crash, even if it fails
-												await commands.executeCommand(
-													`code-for-ibmi.runCommand`,
+												await connection.runCommand(
 													{
 														command: `ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
 													}
@@ -124,7 +123,7 @@ export function initialise(context: ExtensionContext) {
 												try {
 													console.log(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);
 
-													await content.uploadMemberContent(null, memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
+													await content.uploadMemberContent(undefined, memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
 													await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
 												} catch (e) {
 													console.log(e);
