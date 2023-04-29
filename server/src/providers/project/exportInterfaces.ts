@@ -35,8 +35,9 @@ export function getInterfaces(): APIInterface[] {
 
 							interfaces.push({
 								name: proc.name,
-								insertText: proc.name,
-								detail: `export function`,
+								insertText: `${proc.name}(${proc.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`,
+								detail: proc.name,
+								description: proc.description,
 								type: `function`,
 								prototype
 							});
