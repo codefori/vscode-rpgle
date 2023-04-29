@@ -4,6 +4,7 @@ import Linter from '../language/linter';
 import { calculateOffset } from './linter';
 
 import * as Project from "./project";
+import { findAllLocalReferences } from './project/references';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]|undefined> {
 	const uri = params.textDocument.uri;
@@ -41,7 +42,7 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 
 				if (def) {
 					if (Project.isEnabled) {
-						return Project.findAllReferences(def);
+						return findAllLocalReferences(def);
 					} else {
 						return def.references.map(ref => Location.create(
 							def.position.path,
