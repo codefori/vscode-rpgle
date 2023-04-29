@@ -754,7 +754,7 @@ export default class Parser {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = partsLower[1];
                 currentItem.description = currentDescription.join(` `);
-		currentItem.keywords = [`Subroutine`];
+		            currentItem.keywords = [`Subroutine`];
 
                 currentItem.position = {
                   path: file,
