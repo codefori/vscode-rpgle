@@ -27,7 +27,7 @@ export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): 
 						)
 					)
 				)
-			} else if (baseNameLower.endsWith(`.pgm.rpgle`)) {
+			} else if (baseNameLower.includes(`.pgm.`)) {
 				symbols.push(
 					WorkspaceSymbol.create(
 						basename,

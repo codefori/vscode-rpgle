@@ -1,17 +1,19 @@
 
 
-interface APIInterface {
+export interface APIInterface {
+  name: string;
   type: "function"|"struct";
   insertText: string;
   /** Usually indicates what it will return */
   detail: string;
-  description: string; 
+  description?: string; 
   prototype: string[];
   example?: string[];
 }
 
-export const bodies: {[name: string]: APIInterface} = {
-  printf: {
+export const bodies: APIInterface[] = [
+  {
+    name: `printf`,
     type: `function`,
     insertText: `printf(\${1:value})\$0`,
     detail: `int(10)`, // usually what it returns
@@ -33,7 +35,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `printf(outtext + '\\n');`,
     ]
   },
-  Qp0zLprintf: {
+  {
+    name: `Qp0zLprintf`,
     type: `function`,
     insertText: `Qp0zLprintf(\${1:value})\$0`,
     detail: `int(10)`,
@@ -52,7 +55,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`,
     ]
   },
-  system: {
+  {
+    name: `system`,
     type: `function`,
     insertText: `system(\${1:value})\$0`,
     detail: `int(10)`,
@@ -68,7 +72,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`,
     ]
   },
-  QzshSystem: {
+  {
+    name: `QzshSystem`,
     type: `function`,
     insertText: `QzshSystem(\${1:value})\$0`,
     detail: `int(10)`,
@@ -85,7 +90,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`,
     ]
   },
-  getenv: {
+  {
+    name: `getenv`,
     type: `function`,
     insertText: `getenv(\${1:'ENVVAR'})\$0`,
     detail: `pointer`,
@@ -106,7 +112,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `EnvVarValue = %str(getenv('ENVVAR'));`
     ]
   },
-  putenv: {
+  {
+    name: `putenv`,
     type: `function`,
     insertText: `putenv(\${1:'ENVVAR=value'})\$0`,
     detail: `int(10)`,
@@ -128,7 +135,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `putenv('ENVVAR=' + EnvVarValue);`
     ]
   },
-  QUSCRTUS: {
+  {
+    name: `QUSCRTUS`,
     type: `function`,
     insertText: `QUSCRTUS(\n  \${1:'NAME      LIB'}:\n  \${2:'LOG'}:\n  \${3:size}:\n  \${4:'*ALL'}:\n  \${5:'New object'}\n);$0`,
     detail: `void`,
@@ -156,7 +164,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`,
     ]
   },
-  QUSDLTUS: {
+  {
+    name: `QUSDLTUS`,
     type: `function`,
     insertText: `QUSDLTUS(\${1:'NAME      LIB'}:\${2:APIERRC});`,
     detail: `void`,
@@ -172,7 +181,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  APIERRC_T: {
+  {
+    name: `APIERRC_T`,
     type: `struct`,
     insertText: `APIERRC_T`,
     detail: `ERRC0100 format`,
@@ -196,7 +206,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `apierrc.bytesProvided = %size(apierrc);`
     ]
   },
-  "QCMDEXC": {
+  {
+    name: `QCMDEXC`,
     "type": `function`,
     "description": `Execute a system command`,
     "detail": `void`,
@@ -212,7 +223,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `End-Pr;`
     ]
   },
-  "QCLRDTAQ": {
+  {
+    name: `QCLRDTAQ`,
     "type": `function`,
     "description": `Clear data queue`,
     "detail": `void`,
@@ -232,7 +244,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `End-Pr;`
     ]
   },
-  "QSNDDTAQ": {
+  {
+    name: `QSNDDTAQ`,
     "type": `function`,
     "description": `Send to data queue`,
     "detail": `void`,
@@ -254,7 +267,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `End-Pr;`
     ]
   },
-  "memcpy": {
+  {
+    name: `memcpy`,
     "type": `function`,
     "description": ``,
     "detail": `void`,
@@ -271,7 +285,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  "QRCVDTAQ": {
+  {
+    name: `QRCVDTAQ`,
     "type": `function`,
     "description": ``,
     "detail": `void`,
@@ -293,7 +308,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  "RSLVSP2": {
+  {
+    name: `RSLVSP2`,
     "type": `function`,
     "description": `Get library pointer`,
     "detail": `void`,
@@ -311,7 +327,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  "RSLVSP4": {
+  {
+    name: `RSLVSP4`,
     "type": `function`,
     "description": `Get object pointer`,
     "detail": `void`,
@@ -331,7 +348,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  "QleActBndPgmLong": {
+  {
+    name: `QleActBndPgmLong`,
     "type": `function`,
     "description": `Activate service program`,
     "detail": `INT(20)`,
@@ -347,7 +365,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  "RetrieveFunctionPointer": {
+  {
+    name: `RetrieveFunctionPointer`,
     "type": `function`,
     "description": `Retrieve function pointer`,
     "detail": `POINTER`,
@@ -376,7 +395,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  "callpgmv": {
+  {
+    name: `callpgmv`,
     "type": `function`,
     "description": ``,
     "detail": `void`,
@@ -393,7 +413,8 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-pr;`
     ]
   },
-  "rslvsp_t": {
+  {
+    name: `rslvsp_t`,
     "type": `struct`,
     "description": `Resolve object pointer struct`,
     "detail": `QUALIFIED TEMPLATE`,
@@ -415,6 +436,4 @@ export const bodies: {[name: string]: APIInterface} = {
       `end-ds;`
     ]
   }
-};
-
-export const names = Object.keys(bodies);
+];

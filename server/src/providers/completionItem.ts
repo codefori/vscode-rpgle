@@ -6,6 +6,7 @@ import Declaration from '../language/models/declaration';
 import * as ileExports from './apis';
 import skipRules from './linter/skipRules';
 import * as Project from "./project";
+import { getInterfaces } from './project/exportInterfaces';
 
 const completionKind = {
   function: CompletionItemKind.Function,
@@ -203,16 +204,15 @@ export default async function completionItemProvider(handler: CompletionParams):
 						expandScope(currentProcedure.scope);
 					}
 
-					// Next, we're going to make some import suggestions for system APIs
-					// TODO: support not free
 					if (isFree) {
+						const isInclude = currentPath.toLowerCase().endsWith(`.rpgleinc`);
 						const insertAt = doc.getDefinitionBlockEnd(document.uri) + 1;
 						const insertRange = Range.create(insertAt, 0, insertAt, 0);
 
-						ileExports.names.filter(
+						[...ileExports.bodies, ...getInterfaces()].filter(
 							// Check the prototype doesn't exist
-							apiName => !doc.procedures.some(proc => {
-								const apiNameUpper = apiName.toUpperCase();
+							api => !doc.procedures.some(proc => {
+								const apiNameUpper = api.name.toUpperCase();
 								if (proc.name.toUpperCase() === apiNameUpper) return true;
 
 								let possibleExternalName = proc.keyword[`EXTPROC`] || proc.keyword[`EXTPGM`];
@@ -225,14 +225,11 @@ export default async function completionItemProvider(handler: CompletionParams):
 							}) &&
 
 								// And also the struct hasn't been defined with the same name
-								!doc.structs.some(struct => struct.name.toUpperCase() === apiName.toUpperCase())
-						).forEach(apiName => {
-							const currentExport = ileExports.bodies[apiName];
+								!doc.structs.some(struct => struct.name.toUpperCase() === api.name.toUpperCase())
+						).forEach(currentExport => {
 
-							const item = CompletionItem.create(apiName);
+							const item = CompletionItem.create(currentExport.name);
 							item.kind = completionKind[currentExport.type];
-							item.insertTextFormat = InsertTextFormat.Snippet;
-							item.insertText = currentExport.insertText;
 							item.detail = `${currentExport.detail} (auto-import)`;
 
 							item.documentation = {
@@ -245,10 +242,20 @@ export default async function completionItemProvider(handler: CompletionParams):
 								].filter(v => v).join(eol + eol)
 							};
 
-							item.additionalTextEdits = [{
-								range: insertRange,
-								newText: eol + currentExport.prototype.join(eol) + eol
-							}];
+							item.insertTextFormat = InsertTextFormat.Snippet;
+
+							// If it's an include, we really only want the prototype
+							if (isInclude) {
+								item.insertText = currentExport.prototype.join(eol);
+
+							} else {
+								item.insertText = currentExport.insertText;
+
+								item.additionalTextEdits = [{
+									range: insertRange,
+									newText: eol + currentExport.prototype.join(eol) + eol
+								}];
+							}
 
 							items.push(item);
 						})

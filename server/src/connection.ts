@@ -25,6 +25,8 @@ export async function validateUri(stringUri: string, scheme = ``) {
 	const possibleCachedFile = findFile(stringUri, scheme);
 	if (possibleCachedFile) return possibleCachedFile;
 
+	console.log(`Validating file from server: ${stringUri}`);
+
 	// Then reach out to the extension to find it
 	const uri: string|undefined = await connection.sendRequest("getUri", stringUri);
 	if (uri) return uri; 
@@ -36,6 +38,8 @@ export async function getFileRequest(uri: string) {
 	// First, check if it's local
 	const localCacheDoc = documents.get(uri);
 	if (localCacheDoc) return localCacheDoc.getText();
+
+	console.log(`Fetching file from server: ${uri}`);
 
 	// If not, then grab it from remote
 	const body: string|undefined = await connection.sendRequest("getFile", uri);
