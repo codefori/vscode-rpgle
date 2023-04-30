@@ -65,42 +65,6 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	});
 
 	/**
-	 * Returns all valid RPGLE files in the local workspace.
-	 */
-	client.onRequest(`getProjectFiles`, async (): Promise<string[] | undefined> => {
-		if (workspace.workspaceFolders) {
-			const uris = await workspace.findFiles(projectFilesGlob, `**/.git`);
-			return uris.map(uri => uri.toString());
-		}
-
-		return undefined;
-	});
-
-	/**
-	 * Returns all valid rpgleinc files in the local workspace.
-	 */
-	client.onRequest(`getIncludesUris`, async (stringUri: string): Promise<{ uri: string, relative: string }[]> => {
-		if (workspace.workspaceFolders) {
-			const uri = Uri.parse(stringUri);
-			const workspaceFolder = workspace.getWorkspaceFolder(uri);
-
-			if (workspaceFolder) {
-				const relativeWorkspace = new RelativePattern(workspaceFolder, `**/*.{rpgleinc,RPGLEINC}`);
-				const localFiles = await workspace.findFiles(relativeWorkspace, `**/.git`);
-
-				return localFiles.map(localFile => {
-					return {
-						uri: localFile.toString(),
-						relative: path.relative(workspaceFolder.uri.path, localFile.path)
-					};
-				});
-			}
-		}
-
-		return [];
-	});
-
-	/**
 	 * Gets the column information for a provided file
 	 */
 	client.onRequest(`getObject`, async (table: string) => {

@@ -1,12 +1,13 @@
 import * as fs from "fs/promises";
 
-import { connection, getIncludesUris, PossibleInclude, watchedFilesChangeEvent } from '../../connection';
+import { connection, getWorkspaceFolder, PossibleInclude, watchedFilesChangeEvent } from '../../connection';
 import { parser } from '..';
 import Linter from '../../language/linter';
 import { DidChangeWatchedFilesParams, FileChangeType } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 
 import { glob } from "glob";
+import * as path from "path";
 const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
 
 export let isEnabled = false;
@@ -26,7 +27,7 @@ export async function initialise() {
 					loadLocalFile(fileEvent.uri);
 
 					if (fileEvent.uri.toLowerCase().endsWith(`.rpgleinc`)) {
-						currentIncludes = undefined;
+						currentIncludes = [];
 					}
 					break;
 
@@ -96,10 +97,24 @@ async function loadLocalFile(uri: string) {
 	}
 }
 
-let currentIncludes: PossibleInclude[] | undefined = [];
+let currentIncludes: PossibleInclude[] = [];
 
-export async function getIncludes(basePath: string) {
-	if (!currentIncludes || currentIncludes && currentIncludes.length === 0) currentIncludes = await getIncludesUris(basePath);
+export async function getIncludes(baseUri: string) {
+	const workspace = await getWorkspaceFolder(baseUri);
+	if (workspace) {
+		const workspacePath = URI.parse(workspace?.uri).path;
+
+		if (!currentIncludes || currentIncludes && currentIncludes.length === 0) {
+			currentIncludes = glob.sync(`**/*.{rpgleinc,rpgleh}`, {
+				cwd: workspacePath,
+				nocase: true,
+				absolute: true
+			}).map(truePath => ({
+				uri: URI.file(truePath).toString(),
+				relative: path.relative(workspacePath, truePath)
+			}))
+		}
+	}
 
 	return currentIncludes;
 }

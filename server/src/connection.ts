@@ -4,7 +4,8 @@ import {
 	createConnection,
 	DidChangeWatchedFilesParams,
 	ProposedFeatures,
-	_Connection
+	_Connection,
+	WorkspaceFolder
 } from 'vscode-languageserver/node';
 import { URI } from 'vscode-uri';
 
@@ -64,8 +65,16 @@ export interface PossibleInclude {
 	relative: string
 };
 
-export function getIncludesUris(uri: string): Promise<PossibleInclude[]> {
-	return connection.sendRequest(`getIncludesUris`, uri);
+export async function getWorkspaceFolder(baseUri: string) {
+	let workspaceFolder: WorkspaceFolder | undefined;
+
+	const workspaceFolders = await connection.workspace.getWorkspaceFolders();
+
+	if (workspaceFolders) {
+		workspaceFolder = workspaceFolders.find(folderUri => baseUri.startsWith(folderUri.uri))
+	}
+
+	return workspaceFolder
 }
 
 export interface BindingDirectory {
