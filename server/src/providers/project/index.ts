@@ -1,13 +1,14 @@
 import * as fs from "fs/promises";
 
 import { connection, getWorkspaceFolder, PossibleInclude, watchedFilesChangeEvent } from '../../connection';
-import { parser } from '..';
+import { documents, parser } from '..';
 import Linter from '../../language/linter';
 import { DidChangeWatchedFilesParams, FileChangeType } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 
 import { glob } from "glob";
 import * as path from "path";
+import { TextDocument } from 'vscode-languageserver-textdocument';
 const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
 
 export let isEnabled = false;
@@ -81,20 +82,37 @@ async function loadWorkspace() {
 }
 
 async function loadLocalFile(uri: string) {
-	const validPath = URI.parse(uri).fsPath;
-	const content = await fs.readFile(validPath, { encoding: `utf-8` });
+	const document = await getTextDoc(uri);
 
-	const cache = await parser.getDocs(uri, content, {withIncludes: false});
-	if (cache) {
-		if (content.length >= 6 && content.substring(0, 6).toUpperCase() === `**FREE`) {
-			Linter.getErrors({
-				uri,
-				content,
-			}, {
-				CollectReferences: true
-			}, cache);
+	if (document) {
+		const content = document?.getText();
+		const cache = await parser.getDocs(uri, content);
+		if (cache) {
+			if (content.length >= 6 && content.substring(0, 6).toUpperCase() === `**FREE`) {
+				Linter.getErrors({
+					uri,
+					content,
+				}, {
+					CollectReferences: true
+				}, cache);
+			}
 		}
 	}
+}
+
+export async function getTextDoc(uri: string): Promise<TextDocument | undefined> {
+	let document = documents.get(uri);
+
+	if (document) {
+		return document;
+	}
+
+	try {
+		const content = await fs.readFile(URI.parse(uri).fsPath, { encoding: `utf-8` });
+		return TextDocument.create(uri, `rpgle`, 1, content);
+	} catch (e) {}
+
+	return;
 }
 
 let currentIncludes: PossibleInclude[] = [];

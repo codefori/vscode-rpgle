@@ -42,7 +42,7 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 
 				if (def) {
 					if (Project.isEnabled) {
-						return findAllLocalReferences(def);
+						return await findAllLocalReferences(def);
 					} else {
 						return def.references.map(ref => Location.create(
 							def.position.path,
