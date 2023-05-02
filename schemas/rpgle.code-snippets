@@ -942,7 +942,7 @@
 			"Ctl-Opt Main(${1:${TM_FILENAME_BASE/([^\\.]+).*/${1:/upcase}/}});",
 			"",
 			"Dcl-Proc $1;",
-			"  Dcl-Pi *N EXTPGM;",
+			"  Dcl-Pi *N;",
 			"  End-Pi;",
 			"",
 			"  $0",
