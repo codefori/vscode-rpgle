@@ -157,6 +157,37 @@
 		],
 		"description": "The SND-MSG operation sends an informational message or an exception message. The message can be sent to any procedure on the call stack, including the current procedure. The message appears in the joblog after it is sent."
 	},
+	"sql-cursor-loop": {
+    "prefix": "sql-cursor-loop",
+    "description": "SQL cursor loop",
+    "scope": "rpgle",
+    "body": [
+      "Dcl-Ds $3 ExtName('$3') Alias Qualified;",
+      "End-Ds;",
+      "",
+      "EXEC SQL",
+      "  DECLARE $1 CURSOR FOR",
+      "    SELECT $2 FROM $3",
+      "    // WHERE  field = :code",
+      "EXEC SQL",
+      "  OPEN $1;",
+      "--really should check SQLSTATE here too!",
+      "",
+      "EXEC SQL",
+      "  FETCH NEXT FROM $1 INTO $4;",
+      "",
+      "Dow SQLSTATE = '00000';",
+      "  --note 00000 = no errors or warning",
+      "  --     02000 = no data",
+      "  <do somthing?>",
+      "  EXEC SQL",
+      "      FETCH NEXT FROM $1 INTO $4;",
+      "ENDDO;",
+      "",
+      "EXEC SQL",
+      "  CLOSE $1;",
+    ]
+  },
 	"%abs": {
 		"prefix": "%abs",
 		"body": [
