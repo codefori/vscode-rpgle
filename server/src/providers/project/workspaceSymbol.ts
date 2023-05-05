@@ -27,41 +27,44 @@ export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): 
 						)
 					)
 				)
-			} else if (baseNameLower.includes(`.pgm.`)) {
-				symbols.push(
-					WorkspaceSymbol.create(
-						basename,
-						SymbolKind.Method,
-						uri,
-						Range.create(
-							0,
-							0,
-							0,
-							0
-						)
-					)
-				)
 			} else {
 				const cache = parser.getParsedCache(uri);
 
 				if (cache) {
-					cache.procedures.forEach(proc => {
-						if (proc.keyword[`EXPORT`]) {
-							symbols.push(
-								WorkspaceSymbol.create(
-									proc.name,
-									SymbolKind.Function,
-									uri,
-									Range.create(
-										proc.position.line,
-										0,
-										proc.position.line,
-										0
-									)
+					if (cache.keyword[`MAIN`]) {
+						symbols.push(
+							WorkspaceSymbol.create(
+								basename,
+								SymbolKind.Method,
+								uri,
+								Range.create(
+									0,
+									0,
+									0,
+									0
 								)
-							);
-						}
-					});
+							)
+						);
+					} else
+					if (cache.keyword[`NOMAIN`]) {
+						cache.procedures.forEach(proc => {
+							if (proc.keyword[`EXPORT`]) {
+								symbols.push(
+									WorkspaceSymbol.create(
+										proc.name,
+										SymbolKind.Function,
+										uri,
+										Range.create(
+											proc.position.line,
+											0,
+											proc.position.line,
+											0
+										)
+									)
+								);
+							}
+						});
+					}
 				}
 			}
 		});
