@@ -13,7 +13,9 @@ export function getInterfaces(): APIInterface[] {
 			const uriDetail = path.parse(uri);
 			const basename = uriDetail.base;
 			const nameDetail = path.parse(basename);
-			const objectName = nameDetail.name.toUpperCase();
+			let objectName = path.basename(nameDetail.name).toUpperCase();
+
+			if (objectName.endsWith(`.PGM`)) objectName = objectName.substring(0, objectName.length-4);
 
 			if (basename.toLowerCase().endsWith(`.rpgleinc`) === false) {
 				const cache = parser.getParsedCache(uri);
