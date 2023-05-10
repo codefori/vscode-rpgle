@@ -779,6 +779,60 @@ export default class Parser {
             }
             break;
 
+          case `EXEC`:
+            if (currentItem === undefined) {
+              if (parts.length > 2 && !parts.includes(`FETCH`)) {
+                // insert into XX.XX
+                // delete from xx.xx
+                // update xx.xx set
+                // select * from xx.xx
+                // call xx.xx()
+                const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`];
+
+                const cleanupObjectRef = (content = ``) => {
+                  const result = {
+                    schema: undefined,
+                    name: content
+                  }
+
+                  const schemaSplit = Math.max(result.name.indexOf(`.`), result.name.indexOf(`/`));
+                  if (schemaSplit >= 0) {
+                    result.schema = result.name.substring(0, schemaSplit);
+                    result.name = result.name.substring(schemaSplit+1);
+                  }
+
+                  // For procedures or functions?
+                  const openBracket = result.name.indexOf(`(`);
+                  if (openBracket >= 0) {
+                    result.name = result.name.substring(0, schemaSplit);
+                  }
+
+                  return result;
+                }
+
+                const preIndex = parts.findIndex(part => preFileWords.includes(part));
+
+                if (preIndex >= 0 && (preIndex+1) < parts.length) {
+                  const possibleFileName = partsLower[preIndex+1];
+                  const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
+
+                  currentItem = new Declaration(`file`);
+                  currentItem.name = qualifiedObjectPath.name;
+                  currentItem.keywords = [];
+                  currentItem.description = qualifiedObjectPath.schema || ``;
+  
+                  currentItem.position = {
+                    path: file,
+                    line: statementStartingLine
+                  };
+  
+                  scope.sqlReferences.push(currentItem);
+                  resetDefinition = true;
+                }
+              }
+            }
+            break;
+
           case `///`:
             docs = !docs;
           

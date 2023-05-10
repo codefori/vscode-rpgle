@@ -18,6 +18,7 @@ interface CacheProps {
   variables?: Declaration[];
   structs?: Declaration[];
   constants?: Declaration[];
+  sqlReferences?: Declaration[];
   indicators?: Declaration[];
   includes?: IncludeStatement[];
 }

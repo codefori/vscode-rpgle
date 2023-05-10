@@ -825,3 +825,79 @@ exports.issue_195b = async () => {
   const DoProfileStuff = cache.find(`DoProfileStuff`);
   assert.strictEqual(DoProfileStuff.scope.procedures.length, 2);
 }
+
+exports.exec_1 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dsply 'aaa';`,
+    `DSPLY '';`,
+    `Dsply 'aaa';`,
+    ``,
+    `EXEC SQL`,
+    `   Select nullif('aaa', '') from sysibm/sysdummy1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 1);
+  assert.strictEqual(cache.sqlReferences[0].name, `sysdummy1`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sysibm`);
+}
+
+exports.exec_2 = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-s DeptNum Char(3);`,
+    ``,
+    `DeptNum = 'ABC';`,
+    ``,
+    `ClearSubfile();`,
+    ``,
+    `EXEC SQL DECLARE empCurA CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    `    FROM Employee`,
+    `    WHERE WORKDEPT = Deptnum;`,
+    ``,
+    `EXEC SQL DECLARE empCurB CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    ``,
+    `    FROM sample.Employee`,
+    `    WHERE WORKDEPT = :deptNum;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+  assert.strictEqual(cache.sqlReferences[0].name, `Employee`);
+  assert.strictEqual(cache.sqlReferences[0].description, ``);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `Employee`);
+  assert.strictEqual(cache.sqlReferences[1].description, `sample`);
+}
+
+exports.exec_3 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `    FETCH NEXT FROM empCur       `,
+    `    INTO :myvariable2;`,
+    `EXEC SQL`,
+    `    EXECUTE IMMEDIATE :myvariable2;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 0);
+}

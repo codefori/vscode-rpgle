@@ -38,6 +38,9 @@ export default class Cache {
     this.constants = cache.constants || [];
 
     /** @type {Declaration[]} */
+    this.sqlReferences = cache.sqlReferences || [];
+
+    /** @type {Declaration[]} */
     this.indicators = cache.indicators || [...inds];
 
     /** @type {IncludeStatement[]} */
@@ -58,6 +61,7 @@ export default class Cache {
         files: [...this.files, ...second.files],
         structs: [...this.structs, ...second.structs],
         constants: [...this.constants, ...second.constants],
+        sqlReferences: [...this.sqlReferences, ...second.sqlReferences],
         indicators: [...this.indicators, ...second.indicators]
       });
     } else {
