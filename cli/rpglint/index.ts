@@ -5,9 +5,9 @@
 import glob from "glob";
 import { readFileSync } from 'fs';
 
-import Parser from '../server/src/language/parser';
-import Linter from '../server/src/language/linter';
-import { Rules } from '../server/src/language';
+import Parser from '../../server/src/language/parser';
+import Linter from '../../server/src/language/linter';
+import { Rules } from '../../server/src/language';
 import path from 'path';
 
 type FormatTypes = "standard" | "flc";
