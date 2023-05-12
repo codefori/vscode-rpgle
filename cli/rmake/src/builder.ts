@@ -8,6 +8,7 @@ interface ILEObject {
 	name: string;
 	type: ObjectType;
 	relativePath: string;
+	extension: string;
 }
 
 interface ILEObjectTarget extends ILEObject {
@@ -36,7 +37,8 @@ export class Builder {
 		const theObject: ILEObject = {
 			name,
 			type,
-			relativePath
+			relativePath,
+			extension: detail.ext.length > 1 ? detail.ext.substring(1) : detail.ext
 		};
 
 		this.resolvedObjects[localPath] = theObject;
@@ -157,6 +159,9 @@ export class Builder {
 
 	public generateMake(): string[] {
 		let lines = [];
+
+		// BIN_LIB=DEV
+		// PREPATH=/QSYS.LIB/$(BIN_LIB).LIB
 
 		for (const target of this.targets) {
 			lines.push(
