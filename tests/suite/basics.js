@@ -1050,3 +1050,30 @@ exports.exec_8 = async () => {
   assert.strictEqual(cache.sqlReferences[1].name, `wooptable`);
   assert.strictEqual(cache.sqlReferences[1].description, ``);
 }
+
+exports.exec_9 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  CALL sample.MyRandomProc(:MyVariable2);`,
+    ``,
+    `EXEC SQL`,
+    `  CALL OtherCoolProc(:MyVariable2);`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `MyRandomProc`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `OtherCoolProc`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
