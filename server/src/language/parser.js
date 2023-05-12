@@ -785,7 +785,7 @@ export default class Parser {
                 // insert into XX.XX
                 // delete from xx.xx
                 // update xx.xx set
-                // select * from xx.xx
+                // select * into :x from xx.xx
                 // call xx.xx()
                 const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`];
 
@@ -810,7 +810,10 @@ export default class Parser {
                   return result;
                 }
 
-                const preIndex = parts.findIndex(part => preFileWords.includes(part));
+                const preIndex = parts.findIndex((part, index) => 
+                  preFileWords.includes(part) &&  // If this is true, usually means next word is the object
+                  (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
+                );
 
                 if (preIndex >= 0 && (preIndex+1) < parts.length) {
                   const possibleFileName = partsLower[preIndex+1];

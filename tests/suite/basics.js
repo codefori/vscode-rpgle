@@ -901,3 +901,38 @@ exports.exec_3 = async () => {
 
   assert.strictEqual(cache.sqlReferences.length, 0);
 }
+
+exports.exec_4 = async () => {
+  const lines = [
+    `        dcl-s NULL pointer inz(*NULL);`,
+    `        dcl-s amount1 packed(7:2);`,
+    `        dcl-s amount2 packed(7:2);`,
+    `        dcl-s amount3 packed(7:2);`,
+    `        dcl-s amount4 packed(7:2);`,
+    `        dcl-s amount5 packed(7:2);`,
+    `        `,
+    `        // Watch null move left`,
+    `        Exec Sql`,
+    `          select`,
+    `            max(case when bonus < 900 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 800 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 700 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 600 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 500 then bonus else null end)`,
+    `          into`,
+    `            :amount1,:amount2,:amount3,:amount4,:amount5`,
+    `          from`,
+    `            sample.employee;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 1);
+  assert.strictEqual(cache.sqlReferences[0].name, `employee`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+}
