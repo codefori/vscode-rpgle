@@ -804,7 +804,7 @@ export default class Parser {
                   // For procedures or functions?
                   const openBracket = result.name.indexOf(`(`);
                   if (openBracket >= 0) {
-                    result.name = result.name.substring(0, schemaSplit);
+                    result.name = result.name.substring(0, openBracket);
                   }
 
                   return result;
