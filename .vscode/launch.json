@@ -43,6 +43,6 @@
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}
-		}
+		},
 	]
 }

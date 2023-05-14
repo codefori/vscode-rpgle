@@ -96,6 +96,16 @@ export class Project {
 		}
 	}
 
+	public getMakefile() {
+		return [
+			...this.generateHeader(),
+			``,
+			...this.generateTargets(),
+			``,
+			...this.generateGenericRules()
+		];
+	}
+
 	private generateHeader(): string[] {
 		return [
 			`BIN_LIB=DEV`,

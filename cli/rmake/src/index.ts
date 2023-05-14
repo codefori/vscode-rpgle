@@ -26,6 +26,12 @@ async function main() {
 				i++;
 				break;
 
+			case `-d`:
+			case `--cwd`:
+				cwd = parms[i + 1];
+				i++;
+				break;
+
 			case `-h`:
 			case `--help`:
 				process.exit(0);
@@ -69,7 +75,8 @@ async function main() {
 	targets.determineLibraries();
 
 	const project = new Project(cwd, targets);
-	
+
+	console.log(project.getMakefile());
 }
 
 function getFiles(cwd: string, globPath: string): string[] {
