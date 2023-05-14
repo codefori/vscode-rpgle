@@ -16,24 +16,27 @@ interface CompileData {
 
 interface iProject {
 	includePaths: string[];
-	compiles: {[ext: string]: CompileData}
+	compiles: {[ext: string]: CompileData},
+	binders: string[];
 }
 
 export class Project {
 	private settings: iProject;
+
 	constructor(private cwd: string, private targets: Targets) {
 		this.settings = {
+			binders: [],
 			includePaths: [],
 			compiles: {
 				"pgm.rpgle": {
 					becomes: `PGM`,
 					dir: `qrpglesrc`,
-					command: `system "CRTSQLRPGI OBJ($(BIN_LIB)/$*) SRCSTMF('$<') COMMIT(*NONE) DBGVIEW(*SOURCE) OPTION(*EVENTF) COMPILEOPT('BNDDIR($(BIN_LIB)/$(BNDDIR)) DFTACTGRP(*no)')"`
+					command: `CRTBNDRPG PGM($(BIN_LIB)/$*) SRCSTMF('$<') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTRLS(*CURRENT) TGTCCSID(*JOB) BNDDIR($(BNDDIR)) DFTACTGRP(*no)`
 				},
 				"pgm.sqlrpgle": {
 					becomes: "PGM",
 					dir: "qrpglesrc",
-					command: "CRTSQLRPGI OBJTYPE(*PGM)"
+					command: `CRTSQLRPGI OBJ($(BIN_LIB)/$*) SRCSTMF('$<') COMMIT(*NONE) DBGVIEW(*SOURCE) OPTION(*EVENTF) COMPILEOPT('BNDDIR($(BNDDIR)) DFTACTGRP(*no)')`
 				},
 				dspf: {
 					becomes: "FILE",
@@ -44,7 +47,7 @@ export class Project {
 				sql: {
 					becomes: `FILE`,
 					dir: `qsqlsrc`,
-					command: `system "RUNSQLSTM SRCSTMF('$<') COMMIT(*NONE)"`
+					command: `RUNSQLSTM SRCSTMF('$<') COMMIT(*NONE)`
 				},
 				table: {
 					becomes: `FILE`,
@@ -57,7 +60,7 @@ export class Project {
 						`-system -q "RMVBNDDIRE BNDDIR($(BIN_LIB)/$*) OBJ($(BIN_LIB)/$* *SRVPGM)"`,
 						`-system "DLTOBJ OBJ($(BIN_LIB)/$*) OBJTYPE(*SRVPGM)"`
 					],
-					command: `system "CRTSRVPGM SRVPGM($(BIN_LIB)/$*) MODULE(*SRVPGM) EXPORT(*ALL) BNDDIR($(BIN_LIB)/$(BNDDIR))"`
+					command: `CRTSRVPGM SRVPGM($(BIN_LIB)/$*) MODULE(*SRVPGM) EXPORT(*ALL) BNDDIR($(BNDDIR))`
 				},
 				bnddir: {
 					becomes: `BNDDIR`,
@@ -79,6 +82,10 @@ export class Project {
 
 			if (asJson.includePaths) {
 				this.settings.includePaths = asJson.includePaths;
+			}
+
+			if (asJson.binders) {
+				this.settings.binders = asJson.binders;
 			}
 
 			if (asJson.compiles) {
@@ -109,8 +116,9 @@ export class Project {
 	private generateHeader(): string[] {
 		return [
 			`BIN_LIB=DEV`,
-			`BNDDIR=myapp`,
+			`APP_BNDDIR=$(BIN_LIB)/APP`,
 			``,
+			`BNDDIR=${this.targets.binderRequired() ? [`($(APP_BNDDIR))`, ...this.settings.binders.map(b => `(${b})`)].join(` `) : `*NONE`}`,
 			`PREPATH=/QSYS.LIB/$(BIN_LIB).LIB`,
 			`SHELL=/QOpenSys/usr/bin/qsh`,
 		];
@@ -118,6 +126,15 @@ export class Project {
 
 	private generateTargets(): string[] {
 		let lines = [];
+
+		const allPrograms = this.targets.getObjects(`PGM`);
+
+		if (allPrograms.length > 0) {
+			lines.push(
+				`all: ${allPrograms.map(dep => `$(PREPATH)/${dep.name}.${dep.type}`).join(` `)}`,
+				``
+			)
+		}
 
 		for (const target of this.targets.getDeps()) {
 			if (target.deps.length > 0) {

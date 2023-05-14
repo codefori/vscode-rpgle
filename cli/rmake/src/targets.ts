@@ -21,6 +21,7 @@ export class Targets {
 	private resolvedObjects: { [localPath: string]: ILEObject } = {};
 
 	private deps: ILEObjectTarget[] = [];
+	private needsBinder = false;
 
 	constructor(private cwd: string) { }
 
@@ -116,6 +117,10 @@ export class Targets {
 			throw new Error(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword found.`);
 		}
 
+		if (ileObject.type === `MODULE` && !cache.keyword[`NOMAIN`]) {
+			throw new Error(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword was not found. Is it possible the extension should include '.pgm'?`);
+		}
+
 		// Find external programs
 		cache.procedures
 			.filter((proc: any) => proc.keyword[`EXTPGM`])
@@ -176,6 +181,9 @@ export class Targets {
 
 		const bindingDirectoryTarget: ILEObject = {name: `$(BNDDIR)`, type: `BNDDIR`};
 
+		// We can simply check for any modules since we turn them into service programs
+		this.needsBinder = this.deps.some(d => d.type === `MODULE`);
+
 		// Create all the service program targets
 		for (const target of this.deps) {
 			switch (target.type) {
@@ -193,8 +201,10 @@ export class Targets {
 					break;
 
 				case `PGM`:
-					// Before the program can be built, we need the binding directory
-					target.deps.push(bindingDirectoryTarget);
+					if (this.needsBinder) {
+						// Before the program can be built, we need the binding directory
+						target.deps.push(bindingDirectoryTarget);
+					}
 					break;
 			}
 		}
@@ -213,6 +223,14 @@ export class Targets {
 		}
 
 		existingTarget.deps.push(newDep);
+	}
+
+	public binderRequired() {
+		return this.needsBinder;
+	}
+
+	public getObjects(type: ObjectType) {
+		return this.deps.filter(d => d.type === type);
 	}
 }
 
