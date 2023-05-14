@@ -118,6 +118,7 @@ export class Project {
 			`BIN_LIB=DEV`,
 			`APP_BNDDIR=$(BIN_LIB)/APP`,
 			``,
+			`INCDIR="${this.settings.includePaths.join(`:`)}"`,
 			`BNDDIR=${this.targets.binderRequired() ? [`($(APP_BNDDIR))`, ...this.settings.binders.map(b => `(${b})`)].join(` `) : `*NONE`}`,
 			`PREPATH=/QSYS.LIB/$(BIN_LIB).LIB`,
 			`SHELL=/QOpenSys/usr/bin/qsh`,
