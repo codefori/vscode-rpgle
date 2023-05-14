@@ -15,12 +15,12 @@ interface ILEObjectTarget extends ILEObject {
 	deps: ILEObject[];
 }
 
-export class Builder {
+export class Targets {
 	private pathCache: { [path: string]: true } | undefined;
 	private resolvedPaths: { [query: string]: string } = {};
 	private resolvedObjects: { [localPath: string]: ILEObject } = {};
 
-	private targets: ILEObjectTarget[];
+	private deps: ILEObjectTarget[];
 
 	constructor(private cwd: string) { }
 
@@ -31,7 +31,7 @@ export class Builder {
 
 		const isProgram = detail.name.toUpperCase().endsWith(`.PGM`);
 		const name = isProgram ? detail.name.substring(0, detail.name.length - 4) : detail.name;
-		const type: ObjectType = (isProgram ? "PGM" : Builder.getObjectType(detail.ext));
+		const type: ObjectType = (isProgram ? "PGM" : Targets.getObjectType(detail.ext));
 		const relativePath = path.relative(this.cwd, localPath);
 
 		const theObject: ILEObject = {
@@ -154,22 +154,11 @@ export class Builder {
 				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
 			});
 
-		this.targets.push(target);
+		this.deps.push(target);
 	}
 
-	public generateMake(): string[] {
-		let lines = [];
-
-		// BIN_LIB=DEV
-		// PREPATH=/QSYS.LIB/$(BIN_LIB).LIB
-
-		for (const target of this.targets) {
-			lines.push(
-				`$(PREPATH)/${target.name}.${target.type}: ${target.deps.map(dep => `$(PREPATH)/${dep.name}.${dep.type}`).join(` `)}`
-			)
-		};
-
-		return lines;
+	getDeps() {
+		return this.deps;
 	}
 }
 

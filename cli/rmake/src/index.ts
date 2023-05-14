@@ -7,6 +7,8 @@ import { readFileSync } from 'fs';
 
 import Parser from '../../../server/src/language/parser';
 import { setupParser } from './parser';
+import { Targets } from './targets';
+import { Project } from './project';
 
 main();
 
@@ -41,6 +43,8 @@ async function main() {
 		process.exit(1);
 	}
 
+	const targets = new Targets(cwd);
+
 	for (const filePath of files) {
 		try {
 			const content = readFileSync(filePath, { encoding: `utf-8` });
@@ -53,11 +57,17 @@ async function main() {
 				}
 			);
 
+			targets.createTarget(filePath, docs);
+
 		} catch (e) {
-			error(`Failed to lint ${filePath}: ${e.message || e}`);
+			error(`Failed to parse ${filePath}: ${e.message || e}`);
 			error(`Report this issue to us with an example: github.com/halcyon-tech/vscode-rpgle/issues`);
+			process.exit(1);
 		}
 	}
+
+	const project = new Project(cwd, targets);
+	
 }
 
 function getFiles(cwd: string, globPath: string): string[] {
