@@ -20,7 +20,7 @@ export class Targets {
 	private resolvedPaths: { [query: string]: string } = {};
 	private resolvedObjects: { [localPath: string]: ILEObject } = {};
 
-	private deps: ILEObjectTarget[];
+	private deps: ILEObjectTarget[] = [];
 
 	constructor(private cwd: string) { }
 
@@ -31,14 +31,15 @@ export class Targets {
 
 		const isProgram = detail.name.toUpperCase().endsWith(`.PGM`);
 		const name = isProgram ? detail.name.substring(0, detail.name.length - 4) : detail.name;
-		const type: ObjectType = (isProgram ? "PGM" : Targets.getObjectType(detail.ext));
+		const extension = detail.ext.length > 1 ? detail.ext.substring(1) : detail.ext;
+		const type: ObjectType = (isProgram ? "PGM" : Targets.getObjectType(extension));
 		const relativePath = path.relative(this.cwd, localPath);
 
 		const theObject: ILEObject = {
 			name: name.toUpperCase(),
 			type: type,
 			relativePath,
-			extension: detail.ext.length > 1 ? detail.ext.substring(1) : detail.ext
+			extension
 		};
 
 		this.resolvedObjects[localPath] = theObject;
@@ -87,6 +88,9 @@ export class Targets {
 	private static getObjectType(ext: string): ObjectType {
 		switch (ext.toLowerCase()) {
 			case `sql`:
+			case `dspf`:
+			case `pf`:
+			case `lf`:
 			case `table`:
 			case `view`:
 				// TODO: add more types

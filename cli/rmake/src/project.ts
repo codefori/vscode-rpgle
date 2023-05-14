@@ -25,12 +25,12 @@ export class Project {
 		this.settings = {
 			includePaths: [],
 			compiles: {
-				".pgm.rpgle": {
+				"pgm.rpgle": {
 					becomes: `PGM`,
 					dir: `qrpglesrc`,
-					command: `CRTBNDRPG ...`
+					command: `system "CRTSQLRPGI OBJ($(BIN_LIB)/$*) SRCSTMF('$<') COMMIT(*NONE) DBGVIEW(*SOURCE) OPTION(*EVENTF) COMPILEOPT('BNDDIR($(BIN_LIB)/$(BNDDIR)) DFTACTGRP(*no)')"`
 				},
-				".pgm.sqlrpgle": {
+				"pgm.sqlrpgle": {
 					becomes: "PGM",
 					dir: "qrpglesrc",
 					command: "CRTSQLRPGI OBJTYPE(*PGM)"
@@ -109,8 +109,9 @@ export class Project {
 	private generateHeader(): string[] {
 		return [
 			`BIN_LIB=DEV`,
-			`PREPATH=/QSYS.LIB/$(BIN_LIB).LIB`,
 			`BNDDIR=myapp`,
+			``,
+			`PREPATH=/QSYS.LIB/$(BIN_LIB).LIB`,
 			`SHELL=/QOpenSys/usr/bin/qsh`,
 		];
 	}
@@ -136,14 +137,14 @@ export class Project {
 			const [type, data] = entry;
 
 			// Only used for member copies
-			const qsysTempName = (data.dir.length > 10 ? data.dir.substring(0, 10) : data.dir);
+			const qsysTempName: string|undefined = (data.dir && data.dir.length > 10 ? data.dir.substring(0, 10) : data.dir);
 
 			lines.push(
 				`$(PREPATH)/%.${data.becomes}: ${data.dir ? path.posix.join(data.dir, `%.${type}`) : ``}`,
-				...(data.member ?
+				...(qsysTempName && data.member ?
 					[
-						`-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
-						`system "CPYFRMSTMF FROMSTMF('./qddssrc/$*.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/$*.MBR') MBROPT(*REPLACE)"`
+						`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
+						`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/$*.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/$*.MBR') MBROPT(*REPLACE)"`
 					] : []),
 				...(data.commands ? data.commands.map(cmd => `\t${cmd}`) : [] ),
 				...(data.command ?

@@ -14,10 +14,10 @@ const webpack = require(`webpack`);
 module.exports = withDefaults({
   context: path.join(__dirname),
   entry: {
-    extension: `./index.ts`,
+    extension: `./src/index.ts`,
   },
   output: {
-    filename: path.join(`src`, `index.js`),
+    filename: path.join(`index.js`),
     path: path.join(__dirname, `dist`)
   },
   // Other stuff

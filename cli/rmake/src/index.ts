@@ -1,6 +1,4 @@
-// rpglint CLI
-// --files [glob]
-// --cwd "[path]"
+
 
 import glob from "glob";
 import { readFileSync } from 'fs';
@@ -76,7 +74,7 @@ async function main() {
 
 	const project = new Project(cwd, targets);
 
-	console.log(project.getMakefile());
+	console.log(project.getMakefile().join(`\n`));
 }
 
 function getFiles(cwd: string, globPath: string): string[] {
@@ -88,5 +86,5 @@ function getFiles(cwd: string, globPath: string): string[] {
 }
 
 function error(line: string) {
-	process.stdout.write(line + `\n`);
+	console.log(`ERROR: ${line}`);
 }
