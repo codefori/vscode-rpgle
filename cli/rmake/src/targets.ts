@@ -1,6 +1,6 @@
 import glob from 'glob';
 import path from 'path';
-import Cache from '../../../server/src/language/models/cache';
+import Cache from '../../../language/models/cache';
 
 type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR";
 

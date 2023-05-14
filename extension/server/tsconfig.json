@@ -6,15 +6,16 @@
 		"moduleResolution": "node",
 		"sourceMap": true,
 		"outDir": "out",
-		"rootDir": "src",
+		"rootDir": "./../..",
 		"lib": [ "es2020" ],
 		"allowJs": true,
 		"composite": true
 	},
 	"include": [
-		"src"
+		"src",
+  	"../../language"
 	],
 	"exclude": [
-		"node_modules", ".vscode-test", "src/test"
+		"node_modules", ".vscode-test",
 	]
 }

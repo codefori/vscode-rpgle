@@ -1,6 +1,6 @@
 
 import { Location, Range } from 'vscode-languageserver';
-import Declaration from '../../language/models/declaration';
+import Declaration from '../../../../../language/models/declaration';
 import { calculateOffset } from '../linter';
 import { documents, parser } from '..';
 import { getTextDoc, isEnabled } from '.';

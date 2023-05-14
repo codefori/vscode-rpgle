@@ -1,6 +1,6 @@
 import { Location, Range, ReferenceParams } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
-import Linter from '../language/linter';
+import Linter from '../../../../language/linter';
 import { calculateOffset } from './linter';
 
 import * as Project from "./project";

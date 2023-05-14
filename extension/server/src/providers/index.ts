@@ -9,7 +9,7 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import Parser from '../language/parser';
+import Parser from '../../../../language/parser';
 
 // Create a simple text document manager.
 export const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);

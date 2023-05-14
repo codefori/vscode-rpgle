@@ -1,8 +1,8 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
-import Cache from '../language/models/cache';
-import Declaration from '../language/models/declaration';
+import Cache from '../../../../language/models/cache';
+import Declaration from '../../../../language/models/declaration';
 import * as ileExports from './apis';
 import skipRules from './linter/skipRules';
 import * as Project from "./project";

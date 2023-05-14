@@ -2,7 +2,7 @@
 const assert = require(`assert`);
 
 const {default: parserSetup} = require(`../parserSetup`);
-const {default: Linter} = require(`../../server/src/language/linter`);
+const {default: Linter} = require(`../../language/linter`);
 
 const uri = `source.rpgle`;
 

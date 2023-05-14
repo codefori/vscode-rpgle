@@ -2,7 +2,7 @@ import * as fs from "fs/promises";
 
 import { connection, getWorkspaceFolder, PossibleInclude, watchedFilesChangeEvent } from '../../connection';
 import { documents, parser } from '..';
-import Linter from '../../language/linter';
+import Linter from '../../../../../language/linter';
 import { DidChangeWatchedFilesParams, FileChangeType } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 

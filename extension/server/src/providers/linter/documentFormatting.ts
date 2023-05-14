@@ -2,7 +2,7 @@
 import { DocumentFormattingParams, ProgressToken, Range, TextEdit, WorkDoneProgress } from 'vscode-languageserver';
 import { calculateOffset, getActions, getLintOptions } from '.';
 import { documents, parser } from '..';
-import Linter from '../../language/linter';
+import Linter from '../../../../../language/linter';
 
 export default async function documentFormattingProvider(params: DocumentFormattingParams): Promise<TextEdit[] | undefined> {
 	const uri = params.textDocument.uri;

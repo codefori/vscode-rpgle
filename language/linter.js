@@ -54,7 +54,7 @@ export default class Linter {
 
   /**
    * @param {{uri: string, content: string, availableIncludes?: string[]}} data
-   * @param {Rules} rules 
+   * @param {import(".").Rules} rules 
    * @param {Cache|null} [globalScope]
    */
   static getErrors(data, rules, globalScope) {
@@ -86,7 +86,7 @@ export default class Linter {
 
     // Offset is always the offset within the range
 
-    /** @type {IssueRange[]} */
+    /** @type {import(".").IssueRange[]} */
     const errors = [];
 
     /** @type {Number} */
@@ -104,9 +104,9 @@ export default class Linter {
     let currentStatement = ``;
     let opcode;
 
-    /** @type {vscode.Position} */
+    /** @type {Position} */
     let statementStart;
-    /** @type {vscode.Position} */
+    /** @type {Position} */
     let statementEnd;
 
     if (rules.NoUnreferenced) {
@@ -127,7 +127,7 @@ export default class Linter {
     /** @type {import(".").SelectBlock[]} */
     const selectBlocks = [];
 
-    /** @type {{value: string, definition?: string, list: {range: Range, offset: Offset}[]}[]} */
+    /** @type {{value: string, definition?: string, list: {range: Range, offset: import(".").Offset}[]}[]} */
     const stringLiterals = [];
 
     let directiveScope = 0;

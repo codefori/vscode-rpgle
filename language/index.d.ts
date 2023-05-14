@@ -12,6 +12,7 @@ interface IncludeStatement {
 }
 
 interface CacheProps {
+  parameters?: Declaration[];
   subroutines?: Declaration[];
   procedures?: Declaration[];
   files?: Declaration[];

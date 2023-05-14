@@ -1,7 +1,7 @@
 import path = require('path');
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
-import Parser from "../language/parser";
+import Parser from "../../../../language/parser";
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover|undefined> {
 	const currentPath = params.textDocument.uri;

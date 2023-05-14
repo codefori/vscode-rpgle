@@ -1,6 +1,6 @@
 import { DefinitionParams, Location, Definition, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
-import Parser from '../language/parser';
+import Parser from '../../../../language/parser';
 
 export default async function definitionProvider(handler: DefinitionParams): Promise<Definition|null> {
 	const currentPath = handler.textDocument.uri;

@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 
 import glob from "glob";
-import Parser from '../../../server/src/language/parser';
+import Parser from '../../../language/parser';
 import path from 'path';
 
 export function setupParser(cwd: string, globPath: string): Parser {

@@ -3,7 +3,7 @@
 import glob from "glob";
 import { readFileSync } from 'fs';
 
-import Parser from '../../../server/src/language/parser';
+import Parser from '../../../language/parser';
 import { setupParser } from './parser';
 import { Targets } from './targets';
 import { Project } from './project';

@@ -3,9 +3,9 @@ import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWa
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { documents, parser } from '..';
-import { IssueRange, Rules } from '../../language';
-import Linter from '../../language/linter';
-import Cache from '../../language/models/cache';
+import { IssueRange, Rules } from '../../../../../language';
+import Linter from '../../../../../language/linter';
+import Cache from '../../../../../language/models/cache';
 import codeActionsProvider from './codeActions';
 import documentFormattingProvider from './documentFormatting';
 

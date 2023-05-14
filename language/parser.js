@@ -1278,9 +1278,9 @@ export default class Parser {
 
   /**
    * @param {string[]} parts 
-   * @returns {Keywords}
    */
   static expandKeywords(parts) {
+    /** @type {{[keyword: string]: string|boolean}} */
     const keyvalues = {};
 
     if (parts.length > 0) {

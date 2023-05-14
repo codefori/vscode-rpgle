@@ -20,8 +20,8 @@ import hoverProvider from './providers/hover';
 import { connection, getFileRequest, getObject as getObjectData, validateUri } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
-import Declaration from './language/models/declaration';
-import { getPrettyType } from './language/models/fixed';
+import Declaration from '../../../language/models/declaration';
+import { getPrettyType } from '../../../language/models/fixed';
 
 import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';

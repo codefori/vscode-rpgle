@@ -41,8 +41,8 @@ export default async function implementationProvider(params: ImplementationParam
 			// Then, we fall back to the server to see if we can find a reference or something?
 			const cache = parser.getParsedCache(currentPath);
 			if (cache) {
-				const bnddir: string | undefined = cache.keyword[`BNDDIR`];
-				if (bnddir) {
+				const bnddir: string | true | undefined = cache.keyword[`BNDDIR`];
+				if (typeof bnddir === "string") {
 					const objectStrings = bnddir.split(`:`).map(obj => trimQuotes(obj));
 					const binders: BindingDirectory[] = objectStrings.map(qualifiedPath => {
 						const parts = qualifiedPath.split(`/`);

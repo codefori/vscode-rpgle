@@ -1,5 +1,5 @@
-import Declaration from './language/models/declaration';
-import { getPrettyType } from './language/models/fixed';
+import Declaration from '../../../language/models/declaration';
+import { getPrettyType } from '../../../language/models/fixed';
 
 export function parseMemberUri(path: string): {asp?: string, library?: string, file?: string, name: string} {
 	const parts = path.split(`/`).map(s => s.split(`,`)).flat().filter(s => s.length >= 1);

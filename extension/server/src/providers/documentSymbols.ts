@@ -1,6 +1,6 @@
 import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-languageserver';
 import { documents, parser } from '.';
-import Cache from '../language/models/cache';
+import Cache from '../../../../language/models/cache';
 
 export default async function documentSymbolProvider(handler: DocumentSymbolParams): Promise<DocumentSymbol[]> {
 	const currentPath = handler.textDocument.uri;
