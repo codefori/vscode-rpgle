@@ -1,12 +1,13 @@
 
 
 import glob from "glob";
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 
 import Parser from '../../../language/parser';
 import { setupParser } from './parser';
 import { Targets } from './targets';
 import { Project } from './project';
+import path from 'path';
 
 main();
 
@@ -17,7 +18,7 @@ async function main() {
 	let scanGlob = `**/*.{SQLRPGLE,sqlrpgle,RPGLE,rpgle}`;
 
 	for (let i = 0; i < parms.length; i++) {
-		switch (parms[0]) {
+		switch (parms[i]) {
 			case `-f`:
 			case `--files`:
 				scanGlob = parms[i + 1];
@@ -29,6 +30,11 @@ async function main() {
 				cwd = parms[i + 1];
 				i++;
 				break;
+
+			case `-i`:
+			case `--init`:
+				initProject(cwd);
+				process.exit(0);
 
 			case `-h`:
 			case `--help`:
@@ -87,4 +93,30 @@ function getFiles(cwd: string, globPath: string): string[] {
 
 function error(line: string) {
 	console.log(`ERROR: ${line}`);
+}
+
+function initProject(cwd) {
+	console.log(`Initialising in ${cwd}`);
+
+	const iprojPath = path.join(cwd, `iproj.json`);
+
+	let base = {};
+	const iprojExists = existsSync(iprojPath);
+
+	try {
+		console.log(`iproj.json already exists. Will append new properties.`);
+		base = JSON.parse(readFileSync(iprojPath, {encoding: `utf-8`}));
+	} catch (e) {
+		error(`Failed to parse iproj.json. Aborting`);
+		process.exit(1);
+	}
+
+	base = {
+		...base,
+		...Project.getDefaultSettings()
+	};
+
+	writeFileSync(iprojPath, JSON.stringify(base, null, 2));
+
+	console.log(`Written to ${iprojPath}`);
 }

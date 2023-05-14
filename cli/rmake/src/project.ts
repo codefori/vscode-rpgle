@@ -24,7 +24,13 @@ export class Project {
 	private settings: iProject;
 
 	constructor(private cwd: string, private targets: Targets) {
-		this.settings = {
+		this.settings = Project.getDefaultSettings();
+
+		this.setupSettings();
+	}
+
+	public static getDefaultSettings(): iProject {
+		return {
 			binders: [],
 			includePaths: [],
 			compiles: {
@@ -70,9 +76,7 @@ export class Project {
 					]
 				}
 			}
-		}
-
-		this.setupSettings();
+		};
 	}
 
 	private setupSettings() {
