@@ -9,6 +9,9 @@ interface ILEObject {
 	type: ObjectType;
 	relativePath: string;
 	extension: string;
+
+	/** this is used if the module belongs to program or service program */
+	parent?: ILEObject;
 }
 
 interface ILEObjectTarget extends ILEObject {
@@ -42,6 +45,13 @@ export class Targets {
 		};
 
 		this.resolvedObjects[localPath] = theObject;
+
+		if (type === `MODULE`) {
+			// If the type is a module, we check if the parent is a .srvpgm or .pgm
+			const parentBasename = path.basename(detail.dir);
+			
+		}
+
 		return theObject;
 	}
 
@@ -155,10 +165,29 @@ export class Targets {
 			});
 
 		this.deps.push(target);
+
+		if (ileObject.type === `MODULE`) {
+
+		}
 	}
 
 	getDeps() {
 		return this.deps;
+	}
+
+	createOrAppend(parentObject: ILEObject, newDep: ILEObject) {
+		let existingTarget = this.deps.find(dep => dep.name === parentObject.name && dep.type === parentObject.type);
+
+		if (!existingTarget) {
+			existingTarget = {
+				...parentObject,
+				deps: []
+			};
+
+			this.deps.push(existingTarget);
+		}
+
+		existingTarget.deps.push(newDep);
 	}
 }
 
