@@ -2,16 +2,13 @@ import glob from 'glob';
 import path from 'path';
 import Cache from '../../../server/src/language/models/cache';
 
-type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE";
+type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR";
 
 interface ILEObject {
 	name: string;
 	type: ObjectType;
-	relativePath: string;
-	extension: string;
-
-	/** this is used if the module belongs to program or service program */
-	parent?: ILEObject;
+	relativePath?: string;
+	extension?: string;
 }
 
 interface ILEObjectTarget extends ILEObject {
@@ -38,19 +35,13 @@ export class Targets {
 		const relativePath = path.relative(this.cwd, localPath);
 
 		const theObject: ILEObject = {
-			name,
-			type,
+			name: name.toUpperCase(),
+			type: type,
 			relativePath,
 			extension: detail.ext.length > 1 ? detail.ext.substring(1) : detail.ext
 		};
 
 		this.resolvedObjects[localPath] = theObject;
-
-		if (type === `MODULE`) {
-			// If the type is a module, we check if the parent is a .srvpgm or .pgm
-			const parentBasename = path.basename(detail.dir);
-			
-		}
 
 		return theObject;
 	}
@@ -117,6 +108,10 @@ export class Targets {
 			deps: []
 		};
 
+		if (ileObject.type === `PGM` && cache.keyword[`NOMAIN`]) {
+			throw new Error(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword found.`);
+		}
+
 		// Find external programs
 		cache.procedures
 			.filter((proc: any) => proc.keyword[`EXTPGM`])
@@ -165,17 +160,43 @@ export class Targets {
 			});
 
 		this.deps.push(target);
-
-		if (ileObject.type === `MODULE`) {
-
-		}
 	}
 
 	getDeps() {
 		return this.deps;
 	}
 
-	createOrAppend(parentObject: ILEObject, newDep: ILEObject) {
+	// Generates targets for service programs and binding directories
+	public determineLibraries() {
+		// Right now, we really only support single module programs and service programs
+
+		const bindingDirectoryTarget: ILEObject = {name: `$(BNDDIR)`, type: `BNDDIR`};
+
+		// Create all the service program targets
+		for (const target of this.deps) {
+			switch (target.type) {
+				case `MODULE`:
+					const serviceProgramTarget: ILEObject = {
+						name: target.name,
+						type: `SRVPGM`
+					};
+	
+					// This creates the service program target
+					this.createOrAppend(serviceProgramTarget, target);
+
+					// Before the binding directory can be built, we need the service program
+					this.createOrAppend(bindingDirectoryTarget, serviceProgramTarget);
+					break;
+
+				case `PGM`:
+					// Before the program can be built, we need the binding directory
+					target.deps.push(bindingDirectoryTarget);
+					break;
+			}
+		}
+	}
+
+	private createOrAppend(parentObject: ILEObject, newDep: ILEObject) {
 		let existingTarget = this.deps.find(dep => dep.name === parentObject.name && dep.type === parentObject.type);
 
 		if (!existingTarget) {

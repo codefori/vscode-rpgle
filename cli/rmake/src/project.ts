@@ -96,22 +96,30 @@ export class Project {
 		}
 	}
 
+	private generateHeader(): string[] {
+		return [
+			`BIN_LIB=DEV`,
+			`PREPATH=/QSYS.LIB/$(BIN_LIB).LIB`,
+			`BNDDIR=myapp`,
+			`SHELL=/QOpenSys/usr/bin/qsh`,
+		];
+	}
+
 	private generateTargets(): string[] {
 		let lines = [];
 
-		// BIN_LIB=DEV
-		// PREPATH=/QSYS.LIB/$(BIN_LIB).LIB
-
 		for (const target of this.targets.getDeps()) {
-			lines.push(
-				`$(PREPATH)/${target.name}.${target.type}: ${target.deps.map(dep => `$(PREPATH)/${dep.name}.${dep.type}`).join(` `)}`
-			)
+			if (target.deps.length > 0) {
+				lines.push(
+					`$(PREPATH)/${target.name}.${target.type}: ${target.deps.map(dep => `$(PREPATH)/${dep.name}.${dep.type}`).join(` `)}`
+				)
+			}
 		};
 
 		return lines;
 	}
 
-	private generateRules(): string[] {
+	private generateGenericRules(): string[] {
 		let lines = [];
 
 		for (const entry of Object.entries(this.settings.compiles)) {

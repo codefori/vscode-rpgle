@@ -66,6 +66,8 @@ async function main() {
 		}
 	}
 
+	targets.determineLibraries();
+
 	const project = new Project(cwd, targets);
 	
 }
