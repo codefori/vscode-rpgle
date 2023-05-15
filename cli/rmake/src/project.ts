@@ -117,7 +117,7 @@ export class Project {
 		];
 	}
 
-	private generateHeader(): string[] {
+	public generateHeader(): string[] {
 		return [
 			`BIN_LIB=DEV`,
 			`APP_BNDDIR=$(BIN_LIB)/APP`,
@@ -129,7 +129,7 @@ export class Project {
 		];
 	}
 
-	private generateTargets(): string[] {
+	public generateTargets(): string[] {
 		let lines = [];
 
 		const allPrograms = this.targets.getObjects(`PGM`);
@@ -152,7 +152,7 @@ export class Project {
 		return lines;
 	}
 
-	private generateGenericRules(): string[] {
+	public generateGenericRules(): string[] {
 		let lines = [];
 
 		for (const entry of Object.entries(this.settings.compiles)) {

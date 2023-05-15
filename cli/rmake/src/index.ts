@@ -76,7 +76,7 @@ async function main() {
 		}
 	}
 
-	targets.determineLibraries();
+	targets.resolveBinder();
 
 	const project = new Project(cwd, targets);
 

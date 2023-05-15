@@ -176,7 +176,7 @@ export class Targets {
 	}
 
 	// Generates targets for service programs and binding directories
-	public determineLibraries() {
+	public resolveBinder() {
 		// Right now, we really only support single module programs and service programs
 
 		const bindingDirectoryTarget: ILEObject = {name: `$(BNDDIR)`, type: `BNDDIR`};
@@ -210,7 +210,7 @@ export class Targets {
 		}
 	}
 
-	private createOrAppend(parentObject: ILEObject, newDep: ILEObject) {
+	public createOrAppend(parentObject: ILEObject, newDep?: ILEObject) {
 		let existingTarget = this.deps.find(dep => dep.name === parentObject.name && dep.type === parentObject.type);
 
 		if (!existingTarget) {
@@ -222,7 +222,8 @@ export class Targets {
 			this.deps.push(existingTarget);
 		}
 
-		existingTarget.deps.push(newDep);
+		if (newDep)
+			existingTarget.deps.push(newDep);
 	}
 
 	public binderRequired() {

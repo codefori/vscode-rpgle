@@ -6,6 +6,7 @@
     "rpglint": "./dist/index.js"
   },
   "scripts": {
+    "test": "vitest",
     "webpack:dev": "webpack --mode none --config ./webpack.config.js",
     "webpack": "webpack --mode production --config ./webpack.config.js",
     "local": "npm run webpack:dev && npm i -g",
@@ -24,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/halcyon-tech/vscode-rpgle/issues"
   },
-  "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme"
+  "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme",
+  "devDependencies": {
+    "vitest": "^0.31.0"
+  }
 }
