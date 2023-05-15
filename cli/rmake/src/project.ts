@@ -15,9 +15,9 @@ interface CompileData {
 };
 
 interface iProject {
-	includePaths: string[];
-	compiles: {[ext: string]: CompileData},
-	binders: string[];
+	includePaths?: string[];
+	compiles?: {[ext: string]: CompileData},
+	binders?: string[];
 }
 
 export class Project {
@@ -84,26 +84,30 @@ export class Project {
 			const content = readFileSync(path.join(this.cwd, `iproj.json`), {encoding: `utf-8`});
 			const asJson: iProject = JSON.parse(content);
 
-			if (asJson.includePaths) {
-				this.settings.includePaths = asJson.includePaths;
-			}
-
-			if (asJson.binders) {
-				this.settings.binders = asJson.binders;
-			}
-
-			if (asJson.compiles) {
-				for (const [ext, data] of Object.entries(asJson.compiles)) {
-					// We don't want to fully overwrite the default settings,
-					// perhaps the user is only changing the `dir`?
-					this.settings.compiles[ext] = {
-						...(this.settings.compiles[ext] || {}),
-						...data
-					};
-				}
-			}
+			this.applySettings(asJson);
 		} catch (e) {
 			console.log(`Failed to read 'iproj.json'.`);
+		}
+	}
+
+	public applySettings(input: iProject) {
+		if (input.includePaths) {
+			this.settings.includePaths = input.includePaths;
+		}
+
+		if (input.binders) {
+			this.settings.binders = input.binders;
+		}
+
+		if (input.compiles) {
+			for (const [ext, data] of Object.entries(input.compiles)) {
+				// We don't want to fully overwrite the default settings,
+				// perhaps the user is only changing the `dir`?
+				this.settings.compiles[ext] = {
+					...(this.settings.compiles[ext] || {}),
+					...data
+				};
+			}
 		}
 	}
 
@@ -118,12 +122,19 @@ export class Project {
 	}
 
 	public generateHeader(): string[] {
+		let baseBinders = [
+			...(this.targets.binderRequired() ? [`($(APP_BNDDIR))`] : []),
+			...this.settings.binders.map(b => `(${b})`)
+		];
+
+		if (baseBinders.length === 0) baseBinders.push(`*NONE`);
+
 		return [
 			`BIN_LIB=DEV`,
 			`APP_BNDDIR=$(BIN_LIB)/APP`,
 			``,
-			`INCDIR="${this.settings.includePaths.join(`:`)}"`,
-			`BNDDIR=${this.targets.binderRequired() ? [`($(APP_BNDDIR))`, ...this.settings.binders.map(b => `(${b})`)].join(` `) : `*NONE`}`,
+			`INCDIR="${this.settings.includePaths ? this.settings.includePaths.join(`:`) : `.`}"`,
+			`BNDDIR=${baseBinders.join(` `)}`,
 			`PREPATH=/QSYS.LIB/$(BIN_LIB).LIB`,
 			`SHELL=/QOpenSys/usr/bin/qsh`,
 		];
