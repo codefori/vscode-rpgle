@@ -71,7 +71,7 @@ export class Targets {
 			});
 		}
 
-		let globString = `**/${name}.*`;
+		let globString = `**/${name}*`;
 
 		const results = glob.sync(globString, {
 			cwd: this.cwd,

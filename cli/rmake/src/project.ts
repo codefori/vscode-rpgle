@@ -187,11 +187,11 @@ export class Project {
 							try {
 								const content = readFileSync(sourcePath, {encoding: `utf-8`});
 								const eol = content.indexOf(`\r\n`) >= 0 ? `\r\n` : `\n`;
-								const lines = content.split(eol).filter(l => !l.startsWith(`/*`)); // Remove comments
+								const commands = content.split(eol).filter(l => !l.startsWith(`/*`)); // Remove comments
 
 								lines.push(
 									`$(PREPATH)/${ileObject.name}.${data.becomes}: ${ileObject.relativePath}`,
-									...(lines.map(l => `\t-system -q "${l}"`)),
+									...(commands.map(l => `\t-system -q "${l}"`)),
 								);
 
 							} catch (e) {
@@ -223,6 +223,8 @@ export class Project {
 						)
 				);
 			}
+
+			lines.push(``);
 
 		}
 
