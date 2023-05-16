@@ -2,7 +2,7 @@ import glob from 'glob';
 import path from 'path';
 import Cache from '../../../language/models/cache';
 
-type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR";
+export type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR" | "DTAARA";
 
 interface ILEObject {
 	name: string;
@@ -97,6 +97,9 @@ export class Targets {
 				// TODO: add more types
 				return "FILE";
 
+			case `dtaara`:
+				return "DTAARA";
+
 			case `rpgle`:
 			case `sqlrpgle`:
 			case `clle`:
@@ -152,6 +155,7 @@ export class Targets {
 				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
 			});
 
+		// Find external files
 		cache.files
 			.map(file => file.name)
 			.forEach(ref => {
@@ -163,6 +167,43 @@ export class Targets {
 		cache.sqlReferences
 			.filter(ref => !ref.description)
 			.map(ref => ref.name)
+			.forEach(ref => {
+				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+			});
+
+		// Find external data areas
+		cache.structs
+			.filter((struct: any) => struct.keyword[`DTAARA`])
+			.map(ref => {
+				const keyword = ref.keyword;
+				let fileName = ref.name;
+				const dtaara = keyword[`DTAARA`];
+				if (dtaara) {
+					if (dtaara === true) fileName = ref.name;
+					else fileName = trimQuotes(dtaara);
+				}
+
+				return fileName + `.dtaara`;
+			})
+			.forEach(ref => {
+				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+			});
+
+		cache.variables
+			.filter((struct: any) => struct.keyword[`DTAARA`])
+			.map(ref => {
+				const keyword = ref.keyword;
+				let fileName = ref.name;
+				const dtaara = keyword[`DTAARA`];
+				if (dtaara) {
+					if (dtaara === true) fileName = ref.name;
+					else fileName = trimQuotes(dtaara);
+				}
+
+				return fileName + `.dtaara`;
+			})
 			.forEach(ref => {
 				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
 				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
@@ -232,6 +273,12 @@ export class Targets {
 
 	public getObjects(type: ObjectType) {
 		return this.deps.filter(d => d.type === type);
+	}
+
+	public getResolvedObjects(type: ObjectType) {
+		const objects = Object.values(this.resolvedObjects);
+
+		return objects.filter(o => o.type === type);
 	}
 }
 

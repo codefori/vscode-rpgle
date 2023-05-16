@@ -1,17 +1,19 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
-import { Targets } from './targets';
+import { ObjectType, Targets } from './targets';
 
 interface CompileData {
-	becomes: string;
+	becomes: ObjectType;
 	/** `dir` is used to indicate where the source lives for this object */
 	dir?: string;
 	/** `member` will copy the source to a temp member first */
 	member?: boolean,
-	/** `commands` do not respect the library list */
+	/** `commands` do not respect the library list and run before 'command' */
 	commands?: string[]
 	/** `command` does respect the library list */
 	command?: string;
+	/** used if the commands are built up from source */
+	commandSource?: boolean;
 };
 
 interface iProject {
@@ -74,6 +76,10 @@ export class Project {
 						`-system -q "CRTBNDDIR BNDDIR($(BIN_LIB)/$*)"`,
 						`-system -q "ADDBNDDIRE BNDDIR($(BIN_LIB)/$*) OBJ($(patsubst %.srvpgm,(*LIBL/% *SRVPGM *IMMED),$^))`
 					]
+				},
+				dtaara: {
+					becomes: `DTAARA`,
+					commandSource: true
 				}
 			}
 		};
@@ -169,25 +175,54 @@ export class Project {
 		for (const entry of Object.entries(this.settings.compiles)) {
 			const [type, data] = entry;
 
-			// Only used for member copies
-			const qsysTempName: string|undefined = (data.dir && data.dir.length > 10 ? data.dir.substring(0, 10) : data.dir);
+			// commandSource means 'is this object built from CL commands in a file'
+			if (data.commandSource) {
+				const objects = this.targets.getResolvedObjects(data.becomes);
+				for (const ileObject of objects) {
+					if (ileObject.relativePath) {
+						const sourcePath = path.join(this.cwd, ileObject.relativePath);
+						const exists = existsSync(sourcePath);
 
-			lines.push(
-				`$(PREPATH)/%.${data.becomes}: ${data.dir ? path.posix.join(data.dir, `%.${type}`) : ``}`,
-				...(qsysTempName && data.member ?
-					[
-						`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
-						`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/$*.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/$*.MBR') MBROPT(*REPLACE)"`
-					] : []),
-				...(data.commands ? data.commands.map(cmd => `\t${cmd}`) : [] ),
-				...(data.command ?
-					[
-						`\tliblist -c $(BIN_LIB);\\`,
-						`\tsystem "${data.command}"` // TODO: write the spool file somewhere?
-					]
-					: []
-					)
-			)
+						if (exists) {
+							try {
+								const content = readFileSync(sourcePath, {encoding: `utf-8`});
+								const eol = content.indexOf(`\r\n`) >= 0 ? `\r\n` : `\n`;
+								const lines = content.split(eol).filter(l => !l.startsWith(`/*`)); // Remove comments
+
+								lines.push(
+									`$(PREPATH)/${ileObject.name}.${data.becomes}: ${ileObject.relativePath}`,
+									...(lines.map(l => `\t-system -q "${l}"`)),
+								);
+
+							} catch (e) {
+								console.log(`Failed to parse '${ileObject.relativePath}'`);
+								process.exit();
+							}
+						}
+					}
+				}
+
+			} else {
+				// Only used for member copies
+				const qsysTempName: string|undefined = (data.dir && data.dir.length > 10 ? data.dir.substring(0, 10) : data.dir);
+
+				lines.push(
+					`$(PREPATH)/%.${data.becomes}: ${data.dir ? path.posix.join(data.dir, `%.${type}`) : ``}`,
+					...(qsysTempName && data.member ?
+						[
+							`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
+							`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/$*.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/$*.MBR') MBROPT(*REPLACE)"`
+						] : []),
+					...(data.commands ? data.commands.map(cmd => `\t${cmd}`) : [] ),
+					...(data.command ?
+						[
+							`\tliblist -c $(BIN_LIB);\\`,
+							`\tsystem "${data.command}"` // TODO: write the spool file somewhere?
+						]
+						: []
+						)
+				);
+			}
 
 		}
 
