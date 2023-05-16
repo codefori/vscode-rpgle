@@ -64,15 +64,6 @@ test('resolveBinder', () => {
     expect(srvPgm.relativePath).toBeUndefined();
     expect(srvPgm.extension).toBeUndefined();
   }
-
-  // All programs should have the binder as a dep now
-  const programs = targets.getParentObjects("PGM");
-
-  expect(programs.length).toBeGreaterThan(0);
-
-  for (const program of programs) {
-    expect(program.deps.some(d => d.name === `$(APP_BNDDIR)` && d.type === `BNDDIR`)).toBeTruthy();
-  }
 });
 
 test('getObjectsByExtension', () => {

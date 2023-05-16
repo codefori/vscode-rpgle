@@ -4,6 +4,8 @@ import Cache from '../../../language/models/cache';
 
 export type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR" | "DTAARA";
 
+const bindingDirectoryTarget: ILEObject = {name: `$(APP_BNDDIR)`, type: `BNDDIR`};
+
 interface ILEObject {
 	name: string;
 	type: ObjectType;
@@ -209,6 +211,11 @@ export class Targets {
 				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
 			});
 
+		// Then, if this source has any EXTPROC, add our binder to it
+		if (cache.procedures.some(proc => proc.keyword[`EXTPROC`] !== undefined)) {
+			target.deps.push(bindingDirectoryTarget);
+		}
+
 		this.deps.push(target);
 	}
 
@@ -219,8 +226,6 @@ export class Targets {
 	// Generates targets for service programs and binding directories
 	public resolveBinder() {
 		// Right now, we really only support single module programs and service programs
-
-		const bindingDirectoryTarget: ILEObject = {name: `$(APP_BNDDIR)`, type: `BNDDIR`};
 
 		// We can simply check for any modules since we turn them into service programs
 		this.needsBinder = this.deps.some(d => d.type === `MODULE`);
@@ -239,13 +244,6 @@ export class Targets {
 
 					// Before the binding directory can be built, we need the service program
 					this.createOrAppend(bindingDirectoryTarget, serviceProgramTarget);
-					break;
-
-				case `PGM`:
-					if (this.needsBinder) {
-						// Before the program can be built, we need the binding directory
-						target.deps.push(bindingDirectoryTarget);
-					}
 					break;
 			}
 		}

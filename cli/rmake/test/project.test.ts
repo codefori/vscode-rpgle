@@ -31,13 +31,12 @@ test('generateTargets (post-resolve)', () => {
 
   const targetContent = project.generateTargets();
 
-  expect(targetContent.length).toBe(9);
   expect(targetContent).toEqual(
     [
       'all: $(PREPATH)/PROGRAMA.PGM $(PREPATH)/PROGRAMB.PGM',
       '',
-      '$(PREPATH)/PROGRAMA.PGM: $(PREPATH)/FILEA.FILE $(PREPATH)/PROGRAMB.PGM $(PREPATH)/$(APP_BNDDIR).BNDDIR',
-      '$(PREPATH)/PROGRAMB.PGM: $(PREPATH)/$(APP_BNDDIR).BNDDIR',
+      '$(PREPATH)/PROGRAMA.PGM: $(PREPATH)/FILEA.FILE $(PREPATH)/PROGRAMB.PGM',
+      // '$(PREPATH)/PROGRAMB.PGM: $(PREPATH)/$(APP_BNDDIR).BNDDIR', Program B won't have anything since it has no subdeps
       '$(PREPATH)/MODULEA.MODULE: $(PREPATH)/FILEA.FILE $(PREPATH)/FILEB.FILE',
       '$(PREPATH)/MODULEB.MODULE: $(PREPATH)/FILEB.FILE',
       '$(PREPATH)/MODULEA.SRVPGM: $(PREPATH)/MODULEA.MODULE',
