@@ -97,11 +97,11 @@ export class Project {
 	}
 
 	public applySettings(input: iProject) {
-		if (input.includePaths) {
+		if (input.includePaths && input.includePaths.length > 0) {
 			this.settings.includePaths = input.includePaths;
 		}
 
-		if (input.binders) {
+		if (input.binders && input.includePaths.length > 0) {
 			this.settings.binders = input.binders;
 		}
 

@@ -3,7 +3,7 @@
   "version": "0.17.5",
   "description": "RPG make tool",
   "bin": {
-    "rpglint": "./dist/index.js"
+    "rmake": "./dist/index.js"
   },
   "scripts": {
     "test": "vitest",
