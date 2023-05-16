@@ -65,8 +65,8 @@ test('applySettings (compiles)', () => {
   project.applySettings({
     compiles: {
       "srvpgm": {
+        targetSource: `qbndsrc/%.srvpgm`,
         becomes: `SRVPGM`,
-        dir: `qbndsrc`,
         command: `CRTSRVPGM SRVPGM($(BIN_LIB)/$*) MODULE(*SRVPGM) SRCSTMF('$<') BNDDIR($(BNDDIR))`,
       }
     }

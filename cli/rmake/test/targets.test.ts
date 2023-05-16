@@ -66,7 +66,7 @@ test('resolveBinder', () => {
   }
 
   // All programs should have the binder as a dep now
-  const programs = targets.getObjects("PGM");
+  const programs = targets.getParentObjects("PGM");
 
   expect(programs.length).toBeGreaterThan(0);
 

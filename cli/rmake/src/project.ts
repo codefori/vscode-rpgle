@@ -3,6 +3,8 @@ import path from 'path';
 import { ObjectType, Targets } from './targets';
 
 interface CompileData {
+	/** if the non-source object now requires source */
+	targetSource?: string;
 	becomes: ObjectType;
 	/** `member` will copy the source to a temp member first */
 	member?: boolean,
@@ -16,7 +18,7 @@ interface CompileData {
 
 interface iProject {
 	includePaths?: string[];
-	compiles?: {[ext: string]: CompileData},
+	compiles?: { [ext: string]: CompileData },
 	binders?: string[];
 }
 
@@ -83,7 +85,7 @@ export class Project {
 
 	private setupSettings() {
 		try {
-			const content = readFileSync(path.join(this.cwd, `iproj.json`), {encoding: `utf-8`});
+			const content = readFileSync(path.join(this.cwd, `iproj.json`), { encoding: `utf-8` });
 			const asJson: iProject = JSON.parse(content);
 
 			this.applySettings(asJson);
@@ -97,7 +99,7 @@ export class Project {
 			this.settings.includePaths = input.includePaths;
 		}
 
-		if (input.binders && input.includePaths.length > 0) {
+		if (input.binders && input.binders.length > 0) {
 			this.settings.binders = input.binders;
 		}
 
@@ -182,7 +184,7 @@ export class Project {
 
 						if (exists) {
 							try {
-								const content = readFileSync(sourcePath, {encoding: `utf-8`});
+								const content = readFileSync(sourcePath, { encoding: `utf-8` });
 								const eol = content.indexOf(`\r\n`) >= 0 ? `\r\n` : `\n`;
 								const commands = content.split(eol).filter(l => !l.startsWith(`/*`)); // Remove comments
 
@@ -203,31 +205,45 @@ export class Project {
 				// Only used for member copies
 				const objects = this.targets.getObjectsByExtension(type);
 
-				for (const ileObject of objects) {
-					const parentName = ileObject.relativePath ? path.dirname(ileObject.relativePath) : undefined;
-					const qsysTempName: string|undefined = (parentName && parentName.length > 10 ? parentName.substring(0, 10) : parentName);
+				if (objects.length > 0) {
+					for (const ileObject of objects) {
+						const parentName = ileObject.relativePath ? path.dirname(ileObject.relativePath) : undefined;
+						const qsysTempName: string | undefined = (parentName && parentName.length > 10 ? parentName.substring(0, 10) : parentName);
 
-					const resolve = (command: string) => {
-						command = command.replace(new RegExp(`\\$\\*`, `g`), ileObject.name);
-						command = command.replace(new RegExp(`\\$<`, `g`), ileObject.relativePath);
-						return command;
+						const resolve = (command: string) => {
+							command = command.replace(new RegExp(`\\$\\*`, `g`), ileObject.name);
+							command = command.replace(new RegExp(`\\$<`, `g`), ileObject.relativePath);
+							return command;
+						}
+
+						lines.push(
+							`$(PREPATH)/${ileObject.name}.${ileObject.type}: ${ileObject.relativePath || ``}`,
+							...(qsysTempName && data.member ?
+								[
+									`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
+									`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/${ileObject.name}.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/${ileObject.name}.MBR') MBROPT(*REPLACE)"`
+								] : []),
+							...(data.commands ? data.commands.map(cmd => `\t${resolve(cmd)}`) : []),
+							...(data.command ?
+								[
+									`\tliblist -c $(BIN_LIB);\\`,
+									`\tsystem "${resolve(data.command)}"` // TODO: write the spool file somewhere?
+								]
+								: []
+							)
+						);
 					}
-					
+				} else {
 					lines.push(
-						`$(PREPATH)/${ileObject.name}.${ileObject.type}: ${ileObject.relativePath || ``}`,
-						...(qsysTempName && data.member ?
-							[
-								`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
-								`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/${ileObject.name}.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/${ileObject.name}.MBR') MBROPT(*REPLACE)"`
-							] : []),
-						...(data.commands ? data.commands.map(cmd => `\t${resolve(cmd)}`) : [] ),
+						`$(PREPATH)/%.${data.becomes}: ${data.targetSource || ``}`,
+						...(data.commands ? data.commands.map(cmd => `\t${cmd}`) : []),
 						...(data.command ?
 							[
 								`\tliblist -c $(BIN_LIB);\\`,
-								`\tsystem "${resolve(data.command)}"` // TODO: write the spool file somewhere?
+								`\tsystem "${data.command}"` // TODO: write the spool file somewhere?
 							]
 							: []
-							)
+						)
 					);
 				}
 			}
