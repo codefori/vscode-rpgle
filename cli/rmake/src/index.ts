@@ -80,7 +80,7 @@ async function main() {
 
 	const project = new Project(cwd, targets);
 
-	console.log(project.getMakefile().join(`\n`));
+	writeFileSync(path.join(cwd, `makefile`), project.getMakefile().join(`\n`));
 }
 
 function getFiles(cwd: string, globPath: string): string[] {
