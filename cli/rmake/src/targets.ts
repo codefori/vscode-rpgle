@@ -220,7 +220,7 @@ export class Targets {
 	public resolveBinder() {
 		// Right now, we really only support single module programs and service programs
 
-		const bindingDirectoryTarget: ILEObject = {name: `$(BNDDIR)`, type: `BNDDIR`};
+		const bindingDirectoryTarget: ILEObject = {name: `$(APP_BNDDIR)`, type: `BNDDIR`};
 
 		// We can simply check for any modules since we turn them into service programs
 		this.needsBinder = this.deps.some(d => d.type === `MODULE`);
@@ -285,7 +285,14 @@ export class Targets {
 		const upperExt = ext.toUpperCase();
 		return Object.
 			keys(this.resolvedObjects).
-			filter(filePath => filePath.toUpperCase().endsWith(upperExt)).
+			filter(filePath => {
+				const basename = path.basename(filePath);
+				const dotIndex = basename.indexOf(`.`);
+				if (dotIndex >= 0) {
+					const lastPart = basename.substring(dotIndex+1);
+					return (lastPart.toUpperCase() === upperExt);
+				}
+			}).
 			map(filePath => this.resolvedObjects[filePath]);
 	}
 }

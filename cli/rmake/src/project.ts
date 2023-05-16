@@ -47,6 +47,13 @@ export class Project {
 					],
 					command: `CRTSQLRPGI OBJ($(BIN_LIB)/$*) SRCSTMF('$<') COMMIT(*NONE) DBGVIEW(*SOURCE) OPTION(*EVENTF) COMPILEOPT('BNDDIR($(BNDDIR)) DFTACTGRP(*no)')`
 				},
+				"sqlrpgle": {
+					becomes: "MODULE",
+					commands: [
+						`system -s "CHGATR OBJ('$<') ATR(*CCSID) VALUE(1252)"`
+					],
+					command: `CRTSQLRPGI OBJ($(BIN_LIB)/$*) SRCSTMF('$<') COMMIT(*NONE) DBGVIEW(*SOURCE) OPTION(*EVENTF) OBJTYPE(*MODULE)`
+				},
 				dspf: {
 					becomes: "FILE",
 					member: true,
@@ -63,6 +70,7 @@ export class Project {
 				srvpgm: {
 					becomes: `SRVPGM`,
 					commands: [
+						`-system -q "CRTBNDDIR BNDDIR($(BNDDIR))"`,
 						`-system -q "RMVBNDDIRE BNDDIR($(BIN_LIB)/$*) OBJ($(BIN_LIB)/$* *SRVPGM)"`,
 						`-system "DLTOBJ OBJ($(BIN_LIB)/$*) OBJTYPE(*SRVPGM)"`
 					],
@@ -72,7 +80,7 @@ export class Project {
 					becomes: `BNDDIR`,
 					commands: [
 						`-system -q "CRTBNDDIR BNDDIR($(BIN_LIB)/$*)"`,
-						`-system -q "ADDBNDDIRE BNDDIR($(BIN_LIB)/$*) OBJ($(patsubst %.srvpgm,(*LIBL/% *SRVPGM *IMMED),$^))`
+						`-system -q "ADDBNDDIRE BNDDIR($(BIN_LIB)/$*) OBJ($(patsubst %.SRVPGM,(*LIBL/% *SRVPGM *IMMED),$(notdir $^)))"`
 					]
 				},
 				dtaara: {
@@ -127,7 +135,7 @@ export class Project {
 
 	public generateHeader(): string[] {
 		let baseBinders = [
-			...(this.targets.binderRequired() ? [`($(APP_BNDDIR))`] : []),
+			...(this.targets.binderRequired() ? [`($(BIN_LIB)/$(APP_BNDDIR))`] : []),
 			...this.settings.binders.map(b => `(${b})`)
 		];
 
@@ -135,7 +143,7 @@ export class Project {
 
 		return [
 			`BIN_LIB=DEV`,
-			`APP_BNDDIR=$(BIN_LIB)/APP`,
+			`APP_BNDDIR=APP`,
 			``,
 			`INCDIR="${this.settings.includePaths ? this.settings.includePaths.join(`:`) : `.`}"`,
 			`BNDDIR=${baseBinders.join(` `)}`,

@@ -47,7 +47,7 @@ test('resolveBinder', () => {
   expect(deps.length).toBe(7);
   expect(targets.binderRequired()).toBe(true);
 
-  const bnddir = deps.find(d => d.name === `$(BNDDIR)` && d.type === `BNDDIR`);
+  const bnddir = deps.find(d => d.name === `$(APP_BNDDIR)` && d.type === `BNDDIR`);
   expect(bnddir).toBeDefined();
   expect(bnddir.extension).toBeUndefined();
   expect(bnddir.relativePath).toBeUndefined();
@@ -71,6 +71,18 @@ test('resolveBinder', () => {
   expect(programs.length).toBeGreaterThan(0);
 
   for (const program of programs) {
-    expect(program.deps.some(d => d.name === `$(BNDDIR)` && d.type === `BNDDIR`)).toBeTruthy();
+    expect(program.deps.some(d => d.name === `$(APP_BNDDIR)` && d.type === `BNDDIR`)).toBeTruthy();
   }
 });
+
+test('getObjectsByExtension', () => {
+  const targets = createTargets(true);
+
+  const rpglePrograms = targets.getObjectsByExtension(`pgm.rpgle`);
+  expect(rpglePrograms.length).toBe(1);
+  expect(rpglePrograms[0].relativePath).toBe(`qrpglesrc/programA.pgm.rpgle`);
+
+  const rpgleModules = targets.getObjectsByExtension(`rpgle`);
+  expect(rpgleModules.length).toBe(1);
+  expect(rpgleModules[0].relativePath).toBe(`qrpglesrc/moduleA.rpgle`);
+})

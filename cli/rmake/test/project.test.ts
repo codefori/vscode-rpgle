@@ -36,12 +36,12 @@ test('generateTargets (post-resolve)', () => {
     [
       'all: $(PREPATH)/PROGRAMA.PGM $(PREPATH)/PROGRAMB.PGM',
       '',
-      '$(PREPATH)/PROGRAMA.PGM: $(PREPATH)/FILEA.FILE $(PREPATH)/PROGRAMB.PGM $(PREPATH)/$(BNDDIR).BNDDIR',
-      '$(PREPATH)/PROGRAMB.PGM: $(PREPATH)/$(BNDDIR).BNDDIR',
+      '$(PREPATH)/PROGRAMA.PGM: $(PREPATH)/FILEA.FILE $(PREPATH)/PROGRAMB.PGM $(PREPATH)/$(APP_BNDDIR).BNDDIR',
+      '$(PREPATH)/PROGRAMB.PGM: $(PREPATH)/$(APP_BNDDIR).BNDDIR',
       '$(PREPATH)/MODULEA.MODULE: $(PREPATH)/FILEA.FILE $(PREPATH)/FILEB.FILE',
       '$(PREPATH)/MODULEB.MODULE: $(PREPATH)/FILEB.FILE',
       '$(PREPATH)/MODULEA.SRVPGM: $(PREPATH)/MODULEA.MODULE',
-      '$(PREPATH)/$(BNDDIR).BNDDIR: $(PREPATH)/MODULEA.SRVPGM $(PREPATH)/MODULEB.SRVPGM',
+      '$(PREPATH)/$(APP_BNDDIR).BNDDIR: $(PREPATH)/MODULEA.SRVPGM $(PREPATH)/MODULEB.SRVPGM',
       '$(PREPATH)/MODULEB.SRVPGM: $(PREPATH)/MODULEB.MODULE'
     ]
   );
@@ -93,7 +93,7 @@ test('generateHeader (binder changes)', () => {
 
   const headerContentB = project.generateHeader();
 
-  expect(headerContentB[bndDirIndex]).toBe(`BNDDIR=($(APP_BNDDIR))`);
+  expect(headerContentB[bndDirIndex]).toBe(`BNDDIR=($(BIN_LIB)/$(APP_BNDDIR))`);
 });
 
 test('applySettings (binder)', () => {
@@ -115,5 +115,5 @@ test('applySettings (binder)', () => {
 
   const headerContentB = project.generateHeader();
 
-  expect(headerContentB[bndDirIndex]).toBe(`BNDDIR=($(APP_BNDDIR)) (TESTING)`);
+  expect(headerContentB[bndDirIndex]).toBe(`BNDDIR=($(BIN_LIB)/$(APP_BNDDIR)) (TESTING)`);
 });
