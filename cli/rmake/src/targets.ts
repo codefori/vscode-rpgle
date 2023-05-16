@@ -271,7 +271,7 @@ export class Targets {
 		return this.needsBinder;
 	}
 
-	public getObjects(type: ObjectType) {
+	public getParentObjects(type: ObjectType) {
 		return this.deps.filter(d => d.type === type);
 	}
 
@@ -279,6 +279,14 @@ export class Targets {
 		const objects = Object.values(this.resolvedObjects);
 
 		return objects.filter(o => o.type === type);
+	}
+
+	public getObjectsByExtension(ext: string) {
+		const upperExt = ext.toUpperCase();
+		return Object.
+			keys(this.resolvedObjects).
+			filter(filePath => filePath.toUpperCase().endsWith(upperExt)).
+			map(filePath => this.resolvedObjects[filePath]);
 	}
 }
 

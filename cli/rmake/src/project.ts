@@ -4,8 +4,6 @@ import { ObjectType, Targets } from './targets';
 
 interface CompileData {
 	becomes: ObjectType;
-	/** `dir` is used to indicate where the source lives for this object */
-	dir?: string;
 	/** `member` will copy the source to a temp member first */
 	member?: boolean,
 	/** `commands` do not respect the library list and run before 'command' */
@@ -38,29 +36,27 @@ export class Project {
 			compiles: {
 				"pgm.rpgle": {
 					becomes: `PGM`,
-					dir: `qrpglesrc`,
 					command: `CRTBNDRPG PGM($(BIN_LIB)/$*) SRCSTMF('$<') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTRLS(*CURRENT) TGTCCSID(*JOB) BNDDIR($(BNDDIR)) DFTACTGRP(*no)`
 				},
 				"pgm.sqlrpgle": {
 					becomes: "PGM",
-					dir: "qrpglesrc",
+					commands: [
+						`system -s "CHGATR OBJ('$<') ATR(*CCSID) VALUE(1252)"`
+					],
 					command: `CRTSQLRPGI OBJ($(BIN_LIB)/$*) SRCSTMF('$<') COMMIT(*NONE) DBGVIEW(*SOURCE) OPTION(*EVENTF) COMPILEOPT('BNDDIR($(BNDDIR)) DFTACTGRP(*no)')`
 				},
 				dspf: {
 					becomes: "FILE",
-					dir: "qddssrc",
 					member: true,
 					command: "CRTDSPF FILE($(BIN_LIB)/$*) SRCFILE($(BIN_LIB)/qddssrc) SRCMBR($*)"
 				},
 				sql: {
 					becomes: `FILE`,
-					dir: `qsqlsrc`,
 					command: `RUNSQLSTM SRCSTMF('$<') COMMIT(*NONE)`
 				},
 				table: {
 					becomes: `FILE`,
-					dir: `qsqlsrc`,
-					command: `system "RUNSQLSTM SRCSTMF('$<') COMMIT(*NONE)"`
+					command: `RUNSQLSTM SRCSTMF('$<') COMMIT(*NONE)`
 				},
 				srvpgm: {
 					becomes: `SRVPGM`,
@@ -149,7 +145,7 @@ export class Project {
 	public generateTargets(): string[] {
 		let lines = [];
 
-		const allPrograms = this.targets.getObjects(`PGM`);
+		const allPrograms = this.targets.getParentObjects(`PGM`);
 
 		if (allPrograms.length > 0) {
 			lines.push(
@@ -178,6 +174,7 @@ export class Project {
 			// commandSource means 'is this object built from CL commands in a file'
 			if (data.commandSource) {
 				const objects = this.targets.getResolvedObjects(data.becomes);
+
 				for (const ileObject of objects) {
 					if (ileObject.relativePath) {
 						const sourcePath = path.join(this.cwd, ileObject.relativePath);
@@ -204,24 +201,35 @@ export class Project {
 
 			} else {
 				// Only used for member copies
-				const qsysTempName: string|undefined = (data.dir && data.dir.length > 10 ? data.dir.substring(0, 10) : data.dir);
+				const objects = this.targets.getObjectsByExtension(type);
 
-				lines.push(
-					`$(PREPATH)/%.${data.becomes}: ${data.dir ? path.posix.join(data.dir, `%.${type}`) : ``}`,
-					...(qsysTempName && data.member ?
-						[
-							`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
-							`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/$*.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/$*.MBR') MBROPT(*REPLACE)"`
-						] : []),
-					...(data.commands ? data.commands.map(cmd => `\t${cmd}`) : [] ),
-					...(data.command ?
-						[
-							`\tliblist -c $(BIN_LIB);\\`,
-							`\tsystem "${data.command}"` // TODO: write the spool file somewhere?
-						]
-						: []
-						)
-				);
+				for (const ileObject of objects) {
+					const parentName = ileObject.relativePath ? path.dirname(ileObject.relativePath) : undefined;
+					const qsysTempName: string|undefined = (parentName && parentName.length > 10 ? parentName.substring(0, 10) : parentName);
+
+					const resolve = (command: string) => {
+						command = command.replace(new RegExp(`\\$\\*`, `g`), ileObject.name);
+						command = command.replace(new RegExp(`\\$<`, `g`), ileObject.relativePath);
+						return command;
+					}
+					
+					lines.push(
+						`$(PREPATH)/${ileObject.name}.${ileObject.type}: ${ileObject.relativePath || ``}`,
+						...(qsysTempName && data.member ?
+							[
+								`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
+								`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/${ileObject.name}.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/${ileObject.name}.MBR') MBROPT(*REPLACE)"`
+							] : []),
+						...(data.commands ? data.commands.map(cmd => `\t${resolve(cmd)}`) : [] ),
+						...(data.command ?
+							[
+								`\tliblist -c $(BIN_LIB);\\`,
+								`\tsystem "${resolve(data.command)}"` // TODO: write the spool file somewhere?
+							]
+							: []
+							)
+					);
+				}
 			}
 
 			lines.push(``);
