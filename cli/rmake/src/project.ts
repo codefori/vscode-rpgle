@@ -57,7 +57,12 @@ export class Project {
 				dspf: {
 					becomes: "FILE",
 					member: true,
-					command: "CRTDSPF FILE($(BIN_LIB)/$*) SRCFILE($(BIN_LIB)/qddssrc) SRCMBR($*)"
+					command: "CRTDSPF FILE($(BIN_LIB)/$*) SRCFILE($(BIN_LIB)/$(SRCPF)) SRCMBR($*)"
+				},
+				cmd: {
+					becomes: "CMD",
+					member: true,
+					command: "CRTCMD CMD($(BIN_LIB)/$*) PGM($(BIN_LIB)/$*) SRCFILE($(BIN_LIB)/$(SRCPF))"
 				},
 				sql: {
 					becomes: `FILE`,
@@ -221,6 +226,7 @@ export class Project {
 						const resolve = (command: string) => {
 							command = command.replace(new RegExp(`\\$\\*`, `g`), ileObject.name);
 							command = command.replace(new RegExp(`\\$<`, `g`), ileObject.relativePath);
+							command = command.replace(new RegExp(`\\$\\(SRCPF\\)`, `g`), qsysTempName);
 							return command;
 						}
 
@@ -229,7 +235,7 @@ export class Project {
 							...(qsysTempName && data.member ?
 								[
 									`\t-system -qi "CRTSRCPF FILE($(BIN_LIB)/${qsysTempName}) RCDLEN(112)"`,
-									`\tsystem "CPYFRMSTMF FROMSTMF('./qddssrc/${ileObject.name}.dspf') TOMBR('$(PREPATH)/${qsysTempName}.FILE/${ileObject.name}.MBR') MBROPT(*REPLACE)"`
+									`\tsystem "CPYFRMSTMF FROMSTMF('${ileObject.relativePath}') TOMBR('$(PREPATH)/${qsysTempName}.FILE/${ileObject.name}.MBR') MBROPT(*REPLACE)"`
 								] : []),
 							...(data.commands ? data.commands.map(cmd => `\t${resolve(cmd)}`) : []),
 							...(data.command ?

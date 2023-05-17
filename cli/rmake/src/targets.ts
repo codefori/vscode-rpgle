@@ -1,12 +1,13 @@
 import glob from 'glob';
 import path from 'path';
 import Cache from '../../../language/models/cache';
+import { info } from './cli';
 
-export type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR" | "DTAARA";
+export type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR" | "DTAARA" | "CMD";
 
 const bindingDirectoryTarget: ILEObject = {name: `$(APP_BNDDIR)`, type: `BNDDIR`};
 
-interface ILEObject {
+export interface ILEObject {
 	name: string;
 	type: ObjectType;
 	relativePath?: string;
@@ -53,7 +54,7 @@ export class Targets {
 	/**
 	 * Resolves a search to a filename. Basically a special blob
 	 */
-	public resolveLocalObjectQuery(name: string, ignoreName?: string): string {
+	public resolveLocalObjectQuery(name: string, baseName?: string): string {
 		name = name.toUpperCase();
 
 		if (this.resolvedPaths[name]) return this.resolvedPaths[name];
@@ -79,7 +80,7 @@ export class Targets {
 			cwd: this.cwd,
 			absolute: true,
 			nocase: true,
-			ignore: ignoreName ? `**/${ignoreName}` : undefined,
+			ignore: baseName ? `**/${baseName}` : undefined,
 			cache: this.pathCache
 		});
 
@@ -102,11 +103,17 @@ export class Targets {
 			case `dtaara`:
 				return "DTAARA";
 
+			case `cmd`:
+				return "CMD";
+
 			case `rpgle`:
 			case `sqlrpgle`:
 			case `clle`:
 			case `cl`:
 				return "MODULE";
+
+			default:
+				return (ext.toUpperCase() as ObjectType);
 		}
 	}
 
@@ -216,6 +223,14 @@ export class Targets {
 			target.deps.push(bindingDirectoryTarget);
 		}
 
+		// We also look to see if there is a `.cmd. object with the same name
+		const possibleCommand = this.resolveLocalObjectQuery(ileObject.name, sourceName);
+		if (possibleCommand) target.deps.push(this.resolveObject(possibleCommand));
+
+		info(`${ileObject.name}.${ileObject.type}`);
+		info(`\tSource: ${ileObject.relativePath}`);
+		info(`\tDepends on: ${target.deps.map(d => `${d.name}.${d.type}`).join(` `)}`);
+
 		this.deps.push(target);
 	}
 
@@ -234,6 +249,8 @@ export class Targets {
 		for (const target of this.deps) {
 			switch (target.type) {
 				case `MODULE`:
+					info(`Assuming ${target.name}.${target.type} is a service program (SRVPGM)`);
+
 					const serviceProgramTarget: ILEObject = {
 						name: target.name,
 						type: `SRVPGM`
@@ -273,10 +290,10 @@ export class Targets {
 		return this.deps.filter(d => d.type === type);
 	}
 
-	public getResolvedObjects(type: ObjectType) {
+	public getResolvedObjects(type?: ObjectType) {
 		const objects = Object.values(this.resolvedObjects);
 
-		return objects.filter(o => o.type === type);
+		return objects.filter(o => type === undefined || o.type === type);
 	}
 
 	public getObjectsByExtension(ext: string) {
