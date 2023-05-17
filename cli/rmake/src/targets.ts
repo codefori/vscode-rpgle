@@ -1,7 +1,7 @@
 import glob from 'glob';
 import path from 'path';
 import Cache from '../../../language/models/cache';
-import { info } from './cli';
+import { info, warning } from './cli';
 
 export type ObjectType = "PGM" | "SRVPGM" | "MODULE" | "FILE" | "BNDDIR" | "DTAARA" | "CMD";
 
@@ -117,7 +117,7 @@ export class Targets {
 		}
 	}
 
-	public createTarget(localPath: string, cache: Cache) {
+	public createRpgTarget(localPath: string, cache: Cache) {
 		const sourceName = path.basename(localPath);
 		const ileObject = this.resolveObject(localPath);
 		const target: ILEObjectTarget = {
@@ -125,12 +125,19 @@ export class Targets {
 			deps: []
 		};
 
+		info(`${ileObject.name}.${ileObject.type}`);
+		info(`\tSource: ${ileObject.relativePath}`);
+
 		if (ileObject.type === `PGM` && cache.keyword[`NOMAIN`]) {
-			throw new Error(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword found.`);
+			warning(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword found.`);
 		}
 
 		if (ileObject.type === `MODULE` && !cache.keyword[`NOMAIN`]) {
-			throw new Error(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword was not found. Is it possible the extension should include '.pgm'?`);
+			warning(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword was not found. Is it possible the extension should include '.pgm'?`);
+		}
+
+		if (cache.keyword[`BNDDIR`]) {
+			warning(`${localPath}: has the BNDDIR keyword. 'binders' property in iproj.json should be used instead.`);
 		}
 
 		// Find external programs
@@ -149,7 +156,8 @@ export class Targets {
 			})
 			.forEach(ref => {
 				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
-				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath))
+				else info(`\tNo object found for reference '${ref}'`)
 			});
 
 		// Find external data structure sources
@@ -161,7 +169,8 @@ export class Targets {
 			})
 			.forEach(ref => {
 				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
-				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath))
+				else info(`\tNo object found for reference '${ref}'`);
 			});
 
 		// Find external files
@@ -169,7 +178,8 @@ export class Targets {
 			.map(file => file.name)
 			.forEach(ref => {
 				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
-				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath))
+				else info(`\tNo object found for reference '${ref}'`);
 			})
 
 		// We ignore anything with hardcoded schemas
@@ -178,7 +188,8 @@ export class Targets {
 			.map(ref => ref.name)
 			.forEach(ref => {
 				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
-				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath))
+				else info(`\tNo object found for reference '${ref}'`);
 			});
 
 		// Find external data areas
@@ -197,7 +208,8 @@ export class Targets {
 			})
 			.forEach(ref => {
 				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
-				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath))
+				else info(`\tNo object found for reference '${ref}'`);
 			});
 
 		cache.variables
@@ -215,10 +227,11 @@ export class Targets {
 			})
 			.forEach(ref => {
 				const resolvedPath = this.resolveLocalObjectQuery(ref, sourceName);
-				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath));
+				if (resolvedPath) target.deps.push(this.resolveObject(resolvedPath))
+				else info(`\tNo object found for reference '${ref}'`);
 			});
 
-		// Then, if this source has any EXTPROC, add our binder to it
+		// If this source has any EXTPROC, add our binder to it
 		if (cache.procedures.some(proc => proc.keyword[`EXTPROC`] !== undefined)) {
 			target.deps.push(bindingDirectoryTarget);
 		}
@@ -227,9 +240,8 @@ export class Targets {
 		const possibleCommand = this.resolveLocalObjectQuery(`${ileObject.name}.cmd`, sourceName);
 		if (possibleCommand) target.deps.push(this.resolveObject(possibleCommand));
 
-		info(`${ileObject.name}.${ileObject.type}`);
-		info(`\tSource: ${ileObject.relativePath}`);
-		info(`\tDepends on: ${target.deps.map(d => `${d.name}.${d.type}`).join(` `)}`);
+		if (target.deps.length > 0)
+			info(`\tDepends on: ${target.deps.map(d => `${d.name}.${d.type}`).join(` `)}`);
 
 		this.deps.push(target);
 	}
@@ -244,6 +256,8 @@ export class Targets {
 
 		// We can simply check for any modules since we turn them into service programs
 		this.needsBinder = this.deps.some(d => d.type === `MODULE`);
+
+		info(``);
 
 		// Create all the service program targets
 		for (const target of this.deps) {

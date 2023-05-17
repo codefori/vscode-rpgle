@@ -51,7 +51,7 @@
 			"cwd": "${workspaceFolder}/cli/rmake",
 			"program": "${workspaceRoot}/cli/rmake/dist/index.js",
 			"sourceMaps": true,
-			"args": ["-d", "/Users/barry/Downloads/ibmi-company_system", "-l", "EMPS.FILE"],
+			"args": ["-d", "/Users/barry/Downloads/ibmi-company_system", "--verbose"],
 			"preLaunchTask": {
 				"type": "npm",
 				"script": "cli:dev:rmake"

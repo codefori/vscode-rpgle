@@ -7,3 +7,7 @@ export let cliSettings = {
 export function info(message: string) {
 	if (cliSettings.infoMessages) console.log(message);
 }
+
+export function warning(message: string) {
+	console.log(`[WARNING] ${message}`);
+}

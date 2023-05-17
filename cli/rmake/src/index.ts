@@ -56,21 +56,23 @@ async function main() {
 				console.log(`rmake (derived from vscode-rpgle).`);
 				console.log(``);
 				console.log(`See who's contributed: https://github.com/halcyon-tech/vscode-rpgle/graphs/contributors`);
-				console.log();
+				console.log(``);
 				console.log(`rmake is a very simple tool. It looks for .{rpgle,sqlrpgle} sources,`);
 				console.log(`parses them to find dependencies and generates a makefile to be used with GNU Make.`);
-				console.log();
-				console.log(`\t-d`)
-				console.log(`\t--cwd\t\tTo see the directory of where source code lives.`);
+				console.log(``);
+				console.log(`\t-d <dir>`)
+				console.log(`\t--cwd <dir>\tTo see the directory of where source code lives.`);
 				console.log(`\t\t\tThe default is the current working directory.`);
-				console.log();
+				console.log(``);
+				console.log(`\t-l <obj>\tPrint an object and what depends on it.`);
+				console.log(``);
 				console.log(`\t-i`);
 				console.log(`\t--init\t\tAdd default compile options to 'iproj.json' file`);
-				console.log();
+				console.log(``);
 				console.log(`\t--verbose\tPrint all the detail.`);
-				console.log();
+				console.log(``);
 				console.log(`\t--nofile\tDo not create the makefile.`);
-				console.log();
+				console.log(``);
 				process.exit(0);
 		}
 	}
@@ -102,7 +104,7 @@ async function main() {
 				}
 			);
 
-			targets.createTarget(filePath, docs);
+			targets.createRpgTarget(filePath, docs);
 
 		} catch (e) {
 			error(`Failed to parse ${filePath}: ${e.message || e}`);
