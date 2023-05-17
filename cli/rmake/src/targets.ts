@@ -224,7 +224,7 @@ export class Targets {
 		}
 
 		// We also look to see if there is a `.cmd. object with the same name
-		const possibleCommand = this.resolveLocalObjectQuery(ileObject.name, sourceName);
+		const possibleCommand = this.resolveLocalObjectQuery(`${ileObject.name}.cmd`, sourceName);
 		if (possibleCommand) target.deps.push(this.resolveObject(possibleCommand));
 
 		info(`${ileObject.name}.${ileObject.type}`);
