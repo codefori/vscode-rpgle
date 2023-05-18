@@ -129,15 +129,15 @@ export class Targets {
 		info(`\tSource: ${ileObject.relativePath}`);
 
 		if (ileObject.type === `PGM` && cache.keyword[`NOMAIN`]) {
-			warning(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword found.`);
+			warning(`${ileObject.relativePath}: type detected as ${ileObject.type} but NOMAIN keyword found.`);
 		}
 
 		if (ileObject.type === `MODULE` && !cache.keyword[`NOMAIN`]) {
-			warning(`${localPath}: type detected as ${ileObject.type} but NOMAIN keyword was not found. Is it possible the extension should include '.pgm'?`);
+			warning(`${ileObject.relativePath}: type detected as ${ileObject.type} but NOMAIN keyword was not found. Is it possible the extension should include '.pgm'?`);
 		}
 
 		if (cache.keyword[`BNDDIR`]) {
-			warning(`${localPath}: has the BNDDIR keyword. 'binders' property in iproj.json should be used instead.`);
+			warning(`${ileObject.relativePath}: has the BNDDIR keyword. 'binders' property in iproj.json should be used instead.`);
 		}
 
 		// Find external programs
