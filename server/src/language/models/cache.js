@@ -44,7 +44,7 @@ export default class Cache {
     this.includes = cache.includes || [];
 
     /** @type {Declaration[]} */
-    this.cursor = cache.cursor || [];
+    this.cursors = cache.cursors || [];
 
   }
 
