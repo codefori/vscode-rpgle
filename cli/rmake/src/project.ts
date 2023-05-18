@@ -75,7 +75,7 @@ export class Project {
 				srvpgm: {
 					becomes: `SRVPGM`,
 					commands: [
-						`-system -q "CRTBNDDIR BNDDIR($(BNDDIR))"`,
+						`-system -q "CRTBNDDIR BNDDIR($(BIN_LIB)/$*)"`,
 						`-system -q "RMVBNDDIRE BNDDIR($(BIN_LIB)/$*) OBJ($(BIN_LIB)/$* *SRVPGM)"`,
 						`-system "DLTOBJ OBJ($(BIN_LIB)/$*) OBJTYPE(*SRVPGM)"`
 					],
