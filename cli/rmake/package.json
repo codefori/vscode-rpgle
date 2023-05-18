@@ -1,6 +1,6 @@
 {
   "name": "@halcyontech/rmake",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "RPG make tool",
   "bin": {
     "rmake": "./dist/index.js"

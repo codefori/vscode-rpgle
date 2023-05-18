@@ -236,9 +236,12 @@ export class Targets {
 			target.deps.push(bindingDirectoryTarget);
 		}
 
-		// We also look to see if there is a `.cmd. object with the same name
-		const possibleCommand = this.resolveLocalObjectQuery(`${ileObject.name}.cmd`, sourceName);
-		if (possibleCommand) target.deps.push(this.resolveObject(possibleCommand));
+		// We also look to see if there is a `.cmd` object with the same name
+		const possibleCommandPath = this.resolveLocalObjectQuery(`${ileObject.name}.cmd`, sourceName);
+		if (possibleCommandPath) {
+			const resolvedObject = this.resolveObject(possibleCommandPath);
+			if (resolvedObject) this.createOrAppend(resolvedObject, target);
+		}
 
 		if (target.deps.length > 0)
 			info(`\tDepends on: ${target.deps.map(d => `${d.name}.${d.type}`).join(` `)}`);

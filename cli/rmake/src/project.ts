@@ -160,11 +160,14 @@ export class Project {
 	public generateTargets(): string[] {
 		let lines = [];
 
-		const allPrograms = this.targets.getParentObjects(`PGM`);
+		const all = [
+			...this.targets.getParentObjects(`PGM`),
+			...this.targets.getParentObjects(`CMD`)
+		];
 
-		if (allPrograms.length > 0) {
+		if (all.length > 0) {
 			lines.push(
-				`all: ${allPrograms.map(dep => `$(PREPATH)/${dep.name}.${dep.type}`).join(` `)}`,
+				`all: ${all.map(dep => `$(PREPATH)/${dep.name}.${dep.type}`).join(` `)}`,
 				``
 			)
 		}
