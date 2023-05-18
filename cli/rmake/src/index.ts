@@ -190,20 +190,23 @@ function listDeps(targets: Targets, query: string) {
 	let indent = 0;
 	
 	const allDeps = targets.getDeps();
+	let currentTree: ILEObject[] = [];
 
 	function lookupObject(ileObject: ILEObject) {
-		console.log(`${''.padEnd(indent, `\t`)}${ileObject.name}.${ileObject.type} (${ileObject.relativePath || `no source`})`);
-		indent++;
+		console.log(`${''.padEnd(currentTree.length, `\t`)}${ileObject.name}.${ileObject.type} (${ileObject.relativePath || `no source`})`);
+
+		currentTree.push(ileObject);
 
 		for (const target of allDeps) {
 			const containsLookup = target.deps.some(d => d.name === ileObject.name && d.type === ileObject.type);
+			const circurlar = currentTree.some(d => d.name === target.name && d.type === target.type);
 
-			if (containsLookup) {
+			if (containsLookup && !circurlar) {
 				lookupObject(target);
 			}
 		}
 
-		indent--;
+		currentTree.pop();
 	}
 
 	lookupObject(theObject);
