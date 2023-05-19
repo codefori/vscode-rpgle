@@ -227,6 +227,7 @@ export class Project {
 						const qsysTempName: string | undefined = (parentName && parentName.length > 10 ? parentName.substring(0, 10) : parentName);
 
 						const resolve = (command: string) => {
+							command = command.replace(new RegExp(`\\*CURLIB`, `g`), `$(BIN_LIB)`);
 							command = command.replace(new RegExp(`\\$\\*`, `g`), ileObject.name);
 							command = command.replace(new RegExp(`\\$<`, `g`), ileObject.relativePath);
 							command = command.replace(new RegExp(`\\$\\(SRCPF\\)`, `g`), qsysTempName);
