@@ -43,19 +43,6 @@
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}
-		},
-		{
-			"name": "Debug rmake",
-			"type": "node",
-			"request": "launch",
-			"cwd": "${workspaceFolder}/cli/rmake",
-			"program": "${workspaceRoot}/cli/rmake/dist/index.js",
-			"sourceMaps": true,
-			"args": ["-d", "/Users/barry/Downloads/ibmi-company_system", "--verbose"],
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "cli:dev:rmake"
-			},
-		},
+		}
 	]
 }

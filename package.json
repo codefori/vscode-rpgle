@@ -85,7 +85,6 @@
 		"watch": "tsc -b -w",
 		"lint": "eslint ./extension/client/src ./extension/server/src --ext .ts,.tsx",
 		"postinstall": "cd extension/client && npm install && cd ../server && npm install && cd ../..",
-		"cli:dev:rmake": "cd cli/rmake && npm run webpack:dev",
 		"cli:dev:rpglint": "cd cli/rpglint && npm run webpack:dev"
 	},
 	"devDependencies": {
