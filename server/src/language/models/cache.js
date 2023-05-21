@@ -63,7 +63,7 @@ export default class Cache {
         structs: [...this.structs, ...second.structs],
         constants: [...this.constants, ...second.constants],
         indicators: [...this.indicators, ...second.indicators],
-        cursor: [...this.cursor, ...second.cursor]
+        cursors: [...this.cursors, ...second.cursors]
       });
     } else {
       return this;
@@ -84,7 +84,7 @@ export default class Cache {
       ...this.subroutines.map(def => def.name),
       ...this.variables.map(def => def.name),
       ...this.structs.map(def => def.name),
-      ...this.cursor.map(def => def.name),
+      ...this.cursors.map(def => def.name),
     ].filter(name => name);
   }
 
@@ -100,7 +100,7 @@ export default class Cache {
       this.variables.filter(d => d.position.path === fsPath).pop(),
       this.constants.filter(d => d.position.path === fsPath).pop(),
       this.files.filter(d => d.position.path === fsPath).pop(),
-      this.cursor.filter(d => d.position.path === fsPath).pop()
+      this.cursors.filter(d => d.position.path === fsPath).pop()
     ].filter(d => d !== undefined);
 
     const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.line).sort((a, b) => b - a);
@@ -127,7 +127,7 @@ export default class Cache {
       ...this.subroutines.filter(def => def.name.toUpperCase() === name),
       ...this.variables.filter(def => def.name.toUpperCase() === name),
       ...this.indicators.filter(def => def.name.toUpperCase() === name),
-      ...this.cursor.filter(def => def.name.toUpperCase() === name),
+      ...this.cursors.filter(def => def.name.toUpperCase() === name),
     ];
 
     if (allStructs.length > 0 && possibles.length === 0) {
@@ -144,7 +144,7 @@ export default class Cache {
   }
 
   clearReferences() {
-    [...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs, ...this.cursor].forEach(def => {
+    [...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs, ...this.cursors].forEach(def => {
       def.references = [];
     });
 

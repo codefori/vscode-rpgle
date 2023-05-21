@@ -1069,6 +1069,6 @@ exports.fixedfree2 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
-  assert.strictEqual(cache.cursor.length, 1);
-  assert.strictEqual(cache.cursor[0].name, `C1`);
+  assert.strictEqual(cache.cursors.length, 1);
+  assert.strictEqual(cache.cursors[0].name, `C1`);
 };
