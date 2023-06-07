@@ -2,11 +2,19 @@ import { ExtensionContext, Range, SnippetString, TextDocument, commands, window 
 
 export function initialise(context: ExtensionContext) {
 	context.subscriptions.push(
-		commands.registerCommand("vscode-rpgle.surroundWithMonitor", surroundWithMonitor)
+		commands.registerCommand("vscode-rpgle.surroundWithMonitor", () => surroundWithSnippet(lines => [
+			"",
+			"monitor;",
+			...lines,
+			"on-excp '$1';",
+			"on-error$2;",
+			"endmon;",
+			""
+		]))
 	);
 }
 
-function surroundWithMonitor() {
+function surroundWithSnippet(snippetProvider: (lines: string[]) => string[]) {
 	const editor = window.activeTextEditor;
 	if (editor) {
 		const document = editor.document;
@@ -31,17 +39,10 @@ function surroundWithMonitor() {
 				}
 			}
 
-			editor.insertSnippet(new SnippetString([
-				"",
-				"monitor;",
-				...lines,
-				"on-excp '$1';",
-				"on-error$2;",
-				"endmon;",
-				""
-			].join("\n")), new Range(startLine, document.lineAt(startLine).firstNonWhitespaceCharacterIndex, line-1, 9999));
+			editor.insertSnippet(new SnippetString(snippetProvider(lines).join("\n")),
+				new Range(startLine, document.lineAt(startLine).firstNonWhitespaceCharacterIndex, line - 1, 9999));
 		}
-		else{
+		else {
 			window.showWarningMessage("Selection is not valid Free RPGLE code");
 		}
 	}
