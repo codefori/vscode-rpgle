@@ -4,10 +4,10 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, Uri, commands, RelativePattern } from 'vscode';
+import { ExtensionContext, workspace } from 'vscode';
 
-import * as Linter from "./linter";
 import * as columnAssist from "./columnAssist";
+import * as Linter from "./linter";
 
 
 import {
@@ -18,6 +18,7 @@ import {
 } from 'vscode-languageclient/node';
 
 import { projectFilesGlob } from './configuration';
+import { initialise as initialiseEditorCommands } from './editor';
 import buildRequestHandlers from './requests';
 
 let client: LanguageClient;
@@ -74,7 +75,7 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
-
+	initialiseEditorCommands(context);
 	// context.subscriptions.push(...initBuilder(client));
 
 	console.log(`started`);

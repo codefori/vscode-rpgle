@@ -17,7 +17,11 @@
 		"vscode": "^1.70.0"
 	},
 	"keywords": [
-		"rpg", "rpgle", "ibmi", "iseries", "as400"
+		"rpg",
+		"rpgle",
+		"ibmi",
+		"iseries",
+		"as400"
 	],
 	"categories": [
 		"Programming Languages",
@@ -58,14 +62,43 @@
 				"command": "vscode-rpgle.openLintConfig",
 				"title": "Open RPGLE lint configuration",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.surroundWithMonitor",
+				"title": "Surround with monitor",
+				"category": "RPGLE"
+			}
+		],
+		"submenus": [
+			{
+				"id": "vscode-rpgle.editor.menu",
+				"label": "RPGLE"
 			}
 		],
 		"menus": {
+			"vscode-rpgle.editor.menu": [
+				{
+					"command": "vscode-rpgle.surroundWithMonitor"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "vscode-rpgle.surroundWithMonitor",
+					"when": "editorLangId === rpgle"
+				}
+			],
 			"view/item/context": [
 				{
 					"command": "vscode-rpgle.openLintConfig",
 					"when": "view == objectBrowser && viewItem == filter",
 					"group": "1_LibActions@2"
+				}
+			],
+			"editor/context": [
+				{
+					"submenu": "vscode-rpgle.editor.menu",
+					"when": "editorLangId === rpgle",
+					"group": "01_rpgleActions@01"
 				}
 			]
 		}
