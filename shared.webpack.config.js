@@ -31,12 +31,7 @@ module.exports = function withDefaults(/**@type WebpackConfig*/extConfig) {
         use: [{
           // configure TypeScript loader:
           // * enable sources maps for end-to-end source maps
-          loader: `ts-loader`,
-          options: {
-            compilerOptions: {
-              "sourceMap": true,
-            }
-          }
+          loader: `esbuild-loader`
         }]
       }]
     },

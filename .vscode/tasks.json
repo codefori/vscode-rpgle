@@ -9,9 +9,7 @@
 				"panel": "dedicated",
 				"reveal": "never"
 			},
-			"problemMatcher": [
-				"$tsc"
-			]
+			"problemMatcher": "$ts-webpack-watch"
 		}
 	]
 }
