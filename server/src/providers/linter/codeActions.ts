@@ -1,5 +1,5 @@
 import { CodeAction, CodeActionParams, Range } from 'vscode-languageserver';
-import { getActions, refreshDiagnostics } from '.';
+import { getActions, refreshLinterDiagnostics } from '.';
 import { documents, parser } from '..';
 
 export default async function codeActionsProvider(params: CodeActionParams): Promise<CodeAction[]|undefined> {
@@ -13,7 +13,7 @@ export default async function codeActionsProvider(params: CodeActionParams): Pro
 			const docs = await parser.getDocs(document.uri);
 
 			if (docs) {
-				const detail = await refreshDiagnostics(document, docs, false);
+				const detail = await refreshLinterDiagnostics(document, docs, false);
 				if (detail) {
 					const fixErrors = detail.errors.filter(error => range.start.line === error.range.start.line );
 
