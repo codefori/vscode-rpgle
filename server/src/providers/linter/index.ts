@@ -19,6 +19,7 @@ export function initialise(connection: _Connection) {
 	connection.onCodeAction(codeActionsProvider);
 	connection.onDocumentFormatting(documentFormattingProvider);
 
+	// This only works for local workspace files
 	watchedFilesChangeEvent.push((params: DidChangeWatchedFilesParams) => {
 		let runLinter = false;
 
@@ -32,6 +33,8 @@ export function initialise(connection: _Connection) {
 				if (validKey && jsonCache[validKey]) {
 					delete jsonCache[validKey];
 				}
+
+				boundLintConfig = {};
 
 				runLinter = true;
 			}
@@ -49,7 +52,7 @@ export function initialise(connection: _Connection) {
 						}
 					).then(cache => {
 						if (cache) {
-							refreshDiagnostics(document, cache);
+							refreshLinterDiagnostics(document, cache);
 						}
 					});
 				}
@@ -58,12 +61,16 @@ export function initialise(connection: _Connection) {
 	});
 
 	documents.onDidOpen(async e => {
-		const uri = e.document.uri;
+		const uriString = e.document.uri;
 
-		const possibleUri = await getLintConfigUri(uri);
+		const uri = URI.parse(uriString);
 
-		if (possibleUri && jsonCache[possibleUri]) {
-			delete jsonCache[possibleUri];
+		// If we open a new RPGLE file that is remote
+		// we need to refresh the lint config so we can 
+		// make sure it's the latest.
+		if ([`member`, `streamfile`].includes(uri.scheme)) {
+			boundLintConfig = {};
+			jsonCache = {}
 		}
 	})
 }
@@ -83,9 +90,22 @@ export function calculateOffset(document: TextDocument, error: IssueRange) {
 	}
 };
 
+enum ResolvedState {
+	Found,
+	NotFound
+};
+
+let boundLintConfig: {[workingUri: string]: {resolved: ResolvedState, uri: string}} = {};
+
 export async function getLintConfigUri(workingUri: string) {
 	const uri = URI.parse(workingUri);
 	let cleanString: string | undefined;
+
+	const cached = boundLintConfig[workingUri];
+
+	if (cached) {
+		return cached.resolved === ResolvedState.Found ? cached.uri : undefined;
+	}
 
 	switch (uri.scheme) {
 		case `member`:
@@ -123,6 +143,18 @@ export async function getLintConfigUri(workingUri: string) {
 			break;
 	}
 
+	if (cleanString) {
+		boundLintConfig[workingUri] = {
+			resolved: ResolvedState.Found,
+			uri: cleanString
+		}
+	} else {
+		boundLintConfig[workingUri] = {
+			resolved: ResolvedState.NotFound,
+			uri: ``
+		};
+	}
+
 	return cleanString;
 }
 
@@ -150,7 +182,7 @@ export async function getLintOptions(workingUri: string) {
 	return result;
 }
 
-export async function refreshDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
+export async function refreshLinterDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 	if (isFree) {
 		const text = document.getText();
