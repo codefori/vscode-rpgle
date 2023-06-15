@@ -239,7 +239,7 @@ documents.onDidChangeContent(handler => {
 		}
 	).then(cache => {
 		if (cache) {
-			Linter.refreshDiagnostics(handler.document, cache);
+			Linter.refreshLinterDiagnostics(handler.document, cache);
 		}
 	});
 });

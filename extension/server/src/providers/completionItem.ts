@@ -58,18 +58,12 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 				// Ok, we have a 'preWord' (the name of the struct?)
 				if (preWord) {
-					let possibleStruct: Declaration | undefined;
-
-					if (currentProcedure && currentProcedure.scope) {
-						const procScope = currentProcedure.scope;
-
-						// Look at the parms or existing structs to find a possible reference
-						possibleStruct = [
-							procScope.parameters.find(parm => parm.name.toUpperCase() === preWord && parm.subItems.length > 0),
-							procScope.structs.find(struct => struct.name.toUpperCase() === preWord),
-							doc.structs.find(struct => struct.name.toUpperCase() === preWord)
-						].find(x => x); // find the first non-undefined item
-					}
+					// Look at the parms or existing structs to find a possible reference
+					const possibleStruct: Declaration | undefined = [
+						currentProcedure && currentProcedure.scope ? currentProcedure.scope.parameters.find(parm => parm.name.toUpperCase() === preWord && parm.subItems.length > 0) : undefined,
+						currentProcedure && currentProcedure.scope ? currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === preWord) : undefined,
+						doc.structs.find(struct => struct.name.toUpperCase() === preWord)
+					].find(x => x); // find the first non-undefined item
 
 					if (possibleStruct && possibleStruct.keyword[`QUALIFIED`]) {
 						items.push(...possibleStruct.subItems.map(subItem => {
