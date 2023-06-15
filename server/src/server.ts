@@ -117,7 +117,9 @@ parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration
 	const data = await getObjectData(table);
 
 	return dspffdToRecordFormats(data, aliases);
-})
+});
+
+let fetchingInProgress: { [fetchKey: string]: boolean } = {};
 
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
@@ -126,111 +128,120 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
 
-	// Right now we are resolving based on the base file schema.
-	// This is likely bad since you can include across file systems.
+	if (!fetchingInProgress[includeString]) {
+		fetchingInProgress[includeString] = true;
 
-	switch (currentUri.scheme) {
-		case `member`:
-			const memberPath = uriPath.startsWith(`/`) ? uriPath.substring(1).split(`/`) : uriPath.split(`/`);
+		// Right now we are resolving based on the base file schema.
+		// This is likely bad since you can include across file systems.
 
-			if (includeString.startsWith(`'`) && includeString.endsWith(`'`)) {
-				// IFS fetch
-				cleanString = includeString.substring(1, includeString.length - 1);
-				// TODO:....
+		switch (currentUri.scheme) {
+			case `member`:
+				const memberPath = uriPath.startsWith(`/`) ? uriPath.substring(1).split(`/`) : uriPath.split(`/`);
 
-			} else {
-
-				// Member fetch
-				// Split by /,
-				const parts = includeString.split(`/`).map(s => s.split(`,`)).flat();
-
-				let possibleAsp = memberPath[memberPath.length - 4];
-				let baseLibrary = parts[parts.length - 3];
-				let baseFile = parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`;
-				let baseMember = parts[parts.length - 1];
-
-				if (baseLibrary) {
-					cleanString = [
-						``,
-						...(possibleAsp ? [possibleAsp] : []),
-						parts[parts.length - 3] ? parts[parts.length - 3] : baseLibrary,
-						parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`,
-						parts[parts.length - 1] + `.rpgleinc`
-					].join(`/`);
-
-					cleanString = URI.from({
-						scheme: `member`,
-						path: cleanString
-					}).toString();
-
-					validUri = await validateUri(cleanString, currentUri.scheme);
+				if (includeString.startsWith(`'`) && includeString.endsWith(`'`)) {
+					// IFS fetch
+					cleanString = includeString.substring(1, includeString.length - 1);
+					// TODO:....
 
 				} else {
-					// No base library provided, let's do a resolve
 
-					const foundMember = await memberResolve(stringUri, baseMember, baseFile);
+					// Member fetch
+					// Split by /,
+					const parts = includeString.split(`/`).map(s => s.split(`,`)).flat();
 
-					if (foundMember) {
+					let possibleAsp = memberPath[memberPath.length - 4];
+					let baseLibrary = parts[parts.length - 3];
+					let baseFile = parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`;
+					let baseMember = parts[parts.length - 1];
+
+					if (baseLibrary) {
 						cleanString = [
 							``,
 							...(possibleAsp ? [possibleAsp] : []),
-							foundMember.library,
-							foundMember.file,
-							foundMember.name + `.rpgleinc`
+							parts[parts.length - 3] ? parts[parts.length - 3] : baseLibrary,
+							parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`,
+							parts[parts.length - 1] + `.rpgleinc`
 						].join(`/`);
-	
-						validUri = URI.from({
+
+						cleanString = URI.from({
 							scheme: `member`,
 							path: cleanString
 						}).toString();
+
+						validUri = await validateUri(cleanString, currentUri.scheme);
+
+					} else {
+						// No base library provided, let's do a resolve
+
+						const foundMember = await memberResolve(stringUri, baseMember, baseFile);
+
+						if (foundMember) {
+							cleanString = [
+								``,
+								...(possibleAsp ? [possibleAsp] : []),
+								foundMember.library,
+								foundMember.file,
+								foundMember.name + `.rpgleinc`
+							].join(`/`);
+
+							validUri = URI.from({
+								scheme: `member`,
+								path: cleanString
+							}).toString();
+						}
 					}
 				}
-			}
-			break;
+				break;
 
-		case `file`:
-			const workspaceFolders = await connection.workspace.getWorkspaceFolders();
-			let workspaceFolder: WorkspaceFolder | undefined;
-			if (workspaceFolders) {
-				workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).path))
-			}
-
-			cleanString = includeString;
-
-			if (cleanString.startsWith(`'`) && cleanString.endsWith(`'`)) {
-				cleanString = cleanString.substring(1, cleanString.length - 1);
-			}
-
-			if (Project.isEnabled) {
-				// Project mode is enable. Let's do a search for the path.
-				validUri = await validateUri(cleanString, currentUri.scheme);
-
-			} else {
-				// Because project mode is disabled, likely due to the large workspace, we don't search
-				if (workspaceFolder) {
-					cleanString = path.posix.join(URI.parse(workspaceFolder.uri).path, cleanString)
+			case `file`:
+				const workspaceFolders = await connection.workspace.getWorkspaceFolders();
+				let workspaceFolder: WorkspaceFolder | undefined;
+				if (workspaceFolders) {
+					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).path))
 				}
 
-				validUri = existsSync(cleanString) ? 
-					URI.from({
-						scheme: currentUri.scheme,
-						path: cleanString
-					}).toString()
-				: undefined;
-			}
-			break;
-	}
+				cleanString = includeString;
 
-	if (validUri) {
-		const validSource = await getFileRequest(validUri);
-		if (validSource) {
-			return {
-				found: true,
-				uri: validUri,
-				lines: validSource.split(`\n`)
-			};
+				if (cleanString.startsWith(`'`) && cleanString.endsWith(`'`)) {
+					cleanString = cleanString.substring(1, cleanString.length - 1);
+				}
+
+				if (Project.isEnabled) {
+					// Project mode is enable. Let's do a search for the path.
+					validUri = await validateUri(cleanString, currentUri.scheme);
+
+				} else {
+					// Because project mode is disabled, likely due to the large workspace, we don't search
+					if (workspaceFolder) {
+						cleanString = path.posix.join(URI.parse(workspaceFolder.uri).path, cleanString)
+					}
+
+					validUri = existsSync(cleanString) ?
+						URI.from({
+							scheme: currentUri.scheme,
+							path: cleanString
+						}).toString()
+						: undefined;
+				}
+				break;
 		}
+
+		fetchingInProgress[includeString] = false;
+
+		if (validUri) {
+			const validSource = await getFileRequest(validUri);
+			if (validSource) {
+				return {
+					found: true,
+					uri: validUri,
+					lines: validSource.split(`\n`)
+				};
+			}
+		}
+
 	}
+	
+	fetchingInProgress[includeString] = false;
 
 	return {
 		found: false,
