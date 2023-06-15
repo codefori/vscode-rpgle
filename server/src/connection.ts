@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises';
+import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
 
 import {
 	createConnection,
@@ -7,8 +7,6 @@ import {
 	_Connection,
 	WorkspaceFolder
 } from 'vscode-languageserver/node';
-import { URI } from 'vscode-uri';
-
 
 import { documents, findFile } from './providers';
 
@@ -50,6 +48,23 @@ export async function getFileRequest(uri: string) {
 	}
 
 	return;
+}
+
+export let resolveCache: {[baseUri: string]: {[fileKey: string]: IBMiMember}} = {};
+
+export async function memberResolve(baseUri: string, member: string, file: string): Promise<IBMiMember|undefined> {
+	const fileKey = file+member;
+
+	if (resolveCache[baseUri] && resolveCache[baseUri][fileKey]) return resolveCache[baseUri][fileKey];
+
+	const resolvedMember = await connection.sendRequest("memberResolve", [member, file]) as IBMiMember|undefined;
+
+	if (resolvedMember) {
+		if (!resolveCache[baseUri]) resolveCache[baseUri] = {};
+		resolveCache[baseUri][fileKey] = resolvedMember;
+	}
+
+	return resolvedMember;
 }
 
 export function getWorkingDirectory(): Promise<string|undefined> {

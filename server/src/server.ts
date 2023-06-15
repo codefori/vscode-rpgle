@@ -17,7 +17,7 @@ import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, getFileRequest, getObject as getObjectData, validateUri } from "./connection";
+import { connection, getFileRequest, getObject as getObjectData, memberResolve, validateUri } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from './language/models/declaration';
@@ -126,16 +126,12 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
 
+	// Right now we are resolving based on the base file schema.
+	// This is likely bad since you can include across file systems.
+
 	switch (currentUri.scheme) {
 		case `member`:
-			let possibleAsp = undefined;
-			let baseLibrary = `QSYSINC`;
 			const memberPath = uriPath.startsWith(`/`) ? uriPath.substring(1).split(`/`) : uriPath.split(`/`);
-
-			// if (path.length > 0) result.basename = path[path.length - 1];
-			// if (path.length > 1) result.file = path[path.length - 2];
-			if (memberPath.length > 2) baseLibrary = memberPath[memberPath.length - 3];
-			if (memberPath.length > 3) possibleAsp = memberPath[memberPath.length - 4];
 
 			if (includeString.startsWith(`'`) && includeString.endsWith(`'`)) {
 				// IFS fetch
@@ -147,20 +143,49 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// Member fetch
 				// Split by /,
 				const parts = includeString.split(`/`).map(s => s.split(`,`)).flat();
-				cleanString = [
-					``,
-					...(possibleAsp ? [possibleAsp] : []),
-					parts[parts.length - 3] ? parts[parts.length - 3] : baseLibrary,
-					parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`,
-					parts[parts.length - 1] + `.rpgleinc`
-				].join(`/`);
 
-				cleanString = URI.from({
-					scheme: `member`,
-					path: cleanString
-				}).toString();
+				let possibleAsp = memberPath[memberPath.length - 4];
+				let baseLibrary = parts[parts.length - 3];
+				let baseFile = parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`;
+				let baseMember = parts[parts.length - 1];
+
+				if (baseLibrary) {
+					cleanString = [
+						``,
+						...(possibleAsp ? [possibleAsp] : []),
+						parts[parts.length - 3] ? parts[parts.length - 3] : baseLibrary,
+						parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`,
+						parts[parts.length - 1] + `.rpgleinc`
+					].join(`/`);
+
+					cleanString = URI.from({
+						scheme: `member`,
+						path: cleanString
+					}).toString();
+
+					validUri = await validateUri(cleanString, currentUri.scheme);
+
+				} else {
+					// No base library provided, let's do a resolve
+
+					const foundMember = await memberResolve(stringUri, baseMember, baseFile);
+
+					if (foundMember) {
+						cleanString = [
+							``,
+							...(possibleAsp ? [possibleAsp] : []),
+							foundMember.library,
+							foundMember.file,
+							foundMember.name + `.rpgleinc`
+						].join(`/`);
+	
+						validUri = URI.from({
+							scheme: `member`,
+							path: cleanString
+						}).toString();
+					}
+				}
 			}
-			validUri = await validateUri(cleanString, currentUri.scheme);
 			break;
 
 		case `file`:
