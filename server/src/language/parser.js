@@ -47,8 +47,8 @@ export default class Parser {
   }
 
   /**
-	 * @param {includeFilePromise} promise 
-	 */
+   * @param {includeFilePromise} promise 
+   */
   setIncludeFileFetch(promise) {
     this.includeFileFetch = promise;
   }
@@ -121,9 +121,9 @@ export default class Parser {
   }
 
   /**
-	 * @param {string} line 
-	 * @returns {string|undefined}
-	 */
+   * @param {string} line 
+   * @returns {string|undefined}
+   */
   static getIncludeFromDirective(line) {
     const linePieces = line.trim().split(` `);
     const copyIndex = linePieces.findIndex(piece => {
@@ -132,8 +132,8 @@ export default class Parser {
       return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
     });
 
-    if (copyIndex >= 0 && linePieces[copyIndex+1]) {
-      return linePieces[copyIndex+1];
+    if (copyIndex >= 0 && linePieces[copyIndex + 1]) {
+      return linePieces[copyIndex + 1];
     }
   }
 
@@ -143,7 +143,7 @@ export default class Parser {
    * @param {{withIncludes?: boolean, ignoreCache?: boolean}} options
    * @returns {Promise<Cache|null>}
    */
-  async getDocs(workingUri, content, options = {withIncludes: true}) {
+  async getDocs(workingUri, content, options = { withIncludes: true }) {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       return existingCache;
@@ -165,6 +165,8 @@ export default class Parser {
     /** @type {Declaration} */
     let currentSub;
     let currentProcName;
+    /** @type {Declaration} */
+    let currentCursor;
 
     let resetDefinition = false; //Set to true when you're done defining a new item
     let docs = false; // If section is for ILEDocs
@@ -192,12 +194,12 @@ export default class Parser {
       let objectName = defaultName;
       const extObjKeywords = [`EXTFILE`];
       const extObjKeywordsDesc = [`EXTDESC`];
-            
+
       // Check for external object
       extObjKeywords.forEach(keyword => {
         const keywordValue = keywords.find(part => part.startsWith(`${keyword}(`) && part.endsWith(`)`));
         if (keywordValue) {
-          objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
+          objectName = keywordValue.substring(keyword.length + 1, keywordValue.length - 1).toUpperCase();
 
           if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
             objectName = objectName.substring(1, objectName.length - 1);
@@ -205,12 +207,12 @@ export default class Parser {
         }
       });
 
-      if(objectName === `*EXTDESC`){
+      if (objectName === `*EXTDESC`) {
         // Check for external object
         extObjKeywordsDesc.forEach(keyword => {
           const keywordValue = keywords.find(part => part.startsWith(`${keyword}(`) && part.endsWith(`)`));
           if (keywordValue) {
-            objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
+            objectName = keywordValue.substring(keyword.length + 1, keywordValue.length - 1).toUpperCase();
 
             if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
               objectName = objectName.substring(1, objectName.length - 1);
@@ -232,7 +234,7 @@ export default class Parser {
       for (const tag of tags) {
         const keyword = ds.keywords.find(keyword => keyword.startsWith(`${tag}(`) && keyword.endsWith(`)`));
         if (keyword) {
-          let keywordValue = keyword.substring(tag.length+1, keyword.length - 1).toUpperCase();
+          let keywordValue = keyword.substring(tag.length + 1, keyword.length - 1).toUpperCase();
 
           if (keywordValue.includes(`:`)) {
             const parms = keywordValue.split(`:`).filter(part => part.trim().startsWith(`*`) === false);
@@ -276,7 +278,7 @@ export default class Parser {
               const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
               if (valuePointer) {
                 ds.subItems = valuePointer.subItems;
-    
+
                 // We need to add qualified as it is qualified by default.
                 if (!ds.keywords.includes(`QUALIFIED`))
                   ds.keywords.push(`QUALIFIED`);
@@ -289,7 +291,7 @@ export default class Parser {
     };
 
     if (options.withIncludes && this.includeFileFetch) {
-    //First loop is for copy/include statements
+      //First loop is for copy/include statements
       for (let i = baseLines.length - 1; i >= 0; i--) {
         let line = baseLines[i].trim(); //Paths are case insensitive so it's okay
         if (line === ``) continue;
@@ -304,8 +306,8 @@ export default class Parser {
           return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
         });
 
-        if (copyIndex >= 0 && pieces[copyIndex+1]) {
-          const include = await this.includeFileFetch(workingUri, pieces[copyIndex+1]);
+        if (copyIndex >= 0 && pieces[copyIndex + 1]) {
+          const include = await this.includeFileFetch(workingUri, pieces[copyIndex + 1]);
           if (include.found) {
             files[include.uri] = include.lines;
             scopes[0].includes.push({
@@ -369,7 +371,7 @@ export default class Parser {
             lineIsFree = true;
           } else {
             if (spec === ` `) {
-            //Clear out stupid comments
+              //Clear out stupid comments
               line = line.substring(7);
 
               lineIsFree = true;
@@ -380,7 +382,7 @@ export default class Parser {
                 // We don't want to waste precious time parsing all C specs, so we make sure it's got
                 // BEGSR or ENDSR in it first.
                 const upperLine = line.toUpperCase();
-                if ([`BEGSR`, `ENDSR`].some(v => upperLine.includes(v)) === false) {
+                if ([`BEGSR`, `ENDSR`, `CURSOR`].some(v => upperLine.includes(v)) === false) {
                   continue;
                 }
               }
@@ -395,7 +397,7 @@ export default class Parser {
 
         pieces = [];
         parts = [];
-        
+
         if (isFullyFree || lineIsFree) {
           // Free format!
           line = line.trim();
@@ -451,7 +453,7 @@ export default class Parser {
             } else if (!line.endsWith(`;`)) {
 
               currentStatement = (currentStatement || ``) + line.trim();
-              if (currentStatement.endsWith(`-`)) 
+              if (currentStatement.endsWith(`-`))
                 currentStatement = currentStatement.substring(0, currentStatement.length - 1);
               else
                 currentStatement += ` `;
@@ -486,8 +488,8 @@ export default class Parser {
                     prefix = element.trim().substring(7, element.indexOf(`)`))
                     return true;
                   }
-                });	
-          
+                });
+
                 const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
 
                 if (recordFormats.length > 0) {
@@ -502,7 +504,7 @@ export default class Parser {
 
                     recordFormat.subItems.forEach(subItem => {
                       // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
-                      if(prefix) {
+                      if (prefix) {
                         subItem.name = prefix + subItem.name;
                       }
                       subItem.position = currentItem.position;
@@ -610,7 +612,7 @@ export default class Parser {
               dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
             }
             break;
-        
+
           case `DCL-PR`:
             if (currentItem === undefined) {
               if (parts.length > 1) {
@@ -661,11 +663,11 @@ export default class Parser {
               resetDefinition = true;
             }
             break;
-        
+
           case `DCL-PROC`:
             if (parts.length > 1) {
-            //We can overwrite it.. it might have been a PR before.
-            // eslint-disable-next-line no-case-declarations
+              //We can overwrite it.. it might have been a PR before.
+              // eslint-disable-next-line no-case-declarations
               const existingProc = scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === parts[1]);
 
               // We found the PR... so we can overwrite it
@@ -710,7 +712,7 @@ export default class Parser {
                 if (currentItem) {
 
                   // Indicates that the PI starts and ends on the same line
-                  if (endInline >= 0) { 
+                  if (endInline >= 0) {
                     parts.splice(endInline, 1);
                     currentItem.readParms = false;
                     resetDefinition = true;
@@ -770,7 +772,7 @@ export default class Parser {
               }
             }
             break;
-    
+
           case `ENDSR`:
             if (currentItem && currentItem.type === `subroutine`) {
               currentItem.range.end = statementStartingLine;
@@ -779,9 +781,33 @@ export default class Parser {
             }
             break;
 
+          case `EXEC`:
+            if (parts[1] === `SQL`) {
+              const indexDeclare = parts.findIndex(el => el === `DECLARE`);
+              const indexCursor = parts.findIndex(el => el === `CURSOR`);
+              let indexCursorName = 0;
+              if (indexCursor - 1 == indexDeclare + 1) {
+                indexCursorName = indexCursor - 1;
+              }
+              if (currentCursor === undefined
+                  && indexDeclare >= 0
+                  && indexCursor >= 0) {
+                currentCursor = new Declaration(`cursor`);
+                currentCursor.name = parts[indexCursorName];
+                currentCursor.position = {
+                  path: file,
+                  line: statementStartingLine
+                };
+
+                scope.cursors.push(currentCursor);
+                currentCursor = undefined;
+              }
+            }
+            break;
+
           case `///`:
             docs = !docs;
-          
+
             // When enabled
             if (docs === true) {
               currentTitle = undefined;
@@ -816,7 +842,7 @@ export default class Parser {
                 }
 
               } else {
-              //Do nothing because it's a regular comment
+                //Do nothing because it's a regular comment
               }
 
             } else {
@@ -835,7 +861,7 @@ export default class Parser {
                   }
 
                   currentSub = new Declaration(`subitem`);
-                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;
+                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length + 1}` : partsLower[0]);
                   currentSub.keywords = parts.slice(1);
 
                   currentSub.position = {
@@ -893,15 +919,15 @@ export default class Parser {
                 path: file,
                 line: lineNumber
               };
-			  
-			        let prefix = ``;
+
+              let prefix = ``;
 
               fSpec.keywords.find(element => {
                 if (element.toUpperCase().includes(`PREFIX`)) {
                   prefix = element.substring(7, element.indexOf(`)`))
                   return true;
                 }
-              });				 
+              });
 
               const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
@@ -916,10 +942,10 @@ export default class Parser {
                   recordFormat.position = currentItem.position;
 
                   recordFormat.subItems.forEach(subItem => {
-					          // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
-                    if(prefix) {
+                    // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
+                    if (prefix) {
                       subItem.name = prefix.toUpperCase() + subItem.name;
-                    }					 
+                    }
                     subItem.position = currentItem.position;
                   });
                 });
@@ -930,45 +956,70 @@ export default class Parser {
 
               scope.files.push(currentItem);
             }
-            
+
             resetDefinition = true;
             break;
 
           case `C`:
-            const cSpec = parseCLine(line);
-
-            potentialName = cSpec.factor1;
-
-            switch (cSpec.opcode) {
-            case `BEGSR`:
-              if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
-                currentItem = new Declaration(`subroutine`);
-                currentItem.name = potentialName;
-                currentItem.keywords = [`Subroutine`];
-  
-                currentItem.position = {
+            if (line.substring(5, 7) === `C+`) {
+              pieces = line.split(`;`);
+              parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
+              const indexDeclare = parts.findIndex(el => el === `DECLARE`);
+              const indexCursor = parts.findIndex(el => el === `CURSOR`);
+              let indexCursorName = 0;
+              if (indexCursor - 1 == indexDeclare + 1) {
+                indexCursorName = indexCursor - 1;
+              }
+              if (currentCursor === undefined
+                  && indexDeclare >= 0
+                  && indexCursor >= 0) {
+                currentCursor = new Declaration(`cursor`);
+                currentCursor.name = parts[indexCursorName];
+                currentCursor.position = {
                   path: file,
                   line: lineNumber
                 };
-  
-                currentItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
-                };
-  
-                currentDescription = [];
+
+                scope.cursors.push(currentCursor);
+                currentCursor = undefined;
               }
-              break;
-            case `ENDSR`:
-              if (currentItem && currentItem.type === `subroutine`) {
-                currentItem.range.end = lineNumber;
-                scope.subroutines.push(currentItem);
-                resetDefinition = true;
+            } else {
+              const cSpec = parseCLine(line);
+
+              potentialName = cSpec.factor1;
+
+              switch (cSpec.opcode) {
+              case `BEGSR`:
+                if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
+                  currentItem = new Declaration(`subroutine`);
+                  currentItem.name = potentialName;
+                  currentItem.keywords = [`Subroutine`];
+
+                  currentItem.position = {
+                    path: file,
+                    line: lineNumber
+                  };
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  currentDescription = [];
+                }
+                break;
+              case `ENDSR`:
+                if (currentItem && currentItem.type === `subroutine`) {
+                  currentItem.range.end = lineNumber;
+                  scope.subroutines.push(currentItem);
+                  resetDefinition = true;
+                }
+                break;
               }
-              break;
             }
 
             break;
+
           case `P`:
             const pSpec = parsePLine(line);
 
@@ -1041,13 +1092,13 @@ export default class Parser {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = potentialName || `*N`;
                 currentItem.keywords = [...dSpec.keywords];
-                  
+
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: file,
                   line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 };
-    
+
                 scope.constants.push(currentItem);
                 resetDefinition = true;
                 break;
@@ -1094,7 +1145,7 @@ export default class Parser {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = potentialName || `*N`;
                   currentItem.keywords = [getPrettyType(dSpec), ...dSpec.keywords];
-  
+
                   currentItem.position = {
                     path: file,
                     line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
@@ -1104,7 +1155,7 @@ export default class Parser {
                     start: currentItem.position.line,
                     end: currentItem.position.line
                   };
-  
+
                   currentGroup = `procedures`;
                   scope.procedures.push(currentItem);
                   currentDescription = [];
@@ -1138,7 +1189,7 @@ export default class Parser {
                       validScope = scopes[i];
                       if (validScope[currentGroup].length > 0) break;
                     }
-                  
+
                     currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
                     break;
                   }
@@ -1148,7 +1199,7 @@ export default class Parser {
 
                   // This happens when it's a blank parm.
                   if (potentialName === `` && (dSpec.type || dSpec.len))
-                    potentialName = (potentialName === `` ? `parm${currentItem.subItems.length+1}` : potentialName);
+                    potentialName = (potentialName === `` ? `parm${currentItem.subItems.length + 1}` : potentialName);
 
                   if (potentialName) {
                     currentSub = new Declaration(`subitem`);
@@ -1181,10 +1232,11 @@ export default class Parser {
                 }
                 break;
               }
-            
+
               potentialName = undefined;
             }
             break;
+
           }
         }
 
@@ -1196,7 +1248,7 @@ export default class Parser {
 
           potentialName = undefined;
           potentialNameUsed = false;
-          
+
           currentItem = undefined;
           currentTitle = undefined;
           currentDescription = [];
@@ -1210,7 +1262,7 @@ export default class Parser {
       scopes[0].keyword = Parser.expandKeywords(keywords);
     }
 
-    scopes[0].fixProcedures();    
+    scopes[0].fixProcedures();
 
     const parsedData = scopes[0];
 
@@ -1231,8 +1283,8 @@ export default class Parser {
 
       for (let i = 0; i < keywordParts.length; i++) {
         if (keywordParts[i].value) {
-          if (keywordParts[i+1] && keywordParts[i+1].type === `block`) {
-            keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i+1].block.map(part => part.value).join(``);
+          if (keywordParts[i + 1] && keywordParts[i + 1].type === `block`) {
+            keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i + 1].block.map(part => part.value).join(``);
             i++; // Skip one for the block.
           } else {
             keyvalues[keywordParts[i].value.toUpperCase()] = true;

@@ -74,7 +74,17 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						SymbolKind.Constant,
 						Range.create(def.position.line, 0, def.position.line, 0),
 						Range.create(def.position.line, 0, def.position.line, 0)
-					))
+					)),
+
+          ...scope.cursors
+					.filter(cursor => cursor.position && cursor.position.path === currentPath)
+					.map(def => DocumentSymbol.create(
+						def.name,
+						def.keywords.join(` `).trim(),
+						SymbolKind.Interface,
+						Range.create(def.position.line, 0, def.position.line, 0),
+						Range.create(def.position.line, 0, def.position.line, 0)
+					))          
 			);
 
 			scope.files
