@@ -3,7 +3,7 @@ const assert = require(`assert`);
 const path = require(`path`);
 
 const { default: parserSetup } = require(`../parserSetup`);
-const { default: Linter } = require(`../../server/src/language/linter`);
+const { default: Linter } = require(`../../language/linter`);
 
 const uri = `source.rpgle`;
 
@@ -824,4 +824,256 @@ exports.issue_195b = async () => {
 
   const DoProfileStuff = cache.find(`DoProfileStuff`);
   assert.strictEqual(DoProfileStuff.scope.procedures.length, 2);
+}
+
+exports.exec_1 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dsply 'aaa';`,
+    `DSPLY '';`,
+    `Dsply 'aaa';`,
+    ``,
+    `EXEC SQL`,
+    `   Select nullif('aaa', '') from sysibm/sysdummy1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 1);
+  assert.strictEqual(cache.sqlReferences[0].name, `sysdummy1`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sysibm`);
+}
+
+exports.exec_2 = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-s DeptNum Char(3);`,
+    ``,
+    `DeptNum = 'ABC';`,
+    ``,
+    `ClearSubfile();`,
+    ``,
+    `EXEC SQL DECLARE empCurA CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    `    FROM Employee`,
+    `    WHERE WORKDEPT = Deptnum;`,
+    ``,
+    `EXEC SQL DECLARE empCurB CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    ``,
+    `    FROM sample.Employee`,
+    `    WHERE WORKDEPT = :deptNum;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+  assert.strictEqual(cache.sqlReferences[0].name, `Employee`);
+  assert.strictEqual(cache.sqlReferences[0].description, ``);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `Employee`);
+  assert.strictEqual(cache.sqlReferences[1].description, `sample`);
+}
+
+exports.exec_3 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `    FETCH NEXT FROM empCur       `,
+    `    INTO :myvariable2;`,
+    `EXEC SQL`,
+    `    EXECUTE IMMEDIATE :myvariable2;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 0);
+}
+
+exports.exec_4 = async () => {
+  const lines = [
+    `        dcl-s NULL pointer inz(*NULL);`,
+    `        dcl-s amount1 packed(7:2);`,
+    `        dcl-s amount2 packed(7:2);`,
+    `        dcl-s amount3 packed(7:2);`,
+    `        dcl-s amount4 packed(7:2);`,
+    `        dcl-s amount5 packed(7:2);`,
+    `        `,
+    `        // Watch null move left`,
+    `        Exec Sql`,
+    `          select`,
+    `            max(case when bonus < 900 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 800 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 700 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 600 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 500 then bonus else null end)`,
+    `          into`,
+    `            :amount1,:amount2,:amount3,:amount4,:amount5`,
+    `          from`,
+    `            sample.employee;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 1);
+  assert.strictEqual(cache.sqlReferences[0].name, `employee`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+}
+
+exports.exec_5 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO sample.mytable(column) values(:MyVariable2);`,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO othertable(column) values(:MyVariable2);`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `mytable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `othertable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_6 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO sample.mytable`,
+    `  (column) values(:MyVariable2);`,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO othertable`,
+    `  (column) values(:MyVariable2);`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `mytable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `othertable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_7 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  UPDATE sample.thetable set a=:MyVariable2`,
+    `  where id = 6;`,
+    ``,
+    `EXEC SQL`,
+    `  UPDATE cooltable set a=:MyVariable2`,
+    `  where id = 6;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `thetable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `cooltable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_8 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  DELETE from sample.thetable`,
+    `  where id = 6;`,
+    ``,
+    `EXEC SQL`,
+    `  DELETE from wooptable`,
+    `  where id = 6;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `thetable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `wooptable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_9 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  CALL sample.MyRandomProc(:MyVariable2);`,
+    ``,
+    `EXEC SQL`,
+    `  CALL OtherCoolProc(:MyVariable2);`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `MyRandomProc`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `OtherCoolProc`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
 }

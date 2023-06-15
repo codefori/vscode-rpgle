@@ -1,5 +1,3 @@
-client
-server
 .github/**
 assets/**
 **/node_modules
@@ -14,6 +12,8 @@ vsc-extension-quickstart.md
 **/*.map
 **/.eslintrc.json
 tests
+cli
+language
 **/cli
 cli/**
 cli

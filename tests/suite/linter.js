@@ -2,9 +2,9 @@
 const assert = require(`assert`);
 
 const { default: parserSetup } = require(`../parserSetup`);
-const { default: Linter } = require(`../../server/src/language/linter`);
+const { default: Linter } = require(`../../language/linter`);
 const path = require(`path`);
-const { Range, Position } = require(`../../server/src/language/models/DataPoints`);
+const { Range, Position } = require(`../../language/models/DataPoints`);
 
 const uri = `source.rpgle`;
 
