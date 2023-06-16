@@ -26,7 +26,7 @@ import { getPrettyType } from '../../../language/models/fixed';
 import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/implementation';
-import { dspffdToRecordFormats } from './data';
+import { dspffdToRecordFormats, parseMemberUri } from './data';
 import path = require('path');
 import { existsSync } from 'fs';
 
@@ -147,20 +147,18 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 
 					// Member fetch
 					// Split by /,
-					const parts = includeString.split(`/`).map(s => s.split(`,`)).flat();
+					const parts = parseMemberUri(includeString);
 
-					let possibleAsp = memberPath[memberPath.length - 4];
-					let baseLibrary = parts[parts.length - 3];
-					let baseFile = parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`;
-					let baseMember = parts[parts.length - 1];
+					let baseFile = parts.file || `QRPGLEREF`;
+					let baseMember = parts.name;
 
-					if (baseLibrary) {
+					if (parts.library) {
 						cleanString = [
 							``,
-							...(possibleAsp ? [possibleAsp] : []),
-							parts[parts.length - 3] ? parts[parts.length - 3] : baseLibrary,
-							parts[parts.length - 2] ? parts[parts.length - 2] : `QRPGLEREF`,
-							parts[parts.length - 1] + `.rpgleinc`
+							...(parts.asp ? [parts.asp] : []),
+							parts.library,
+							baseFile,
+							baseMember + `.rpgleinc`
 						].join(`/`);
 
 						cleanString = URI.from({
@@ -178,7 +176,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 						if (foundMember) {
 							cleanString = [
 								``,
-								...(possibleAsp ? [possibleAsp] : []),
+								...(parts.asp ? [parts.asp] : []),
 								foundMember.library,
 								foundMember.file,
 								foundMember.name + `.rpgleinc`
