@@ -471,7 +471,7 @@ export default class Parser {
                 currentItem = new Declaration(`file`);
                 currentItem.name = partsLower[1];
                 currentItem.keywords = parts.slice(2);
-                currentItem.description = currentDescription.join(` `);
+                currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
                   path: file,
@@ -524,7 +524,7 @@ export default class Parser {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
                 currentItem.keywords = parts.slice(2);
-                currentItem.description = currentDescription.join(` `);
+                currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
                   path: file,
@@ -543,7 +543,7 @@ export default class Parser {
                 currentItem = new Declaration(`variable`);
                 currentItem.name = partsLower[1];
                 currentItem.keywords = parts.slice(2);
-                currentItem.description = currentDescription.join(` `);
+                currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
@@ -563,7 +563,7 @@ export default class Parser {
                 currentItem = new Declaration(`struct`);
                 currentItem.name = partsLower[1];
                 currentItem.keywords = parts.slice(2);
-                currentItem.description = currentDescription.join(` `);
+                currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
@@ -619,7 +619,7 @@ export default class Parser {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = partsLower[1];
                   currentItem.keywords = parts.slice(2);
-                  currentItem.description = currentDescription.join(` `);
+                  currentItem.description = currentDescription.join(`\n`);
                   currentItem.tags = currentTags;
 
                   currentItem.position = {
@@ -676,7 +676,7 @@ export default class Parser {
               currentProcName = partsLower[1];
               currentItem.name = currentProcName;
               currentItem.keywords = parts.slice(2);
-              currentItem.description = currentDescription.join(` `);
+              currentItem.description = currentDescription.join(`\n`);
               currentItem.tags = currentTags;
 
               currentItem.position = {
@@ -753,7 +753,7 @@ export default class Parser {
               if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === parts[1])) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = partsLower[1];
-                currentItem.description = currentDescription.join(` `);
+                currentItem.description = currentDescription.join(`\n`);
 		            currentItem.keywords = [`Subroutine`];
 
                 currentItem.position = {
@@ -1280,7 +1280,7 @@ export default class Parser {
    * @param {string[]} parts 
    */
   static expandKeywords(parts) {
-    /** @type {{[keyword: string]: string|boolean}} */
+    /** @type {import(".").Keywords} */
     const keyvalues = {};
 
     if (parts.length > 0) {

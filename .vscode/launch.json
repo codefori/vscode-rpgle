@@ -10,7 +10,7 @@
 			"outFiles": ["${workspaceRoot}/out/**/*.js"],
 			"sourceMaps": true,
 			"sourceMapPathOverrides": {
-				"webpack://client/./*": "${workspaceFolder}/client/*"
+				"webpack://client/./*": "${workspaceFolder}/extension//client/*"
 			},
 			"preLaunchTask": {
 				"type": "npm",
@@ -26,7 +26,7 @@
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/out/**/*.js"],
 			"sourceMapPathOverrides": {
-				"webpack://server/./*": "${workspaceFolder}/server/*"
+				"webpack://server/./*": "${workspaceFolder}/extension/server/*"
 			},
 		},
 		{
