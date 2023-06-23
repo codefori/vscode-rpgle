@@ -134,65 +134,11 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		// Right now we are resolving based on the base file schema.
 		// This is likely bad since you can include across file systems.
 
-		switch (currentUri.scheme) {
-			case `member`:
-				const memberPath = uriPath.startsWith(`/`) ? uriPath.substring(1).split(`/`) : uriPath.split(`/`);
+		const isUnixPath = includeString.startsWith(`'`) && includeString.endsWith(`'`);
 
-				if (includeString.startsWith(`'`) && includeString.endsWith(`'`)) {
-					// IFS fetch
-					cleanString = includeString.substring(1, includeString.length - 1);
-					// TODO:....
-
-				} else {
-
-					// Member fetch
-					// Split by /,
-					const parts = parseMemberUri(includeString);
-
-					// If there is no file provided, assume QRPGLESRC
-					let baseFile = parts.file || `QRPGLESRC`;
-					let baseMember = parts.name;
-
-					if (parts.library) {
-						cleanString = [
-							``,
-							...(parts.asp ? [parts.asp] : []),
-							parts.library,
-							baseFile,
-							baseMember + `.rpgleinc`
-						].join(`/`);
-
-						cleanString = URI.from({
-							scheme: `member`,
-							path: cleanString
-						}).toString();
-
-						validUri = await validateUri(cleanString, currentUri.scheme);
-
-					} else {
-						// No base library provided, let's do a resolve
-
-						const foundMember = await memberResolve(stringUri, baseMember, baseFile);
-
-						if (foundMember) {
-							cleanString = [
-								``,
-								...(parts.asp ? [parts.asp] : []),
-								foundMember.library,
-								foundMember.file,
-								foundMember.name + `.rpgleinc`
-							].join(`/`);
-
-							validUri = URI.from({
-								scheme: `member`,
-								path: cleanString
-							}).toString();
-						}
-					}
-				}
-				break;
-
-			case `file`:
+		if (isUnixPath) {
+			if (![`streamfile`, `member`].includes(currentUri.scheme)) {
+				// Local file system search (scheme is usually file)
 				const workspaceFolders = await connection.workspace.getWorkspaceFolders();
 				let workspaceFolder: WorkspaceFolder | undefined;
 				if (workspaceFolders) {
@@ -222,7 +168,60 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 						}).toString()
 						: undefined;
 				}
-				break;
+
+			} else {
+				// Resolving IFS path from member or streamfile
+
+				// IFS fetch
+				cleanString = includeString.substring(1, includeString.length - 1);
+				// TODO:....
+			}
+
+		} else {
+			// Member fetch
+			// Split by /,
+			const parts = parseMemberUri(includeString);
+
+			// If there is no file provided, assume QRPGLESRC
+			let baseFile = parts.file || `QRPGLESRC`;
+			let baseMember = parts.name;
+
+			if (parts.library) {
+				cleanString = [
+					``,
+					...(parts.asp ? [parts.asp] : []),
+					parts.library,
+					baseFile,
+					baseMember + `.rpgleinc`
+				].join(`/`);
+
+				cleanString = URI.from({
+					scheme: `member`,
+					path: cleanString
+				}).toString();
+
+				validUri = await validateUri(cleanString, currentUri.scheme);
+
+			} else {
+				// No base library provided, let's do a resolve
+
+				const foundMember = await memberResolve(stringUri, baseMember, baseFile);
+
+				if (foundMember) {
+					cleanString = [
+						``,
+						...(parts.asp ? [parts.asp] : []),
+						foundMember.library,
+						foundMember.file,
+						foundMember.name + `.rpgleinc`
+					].join(`/`);
+
+					validUri = URI.from({
+						scheme: `member`,
+						path: cleanString
+					}).toString();
+				}
+			}
 		}
 
 		fetchingInProgress[includeString] = false;
