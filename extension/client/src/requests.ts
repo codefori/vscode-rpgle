@@ -85,6 +85,19 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return member;
 	});
 
+	client.onRequest("streamfileResolve", async (parms: any[]): Promise<string|undefined> => {
+		const base: string = parms[0];
+		const includePaths: string[] = parms[1];
+
+		const instance = getInstance();
+
+		const content = instance?.getContent();
+
+		const resolvedPath = await content?.streamfileResolve(base, includePaths);
+
+		return resolvedPath;
+ });
+
 	/**
 	 * Gets the column information for a provided file
 	 */

@@ -17,7 +17,7 @@ import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, getFileRequest, getObject as getObjectData, memberResolve, validateUri } from "./connection";
+import { connection, getFileRequest, getObject as getObjectData, memberResolve, streamfileResolve, validateUri } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
@@ -167,6 +167,18 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 							path: cleanString
 						}).toString()
 						: undefined;
+				}
+
+				if (!validUri) {
+					// Ok, no local file was found. Let's see if we can do a server lookup?
+					const foundStreamfile = await streamfileResolve(stringUri, cleanString);
+
+					if (foundStreamfile) {
+						validUri = URI.from({
+							scheme: `streamfile`,
+							path: foundStreamfile
+						}).toString();
+					}
 				}
 
 			} else {

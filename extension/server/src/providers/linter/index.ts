@@ -10,7 +10,7 @@ import codeActionsProvider from './codeActions';
 import documentFormattingProvider from './documentFormatting';
 
 import * as Project from "../project";
-import { connection, getFileRequest, getWorkingDirectory, resolveCache, validateUri, watchedFilesChangeEvent } from '../../connection';
+import { connection, getFileRequest, getWorkingDirectory, resolvedMembers, resolvedStreamfiles, validateUri, watchedFilesChangeEvent } from '../../connection';
 import { parseMemberUri } from '../../data';
 
 export let jsonCache: { [uri: string]: string } = {};
@@ -71,8 +71,10 @@ export function initialise(connection: _Connection) {
 		if ([`member`, `streamfile`].includes(uri.scheme)) {
 			boundLintConfig = {};
 			jsonCache = {}
-			resolveCache[uriString] = {};
 		}
+
+		resolvedMembers[uriString] = {};
+		resolvedStreamfiles[uriString] = {};
 	})
 }
 
