@@ -149,7 +149,8 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					// Split by /,
 					const parts = parseMemberUri(includeString);
 
-					let baseFile = parts.file || `QRPGLEREF`;
+					// If there is no file provided, assume QRPGLESRC
+					let baseFile = parts.file || `QRPGLESRC`;
 					let baseMember = parts.name;
 
 					if (parts.library) {
