@@ -44,10 +44,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
 				let currentPosition = Position.create(handler.position.line, handler.position.character - 2);
-				let preWord = getWordRangeAtPosition(document, currentPosition)?.toUpperCase();
+				let preWord = getWordRangeAtPosition(document, currentPosition);
 
 				// Uh oh! Maybe we found dim struct?
-				if (!preWord) {
+				if (preWord) {
 					const startBracket = currentLine.lastIndexOf(`(`, currentPosition.character);
 
 					if (startBracket > -1) {
@@ -58,6 +58,8 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 				// Ok, we have a 'preWord' (the name of the struct?)
 				if (preWord) {
+					preWord = preWord.toUpperCase();
+					
 					// Look at the parms or existing structs to find a possible reference
 					const possibleStruct: Declaration | undefined = [
 						currentProcedure && currentProcedure.scope ? currentProcedure.scope.parameters.find(parm => parm.name.toUpperCase() === preWord && parm.subItems.length > 0) : undefined,
