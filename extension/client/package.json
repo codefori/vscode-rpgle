@@ -1,0 +1,19 @@
+{
+	"name": "client",
+	"description": "VSCode client for RPGLE LSP",
+	"author": "Liam Allan",
+	"license": "MIT",
+	"version": "0.0.1",
+	"publisher": "vscode",
+	"engines": {
+		"vscode": "^1.63.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^7.0.0"
+	},
+	"devDependencies": {
+		"@halcyontech/vscode-ibmi-types": "^1.9.1",
+		"@types/vscode": "^1.63.0",
+		"@vscode/test-electron": "^2.1.2"
+	}
+}

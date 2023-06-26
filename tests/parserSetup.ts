@@ -1,4 +1,4 @@
-import Parser from '../server/src/language/parser';
+import Parser from '../language/parser';
 
 import glob from "glob";
 import path from 'path';
@@ -6,7 +6,7 @@ import path from 'path';
 import { readFile } from 'fs/promises';
 
 import tables from './tables';
-import { dspffdToRecordFormats } from '../server/src/data';
+import { dspffdToRecordFormats } from '../extension/server/src/data';
 
 const includeDir = process.env.INCLUDE_DIR || path.join(__dirname, `..`);
 
