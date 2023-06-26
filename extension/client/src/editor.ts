@@ -18,10 +18,13 @@ function surroundWithSnippet(snippetProvider: (lines: string[]) => string[]) {
 	const editor = window.activeTextEditor;
 	if (editor) {
 		const document = editor.document;
+		const isFullyFree = isFullyFreeRPGLE(document);
 		let line = editor.selection.start.line;
-		if (isFreeRPGLE(document, line)) {
+		if (isFree(document.lineAt(line).text, isFullyFree)) {
 			// First let's find out if this line starts elsewhere
-			while ((line - 1) >= 0 && !document.lineAt(line).text.trim().endsWith(`;`) && line-- > 0);
+			if (!isFreeLineEnd(document.lineAt(line).text, isFullyFree)) {
+				while ((line - 1) >= 0 && !isFreeLineEnd(document.lineAt(line - 1).text, isFullyFree) && line-- > 0);
+			}
 			const startLine = line;
 
 			// Now get all the relevant lines
@@ -34,33 +37,34 @@ function surroundWithSnippet(snippetProvider: (lines: string[]) => string[]) {
 				const indent = currentLine.firstNonWhitespaceCharacterIndex - initialIdentation;
 				lines.push(`${"".padEnd(2 + (indent > 0 ? indent : 0))}${text.trim()}`);
 				const maybeComment = text.lastIndexOf("//");
-				if (line > editor.selection.end.line && (maybeComment > -1 ? text.substring(maybeComment + 1) : text).endsWith(';')) {
+				if (line > editor.selection.end.line && ((maybeComment > -1 ? text.substring(maybeComment + 1) : text).endsWith(';') || isFreeLineEnd(text, isFullyFree))) {
 					break;
 				}
 			}
 
 			editor.insertSnippet(new SnippetString(snippetProvider(lines).join("\n")),
 				new Range(startLine, document.lineAt(startLine).firstNonWhitespaceCharacterIndex, line - 1, 9999));
-		}
-		else {
+		} else {
 			window.showWarningMessage("Selection is not valid Free RPGLE code");
 		}
 	}
 }
 
-function isFreeRPGLE(document: TextDocument, currentLine: number) {
+function isFullyFreeRPGLE(document: TextDocument) {
 	if (document.lineAt(0).text.substring(0, 6).toLowerCase() === `**free`) {
 		return true;
 	}
 	else {
-		for (let i = currentLine; i < document.lineCount; i++) {
-			const line = document.lineAt(i).text;
-			if (line.length > 10 && line.substring(6, 11).toLowerCase() === '/free') {
-				return false;
-			}
-			else if (line.length > 14 && line.substring(6, 15).toLowerCase() === '/end-free') {
-				return true;
-			}
-		}
+		return false;
 	}
+}
+
+function isFreeLineEnd(line: string, free: boolean) {
+	const endPos = line.lastIndexOf(';');
+	const commentPos = line.lastIndexOf('//');
+	return !isFree(line, free) || line.trim().endsWith(`;`) || (endPos > -1 && commentPos > endPos);
+}
+
+function isFree(line: string, free: boolean) {
+	return free || !(['H', 'F', 'D', 'I', 'C', 'O', 'P'].includes(line.charAt(5).toUpperCase()) || ['/', '*'].includes(line.charAt(6)));
 }
