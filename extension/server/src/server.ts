@@ -134,11 +134,12 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		// Right now we are resolving based on the base file schema.
 		// This is likely bad since you can include across file systems.
 
-		const isUnixPath = (includeString.startsWith(`'`) && includeString.endsWith(`'`)) || includeString.includes(`/`);
+		const hasQuotes = (includeString.startsWith(`'`) && includeString.endsWith(`'`)) || (includeString.startsWith(`"`) && includeString.endsWith(`"`))
+		const isUnixPath = hasQuotes || includeString.includes(`/`);
 
 		cleanString = includeString;
 
-		if (cleanString.startsWith(`'`) && cleanString.endsWith(`'`)) {
+		if (hasQuotes) {
 			cleanString = cleanString.substring(1, cleanString.length - 1);
 		}
 
@@ -195,6 +196,8 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 
 				} else {
 					// Path from home directory?
+					if (path.extname(cleanString) === ``) cleanString += `.*`;
+					
 					const foundStreamfile = await streamfileResolve(stringUri, cleanString);
 
 					if (foundStreamfile) {
