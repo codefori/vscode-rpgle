@@ -134,7 +134,13 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		// Right now we are resolving based on the base file schema.
 		// This is likely bad since you can include across file systems.
 
-		const isUnixPath = includeString.startsWith(`'`) && includeString.endsWith(`'`);
+		const isUnixPath = (includeString.startsWith(`'`) && includeString.endsWith(`'`)) || includeString.includes(`/`);
+
+		cleanString = includeString;
+
+		if (cleanString.startsWith(`'`) && cleanString.endsWith(`'`)) {
+			cleanString = cleanString.substring(1, cleanString.length - 1);
+		}
 
 		if (isUnixPath) {
 			if (![`streamfile`, `member`].includes(currentUri.scheme)) {
@@ -143,12 +149,6 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				let workspaceFolder: WorkspaceFolder | undefined;
 				if (workspaceFolders) {
 					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).path))
-				}
-
-				cleanString = includeString;
-
-				if (cleanString.startsWith(`'`) && cleanString.endsWith(`'`)) {
-					cleanString = cleanString.substring(1, cleanString.length - 1);
 				}
 
 				if (Project.isEnabled) {
@@ -185,8 +185,25 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// Resolving IFS path from member or streamfile
 
 				// IFS fetch
-				cleanString = includeString.substring(1, includeString.length - 1);
-				// TODO:....
+				
+				if (cleanString.startsWith(`/`)) {
+					// Path from root
+					validUri = URI.from({
+						scheme: `streamfile`,
+						path: cleanString
+					}).toString();
+
+				} else {
+					// Path from home directory?
+					const foundStreamfile = await streamfileResolve(stringUri, cleanString);
+
+					if (foundStreamfile) {
+						validUri = URI.from({
+							scheme: `streamfile`,
+							path: foundStreamfile
+						}).toString();
+					}
+				}
 			}
 
 		} else {

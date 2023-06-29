@@ -74,20 +74,16 @@ export async function streamfileResolve(baseUri: string, base: string): Promise<
 
 	const workspace = await getWorkspaceFolder(baseUri);
 
-	if (workspace) {
-		const paths = includePath[workspace.uri];
+	const paths = (workspace ? includePath[workspace.uri] : []) || [];
 
-		if (paths && paths.length > 0) {
-			const resolvedPath = await connection.sendRequest("streamfileResolve", [base, paths]) as string|undefined;
+	const resolvedPath = await connection.sendRequest("streamfileResolve", [base, paths]) as string|undefined;
 
-			if (resolvedPath) {
-				if (!resolvedStreamfiles[baseUri]) resolvedStreamfiles[baseUri] = {};
-				resolvedStreamfiles[baseUri][base] = resolvedPath;
-			}
-
-			return resolvedPath;
-		}
+	if (resolvedPath) {
+		if (!resolvedStreamfiles[baseUri]) resolvedStreamfiles[baseUri] = {};
+		resolvedStreamfiles[baseUri][base] = resolvedPath;
 	}
+
+	return resolvedPath;
 }
 
 export function getWorkingDirectory(): Promise<string|undefined> {

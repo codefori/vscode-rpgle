@@ -92,6 +92,11 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		const instance = getInstance();
 
 		const content = instance?.getContent();
+		const config = instance?.getConfig()!;
+
+		if (includePaths.length === 0) {
+			includePaths.push(config.homeDirectory);
+		}
 
 		const resolvedPath = await content?.streamfileResolve(base, includePaths);
 
