@@ -72,7 +72,10 @@ export function initialise(connection: _Connection) {
 			boundLintConfig = {};
 			jsonCache = {}
 		}
+	})
 
+	documents.onDidClose(async e => {
+		const uriString = e.document.uri;
 		resolvedMembers[uriString] = {};
 		resolvedStreamfiles[uriString] = {};
 	})
