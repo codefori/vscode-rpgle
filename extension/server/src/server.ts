@@ -135,7 +135,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		// This is likely bad since you can include across file systems.
 
 		const hasQuotes = (includeString.startsWith(`'`) && includeString.endsWith(`'`)) || (includeString.startsWith(`"`) && includeString.endsWith(`"`))
-		const isUnixPath = hasQuotes || includeString.includes(`/`);
+		const isUnixPath = hasQuotes || (includeString.includes(`/`) && !includeString.includes(`,`));
 
 		cleanString = includeString;
 
@@ -195,9 +195,13 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					}).toString();
 
 				} else {
-					// Path from home directory?
+					// TODO: Instead of searching for `.*`, search for:
+					//   - `${cleanString}`
+					//   - `${cleanString}.rpgleinc`
+					//   - `${cleanString}.rpgle`
 					if (path.extname(cleanString) === ``) cleanString += `.*`;
 					
+					// Path from home directory?
 					const foundStreamfile = await streamfileResolve(stringUri, cleanString);
 
 					if (foundStreamfile) {
