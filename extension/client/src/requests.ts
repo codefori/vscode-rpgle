@@ -86,7 +86,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	});
 
 	client.onRequest("streamfileResolve", async (parms: any[]): Promise<string|undefined> => {
-		const base: string = parms[0];
+		const bases: string[] = parms[0];
 		const includePaths: string[] = parms[1];
 
 		const instance = getInstance();
@@ -98,7 +98,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 			includePaths.push(config.homeDirectory);
 		}
 
-		const resolvedPath = await content?.streamfileResolve(base, includePaths);
+		const resolvedPath = await content?.streamfileResolve(bases, includePaths);
 
 		return resolvedPath;
  });

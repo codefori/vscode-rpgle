@@ -172,7 +172,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 
 				if (!validUri) {
 					// Ok, no local file was found. Let's see if we can do a server lookup?
-					const foundStreamfile = await streamfileResolve(stringUri, cleanString);
+					const foundStreamfile = await streamfileResolve(stringUri, [cleanString]);
 
 					if (foundStreamfile) {
 						validUri = URI.from({
@@ -199,10 +199,10 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					//   - `${cleanString}`
 					//   - `${cleanString}.rpgleinc`
 					//   - `${cleanString}.rpgle`
-					if (path.extname(cleanString) === ``) cleanString += `.*`;
+					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
 					
 					// Path from home directory?
-					const foundStreamfile = await streamfileResolve(stringUri, cleanString);
+					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
 
 					if (foundStreamfile) {
 						validUri = URI.from({

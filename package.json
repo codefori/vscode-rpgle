@@ -92,7 +92,7 @@
 		"cli:dev:rpglint": "cd cli/rpglint && npm run webpack:dev"
 	},
 	"devDependencies": {
-		"@halcyontech/vscode-ibmi-types": "^1.9.1",
+		"@halcyontech/vscode-ibmi-types": "^2.0.0",
 		"@types/mocha": "^9.1.0",
 		"@types/node": "^16.11.7",
 		"@typescript-eslint/eslint-plugin": "^5.30.0",

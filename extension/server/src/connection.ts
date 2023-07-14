@@ -69,8 +69,9 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 	return resolvedMember;
 }
 
-export async function streamfileResolve(baseUri: string, base: string): Promise<string|undefined> {
-	if (resolvedStreamfiles[baseUri] && resolvedStreamfiles[baseUri][base]) return resolvedStreamfiles[baseUri][base];
+export async function streamfileResolve(baseUri: string, base: string[]): Promise<string|undefined> {
+	const baseString = base.join(`-`);
+	if (resolvedStreamfiles[baseUri] && resolvedStreamfiles[baseUri][baseString]) return resolvedStreamfiles[baseUri][baseString];
 
 	const workspace = await getWorkspaceFolder(baseUri);
 
@@ -80,7 +81,7 @@ export async function streamfileResolve(baseUri: string, base: string): Promise<
 
 	if (resolvedPath) {
 		if (!resolvedStreamfiles[baseUri]) resolvedStreamfiles[baseUri] = {};
-		resolvedStreamfiles[baseUri][base] = resolvedPath;
+		resolvedStreamfiles[baseUri][baseString] = resolvedPath;
 	}
 
 	return resolvedPath;
