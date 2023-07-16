@@ -379,12 +379,12 @@ export function fixStatement(tokens: Token[]) {
   return tokens;
 }
 
-export function createBlocks(statement) {
+export function createBlocks(tokens: Token[]) {
   let start = 0;
   let level = 0;
 
-  for (let i = 0; i < statement.length; i++) {
-    switch (statement[i].type) {
+  for (let i = 0; i < tokens.length; i++) {
+    switch (tokens[i].type) {
     case `openbracket`:
       if (level === 0) {
         start = i;
@@ -395,10 +395,15 @@ export function createBlocks(statement) {
       level--;
 
       if (level === 0) {
-        statement.splice(start, i - start + 1, {
+        const newTokens = tokens.slice(start + 1, i);
+        tokens.splice(start, i - start + 1, {
           type: `block`,
-          block: createBlocks(statement.slice(start + 1, i)),
-          position: statement[start].position
+          block: createBlocks(newTokens),
+          range: {
+            line: tokens[start].range.line,
+            start: tokens[i].range.start,
+            end: tokens[i].range.end,
+          }
         });
         i = start;
       }
@@ -406,5 +411,5 @@ export function createBlocks(statement) {
     }
   }
 
-  return statement;
+  return tokens;
 }

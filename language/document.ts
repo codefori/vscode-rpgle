@@ -107,9 +107,12 @@ export default class Document {
     }
 
     const lastStatementTokens = Statement.trimTokens(tokens.slice(statementStart.index, tokens.length));
-    tokenBeforeStmt = tokens[tokens.length-1-lastStatementTokens.length];
-    const indent = lastStatementTokens[0] ? (lastStatementTokens[0].range.start - tokenBeforeStmt.range.end) : 0;
-    this.addStatement(indent, lastStatementTokens);
+
+    if (lastStatementTokens.length > 0) { 
+      tokenBeforeStmt = tokens[tokens.length-1-lastStatementTokens.length];
+      const indent = lastStatementTokens[0] ? (lastStatementTokens[0].range.start - tokenBeforeStmt.range.end) : 0;
+      this.addStatement(indent, lastStatementTokens);
+    }
   }
 
   getStatementByLine(line: number) {

@@ -1,3 +1,4 @@
+import { createBlocks } from "./tokens";
 import { IRange, Token } from "./types";
 
 export default class Statement {
@@ -19,6 +20,47 @@ export default class Statement {
 		return blockSearch(this.tokens);
 	}
 
+  asBlocks() {
+    return createBlocks(this.tokens);
+  }
+
+  static getParameters(tokens: Token[]) {
+    let parameters: Token[] = [];
+    let newBlock: Token[] = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].type === `seperator`) {
+        parameters.push({
+          type: `block`,
+          block: newBlock,
+          range: {
+            line: newBlock[0].range.line,
+            start: newBlock[0].range.start,
+            end: newBlock[newBlock.length-1].range.end,
+          }
+        });
+
+        newBlock = [tokens[i]];
+      } else {
+        newBlock.push(tokens[i]);
+      }
+    }
+
+    if (newBlock.length > 0) {
+      parameters.push({
+        type: `block`,
+        block: newBlock,
+        range: {
+          line: newBlock[0].range.line,
+          start: newBlock[0].range.start,
+          end: newBlock[newBlock.length-1].range.end,
+        }
+      });
+    }
+
+    return parameters;
+  }
+
 	static trimTokens(tokens: Token[]) {
     if (tokens.length > 0) {
       let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
@@ -35,6 +77,7 @@ export default class Statement {
 
       tokens = tokens.slice(realFirstToken, realLastToken);
     }
+
     return tokens;
   }
 }

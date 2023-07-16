@@ -1146,7 +1146,8 @@ export default class Linter {
 
     return {
       indentErrors,
-      errors
+      errors,
+      doc
     };
   }
 }
