@@ -112,7 +112,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const item = CompletionItem.create(`${procedure.name}`);
 							item.kind = CompletionItemKind.Function;
 							item.insertTextFormat = InsertTextFormat.Snippet;
-							item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`;
+							item.insertText = procedure.name;
 							item.detail = procedure.keywords.join(` `);
 							item.documentation = procedure.description;
 							items.push(item);

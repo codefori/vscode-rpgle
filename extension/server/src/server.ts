@@ -67,7 +67,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.documentSymbolProvider = true;
 		result.capabilities.definitionProvider = true;
 		result.capabilities.completionProvider = {
-			triggerCharacters: [` `, `.`, `:`]
+			triggerCharacters: [` `, `.`, `:`, `(`]
 		};
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;

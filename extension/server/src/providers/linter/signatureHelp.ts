@@ -15,7 +15,6 @@ export async function signatureHelpProvider(params: SignatureHelpParams): Promis
       const offset = document?.offsetAt(params.position);
       const parsedDocument = documentParseCache[uri];
 
-      console.log(params.context);
       if (parsedDocument) {
         const statement = parsedDocument.getStatementByOffset(offset);
         if (statement) {
@@ -55,8 +54,10 @@ export async function signatureHelpProvider(params: SignatureHelpParams): Promis
                     let retrunValue = possibleFunction.keywords.filter(keyword => !keyword.startsWith(`EXTPROC`));
                     if (retrunValue.length === 0) retrunValue = [`void`];
 
+                    const parmsString = possibleFunction.subItems.map(x => x.name).join(` : `);
+
                     let currentSig: SignatureInformation = {
-                      label: `${possibleFunction.name}: ${retrunValue.join(` `)}`,
+                      label: `${possibleFunction.name}(${parmsString}): ${retrunValue.join(` `)}`,
                       activeParameter,
                       documentation: possibleFunction.description.trim().length > 0 ?
                         {
