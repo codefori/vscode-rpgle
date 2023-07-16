@@ -1,17 +1,17 @@
 import Declaration from './models/declaration';
 import {Range} from "./models/DataPoints";
 
-interface Keywords {
+export interface Keywords {
   [keyword: string]: string|true;
 }
 
-interface IncludeStatement {
+export interface IncludeStatement {
   /** vscode.Uri.path */
   toPath: string;
   line: number;
 }
 
-interface CacheProps {
+export interface CacheProps {
   parameters?: Declaration[];
   subroutines?: Declaration[];
   procedures?: Declaration[];
@@ -24,7 +24,7 @@ interface CacheProps {
   includes?: IncludeStatement[];
 }
 
-interface Rules {
+export interface Rules {
   indent?: number;
   BlankStructNamesCheck?: boolean;
   QualifiedCheck?: boolean;
@@ -61,19 +61,18 @@ interface Rules {
   CollectReferences?: boolean;
 }
 
-interface DefinitionPosition {
+export  interface DefinitionPosition {
   path: string;
   line: number;
 }
 
-interface Offset {
+export interface Offset {
   position?: number,
   end?: number
 }
 
-interface IssueRange {
-  range: Range;
-  offset?: Offset;
+export interface IssueRange {
+  offset: Offset;
   type?: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|
   "NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|
   "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
@@ -85,7 +84,7 @@ interface IssueRange {
   newValue?: string;
 }
 
-interface SelectBlock {
-  range: Range;
+export interface SelectBlock {
+  offset: Offset;
   otherBlockExists: boolean;
 }
