@@ -601,13 +601,16 @@ export default class Linter {
                   case `EXEC`:
                     isEmbeddedSQL = true;
                     if (rules.NoSELECTAll) {
-                      // TODO:
-                      // if (currentStatementUpper.includes(`SELECT *`)) {
-                      //   errors.push({
-
-                      //     type: `NoSELECTAll`,
-                      //   });
-                      // }
+                      const selectIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `SELECT`);
+                      const allIndex = statement.findIndex(part => part.value && part.value === `*`);
+                      if (selectIndex >= 0) {
+                        if (selectIndex + 1 === allIndex) {
+                          errors.push({
+                            offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end },
+                            type: `NoSELECTAll`,
+                          });
+                        }
+                      }
                     }
 
                     if (rules.NoSQLJoins) {
