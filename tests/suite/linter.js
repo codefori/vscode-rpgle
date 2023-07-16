@@ -1247,61 +1247,54 @@ exports.linter14 = async () => {
   assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
 };
 
-// TODO: support pretty comments
-// exports.linter15 = async () => {
-//   const lines = [
-//     `**FREE`,
-//     ``,
-//     `Ctl-Opt DFTACTGRP(*No);`,
-//     ``,
-//     `//`,
-//     `//Append a single quote. This procedure exists to make other code more readable.`,
-//     `//`,
-//     ``,
-//     `// my variable`,
-//     `Dcl-S MyVariable2 Char(20);`,
-//     ``,
-//     `MyVariable2 = 'Hello world';`,
-//     ``,
-//     `If 2 = 2;`,
-//     `  //Change thw value of my variable`,
-//     `  MyVariable2 = 'Hello friends';`,
-//     `  //`,
-//     `Endif;`,
-//     ``,
-//     `Dsply MyVariable2;`,
-//     ``,
-//     `     // Append a single quote. This procedure exists to make other code more readable.`,
-//     ``,
-//     `return;`
-//   ].join(`\n`);
+exports.linter15 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `//`,
+    `//Append a single quote. This procedure exists to make other code more readable.`,
+    `//`,
+    ``,
+    `// my variable`,
+    `Dcl-S MyVariable2 Char(20);`,
+    ``,
+    `MyVariable2 = 'Hello world';`,
+    ``,
+    `If 2 = 2;`,
+    `  //Change thw value of my variable`,
+    `  MyVariable2 = 'Hello friends';`,
+    `  //`,
+    `Endif;`,
+    ``,
+    `Dsply MyVariable2;`,
+    ``,
+    `     // Append a single quote. This procedure exists to make other code more readable.`,
+    ``,
+    `return;`
+  ].join(`\n`);
 
-//   const parser = parserSetup();
-//   const cache = await parser.getDocs(uri, lines);
-//   const { errors } = Linter.getErrors({ uri, content: lines }, {
-//     PrettyComments: true
-//   }, cache);
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    PrettyComments: true
+  }, cache);
 
-//   assert.strictEqual(errors.length, 2, `Expect length of 5`);
+  assert.strictEqual(errors.length, 2, `Expect length of 5`);
 
-//   assert.deepStrictEqual(errors[0], {
-//     type: `PrettyComments`,
-//     newValue: `// `,
-//     range: new Range(
-//       new Position(5, 0),
-//       new Position(5, 2),
-//     ),
-//   });
+  assert.deepStrictEqual(errors[0], {
+    offset: { position: 36, end: 38 },
+    type: 'PrettyComments',
+    newValue: '// '
+  });
 
-//   assert.deepStrictEqual(errors[1], {
-//     type: `PrettyComments`,
-//     newValue: `// `,
-//     range: new Range(
-//       new Position(14, 2),
-//       new Position(14, 4),
-//     ),
-//   });
-// };
+  assert.deepStrictEqual(errors[1], {
+    offset: { position: 207, end: 209 },
+    type: 'PrettyComments',
+    newValue: '// '
+  });
+};
 
 /**
    * Subroutine check test
@@ -3041,39 +3034,35 @@ exports.dcl_parm_issue184 = async () => {
   assert.strictEqual(parms[2].name, `address`);
 }
 
-// TODO: support pretty comments
-// exports.prettyCommentsChange = async () => {
-//   const lines = [
-//     `**FREE`,
-//     ``,
-//     `Ctl-Opt DFTACTGRP(*No);`,
-//     ``,
-//     `Dcl-s MyVariable2 Char(20);`,
-//     ``,
-//     `// my constant`,
-//     `//`,
-//     `// second line`,
-//     `Dcl-C theConstant 'Hello world';`,
-//     `//comment with bad indent`,
-//   ].join(`\n`);
+exports.prettyCommentsChange = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `// my constant`,
+    `//`,
+    `// second line`,
+    `Dcl-C theConstant 'Hello world';`,
+    `//comment with bad indent`,
+  ].join(`\n`);
 
-//   const parser = parserSetup();
-//   const cache = await parser.getDocs(uri, lines);
-//   const { errors } = Linter.getErrors({ uri, content: lines }, {
-//     PrettyComments: true
-//   }, cache);
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    PrettyComments: true
+  }, cache);
 
-//   assert.strictEqual(errors.length, 1);
+  assert.strictEqual(errors.length, 1);
 
-//   assert.deepStrictEqual(errors[0], {
-//     type: `PrettyComments`,
-//     newValue: `// `,
-//     range: new Range(
-//       new Position(10, 0),
-//       new Position(10, 2),
-//     ),
-//   });
-// };
+  assert.deepStrictEqual(errors[0], {
+    offset: { position: 128, end: 130 },
+    type: `PrettyComments`,
+    newValue: `// `
+  });
+};
 
 exports.issue_204 = async () => {
   const lines = [

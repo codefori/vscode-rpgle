@@ -319,6 +319,8 @@ export function tokenise(statement) {
   if (currentText.trim() !== `` && state !== ReadState.IN_COMMENT) {
     result.push({ value: currentText, type: state === ReadState.NORMAL ? `word` : `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
     currentText = ``;
+  } else {
+    result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
   }
 
   result = fixStatement(result);
