@@ -9,153 +9,152 @@ const { Range, Position } = require(`../../language/models/DataPoints`);
 const uri = `source.rpgle`;
 
 module.exports = {
-  // TODO: re-implement skip...
-  // skip1: async () => {
-  //   const lines = [
-  //     `**free`,
-  //     ``,
-  //     `/copy myds.ds`,
-  //     `end-ds;`,
-  //     ``,
-  //     `dsply thingy;`,
-  //     ``,
-  //     `return`,
-  //   ].join(`\n`);
+  skip1: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `/copy myds.ds`,
+      `end-ds;`,
+      ``,
+      `dsply thingy;`,
+      ``,
+      `return`,
+    ].join(`\n`);
 
-  //   const parser = parserSetup();
-  //   const cache = await parser.getDocs(uri, lines);
-  //   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
-  //     indent: 2
-  //   }, cache);
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+    const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      indent: 2
+    }, cache);
 
-  //   assert.strictEqual(cache.includes.length, 0); // Because it's not found.
-  //   assert.strictEqual(indentErrors.length > 0, true, `Expect indent errors`);
-  // },
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
+    assert.strictEqual(indentErrors.length > 0, true, `Expect indent errors`);
+  },
 
-  // skip2: async () => {
-  //   const lines = [
-  //     `**free`,
-  //     ``,
-  //     `/copy myds.ds`,
-  //     `// @rpglint-skip`,
-  //     `end-ds;`,
-  //     ``,
-  //     `dsply thingy;`,
-  //     ``,
-  //     `return`,
-  //   ].join(`\n`);
+  skip2: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `/copy myds.ds`,
+      `// @rpglint-skip`,
+      `end-ds;`,
+      ``,
+      `dsply thingy;`,
+      ``,
+      `return`,
+    ].join(`\n`);
 
-  //   const parser = parserSetup();
-  //   const cache = await parser.getDocs(uri, lines);
-  //   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
-  //     indent: 2
-  //   }, cache);
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+    const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      indent: 2
+    }, cache);
 
-  //   assert.strictEqual(cache.includes.length, 0); // Because it's not found.
-  //   assert.strictEqual(indentErrors.length, 0, `Expect no indent errors`);
-  // },
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
+    assert.strictEqual(indentErrors.length, 0, `Expect no indent errors`);
+  },
 
-  // skip2_issue91_1: async () => {
-  //   const lines = [
-  //     `**free`,
-  //     ``,
-  //     `/copy myds.ds`,
-  //     `// @rpglint-skip-indent`,
-  //     `end-ds;`,
-  //     ``,
-  //     `dsply thingy;`,
-  //     ``,
-  //     `return`,
-  //   ].join(`\n`);
+  skip2_issue91_1: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `/copy myds.ds`,
+      `// @rpglint-skip-indent`,
+      `end-ds;`,
+      ``,
+      `dsply thingy;`,
+      ``,
+      `return`,
+    ].join(`\n`);
 
-  //   const parser = parserSetup();
-  //   const cache = await parser.getDocs(uri, lines);
-  //   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
-  //     indent: 2
-  //   }, cache);
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+    const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      indent: 2
+    }, cache);
 
-  //   assert.strictEqual(cache.includes.length, 0); // Because it's not found.
-  //   assert.strictEqual(indentErrors.length, 0, `Expect no indent errors`);
-  // },
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
+    assert.strictEqual(indentErrors.length, 0, `Expect no indent errors`);
+  },
 
-  // skip2_issue91_2: async () => {
-  //   const lines = [
-  //     `**free`,
-  //     ``,
-  //     `/copy myds.ds`,
-  //     `// @rpglint-skip-rules`,
-  //     `end-ds;`,
-  //     ``,
-  //     `dsply thingy;`,
-  //     ``,
-  //     `return`,
-  //   ].join(`\n`);
+  skip2_issue91_2: async () => {
+    const lines = [
+      `**free`,
+      ``,
+      `/copy myds.ds`,
+      `// @rpglint-skip-rules`,
+      `end-ds;`,
+      ``,
+      `dsply thingy;`,
+      ``,
+      `return`,
+    ].join(`\n`);
 
-  //   const parser = parserSetup();
-  //   const cache = await parser.getDocs(uri, lines);
-  //   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
-  //     indent: 2
-  //   }, cache);
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+    const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      indent: 2
+    }, cache);
 
-  //   assert.strictEqual(cache.includes.length, 0); // Because it's not found.
-  //   assert.strictEqual(indentErrors.length, 3, `Expect no indent errors`);
-  // },
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
+    assert.strictEqual(indentErrors.length, 3, `Expect no indent errors`);
+  },
 
-  // skip2_issue91: async () => {
-  //   const lines = [
-  //     `**FREE`,
-  //     ``,
-  //     `/IF DEFINED(ABCEEF)`,
-  //     `/eof`,
-  //     `/EndIf`,
-  //     `/DEFINE ABCEEF`,
+  skip2_issue91: async () => {
+    const lines = [
+      `**FREE`,
+      ``,
+      `/IF DEFINED(ABCEEF)`,
+      `/eof`,
+      `/EndIf`,
+      `/DEFINE ABCEEF`,
 
-  //     `// @rpglint-skip-rules`,
-  //     `CallP THEPROCEDURE2;`,
-  //     ``,
-  //     `Dcl-Proc theProcedure2;`,
-  //     `  Dcl-S mylocal char(20);`,
-  //     `  MyVariable2 = 'Hello world';`,
-  //     `  mylocal = Myvariable2;`,
-  //     `End-Proc;`,
-  //   ].join(`\n`);
+      `// @rpglint-skip-rules`,
+      `CallP THEPROCEDURE2;`,
+      ``,
+      `Dcl-Proc theProcedure2;`,
+      `  Dcl-S mylocal char(20);`,
+      `  MyVariable2 = 'Hello world';`,
+      `  mylocal = Myvariable2;`,
+      `End-Proc;`,
+    ].join(`\n`);
     
-  //   const parser = parserSetup();
-  //   const cache = await parser.getDocs(uri, lines);
-  //   const { errors } = Linter.getErrors({uri, content: lines}, {
-  //     IncorrectVariableCase: true
-  //   }, cache);
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+    const { errors } = Linter.getErrors({uri, content: lines}, {
+      IncorrectVariableCase: true
+    }, cache);
 
-  //   assert.strictEqual(cache.procedures.length, 1);
-  //   const theProcedure2 = cache.find(`theProcedure2`);
-  //   assert.strictEqual(theProcedure2.name, `theProcedure2`);
+    assert.strictEqual(cache.procedures.length, 1);
+    const theProcedure2 = cache.find(`theProcedure2`);
+    assert.strictEqual(theProcedure2.name, `theProcedure2`);
 
-  //   assert.strictEqual(errors.length, 0);
-  // },
+    assert.strictEqual(errors.length, 0);
+  },
 
 
-  // skip3: async () => {
-  //   const lines = [
-  //     `**free`,
-  //     `dcl-s xxField1 char(1);`,
-  //     ``,
-  //     `// @rpglint-skip`,
-  //     `/copy myds.ds`,
-  //     ``,
-  //     `dsply xxfield1;`,
-  //     ``,
-  //     `return`,
-  //   ].join(`\n`);
+  skip3: async () => {
+    const lines = [
+      `**free`,
+      `dcl-s xxField1 char(1);`,
+      ``,
+      `// @rpglint-skip`,
+      `/copy myds.ds`,
+      ``,
+      `dsply xxfield1;`,
+      ``,
+      `return`,
+    ].join(`\n`);
 
-  //   const parser = parserSetup();
-  //   const cache = await parser.getDocs(uri, lines);
-  //   const { errors } = Linter.getErrors({uri, content: lines}, {
-  //     IncorrectVariableCase: true
-  //   }, cache);
+    const parser = parserSetup();
+    const cache = await parser.getDocs(uri, lines);
+    const { errors } = Linter.getErrors({uri, content: lines}, {
+      IncorrectVariableCase: true
+    }, cache);
 
-  //   assert.strictEqual(cache.includes.length, 0); // Because it's not found.
-  //   assert.strictEqual(errors.length, 1, `Expect one errors`);
-  // },
+    assert.strictEqual(cache.includes.length, 0); // Because it's not found.
+    assert.strictEqual(errors.length, 1, `Expect one errors`);
+  },
 
   eof1: async () => {
     const lines = [

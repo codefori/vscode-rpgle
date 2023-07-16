@@ -991,9 +991,10 @@ export default class Linter {
               expectedIndent += indent;
           }
 
-          // Reset the rule back.
-          currentRule = skipRules.none;
         }
+        
+        // Reset the rule back.
+        currentRule = skipRules.none;
       }
 
     }
