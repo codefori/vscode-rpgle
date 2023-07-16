@@ -39,7 +39,6 @@
 				"type": "npm",
 				"script": "compile:tests"
 			},
-			"args": ["linter13"],
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}

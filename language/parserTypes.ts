@@ -67,8 +67,8 @@ export  interface DefinitionPosition {
 }
 
 export interface Offset {
-  position?: number,
-  end?: number
+  position: number,
+  end: number
 }
 
 export interface IssueRange {

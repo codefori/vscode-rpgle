@@ -77,17 +77,11 @@ export function initialise(connection: _Connection) {
 
 export function calculateOffset(document: TextDocument, error: IssueRange) {
 	const offset = error.offset;
-
-	if (offset && offset.position !== undefined && offset.end !== undefined) {
-		const docOffsetStart = document.offsetAt(error.range.start) + offset.position;
-		const docOffsetEnd = document.offsetAt(error.range.start) + offset.end;
-		return Range.create(
-			document.positionAt(docOffsetStart),
-			document.positionAt(docOffsetEnd)
-		);
-	} else {
-		return Range.create(error.range.start, error.range.end);
-	}
+	
+	return Range.create(
+		document.positionAt(error.offset.position),
+		document.positionAt(error.offset.end)
+	);
 };
 
 enum ResolvedState {
