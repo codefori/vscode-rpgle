@@ -141,7 +141,7 @@ export default class Parser {
    * @param {string} workingUri
    * @param {string} [content] 
    * @param {{withIncludes?: boolean, ignoreCache?: boolean}} options
-   * @returns {Promise<Cache|null>}
+   * @returns {Promise<Cache|undefined>}
    */
   async getDocs(workingUri, content, options = {withIncludes: true}) {
     const existingCache = this.getParsedCache(workingUri);
