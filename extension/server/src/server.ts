@@ -81,6 +81,9 @@ connection.onInitialize((params: InitializeParams) => {
 				workDoneProgress: true
 			};
 		}
+		result.capabilities.signatureHelpProvider = {
+			triggerCharacters: [`(`, `:`],
+		};
 	}
 
 	if (hasWorkspaceFolderCapability) {

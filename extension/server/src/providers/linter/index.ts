@@ -3,7 +3,7 @@ import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWa
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { documents, parser } from '..';
-import { IssueRange, Rules } from '../../../../../language/parserTypes';
+import * as parserTypes from '../../../../../language/parserTypes';
 import Linter from '../../../../../language/linter';
 import Cache from '../../../../../language/models/cache';
 import codeActionsProvider from './codeActions';
@@ -12,12 +12,17 @@ import documentFormattingProvider from './documentFormatting';
 import * as Project from "../project";
 import { connection, getFileRequest, getWorkingDirectory, validateUri, watchedFilesChangeEvent } from '../../connection';
 import { parseMemberUri } from '../../data';
+import Document from '../../../../../language/document';
+import { signatureHelpProvider } from './signatureHelp';
 
-export let jsonCache: { [uri: string]: string } = {};
+export let documentParseCache: { [uri: string]: Document } = {};
+
+let jsonCache: { [uri: string]: string } = {};
 
 export function initialise(connection: _Connection) {
 	connection.onCodeAction(codeActionsProvider);
 	connection.onDocumentFormatting(documentFormattingProvider);
+	connection.onSignatureHelp(signatureHelpProvider);
 
 	// This only works for local workspace files
 	watchedFilesChangeEvent.push((params: DidChangeWatchedFilesParams) => {
@@ -75,7 +80,7 @@ export function initialise(connection: _Connection) {
 	})
 }
 
-export function calculateOffset(document: TextDocument, error: IssueRange) {
+export function calculateOffset(document: TextDocument, error: parserTypes.IssueRange) {
 	const offset = error.offset;
 	
 	return Range.create(
@@ -184,7 +189,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 		const indentDiags: Diagnostic[] = [];
 		const generalDiags: Diagnostic[] = [];
 
-		const options: Rules = await getLintOptions(document.uri);
+		const options: parserTypes.Rules = await getLintOptions(document.uri);
 
 		let detail;
 
@@ -210,6 +215,8 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 
 		const indentErrors = detail.indentErrors;
 		const errors = detail.errors;
+
+		documentParseCache[document.uri] = detail.doc;
 
 		if (indentErrors.length > 0) {
 			indentErrors.forEach(error => {
@@ -244,7 +251,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 	}
 }
 
-export function getActions(document: TextDocument, errors: IssueRange[]) {
+export function getActions(document: TextDocument, errors: parserTypes.IssueRange[]) {
 	let actions: CodeAction[] = [];
 
 	// We need to move subroutine to the end and reverse the contents
