@@ -64,6 +64,24 @@ export default class Document {
           }
           break;
 
+
+        case `comment`:
+          const commentToken = Statement.trimTokens(tokens.slice(statementStart.index, i+1));
+          if (commentToken.length === 1) {
+
+            // Don't add the comment as a new statement if it proceeds another non-comment token
+            if (tokens[i-1] && tokens[i-1].range.line !== commentToken[0].range.line) {
+              tokenBeforeStmt = tokens[i-commentToken.length];
+              const indent = commentToken[0] && tokenBeforeStmt ? (commentToken[0].range.start - tokenBeforeStmt.range.end) : 0;
+              this.addStatement(indent, commentToken);
+            }
+
+            statementStart = {
+              index: i+1
+            };
+          }
+          break;
+
         case `directive`:
           const directiveTokens = Statement.trimTokens(tokens.slice(statementStart.index, i+1));
           if (directiveTokens[0].type === `directive`) {

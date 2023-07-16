@@ -911,55 +911,57 @@ export default class Linter {
         }
 
         if (indentEnabled && skipIndentCheck === false) {
-          opcode = statement[0].value.toUpperCase();
+          if (statement[0].type !== `comment` || (statement[0].type === `comment` && rules.PrettyComments)) {
+            opcode = statement[0].value.toUpperCase();
 
-          if ([
-            `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `ENDSL`
-          ].includes(opcode)) {
-            expectedIndent -= indent;
-
-            //Special case for `ENDSL` and `END-PROC
             if ([
-              `ENDSL`
+              `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `ENDSL`
             ].includes(opcode)) {
               expectedIndent -= indent;
+
+              //Special case for `ENDSL` and `END-PROC
+              if ([
+                `ENDSL`
+              ].includes(opcode)) {
+                expectedIndent -= indent;
+              }
+
+              // Support for on-exit
+              if (opcode === `END-PROC` && inOnExit) {
+                inOnExit = false;
+                expectedIndent -= indent;
+              }
             }
 
-            // Support for on-exit
-            if (opcode === `END-PROC` && inOnExit) {
-              inOnExit = false;
-              expectedIndent -= indent;
+            if (currentIndent !== expectedIndent) {
+              indentErrors.push({
+                line: lineNumber,
+                expectedIndent,
+                currentIndent
+              });
+            }
+
+            if ([
+              `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
+            ].includes(opcode)) {
+              if ([`DCL-DS`, `DCL-PI`, `DCL-PR`].includes(opcode) && oneLineTriggers[opcode].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
+                //No change
+              }
+              else if (opcode === `SELECT`) {
+                if (skipIndentCheck === false) expectedIndent += (indent * 2);
+              }
+              else if (opcode === `ON-EXIT`) {
+                expectedIndent += indent;
+                inOnExit = true;
+              }
+              else
+                expectedIndent += indent;
             }
           }
 
-          if (currentIndent !== expectedIndent) {
-            indentErrors.push({
-              line: lineNumber,
-              expectedIndent,
-              currentIndent
-            });
-          }
-
-          if ([
-            `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
-          ].includes(opcode)) {
-            if ([`DCL-DS`, `DCL-PI`, `DCL-PR`].includes(opcode) && oneLineTriggers[opcode].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
-              //No change
-            }
-            else if (opcode === `SELECT`) {
-              if (skipIndentCheck === false) expectedIndent += (indent * 2);
-            }
-            else if (opcode === `ON-EXIT`) {
-              expectedIndent += indent;
-              inOnExit = true;
-            }
-            else
-              expectedIndent += indent;
-          }
+          // Reset the rule back.
+          currentRule = skipRules.none;
         }
-
-        // Reset the rule back.
-        currentRule = skipRules.none;
       }
 
     }

@@ -250,22 +250,27 @@ export function tokenise(statement) {
     // Handle when the comment character is found
     if (state === ReadState.NORMAL && statement[i] && statement[i + 1] && statement.substring(i, i + 2) === startCommentString) {
       commentStart = i;
+      currentText = startCommentString;
       state = ReadState.IN_COMMENT;
+
+      i++
 
       // Handle when the end of line is there and we're in a comment
     } else if (state === ReadState.IN_COMMENT && statement[i] === endCommentString) {
-      const preNewLine = i;
-      statement = statement.substring(0, commentStart) + ` `.repeat(i - commentStart) + statement.substring(i);
-      i--; // So we process the newline next
       state = ReadState.NORMAL;
 
-      currentText = ``;
+      // We're at the new line character so we add the newline
+      result.push(
+        { value: currentText, type: `comment`, range: { start: commentStart, end: i-1, line: lineNumber } },
+        { value: statement[i], type: `newline`, range: { start: i, end: i + statement[i].length, line: lineNumber } }
+      );
 
-      result.push({ value: statement[i], type: `newline`, range: { start: i, end: i + statement[i].length, line: lineNumber } });
+      currentText = ``;
+      startsAt = i+1;
 
       // Ignore characters when we're in a string
     } else if (state === ReadState.IN_COMMENT) {
-      // Do nothing!
+      currentText += statement[i];
     
     } else if (state === ReadState.IN_STRING && statement[i] !== stringChar) {
       currentText += statement[i];
