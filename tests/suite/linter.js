@@ -1143,61 +1143,60 @@ exports.linter13 = async () => {
   assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
 };
 
-// TODO: support comment indentations.....
-// exports.linter13_commentIndent = async () => {
-//   const lines = [
-//     `**FREE`,
-//     ``,
-//     `Ctl-Opt DFTACTGRP(*No);`,
-//     ``,
-//     `Dcl-s MyVariable2 Char(20);`,
-//     ``,
-//     `// my constant`,
-//     `// second line`,
-//     `Dcl-C theConstant 'Hello world';`,
-//     `  // comment with bad indent`,
-//     ``,
-//     `Dcl-Proc theProcedure;`,
-//     `  Dcl-Pi *N;`,
-//     `    newValue Char(20);`,
-//     `  End-Pi;`,
-//     `// comment with wrong indent`,
-//     `  Dcl-S localVar Char(20);`,
-//     `  localvar = newValue;`,
-//     `  // but valid indent`,
-//     `  // with another line`,
-//     `      // too many spaces`,
-//     `  Myvariable2 = localvar;`,
-//     `End-Proc;`,
-//   ].join(`\n`);
+exports.linter13_commentIndent = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `// my constant`,
+    `// second line`,
+    `Dcl-C theConstant 'Hello world';`,
+    `  // comment with bad indent`,
+    ``,
+    `Dcl-Proc theProcedure;`,
+    `  Dcl-Pi *N;`,
+    `    newValue Char(20);`,
+    `  End-Pi;`,
+    `// comment with wrong indent`,
+    `  Dcl-S localVar Char(20);`,
+    `  localvar = newValue;`,
+    `  // but valid indent`,
+    `  // with another line`,
+    `      // too many spaces`,
+    `  Myvariable2 = localvar;`,
+    `End-Proc;`,
+  ].join(`\n`);
 
-//   const parser = parserSetup();
-//   const cache = await parser.getDocs(uri, lines);
-//   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-//     PrettyComments: true,
-//     indent: 2
-//   }, cache);
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    PrettyComments: true,
+    indent: 2
+  }, cache);
 
-//   assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
+  assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
 
-//   assert.deepStrictEqual(indentErrors[0], {
-//     currentIndent: 2,
-//     expectedIndent: 0,
-//     line: 9
-//   });
+  assert.deepStrictEqual(indentErrors[0], {
+    currentIndent: 2,
+    expectedIndent: 0,
+    line: 9
+  });
 
-//   assert.deepStrictEqual(indentErrors[1], {
-//     currentIndent: 0,
-//     expectedIndent: 2,
-//     line: 15
-//   });
+  assert.deepStrictEqual(indentErrors[1], {
+    currentIndent: 0,
+    expectedIndent: 2,
+    line: 15
+  });
 
-//   assert.deepStrictEqual(indentErrors[2], {
-//     currentIndent: 6,
-//     expectedIndent: 2,
-//     line: 20
-//   });
-// };
+  assert.deepStrictEqual(indentErrors[2], {
+    currentIndent: 6,
+    expectedIndent: 2,
+    line: 20
+  });
+};
 
 exports.linter14 = async () => {
   const lines = [
