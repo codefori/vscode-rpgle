@@ -71,7 +71,26 @@ exports.linter_indent_multi_2 = async () => {
 
   assert.strictEqual(indentErrors[0].line, 5, `Second error should be index 5`);
   assert.strictEqual(indentErrors[0].currentIndent, 5, `Actual indent should be 5`);
+  
   assert.strictEqual(indentErrors[0].expectedIndent, 4, `Expected indent should be 4`);
+};
+
+exports.linter_invalid_statement = async () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-s abcd char(5); Dsply 'This is bad but shouldn't error';`,
+    `Begsr shouldError;`,
+    `Endsr;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 0, `There should be 1 error`);
 };
 
 exports.linter1_indent = async () => {

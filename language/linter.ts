@@ -111,7 +111,8 @@ export default class Linter {
 
     const doc = new Document(data.content);
 
-    for (const docStatement of doc.statements) {
+    for (let si = 0; si < doc.statements.length; si++) {
+      const docStatement = doc.statements[si];
       const statement = docStatement.tokens;
       lineNumber = docStatement.range.line;
       currentIndent = docStatement.indent;
@@ -944,57 +945,62 @@ export default class Linter {
           skipIndentCheck = [skipRules.singleIndent, skipRules.single].includes(currentRule);
         }
 
-        if (indentEnabled && skipIndentCheck === false) {
-          opcode = statement[0].value.toUpperCase();
+        // We don't report lint issues for a statement that is on the same line as the last statement
+        // While this isn't technically possible in RPG, we still check it because it's not an indent error
 
-          if ([
-            `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `ENDSL`
-          ].includes(opcode)) {
-            expectedIndent -= indent;
+        if (doc.statements[si-1] === undefined || (doc.statements[si-1].range.line !== lineNumber)) {
+          if (indentEnabled && skipIndentCheck === false) {
+            opcode = statement[0].value.toUpperCase();
 
-            //Special case for `ENDSL` and `END-PROC
             if ([
-              `ENDSL`
+              `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `ENDSL`
             ].includes(opcode)) {
               expectedIndent -= indent;
+
+              //Special case for `ENDSL` and `END-PROC
+              if ([
+                `ENDSL`
+              ].includes(opcode)) {
+                expectedIndent -= indent;
+              }
+
+              // Support for on-exit
+              if (opcode === `END-PROC` && inOnExit) {
+                inOnExit = false;
+                expectedIndent -= indent;
+              }
             }
 
-            // Support for on-exit
-            if (opcode === `END-PROC` && inOnExit) {
-              inOnExit = false;
-              expectedIndent -= indent;
+            if (currentIndent !== expectedIndent) {
+              indentErrors.push({
+                line: lineNumber,
+                expectedIndent,
+                currentIndent
+              });
             }
+
+            if ([
+              `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
+            ].includes(opcode)) {
+              if ([`DCL-DS`, `DCL-PI`, `DCL-PR`].includes(opcode) && oneLineTriggers[opcode].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
+                //No change
+              }
+              else if (opcode === `SELECT`) {
+                if (skipIndentCheck === false) expectedIndent += (indent * 2);
+              }
+              else if (opcode === `ON-EXIT`) {
+                expectedIndent += indent;
+                inOnExit = true;
+              }
+              else
+                expectedIndent += indent;
+            }
+
           }
-
-          if (currentIndent !== expectedIndent) {
-            indentErrors.push({
-              line: lineNumber,
-              expectedIndent,
-              currentIndent
-            });
-          }
-
-          if ([
-            `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
-          ].includes(opcode)) {
-            if ([`DCL-DS`, `DCL-PI`, `DCL-PR`].includes(opcode) && oneLineTriggers[opcode].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
-              //No change
-            }
-            else if (opcode === `SELECT`) {
-              if (skipIndentCheck === false) expectedIndent += (indent * 2);
-            }
-            else if (opcode === `ON-EXIT`) {
-              expectedIndent += indent;
-              inOnExit = true;
-            }
-            else
-              expectedIndent += indent;
-          }
-
+          
+          // Reset the rule back.
+          currentRule = skipRules.none;
         }
-        
-        // Reset the rule back.
-        currentRule = skipRules.none;
       }
 
     }
