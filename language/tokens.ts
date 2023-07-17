@@ -1,6 +1,23 @@
+import { Token } from "./types";
 
-/** @type {{name: string, match: {type: string, match?: function}[], becomes: {type: string}}[]} */
-const commonMatchers = [
+interface Matcher {
+  name: string;
+  match: {
+    type: string;
+    match?: Function;
+  }[];
+  becomes: {
+    type: string
+  };
+};
+
+enum ReadState {
+  NORMAL = "Normal",
+  IN_STRING = "String",
+  IN_COMMENT = "Comment"
+}
+
+const commonMatchers: Matcher[] = [
   {
     name: `FORMAT_STATEMEMT`,
     match: [
@@ -142,6 +159,17 @@ const commonMatchers = [
     }
   },
   {
+    name: `ON-EXIT`,
+    match: [
+      { type: `word`, match: (word) => word.toUpperCase() === `ON` },
+      { type: `minus` },
+      { type: `word`, match: (word) => word.toUpperCase() === `EXIT` },
+    ],
+    becomes: {
+      type: `word`
+    }
+  },
+  {
     name: `CTL-OPT`,
     match: [
       { type: `word`, match: (word) => word.toUpperCase() === `CTL` },
@@ -172,10 +200,17 @@ const commonMatchers = [
     becomes: {
       type: `word`
     }
-  }
+  },
+  {
+    name: `NEWLINE`,
+    match: [{ type: `newliner` }, { type: `newline` }],
+    becomes: {
+      type: `newline`
+    },
+  },
 ];
 
-const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, `,`, ` `];
+const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, `,`, `;`, `\n`, `\r`, ` `];
 const types = {
   '%': `percent`,
   '.': `dot`,
@@ -187,48 +222,86 @@ const types = {
   '*': `asterisk`,
   '=': `equal`,
   ':': `seperator`,
-  ';': `end`,
-  ',': `comma`
+  ';': `semicolon`,
+  ',': `comma`,
+  '\n': `newline`,
+  '\r': `newliner`,
 };
+
+const stringChar: string = `'`;
+const startCommentString = `//`;
+const endCommentString = `\n`;
 
 /**
  * @param {string} statement 
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */
-export function parseStatement(statement) {
-  let inString = false;
+export function tokenise(statement) {
+  let lineNumber = 0;
+  let commentStart = -1;
+  let state: ReadState = ReadState.NORMAL;
 
-  let result = [];
+  let result: Token[] = [];
 
   let startsAt = 0;
   let currentText = ``;
 
   for (let i = 0; i < statement.length; i++) {
-    if (inString && statement[i] !== `'`) {
+    // Handle when the comment character is found
+    if (state === ReadState.NORMAL && statement[i] && statement[i + 1] && statement.substring(i, i + 2) === startCommentString) {
+      commentStart = i;
+      currentText = startCommentString;
+      state = ReadState.IN_COMMENT;
+
+      i++
+
+      // Handle when the end of line is there and we're in a comment
+    } else if (state === ReadState.IN_COMMENT && statement[i] === endCommentString) {
+      state = ReadState.NORMAL;
+
+      // We're at the new line character so we add the newline
+      result.push(
+        { value: currentText, type: `comment`, range: { start: commentStart, end: i-1, line: lineNumber } },
+        { value: statement[i], type: `newline`, range: { start: i, end: i + statement[i].length, line: lineNumber } }
+      );
+
+      currentText = ``;
+      startsAt = i+1;
+
+      // Ignore characters when we're in a string
+    } else if (state === ReadState.IN_COMMENT) {
       currentText += statement[i];
+    
+    } else if (state === ReadState.IN_STRING && statement[i] !== stringChar) {
+      currentText += statement[i];
+
     } else {
       switch (statement[i]) {
-      case `'`:
-        if (inString) {
+      // When it's the string character..
+      case stringChar:
+        if (state === ReadState.IN_STRING) {
           currentText += statement[i];
-          result.push({ value: currentText, type: `string`, position: startsAt });
+          result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
           currentText = ``;
         } else {
           startsAt = i;
           currentText += statement[i];
         }
 
-        inString = !inString;
+        // @ts-ignore
+        state = state === ReadState.IN_STRING ? ReadState.NORMAL : ReadState.IN_STRING;
         break;
+
+      // When it's any other character...
       default:
-        if (splitParts.includes(statement[i]) && inString === false) {
+        if (splitParts.includes(statement[i]) && state === ReadState.NORMAL) {
           if (currentText.trim() !== ``) {
-            result.push({ value: currentText, type: `word`, position: startsAt });
+            result.push({ value: currentText, type: `word`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber }  });
             currentText = ``;
           }
 
           if (statement[i] !== ` `) {
-            result.push({ value: statement[i], type: types[statement[i]], position: i });
+            result.push({ value: statement[i], type: types[statement[i]], range: { start: i, end: i + statement[i].length, line: lineNumber } });
           }
 
           startsAt = i + 1;
@@ -239,24 +312,25 @@ export function parseStatement(statement) {
         break;
       }
     }
+
+    if (statement[i] === `\n`) lineNumber++;
   }
 
-  if (currentText.trim() !== ``) {
-    result.push({ value: currentText, type: `word`, position: startsAt });
+  if (currentText.trim() !== `` && state !== ReadState.IN_COMMENT) {
+    result.push({ value: currentText, type: state === ReadState.NORMAL ? `word` : `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
     currentText = ``;
+  } else {
+    result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
   }
 
   result = fixStatement(result);
-  //result = this.createBlocks(result);
+  //result = createBlocks(result);
 
   return result;
 }
 
-/**
- * @param {{value: string, type: string, position: number}[]} statement 
- */
-export function fixStatement(statement) {
-  for (let i = 0; i < statement.length; i++) {
+export function fixStatement(tokens: Token[]) {
+  for (let i = 0; i < tokens.length; i++) {
     for (let y = 0; y < commonMatchers.length; y++) {
       const type = commonMatchers[y];
       let goodMatch = true;
@@ -264,10 +338,10 @@ export function fixStatement(statement) {
       for (let x = 0; x < type.match.length; x++) {
         const match = type.match[x];
 
-        if (statement[i + x]) {
-          if (statement[i + x].type === match.type) {
+        if (tokens[i + x]) {
+          if (tokens[i + x].type === match.type) {
             if (match.match) {
-              if (match.match(statement[i + x].value)) {
+              if (match.match(tokens[i + x].value)) {
                 goodMatch = true;
               } else {
                 goodMatch = false;
@@ -286,11 +360,15 @@ export function fixStatement(statement) {
       }
 
       if (goodMatch) {
-        const value = statement.slice(i, i + type.match.length).map(x => x.value).join(``);
-        statement.splice(i, type.match.length, {
+        const newTokens = tokens.slice(i, i + type.match.length);
+        tokens.splice(i, type.match.length, {
           ...type.becomes,
-          value,
-          position: statement[i].position
+          value: newTokens.map(x => x.value).join(``),
+          range: {
+            start: newTokens[0].range.start,
+            end: newTokens[newTokens.length-1].range.end,
+            line: newTokens[0].range.line
+          }
         });
 
         break;
@@ -298,15 +376,15 @@ export function fixStatement(statement) {
     }
   }
 
-  return statement;
+  return tokens;
 }
 
-export function createBlocks(statement) {
+export function createBlocks(tokens: Token[]) {
   let start = 0;
   let level = 0;
 
-  for (let i = 0; i < statement.length; i++) {
-    switch (statement[i].type) {
+  for (let i = 0; i < tokens.length; i++) {
+    switch (tokens[i].type) {
     case `openbracket`:
       if (level === 0) {
         start = i;
@@ -317,10 +395,15 @@ export function createBlocks(statement) {
       level--;
 
       if (level === 0) {
-        statement.splice(start, i - start + 1, {
+        const newTokens = tokens.slice(start + 1, i);
+        tokens.splice(start, i - start + 1, {
           type: `block`,
-          block: createBlocks(statement.slice(start + 1, i)),
-          position: statement[start].position
+          block: createBlocks(newTokens),
+          range: {
+            line: tokens[start].range.line,
+            start: tokens[i].range.start,
+            end: tokens[i].range.end,
+          }
         });
         i = start;
       }
@@ -328,5 +411,5 @@ export function createBlocks(statement) {
     }
   }
 
-  return statement;
+  return tokens;
 }
