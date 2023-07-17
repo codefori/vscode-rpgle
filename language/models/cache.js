@@ -10,10 +10,10 @@ const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().pa
 export default class Cache {
   /**
    * 
-   * @param {import("..").CacheProps} cache 
+   * @param {import("../parserTypes").CacheProps} cache 
    */
   constructor(cache = {}) {
-    /** @type {import("..").Keywords} */
+    /** @type {import("../parserTypes").Keywords} */
     this.keyword = {};
 
     /** @type {Declaration[]} */
@@ -43,7 +43,7 @@ export default class Cache {
     /** @type {Declaration[]} */
     this.indicators = cache.indicators || [...inds];
 
-    /** @type {import("..").IncludeStatement[]} */
+    /** @type {import("../parserTypes").IncludeStatement[]} */
     this.includes = cache.includes || [];
   }
 

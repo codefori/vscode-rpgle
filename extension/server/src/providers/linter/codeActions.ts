@@ -15,7 +15,7 @@ export default async function codeActionsProvider(params: CodeActionParams): Pro
 			if (docs) {
 				const detail = await refreshLinterDiagnostics(document, docs, false);
 				if (detail) {
-					const fixErrors = detail.errors.filter(error => range.start.line === error.range.start.line );
+					const fixErrors = detail.errors.filter(error => range.start.line === document.positionAt(error.offset.position!).line );
 
 					if (fixErrors.length > 0) {
 						return getActions(document, fixErrors);

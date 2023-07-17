@@ -326,16 +326,10 @@ module.exports = {
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(4, 0),
-        new Position(4, 8),
-      ),
-      offset: {
-        position: 0,
-        end: 8
-      },
+      offset: { position: 45, end: 53 }, type: `UnexpectedEnd`
     });
+
+    assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `End-Proc`);
   },
 
   incorrectEnd2: async () => {
@@ -355,16 +349,10 @@ module.exports = {
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(4, 0),
-        new Position(4, 5),
-      ),
-      offset: {
-        position: 0,
-        end: 5
-      },
+      offset: { position: 48, end: 53 }, type: `UnexpectedEnd`
     });
+
+    assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `endsr`);
   },
 
   incorrectEnd3: async () => {
@@ -384,16 +372,10 @@ module.exports = {
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(4, 0),
-        new Position(4, 8),
-      ),
-      offset: {
-        position: 0,
-        end: 8
-      },
+      offset: { position: 44, end: 52 }, type: `UnexpectedEnd`
     });
+
+    assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `end-proc`);
   },
 
   incorrectEnd4: async () => {
@@ -420,15 +402,7 @@ module.exports = {
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(11, 0),
-        new Position(11, 8),
-      ),
-      offset: {
-        position: 0,
-        end: 8
-      },
+      offset: { position: 187, end: 195 }, type: `UnexpectedEnd`
     });
   },
 

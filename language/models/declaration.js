@@ -13,7 +13,7 @@ export default class Declaration {
     /** @type {string[]} */
     this.keywords = [];
 
-    /** @type {Keywords} */
+    /** @type {import("../parserTypes").Keywords} */
     this.keyword = {};
     
     this.description = ``;
@@ -21,10 +21,10 @@ export default class Declaration {
     /** @type {{tag: string, content: string}[]} */
     this.tags = [];
 
-    /** @type {DefinitionPosition} */
+    /** @type {import("../parserTypes").DefinitionPosition} */
     this.position = undefined;
 
-    /** @type {IssueRange[]} */
+    /** @type {import("../parserTypes").IssueRange[]} */
     this.references = [];
 
     // Not used in subitem:

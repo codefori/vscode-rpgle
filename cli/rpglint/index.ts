@@ -7,7 +7,7 @@ import { readFileSync } from 'fs';
 
 import Parser from '../../language/parser';
 import Linter from '../../language/linter';
-import { Rules } from '../../language';
+import { Rules } from '../../language/parserTypes';
 import path from 'path';
 
 type FormatTypes = "standard" | "flc";

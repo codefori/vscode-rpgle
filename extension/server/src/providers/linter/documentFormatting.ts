@@ -70,12 +70,7 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 					}, options, docs);
 
 					const indentFixes = indentErrors.map(error => {
-						const range = calculateOffset(document, {
-							range: Range.create(error.line, 0, error.line, error.currentIndent),
-							offset: undefined,
-							type: undefined,
-							newValue: undefined,
-						});
+						const range = Range.create(error.line, 0, error.line, error.currentIndent);
 						return TextEdit.replace(range, ``.padEnd(error.expectedIndent, ` `));
 					});
 

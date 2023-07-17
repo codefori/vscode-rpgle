@@ -1,6 +1,6 @@
 /* eslint-disable no-case-declarations */
 
-import { createBlocks, parseStatement } from "./statement";
+import { createBlocks, tokenise } from "./tokens";
 
 import Cache from "./models/cache";
 import Declaration from "./models/declaration";
@@ -141,7 +141,7 @@ export default class Parser {
    * @param {string} workingUri
    * @param {string} [content] 
    * @param {{withIncludes?: boolean, ignoreCache?: boolean}} options
-   * @returns {Promise<Cache|null>}
+   * @returns {Promise<Cache|undefined>}
    */
   async getDocs(workingUri, content, options = {withIncludes: true}) {
     const existingCache = this.getParsedCache(workingUri);
@@ -1280,11 +1280,11 @@ export default class Parser {
    * @param {string[]} parts 
    */
   static expandKeywords(parts) {
-    /** @type {import(".").Keywords} */
+    /** @type {import("./parserTypes").Keywords} */
     const keyvalues = {};
 
     if (parts.length > 0) {
-      const keywordParts = createBlocks(parseStatement(parts.join(` `)));
+      const keywordParts = createBlocks(tokenise(parts.join(` `)));
 
       for (let i = 0; i < keywordParts.length; i++) {
         if (keywordParts[i].value) {

@@ -35,7 +35,6 @@
 			"request": "launch",
 			"program": "${workspaceRoot}/out/tests/tests/index.js",
 			"sourceMaps": true,
-			"args": ["exec_"],
 			"preLaunchTask": {
 				"type": "npm",
 				"script": "compile:tests"
