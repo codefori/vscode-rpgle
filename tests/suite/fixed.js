@@ -1041,3 +1041,40 @@ exports.ctl_opt_fixed = async () => {
   assert.strictEqual(cache.keyword[`DATFMT`], `*MDY/`);
   assert.strictEqual(cache.keyword[`COPYRIGHT`], `'(C) Copyright ABC Programming - 1995'`);
 };
+
+exports.call_opcode = async () => {
+  const lines = [
+    `     C     CreateNewBoardBEGSR`,
+    `     C                   EVAL      wWinMode = 'T'`,
+    `     C                   EVAL      wWinText = *BLANKS`,
+    `     C                   EVAL      wWinNumber = 0`,
+    `     C                   EVAL      wWinF3 = *OFF`,
+    `     C                   CALL      'BBSWINASKR'`,
+    `     C                   PARM                    wWinMode`,
+    `     C                   PARM                    wWinText`,
+    `     C                   PARM                    wWinNumber`,
+    `     C                   PARM                    wWinF3`,
+    `     C                   IF        wWinF3 = *OFF`,
+    `     C                   EVAL      BRDSHT = wWinText`,
+    `      * Convert it to Uppercase`,
+    `     C     cLo:cUp       XLATE     BRDSHT        BRDSHT`,
+    `     C                   EVAL      BRDLNG = BRDSHT`,
+    `     C                   EVAL      BRDALV = 99`,
+    `     C                   WRITE     RBOARD`,
+    `     C                   EXSR      ReLoadSFL`,
+    `     C                   ENDIF`,
+    `     C                   ENDSR`,
+    ``
+  ].join(`\n`);
+
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.subroutines.length, 1);
+  assert.strictEqual(cache.procedures.length, 1);
+
+  const fixedCall = cache.find(`BBSWINASKR`)
+  assert.strictEqual(fixedCall.name, `BBSWINASKR`);
+  assert.strictEqual(fixedCall.keyword[`EXTPGM`], true);
+}

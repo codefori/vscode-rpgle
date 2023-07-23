@@ -380,7 +380,7 @@ export default class Parser {
                 // We don't want to waste precious time parsing all C specs, so we make sure it's got
                 // BEGSR or ENDSR in it first.
                 const upperLine = line.toUpperCase();
-                if ([`BEGSR`, `ENDSR`].some(v => upperLine.includes(v)) === false) {
+                if ([`BEGSR`, `ENDSR`, `CALL`].some(v => upperLine.includes(v)) === false) {
                   continue;
                 }
               }
@@ -1016,12 +1016,35 @@ export default class Parser {
                 currentDescription = [];
               }
               break;
+
             case `ENDSR`:
               if (currentItem && currentItem.type === `subroutine`) {
                 currentItem.range.end = lineNumber;
                 scope.subroutines.push(currentItem);
                 resetDefinition = true;
               }
+              break;
+          
+            case `CALL`:
+              const callItem = new Declaration(`procedure`);
+              callItem.name = (cSpec.factor2.startsWith(`'`) && cSpec.factor2.endsWith(`'`) ? cSpec.factor2.substring(1, cSpec.factor2.length-1) : cSpec.factor2);
+              callItem.keywords = [`EXTPGM`];
+              callItem.description = currentDescription.join(`\n`);
+              callItem.tags = currentTags;
+
+              callItem.position = {
+                path: file,
+                line: lineNumber
+              };
+
+              callItem.range = {
+                start: lineNumber,
+                end: lineNumber
+              };
+
+              callItem.keyword = Parser.expandKeywords(callItem.keywords);
+
+              scope.procedures.push(callItem);
               break;
             }
 
