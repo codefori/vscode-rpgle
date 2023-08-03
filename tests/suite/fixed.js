@@ -1067,7 +1067,6 @@ exports.call_opcode = async () => {
     ``
   ].join(`\n`);
 
-
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
 
@@ -1077,4 +1076,35 @@ exports.call_opcode = async () => {
   const fixedCall = cache.find(`BBSWINASKR`)
   assert.strictEqual(fixedCall.name, `BBSWINASKR`);
   assert.strictEqual(fixedCall.keyword[`EXTPGM`], true);
+}
+
+exports.file_keywords = async () => {
+  const lines = [
+    ``,
+    `     forder     o    e             disk`,
+    `     fdetord    o    e           k disk`,
+    `     fTmpdetord uf a e           k disk    EXTDESC('DETORD')`,
+    `     f                                     EXTFILE(*EXTDESC)`,
+    `     f                                     rename(fdeto:tmprec)`,
+    `     ford100d   cf   e             workstn`,
+    `     F                                     indds(indds)`,
+    `     F                                     sfile(sfl01:rrn01)`,
+    `     F                                     Infds(Info)`,
+    ``,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.files.length, 4);
+
+  const tmpdetord = cache.find(`Tmpdetord`);
+  assert.strictEqual(tmpdetord.keyword[`EXTDESC`], `'DETORD'`);
+  assert.strictEqual(tmpdetord.keyword[`EXTFILE`], `*EXTDESC`);
+  assert.strictEqual(tmpdetord.keyword[`RENAME`], `fdeto:tmprec`);
+
+  const ord100d = cache.find(`ord100d`);
+  assert.strictEqual(ord100d.keyword[`INDDS`], `indds`);
+  assert.strictEqual(ord100d.keyword[`SFILE`], `sfl01:rrn01`);
+  assert.strictEqual(ord100d.keyword[`INFDS`], `Info`);
 }
