@@ -1077,3 +1077,27 @@ exports.exec_9 = async () => {
   assert.strictEqual(cache.sqlReferences[1].name, `OtherCoolProc`);
   assert.strictEqual(cache.sqlReferences[1].description, ``);
 }
+
+exports.exec_10 = async () => {
+  const lines = [
+    `        EXEC SQL`,
+    `          DECLARE C1 CURSOR FOR`,
+    `            SELECT MSGBRD, MSGSBD, MSGUID, MSGSBJ, MSGDAT, MSGTIM, MSGSND`,
+    `            FROM PSBORDS AS S JOIN PMESSGS AS M`,
+    `              ON S.SBRBRD = M.MSGBRD`,
+    `               AND S.SBRSHT = M.MSGSBD`,
+    `            WHERE MSGDAT = :cAuthUser`,
+    `            ORDER BY MSGDAT DESC, MSGTIM DESC;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `PSBORDS`);
+  assert.strictEqual(cache.sqlReferences[0].description, ``);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `PMESSGS`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}

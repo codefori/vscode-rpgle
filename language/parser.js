@@ -787,7 +787,7 @@ export default class Parser {
                 // update xx.xx set
                 // select * into :x from xx.xx
                 // call xx.xx()
-                const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`];
+                const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
 
                 const cleanupObjectRef = (content = ``) => {
                   const result = {
