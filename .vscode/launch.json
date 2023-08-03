@@ -39,6 +39,7 @@
 				"type": "npm",
 				"script": "compile:tests"
 			},
+			"args": ["call_opcode"],
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}

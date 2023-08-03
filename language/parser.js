@@ -380,7 +380,7 @@ export default class Parser {
                 // We don't want to waste precious time parsing all C specs, so we make sure it's got
                 // BEGSR or ENDSR in it first.
                 const upperLine = line.toUpperCase();
-                if ([`BEGSR`, `ENDSR`].some(v => upperLine.includes(v)) === false) {
+                if ([`BEGSR`, `ENDSR`, `CALL`].some(v => upperLine.includes(v)) === false) {
                   continue;
                 }
               }
@@ -787,7 +787,7 @@ export default class Parser {
                 // update xx.xx set
                 // select * into :x from xx.xx
                 // call xx.xx()
-                const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`];
+                const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
 
                 const cleanupObjectRef = (content = ``) => {
                   const result = {
@@ -810,28 +810,31 @@ export default class Parser {
                   return result;
                 }
 
-                const preIndex = parts.findIndex((part, index) => 
-                  preFileWords.includes(part) &&  // If this is true, usually means next word is the object
-                  (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
-                );
-
-                if (preIndex >= 0 && (preIndex+1) < parts.length) {
-                  const possibleFileName = partsLower[preIndex+1];
-                  const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
-
-                  currentItem = new Declaration(`file`);
-                  currentItem.name = qualifiedObjectPath.name;
-                  currentItem.keywords = [];
-                  currentItem.description = qualifiedObjectPath.schema || ``;
-  
-                  currentItem.position = {
-                    path: file,
-                    line: statementStartingLine
-                  };
-  
-                  scope.sqlReferences.push(currentItem);
+                parts.forEach((part, index) => {
+                  if (
+                    preFileWords.includes(part) &&  // If this is true, usually means next word is the object
+                    (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
+                  ) {
+                    if (index >= 0 && (index+1) < parts.length) {
+                      const possibleFileName = partsLower[index+1];
+                      const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
+    
+                      currentItem = new Declaration(`file`);
+                      currentItem.name = qualifiedObjectPath.name;
+                      currentItem.keywords = [];
+                      currentItem.description = qualifiedObjectPath.schema || ``;
+      
+                      currentItem.position = {
+                        path: file,
+                        line: statementStartingLine
+                      };
+      
+                      scope.sqlReferences.push(currentItem);
+                    }
+                  }
+                  
                   resetDefinition = true;
-                }
+                });
               }
             }
             break;
@@ -941,7 +944,7 @@ export default class Parser {
             const fSpec = parseFLine(line);
             potentialName = getObjectName(fSpec.name, fSpec.keywords);
 
-            if (potentialName) {
+            if (fSpec.name) {
               currentItem = new Declaration(`file`);
               currentItem.name = potentialName;
               currentItem.keywords = fSpec.keywords;
@@ -958,7 +961,7 @@ export default class Parser {
                   prefix = element.substring(7, element.indexOf(`)`))
                   return true;
                 }
-              });				 
+              });
 
               const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
@@ -986,6 +989,12 @@ export default class Parser {
               }
 
               scope.files.push(currentItem);
+            } else {
+              currentItem = scope.files[scope.files.length-1];
+              currentItem.keywords = [
+                ...(currentItem.keywords ? currentItem.keywords : []),
+                ...fSpec.keywords
+              ]
             }
             
             resetDefinition = true;
@@ -1016,12 +1025,35 @@ export default class Parser {
                 currentDescription = [];
               }
               break;
+
             case `ENDSR`:
               if (currentItem && currentItem.type === `subroutine`) {
                 currentItem.range.end = lineNumber;
                 scope.subroutines.push(currentItem);
                 resetDefinition = true;
               }
+              break;
+          
+            case `CALL`:
+              const callItem = new Declaration(`procedure`);
+              callItem.name = (cSpec.factor2.startsWith(`'`) && cSpec.factor2.endsWith(`'`) ? cSpec.factor2.substring(1, cSpec.factor2.length-1) : cSpec.factor2);
+              callItem.keywords = [`EXTPGM`];
+              callItem.description = currentDescription.join(`\n`);
+              callItem.tags = currentTags;
+
+              callItem.position = {
+                path: file,
+                line: lineNumber
+              };
+
+              callItem.range = {
+                start: lineNumber,
+                end: lineNumber
+              };
+
+              callItem.keyword = Parser.expandKeywords(callItem.keywords);
+
+              scope.procedures.push(callItem);
               break;
             }
 

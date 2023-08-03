@@ -125,7 +125,7 @@ export default class Linter {
           const comment = statement[0].value.substring(2).trimEnd();
           if (rules.PrettyComments) {
             // We check for the slash because the documentation requires ///.
-            if (comment !== `/`) {
+            if (comment && comment[0] !== `/`) {
               const startSpaces = comment.search(/\S/);
 
               if (startSpaces === 0) {
