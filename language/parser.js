@@ -941,7 +941,7 @@ export default class Parser {
             const fSpec = parseFLine(line);
             potentialName = getObjectName(fSpec.name, fSpec.keywords);
 
-            if (potentialName) {
+            if (fSpec.name) {
               currentItem = new Declaration(`file`);
               currentItem.name = potentialName;
               currentItem.keywords = fSpec.keywords;
@@ -958,7 +958,7 @@ export default class Parser {
                   prefix = element.substring(7, element.indexOf(`)`))
                   return true;
                 }
-              });				 
+              });
 
               const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
 
@@ -986,6 +986,12 @@ export default class Parser {
               }
 
               scope.files.push(currentItem);
+            } else {
+              currentItem = scope.files[scope.files.length-1];
+              currentItem.keywords = [
+                ...(currentItem.keywords ? currentItem.keywords : []),
+                ...fSpec.keywords
+              ]
             }
             
             resetDefinition = true;
