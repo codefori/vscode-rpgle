@@ -810,28 +810,31 @@ export default class Parser {
                   return result;
                 }
 
-                const preIndex = parts.findIndex((part, index) => 
-                  preFileWords.includes(part) &&  // If this is true, usually means next word is the object
-                  (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
-                );
-
-                if (preIndex >= 0 && (preIndex+1) < parts.length) {
-                  const possibleFileName = partsLower[preIndex+1];
-                  const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
-
-                  currentItem = new Declaration(`file`);
-                  currentItem.name = qualifiedObjectPath.name;
-                  currentItem.keywords = [];
-                  currentItem.description = qualifiedObjectPath.schema || ``;
-  
-                  currentItem.position = {
-                    path: file,
-                    line: statementStartingLine
-                  };
-  
-                  scope.sqlReferences.push(currentItem);
+                parts.forEach((part, index) => {
+                  if (
+                    preFileWords.includes(part) &&  // If this is true, usually means next word is the object
+                    (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
+                  ) {
+                    if (index >= 0 && (index+1) < parts.length) {
+                      const possibleFileName = partsLower[index+1];
+                      const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
+    
+                      currentItem = new Declaration(`file`);
+                      currentItem.name = qualifiedObjectPath.name;
+                      currentItem.keywords = [];
+                      currentItem.description = qualifiedObjectPath.schema || ``;
+      
+                      currentItem.position = {
+                        path: file,
+                        line: statementStartingLine
+                      };
+      
+                      scope.sqlReferences.push(currentItem);
+                    }
+                  }
+                  
                   resetDefinition = true;
-                }
+                });
               }
             }
             break;
