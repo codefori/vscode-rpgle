@@ -3212,3 +3212,26 @@ exports.issue_234 = async () => {
 
   assert.strictEqual(indentErrors.length, 0);
 }
+
+exports.issue_238 = async () => {
+  const lines = [
+    `**FREE`,
+    `/Copy Qcpysrc,Hspecle`,
+    `// Prototypes`,
+    `/Copy Qcpysrc,Copybook1`,
+    `/Copy Qcpysrc,Copybook2`,
+    `/Copy Qcpysrc,Copybook3`,
+    `/Copy Qcpysrc,Copybook4`,
+    `/Copy Qcpysrc,Copybook5`,
+    `Dcl-S MyParm1 Char(1) Const;`,
+    `Dcl-S MyParm2 Char(1) Const;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 0);
+}

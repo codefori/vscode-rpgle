@@ -106,6 +106,7 @@ export default class Document {
             newLineToken = tokens[lastLine.index];
             const indent = statementTokens[0] && newLineToken ? (statementTokens[0].range.start - newLineToken.range.end) : 0;
             this.addStatement(indent, statementTokens);
+            lastLine.need = true;
 
             statementStart = {
               index: i+1
