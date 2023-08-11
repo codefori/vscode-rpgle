@@ -3171,3 +3171,25 @@ exports.issue_204 = async () => {
   assert.strictEqual(printNice_person.references.length, 2);
   assert.strictEqual(printNice_person.subItems.length, 2);
 }
+
+exports.issue_237 = async () => {
+  const lines = [
+    `**FREE`,
+    `If MyVar <> ThatValue //This is fine`,
+    `;`,
+    `  DoThisCode();`,
+    `Else;`,
+    `  CoThatCOde();`,
+    `Endif;`,
+    `*INLR = *ON;`,
+    `Return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 0);
+}

@@ -780,62 +780,60 @@ export default class Parser {
             break;
 
           case `EXEC`:
-            if (currentItem === undefined) {
-              if (parts.length > 2 && !parts.includes(`FETCH`)) {
-                // insert into XX.XX
-                // delete from xx.xx
-                // update xx.xx set
-                // select * into :x from xx.xx
-                // call xx.xx()
-                const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
+            if (parts.length > 2 && !parts.includes(`FETCH`)) {
+              // insert into XX.XX
+              // delete from xx.xx
+              // update xx.xx set
+              // select * into :x from xx.xx
+              // call xx.xx()
+              const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
 
-                const cleanupObjectRef = (content = ``) => {
-                  const result = {
-                    schema: undefined,
-                    name: content
-                  }
-
-                  const schemaSplit = Math.max(result.name.indexOf(`.`), result.name.indexOf(`/`));
-                  if (schemaSplit >= 0) {
-                    result.schema = result.name.substring(0, schemaSplit);
-                    result.name = result.name.substring(schemaSplit+1);
-                  }
-
-                  // For procedures or functions?
-                  const openBracket = result.name.indexOf(`(`);
-                  if (openBracket >= 0) {
-                    result.name = result.name.substring(0, openBracket);
-                  }
-
-                  return result;
+              const cleanupObjectRef = (content = ``) => {
+                const result = {
+                  schema: undefined,
+                  name: content
                 }
 
-                parts.forEach((part, index) => {
-                  if (
-                    preFileWords.includes(part) &&  // If this is true, usually means next word is the object
-                    (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
-                  ) {
-                    if (index >= 0 && (index+1) < parts.length) {
-                      const possibleFileName = partsLower[index+1];
-                      const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
-    
-                      currentItem = new Declaration(`file`);
-                      currentItem.name = qualifiedObjectPath.name;
-                      currentItem.keywords = [];
-                      currentItem.description = qualifiedObjectPath.schema || ``;
-      
-                      currentItem.position = {
-                        path: file,
-                        line: statementStartingLine
-                      };
-      
-                      scope.sqlReferences.push(currentItem);
-                    }
-                  }
-                  
-                  resetDefinition = true;
-                });
+                const schemaSplit = Math.max(result.name.indexOf(`.`), result.name.indexOf(`/`));
+                if (schemaSplit >= 0) {
+                  result.schema = result.name.substring(0, schemaSplit);
+                  result.name = result.name.substring(schemaSplit+1);
+                }
+
+                // For procedures or functions?
+                const openBracket = result.name.indexOf(`(`);
+                if (openBracket >= 0) {
+                  result.name = result.name.substring(0, openBracket);
+                }
+
+                return result;
               }
+
+              parts.forEach((part, index) => {
+                if (
+                  preFileWords.includes(part) &&  // If this is true, usually means next word is the object
+                  (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
+                ) {
+                  if (index >= 0 && (index+1) < parts.length) {
+                    const possibleFileName = partsLower[index+1];
+                    const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
+  
+                    const currentSqlItem = new Declaration(`file`);
+                    currentSqlItem.name = qualifiedObjectPath.name;
+                    currentSqlItem.keywords = [];
+                    currentSqlItem.description = qualifiedObjectPath.schema || ``;
+    
+                    currentSqlItem.position = {
+                      path: file,
+                      line: statementStartingLine
+                    };
+    
+                    scope.sqlReferences.push(currentSqlItem);
+                  }
+                }
+                
+                resetDefinition = true;
+              });
             }
             break;
 

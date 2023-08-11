@@ -39,7 +39,7 @@
 				"type": "npm",
 				"script": "compile:tests"
 			},
-			"args": ["call_opcode"],
+			"args": ["skip2"],
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}

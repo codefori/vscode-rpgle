@@ -32,7 +32,12 @@ export default class Document {
 
   private parseStatements(tokens: Token[]) {
     let currentStatementType: StatementType = StatementType.Normal;
-    let tokenBeforeStmt: Token;
+    let newLineToken: Token;
+
+    let lastLine = {
+      need: true,
+      index: -1
+    };
 
     let statementStart = {
       index: 0,
@@ -42,8 +47,10 @@ export default class Document {
       switch (tokens[i].type) {
         case `semicolon`:
           const statementTokens = Statement.trimTokens(tokens.slice(statementStart.index, i));
-          tokenBeforeStmt = tokens[i-statementTokens.length-1];
-          const indent = statementTokens[0] && tokenBeforeStmt ? (statementTokens[0].range.start - tokenBeforeStmt.range.end) : 0;
+          newLineToken = tokens[lastLine.index];
+          const indent = statementTokens[0] && newLineToken ? (statementTokens[0].range.start - newLineToken.range.end) : 0;
+          lastLine.need = true;
+
           this.addStatement(indent, statementTokens);
 
           statementStart = {
@@ -54,8 +61,10 @@ export default class Document {
         case `format`:
           const formatTokens = Statement.trimTokens(tokens.slice(statementStart.index, i+1));
           if (formatTokens.length === 1) {
-            tokenBeforeStmt = tokens[i-formatTokens.length-1];
-            const indent = formatTokens[0] && tokenBeforeStmt ? (formatTokens[0].range.start - tokenBeforeStmt.range.end) : 0;
+            newLineToken = tokens[lastLine.index]; 
+            const indent = formatTokens[0] && newLineToken ? (formatTokens[0].range.start - newLineToken.range.end) : 0;
+            lastLine.need = true;
+
             this.addStatement(indent, formatTokens);
 
             statementStart = {
@@ -71,8 +80,10 @@ export default class Document {
 
             // Don't add the comment as a new statement if it proceeds another non-comment token
             if (tokens[i-1] && tokens[i-1].range.line !== commentToken[0].range.line) {
-              tokenBeforeStmt = tokens[i-commentToken.length];
-              const indent = commentToken[0] && tokenBeforeStmt ? (commentToken[0].range.start - tokenBeforeStmt.range.end) : 0;
+              newLineToken = tokens[lastLine.index];
+              const indent = commentToken[0] && newLineToken ? (commentToken[0].range.start - newLineToken.range.end) : 0;
+              lastLine.need = true;
+
               this.addStatement(indent, commentToken);
             }
 
@@ -92,8 +103,8 @@ export default class Document {
         case `newline`:
           if (currentStatementType === StatementType.Directive) {
             const statementTokens = Statement.trimTokens(tokens.slice(statementStart.index, i));
-            tokenBeforeStmt = tokens[i-statementTokens.length-1];
-            const indent = statementTokens[0] && tokenBeforeStmt ? (statementTokens[0].range.start - tokenBeforeStmt.range.end) : 0;
+            newLineToken = tokens[lastLine.index];
+            const indent = statementTokens[0] && newLineToken ? (statementTokens[0].range.start - newLineToken.range.end) : 0;
             this.addStatement(indent, statementTokens);
 
             statementStart = {
@@ -102,6 +113,11 @@ export default class Document {
 
             currentStatementType = StatementType.Normal;
           }
+
+          if (lastLine.need || (tokens[i-1] && tokens[i-1].type === `newline`)) { 
+            lastLine.index = i;
+            lastLine.need = false;
+          }
           break;
       }
     }
@@ -109,8 +125,8 @@ export default class Document {
     const lastStatementTokens = Statement.trimTokens(tokens.slice(statementStart.index, tokens.length));
 
     if (lastStatementTokens.length > 0) { 
-      tokenBeforeStmt = tokens[tokens.length-1-lastStatementTokens.length];
-      const indent = lastStatementTokens[0] ? (lastStatementTokens[0].range.start - tokenBeforeStmt.range.end) : 0;
+      newLineToken = tokens[lastLine.index];
+      const indent = lastStatementTokens[0] ? (lastStatementTokens[0].range.start - newLineToken.range.end) : 0;
       this.addStatement(indent, lastStatementTokens);
     }
   }
