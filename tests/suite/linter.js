@@ -3193,3 +3193,22 @@ exports.issue_237 = async () => {
 
   assert.strictEqual(indentErrors.length, 0);
 }
+
+exports.issue_234 = async () => {
+  const lines = [
+    `**free`,
+    `DCL-DS MagicDS QUALIFIED;`,
+    `    Char      CHAR(5000) POS(1);`,
+    `END-DS;`,
+    ``,
+    `DCL-S Pos         INT(5);`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 0);
+}
