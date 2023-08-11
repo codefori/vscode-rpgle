@@ -96,7 +96,25 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 					
 					if (includeDirective) {
 						const include = await parser.includeFileFetch(currentPath, includeDirective);
-						const displayName = include.uri ? URI.parse(include.uri).path : includeDirective;
+						let displayName = includeDirective;
+
+						if (include.found && include.uri) {
+							const foundUri = URI.parse(include.uri);
+
+							if (foundUri.scheme === `member`) {
+								const lastIndex = foundUri.path.lastIndexOf(`.`);
+								if (lastIndex >= 0) {
+									displayName = foundUri.path.substring(0, lastIndex);
+								} else {
+									displayName = foundUri.path;
+								}
+
+								if (displayName.startsWith(`/`)) displayName = displayName.substring(1);
+
+							} else {
+								displayName = foundUri.path;
+							}
+						}
 
 						return {
 							contents: {
