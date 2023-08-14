@@ -3,6 +3,7 @@ import { Uri, workspace, RelativePattern, commands } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import {getInstance} from './base';
 import { projectFilesGlob } from "./configuration";
+import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
 
 let streamFileSupportChecked = false;
 let streamFileSupported = false;
@@ -63,6 +64,44 @@ export default function buildRequestHandlers(client: LanguageClient) {
 
 		return;
 	});
+
+	/**
+	 * Resolves member paths
+	 */
+	 client.onRequest("memberResolve", async (parms: string[]): Promise<IBMiMember | undefined> => {
+		let memberName = parms[0], sourceFile = parms[1];
+		
+		const instance = getInstance();
+
+		const config = instance?.getConfig();
+		const content = instance?.getContent();
+
+		const files = [config?.currentLibrary, ...config?.libraryList!]
+			.filter(l => l !== undefined)
+			.map(l => ({name: sourceFile, library: l!}));
+
+		const member = await content?.memberResolve(memberName.toUpperCase(), files);
+
+		return member;
+	});
+
+	client.onRequest("streamfileResolve", async (parms: any[]): Promise<string|undefined> => {
+		const bases: string[] = parms[0];
+		const includePaths: string[] = parms[1];
+
+		const instance = getInstance();
+
+		const content = instance?.getContent();
+		const config = instance?.getConfig()!;
+
+		if (includePaths.length === 0) {
+			includePaths.push(config.homeDirectory);
+		}
+
+		const resolvedPath = await content?.streamfileResolve(bases, includePaths);
+
+		return resolvedPath;
+ });
 
 	/**
 	 * Gets the column information for a provided file

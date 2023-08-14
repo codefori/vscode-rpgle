@@ -11,6 +11,8 @@ import * as path from "path";
 import { TextDocument } from 'vscode-languageserver-textdocument';
 const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
 
+export let includePath: {[workspaceUri: string]: string[]} = {};
+
 export let isEnabled = false;
 /**
  * Assumes client has workspace
@@ -22,13 +24,24 @@ export async function initialise() {
 
 	watchedFilesChangeEvent.push((params: DidChangeWatchedFilesParams) => {
 		params.changes.forEach(fileEvent => {
+			const pathData = path.parse(fileEvent.uri);
+			const ext = pathData.ext.toLowerCase();
+
 			switch (fileEvent.type) {
 				case FileChangeType.Created:
 				case FileChangeType.Changed:
-					loadLocalFile(fileEvent.uri);
+					switch (ext) {
+						case `.rpgleinc`:
+						case `.rpgleh`:
+							loadLocalFile(fileEvent.uri);
 
-					if (fileEvent.uri.toLowerCase().endsWith(`.rpgleinc`)) {
-						currentIncludes = [];
+							currentIncludes = [];
+							break;
+						case `.json`:
+							if (pathData.base === `iproj.json`) {
+								updateIProj(fileEvent.uri);
+							}
+							break;
 					}
 					break;
 
@@ -46,8 +59,6 @@ export async function initialise() {
 
 async function loadWorkspace() {
 	const workspaces = await connection.workspace.getWorkspaceFolders();
-
-	console.log(workspaces);
 
 	if (workspaces) {
 		let uris: string[] = [];
@@ -67,7 +78,23 @@ async function loadWorkspace() {
 			uris.push(...files.map(file => URI.from({
 				scheme: `file`,
 				path: file
-			}).toString()))
+			}).toString()));
+
+			const iprojFiles = glob.sync(`**/iproj.json`, {
+				cwd: folderPath,
+				absolute: true,
+				nocase: true,
+			});
+
+			if (iprojFiles.length > 0) {
+				const base = iprojFiles[0];
+				const iprojUri = URI.from({
+					scheme: `file`,
+					path: base
+				}).toString();
+
+				updateIProj(iprojUri);
+			}
 		}));
 
 		if (uris.length < 1000) {
@@ -77,6 +104,34 @@ async function loadWorkspace() {
 		} else {
 			console.log(`Disabling project mode for large project.`);
 			isEnabled = false;
+		}
+	}
+}
+
+async function updateIProj(uri: string) {
+	const workspace = await getWorkspaceFolder(uri);
+	if (workspace) {
+		const document = await getTextDoc(uri);
+		const content = document?.getText();
+
+		if (content) {
+			try {
+				const asJson = JSON.parse(content);
+				if (asJson.includePath && Array.isArray(asJson.includePath)) {
+					const includeArray: any[] = asJson.includePath;
+
+					const invalid = includeArray.some(v => typeof v !== `string`);
+
+					if (!invalid) {
+						includePath[workspace.uri] = asJson.includePath;
+					} else {
+						console.log(`${uri} -> 'includePath' is not a valid string array.`);
+					}
+				}
+
+			} catch (e) {
+				console.log(`Unable to parse JSON in ${uri}.`);
+			}
 		}
 	}
 }

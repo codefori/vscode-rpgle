@@ -49,8 +49,8 @@ export function activate(context: ExtensionContext) {
 			{ language: 'rpgle' },
 		],
 		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: [
+				workspace.createFileSystemWatcher('**/iproj.json'),
 				workspace.createFileSystemWatcher('**/rpglint.json'),
 				workspace.createFileSystemWatcher(projectFilesGlob),
 			]

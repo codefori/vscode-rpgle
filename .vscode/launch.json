@@ -10,7 +10,7 @@
 			"outFiles": ["${workspaceRoot}/out/**/*.js"],
 			"sourceMaps": true,
 			"sourceMapPathOverrides": {
-				"webpack://client/./*": "${workspaceFolder}/extension//client/*"
+				"webpack://client/./*": "${workspaceFolder}/extension/client/*"
 			},
 			"preLaunchTask": {
 				"type": "npm",
@@ -39,7 +39,7 @@
 				"type": "npm",
 				"script": "compile:tests"
 			},
-			"args": ["skip2"],
+			"args": ["test11"],
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}

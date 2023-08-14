@@ -125,15 +125,20 @@ export default class Parser {
 	 * @returns {string|undefined}
 	 */
   static getIncludeFromDirective(line) {
-    const linePieces = line.trim().split(` `);
-    const copyIndex = linePieces.findIndex(piece => {
-      if (piece.includes(`*`)) return false; // Comment
-      const pieceUpper = piece.toUpperCase();
-      return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
-    });
+    if (line.includes(`*`)) return; // Likely comment
 
-    if (copyIndex >= 0 && linePieces[copyIndex+1]) {
-      return linePieces[copyIndex+1];
+    const upperLine = line.toUpperCase();
+
+    let directivePosition = upperLine.indexOf(`/COPY `);
+    let directiveLength = 6;
+
+    if (directivePosition === -1) {
+      directivePosition = upperLine.indexOf(`/INCLUDE `);
+      directiveLength = 9
+    };
+
+    if (directivePosition >= 0) {
+      return line.substring(directivePosition+directiveLength).trim();
     }
   }
 
@@ -291,21 +296,13 @@ export default class Parser {
     if (options.withIncludes && this.includeFileFetch) {
     //First loop is for copy/include statements
       for (let i = baseLines.length - 1; i >= 0; i--) {
-        let line = baseLines[i].trim(); //Paths are case insensitive so it's okay
+        let line = baseLines[i]; //Paths are case insensitive so it's okay
         if (line === ``) continue;
 
-        pieces = line.split(` `).filter(piece => piece !== ``);
+        const includePath = Parser.getIncludeFromDirective(line);
 
-        this.brokenPaths = [];
-
-        const copyIndex = pieces.findIndex(piece => {
-          if (piece.includes(`*`)) return false; // Comment
-          const pieceUpper = piece.toUpperCase();
-          return (pieceUpper.includes(`/COPY`) || pieceUpper.includes(`/INCLUDE`));
-        });
-
-        if (copyIndex >= 0 && pieces[copyIndex+1]) {
-          const include = await this.includeFileFetch(workingUri, pieces[copyIndex+1]);
+        if (includePath) {
+          const include = await this.includeFileFetch(workingUri, includePath);
           if (include.found) {
             files[include.uri] = include.lines;
             scopes[0].includes.push({

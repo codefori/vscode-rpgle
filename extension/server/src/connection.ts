@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises';
+import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
 
 import {
 	createConnection,
@@ -7,10 +7,9 @@ import {
 	_Connection,
 	WorkspaceFolder
 } from 'vscode-languageserver/node';
-import { URI } from 'vscode-uri';
-
 
 import { documents, findFile } from './providers';
+import { includePath } from './providers/project';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -50,6 +49,42 @@ export async function getFileRequest(uri: string) {
 	}
 
 	return;
+}
+
+export let resolvedMembers: {[baseUri: string]: {[fileKey: string]: IBMiMember}} = {};
+export let resolvedStreamfiles: {[baseUri: string]: {[fileKey: string]: string}} = {};
+
+export async function memberResolve(baseUri: string, member: string, file: string): Promise<IBMiMember|undefined> {
+	const fileKey = file+member;
+
+	if (resolvedMembers[baseUri] && resolvedMembers[baseUri][fileKey]) return resolvedMembers[baseUri][fileKey];
+
+	const resolvedMember = await connection.sendRequest("memberResolve", [member, file]) as IBMiMember|undefined;
+
+	if (resolvedMember) {
+		if (!resolvedMembers[baseUri]) resolvedMembers[baseUri] = {};
+		resolvedMembers[baseUri][fileKey] = resolvedMember;
+	}
+
+	return resolvedMember;
+}
+
+export async function streamfileResolve(baseUri: string, base: string[]): Promise<string|undefined> {
+	const baseString = base.join(`-`);
+	if (resolvedStreamfiles[baseUri] && resolvedStreamfiles[baseUri][baseString]) return resolvedStreamfiles[baseUri][baseString];
+
+	const workspace = await getWorkspaceFolder(baseUri);
+
+	const paths = (workspace ? includePath[workspace.uri] : []) || [];
+
+	const resolvedPath = await connection.sendRequest("streamfileResolve", [base, paths]) as string|undefined;
+
+	if (resolvedPath) {
+		if (!resolvedStreamfiles[baseUri]) resolvedStreamfiles[baseUri] = {};
+		resolvedStreamfiles[baseUri][baseString] = resolvedPath;
+	}
+
+	return resolvedPath;
 }
 
 export function getWorkingDirectory(): Promise<string|undefined> {
