@@ -3213,6 +3213,30 @@ exports.issue_234_a = async () => {
   assert.strictEqual(errors.length, 0);
 }
 
+
+exports.issue_234_b = async () => {
+  const lines = [
+    `**free`,
+    `ctl-opt debug  option(*nodebugio: *srcstmt) dftactgrp(*no) actgrp(*caller)`,
+    `main(Main);`,
+    `dcl-proc Main;`,
+    `    dsply %CHAR(CalcDiscount(10000));`,
+    `    dsply %char(CalcDiscount(1000));`,
+    `    x = %TIMESTAMP(y);`,
+    `    y = %TimeStamp(x);`,
+    `    return;`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}
+
 exports.issue_238 = async () => {
   const lines = [
     `**FREE`,
