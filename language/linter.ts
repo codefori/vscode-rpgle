@@ -68,6 +68,7 @@ export default class Linter {
 
     let inProcedure = false;
     let inSubroutine = false;
+    let inStruct = 0;
     let inPrototype = false;
     let inOnExit = false;
 
@@ -448,6 +449,7 @@ export default class Linter {
                     break;
 
                   case `DCL-DS`:
+                    inStruct += 1;
                     if (rules.NoOCCURS) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
                         errors.push({
@@ -549,6 +551,9 @@ export default class Linter {
                         });
                       }
                     }
+                    break;
+                  case `END-DS`:
+                    inStruct -= 1;
                     break;
                   case `END-PROC`:
                     if (inProcedure === false || inSubroutine) {
@@ -796,21 +801,26 @@ export default class Linter {
                       }
                     }
 
+                    const isDeclare = [`declare`, `end`].includes(statement[0].type);
+
                     if (rules.IncorrectVariableCase) {
                       // Check the casing of the reference matches the definition
-                      const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
-                      if (definedName && definedName !== part.value) {
-                        if (isEmbeddedSQL === false || (isEmbeddedSQL && statement[i - 1] && statement[i - 1].type === `seperator`)) {
-                          errors.push({
-                            offset: { position: part.range.start, end: part.range.end },
-                            type: `IncorrectVariableCase`,
-                            newValue: definedName
-                          });
+                      if ((isEmbeddedSQL === false || (isEmbeddedSQL && statement[i - 1] && statement[i - 1].type === `seperator`))) {
+                        const possibleKeyword = (isDeclare || inPrototype || inStruct > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
+
+                        if (!possibleKeyword) {
+                          const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
+                          if (definedName && definedName !== part.value) {
+                            errors.push({
+                              offset: { position: part.range.start, end: part.range.end },
+                              type: `IncorrectVariableCase`,
+                              newValue: definedName
+                            });
+                          }
                         }
                       }
                     }
 
-                    const isDeclare = [`declare`, `end`].includes(statement[0].type);
                     if ((isDeclare && i >= 2) || !isDeclare) {
                       if (rules.RequiresParameter && !inPrototype) {
 

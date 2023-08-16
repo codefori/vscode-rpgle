@@ -3194,7 +3194,7 @@ exports.issue_237 = async () => {
   assert.strictEqual(indentErrors.length, 0);
 }
 
-exports.issue_234 = async () => {
+exports.issue_234_a = async () => {
   const lines = [
     `**free`,
     `DCL-DS MagicDS QUALIFIED;`,
@@ -3206,11 +3206,11 @@ exports.issue_234 = async () => {
 
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
-  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0);
+  assert.strictEqual(errors.length, 0);
 }
 
 exports.issue_238 = async () => {
