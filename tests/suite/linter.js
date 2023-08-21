@@ -1807,8 +1807,10 @@ exports.linter24 = async () => {
 
   assert.strictEqual(errors.length, 1);
   assert.deepStrictEqual(errors[0], {
-    type: `NoExternalTo`, offset: { position: 8, end: 15 }
+    type: `NoExternalTo`, offset: { position: 95, end: 132 }
   });
+
+  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `Dcl-PR GetProfile  ExtPgm('QSYGETPH')`);
 }
 
 exports.linter25 = async () => {
@@ -1875,12 +1877,16 @@ exports.linter25 = async () => {
   assert.strictEqual(errors.length, 2);
 
   assert.deepStrictEqual(errors[0], {
-    type: `NoExternalTo`, offset: { position: 14, end: 21 }
+    type: `NoExternalTo`, offset: { position: 163, end: 200 }
   });
 
+  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `Dcl-PR GetProfile  ExtPgm('QSYGETPH')`);
+
   assert.deepStrictEqual(errors[1], {
-    type: `NoExternalTo`, offset: { position: 23, end: 25 }
+    type: `NoExternalTo`, offset: { position: 506, end: 544 }
   });
+
+  assert.strictEqual(lines.substring(errors[1].offset.position, errors[1].offset.end), `Dcl-Pr CloseProfile ExtPgm('QSYRLSPH')`);
 }
 
 exports.linter26 = async () => {
@@ -3258,4 +3264,56 @@ exports.issue_238 = async () => {
   }, cache);
 
   assert.strictEqual(indentErrors.length, 0);
+}
+
+exports.issue_240 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `///`,
+    `// -> ~~~~ <- This is where the error is reported`,
+    `// Comment line 2`,
+    `// Comment line 3`,
+    `// Comment line 4`,
+    `// Comment line 5`,
+    `// Comment line 6`,
+    `// Comment line 7`,
+    `// Comment line 8`,
+    `// Comment line 9`,
+    `// Comment line 10`,
+    `// Comment line 11`,
+    `// Comment line 12`,
+    `// Comment line 13`,
+    `// Comment line 14`,
+    `// Comment line 15`,
+    `// Comment line 16`,
+    `///`,
+    ``,
+    `dcl-pr QCMDEXC  extpgm('QCMDEXC');`,
+    `  cmd            char(32702)  options(*VARSIZE) const;`,
+    `  cmdLen         packed(15:5) const;`,
+    `  igc            char(3)      options(*NOPASS) const;`,
+    `end-pr;`,
+    ``,
+    `*inLR = *ON;`,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    "NoExternalTo": [`QCMD`, `QP2TERM`, `QSH`, `SYSTEM`, `QCMDEXC`]
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+
+  assert.deepStrictEqual(errors[0], {
+    type: `NoExternalTo`,
+    offset: {
+      position: 344,
+      end: 377,
+    }
+  });
+
+  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `dcl-pr QCMDEXC  extpgm('QCMDEXC')`);
 }

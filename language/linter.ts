@@ -1049,10 +1049,13 @@ export default class Linter {
             callLoc = (callLoc.startsWith(`'`) && callLoc.endsWith(`'`) ? callLoc.substring(1, callLoc.length - 1) : callLoc);
 
             if (rules.NoExternalTo.includes(callLoc)) {
-              errors.push({
-                type: `NoExternalTo`,
-                offset: { position: localDef.range.start, end: localDef.range.end }
-              });
+              const possibleStatement = doc.getStatementByLine(localDef.position.line);
+              if (possibleStatement) {
+                errors.push({
+                  type: `NoExternalTo`,
+                  offset: { position: possibleStatement.range.start, end: possibleStatement.range.end },
+                });
+              }
             }
           }
         });
