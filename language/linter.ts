@@ -822,8 +822,7 @@ export default class Linter {
                     }
 
                     if ((isDeclare && i >= 2) || !isDeclare) {
-                      if (rules.RequiresParameter && !inPrototype) {
-
+                      if (rules.RequiresParameter && !inPrototype && !isDeclare) {
                         // Check the procedure reference has a block following it
                         const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
                         if (definedProcedure) {

@@ -3317,3 +3317,34 @@ exports.issue_240 = async () => {
 
   assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `dcl-pr QCMDEXC  extpgm('QCMDEXC')`);
 }
+
+exports.issue_239 = async () => {
+  const lines = [
+    `**FREE`,
+    `ctl-opt dftactgrp(*NO);`,
+    ``,
+    `// If RequiresParameter is enabled, the following line will be flagged with "Procedure calls require brackets.".`,
+    `dcl-s myValue like(getSomeValue);`,
+    ``,
+    `// !! The following is not valid syntax and will not compile:`,
+    `// !! dcl-s myValue like(getSomeValue()); // Invalid syntax; will not compile`,
+    ``,
+    `myValue = getSomeValue();`,
+    `*inLR = *ON;`,
+    `return;`,
+    ``,
+    `dcl-proc getSomeValue;`,
+    `  dcl-pi *N varchar(10);`,
+    `  end-pi;`,
+    `  return %char(%date(): *ISO);`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines);
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    RequiresParameter: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}
