@@ -73,16 +73,20 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		
 		const instance = getInstance();
 
-		const config = instance?.getConfig();
-		const content = instance?.getContent();
+		if (instance) {
+			const config = instance?.getConfig();
+			const content = instance?.getContent();
 
-		const files = [config?.currentLibrary, ...config?.libraryList!]
-			.filter(l => l !== undefined)
-			.map(l => ({name: sourceFile, library: l!}));
+			if (config && content) {
+				const files = [config?.currentLibrary, ...config?.libraryList!]
+					.filter(l => l !== undefined)
+					.map(l => ({name: sourceFile, library: l!}));
 
-		const member = await content?.memberResolve(memberName.toUpperCase(), files);
+				const member = await content?.memberResolve(memberName.toUpperCase(), files);
 
-		return member;
+				return member;
+			}
+		}
 	});
 
 	client.onRequest("streamfileResolve", async (parms: any[]): Promise<string|undefined> => {
