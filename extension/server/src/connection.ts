@@ -8,12 +8,16 @@ import {
 	WorkspaceFolder
 } from 'vscode-languageserver/node';
 
+import PQueue from 'p-queue';
+
 import { documents, findFile } from './providers';
 import { includePath } from './providers/project';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 export const connection: _Connection = createConnection(ProposedFeatures.all);
+
+const queue = new PQueue();
 
 export let watchedFilesChangeEvent: ((params: DidChangeWatchedFilesParams) => void)[] = [];
 connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
@@ -59,7 +63,8 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 
 	if (resolvedMembers[baseUri] && resolvedMembers[baseUri][fileKey]) return resolvedMembers[baseUri][fileKey];
 
-	const resolvedMember = await connection.sendRequest("memberResolve", [member, file]) as IBMiMember|undefined;
+	const resolvedMember = await queue.add(() => {return connection.sendRequest("memberResolve", [member, file])}) as IBMiMember|undefined;
+	// const resolvedMember = await connection.sendRequest("memberResolve", [member, file]) as IBMiMember|undefined;
 
 	if (resolvedMember) {
 		if (!resolvedMembers[baseUri]) resolvedMembers[baseUri] = {};
@@ -77,7 +82,8 @@ export async function streamfileResolve(baseUri: string, base: string[]): Promis
 
 	const paths = (workspace ? includePath[workspace.uri] : []) || [];
 
-	const resolvedPath = await connection.sendRequest("streamfileResolve", [base, paths]) as string|undefined;
+	const resolvedPath = await queue.add(() => {return connection.sendRequest("streamfileResolve", [base, paths])}) as string|undefined;
+	//  const resolvedPath = await connection.sendRequest("streamfileResolve", [base, paths]) as string|undefined;
 
 	if (resolvedPath) {
 		if (!resolvedStreamfiles[baseUri]) resolvedStreamfiles[baseUri] = {};
