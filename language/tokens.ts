@@ -59,7 +59,7 @@ const commonMatchers: Matcher[] = [
       { type: `asterisk` },
       {
         type: `word`, match: (word) =>
-          [`CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
+          [`CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`, `KEY`, `SRCSTMT`, `NOPASS`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
       }
     ],
     becomes: {
@@ -167,6 +167,16 @@ const commonMatchers: Matcher[] = [
     ],
     becomes: {
       type: `word`
+    }
+  },
+  {
+    name: `QUOTE-STRING`,
+    match: [
+      { type: `string`, match: (word) => word === `''` },
+      { type: `string`, match: (word) => word === `''` },
+    ],
+    becomes: {
+      type: `string`
     }
   },
   {
@@ -279,6 +289,14 @@ export function tokenise(statement) {
       switch (statement[i]) {
       // When it's the string character..
       case stringChar:
+        // Silly way RPG does escape strings...
+        const escapeStringStart = (state === ReadState.IN_STRING && statement[i+1] === stringChar);
+
+        if (escapeStringStart) {
+          currentText += (stringChar + stringChar);
+          i++;
+
+        } else 
         if (state === ReadState.IN_STRING) {
           currentText += statement[i];
           result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
@@ -288,8 +306,10 @@ export function tokenise(statement) {
           currentText += statement[i];
         }
 
-        // @ts-ignore
-        state = state === ReadState.IN_STRING ? ReadState.NORMAL : ReadState.IN_STRING;
+        if (escapeStringStart !== true) {
+          // @ts-ignore
+          state = state === ReadState.IN_STRING ? ReadState.NORMAL : ReadState.IN_STRING;
+        }
         break;
 
       // When it's any other character...

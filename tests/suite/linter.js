@@ -1675,7 +1675,7 @@ exports.linter22 = async () => {
     ``,
     `Dcl-Pr TheProcedure;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `Dcl-S theVar CHAR(20);`,
     ``,
@@ -1705,7 +1705,7 @@ exports.linter22_b = async () => {
     ``,
     `Dcl-Pr TheProcedure EXTPROC;`,
     `  parmA CHAR(20);`,
-    `End-Pr`,
+    `End-Pr;`,
     ``,
     `Dcl-S theVar CHAR(20);`,
   ].join(`\n`);
