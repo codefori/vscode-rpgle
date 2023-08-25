@@ -311,11 +311,8 @@ export default class Parser {
         if (includePath) {
           const isAllowed = includePath.isMember === false || (includePath.isMember && options.butIgnoreMembers !== true);
 
-          console.log({includePath, isAllowed});
-
           if (isAllowed) {
             const include = await this.includeFileFetch(workingUri, includePath.content);
-            console.log(include);
             if (include.found) {
               files[include.uri] = include.lines;
               scopes[0].includes.push({
