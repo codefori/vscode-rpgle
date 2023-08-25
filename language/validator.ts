@@ -14,9 +14,9 @@ interface GenericWhenRule {
   end?: boolean;
 }
 
-const Seperators = [`plus`, `minus`, `divide`, `asterisk`, `comma`];
+const Operators = [`plus`, `minus`, `divide`, `asterisk`, `comma`, `dot`];
 const ValueTypes = [`string`, `number`, `special`, `hex`, `builtin`];
-const ExprParts = [...Seperators, ...ValueTypes];
+const ExprParts = [...Operators, ...ValueTypes];
 
 const GenericRules: GenericWhenRule[] = [
   {
@@ -37,13 +37,25 @@ const GenericRules: GenericWhenRule[] = [
     when: {
       type: [`seperator`],
     },
-    then: [{not: true, type: Seperators}]
+    then: [{not: true, type: Operators}]
   },
   {
     when: {
-      type: Seperators
+      type: [`openbracket`],
     },
-    then: [{not: true, type: Seperators}]
+    then: [{not: true, type: Operators}]
+  },
+  {
+    when: {
+      type: [`closebracket`],
+    },
+    then: [{not: true, type: ValueTypes}]
+  },
+  {
+    when: {
+      type: Operators
+    },
+    then: [{not: true, type: Operators}]
   },
   {
     when: {
@@ -53,7 +65,7 @@ const GenericRules: GenericWhenRule[] = [
   },
   {
     when: {
-      type: Seperators
+      type: Operators
     },
     then: [{type: ValueTypes}]
   },
@@ -73,7 +85,7 @@ export function validateTokens(tokens: Token[]): IssueRange|undefined {
         // Throw error. This can only be at the start
         return {
           offset: {position: cToken.range.start, end: cToken.range.end},
-          type: `InvalidToken`,
+          type: `Validator`,
           message: `Token is expected at the start of statements`
         }
       }
@@ -92,14 +104,14 @@ export function validateTokens(tokens: Token[]): IssueRange|undefined {
               // Token unexpected
               return {
                 offset: {position: cToken.range.start, end: cToken.range.end},
-                type: `InvalidToken`,
+                type: `Validator`,
                 message: `Token not expected`
               }
             }
           } else if (thenItem.not !== true) {
             return {
               offset: {position: token.range.start, end: token.range.end},
-              type: `InvalidToken`,
+              type: `Validator`,
               message: `'${thenItem.type.join()}' is ${thenItem.not ? `not` : ``} expected.`
             }
           }
@@ -115,7 +127,7 @@ export function validateTokens(tokens: Token[]): IssueRange|undefined {
         // Throw error. This can only be at the end
           return {
             offset: {position: cToken.range.start, end: cToken.range.end},
-            type: `InvalidToken`,
+            type: `Validator`,
             message: `Token should be at the end of the statement only.`
           }
         }

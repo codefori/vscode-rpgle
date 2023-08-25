@@ -41,7 +41,7 @@ const errorText = {
   'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
   'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
   'RequireOtherBlock': `OTHER block missing from SELECT block.`,
-  'InvalidToken': `Token not expected.`
+  'Validator': `Token not expected.`
 };
 
 const skipRules = {
@@ -52,7 +52,7 @@ const skipRules = {
 };
 
 export default class Linter {
-  static getErrorText(error) {
+  static getErrorText(error: keyof Rules) {
     return errorText[error];
   }
 
@@ -120,12 +120,10 @@ export default class Linter {
       lineNumber = docStatement.range.line;
       currentIndent = docStatement.indent;
 
-      if (rules.InvalidToken) {
-
+      if (rules.Validator) {
+        const possibleError = validateTokens(statement);
+        if (possibleError) errors.push(possibleError);
       }
-
-      const possibleError = validateTokens(statement);
-      if (possibleError) errors.push(possibleError);
 
       if (currentIndent >= 0) {
         skipIndentCheck = false;

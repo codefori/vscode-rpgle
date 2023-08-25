@@ -56,13 +56,13 @@ export interface Rules {
   IncludeMustBeRelative?: boolean;
   SQLHostVarCheck?: boolean;
   RequireOtherBlock?: boolean;
+  Validator?: boolean;
 
   /** Not exposed rules below */
   
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
 
-  InvalidToken?: boolean;
   InvalidDeclareNumber?: boolean;
   UnexpectedEnd?: boolean;
 }
