@@ -20,6 +20,7 @@ exports.qualified1 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({uri, content: lines}, {
+    Validator: true,
     QualifiedCheck: true,
   }, cache);
   
@@ -93,6 +94,7 @@ exports.ctdata1 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -253,6 +255,7 @@ exports.overload1 = async () => {
   const cache = await parser.getDocs(uri, lines);
 
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+    Validator: true,
     indent: 2,
     PrettyComments: true
   }, cache);

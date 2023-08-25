@@ -82,6 +82,7 @@ exports.issue_231 = async () => {
   const cache = await parser.getDocs(uri, lines);
 
   const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2,
     PrettyComments: true,
   }, cache);

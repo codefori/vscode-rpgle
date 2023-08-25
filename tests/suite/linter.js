@@ -37,6 +37,7 @@ exports.linter_indent_multi_1 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -59,6 +60,7 @@ exports.linter_indent_multi_2 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -87,6 +89,7 @@ exports.linter_invalid_statement = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -114,6 +117,7 @@ exports.linter1_indent = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -151,6 +155,7 @@ exports.linter1_1_indent = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -185,6 +190,7 @@ exports.linter2_indent = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -230,6 +236,7 @@ exports.linter2_indent_other = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -271,6 +278,7 @@ exports.linter3_indent = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -308,6 +316,7 @@ exports.linter4 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequireBlankSpecial: true
   }, cache);
 
@@ -345,6 +354,7 @@ exports.linter5 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -386,6 +396,7 @@ exports.linter6 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     StringLiteralDupe: true
   }, cache);
 
@@ -415,6 +426,7 @@ exports.linter6_lf = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     StringLiteralDupe: true,
     IncorrectVariableCase: true
   }, cache);
@@ -459,6 +471,7 @@ exports.linter6_crlf = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     StringLiteralDupe: true,
     IncorrectVariableCase: true
   }, cache);
@@ -511,6 +524,7 @@ exports.linter7_casing1 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `if`, expected: `If` },
       { operation: `endif`, expected: `Endif` },
@@ -552,6 +566,7 @@ exports.linter7_casing2 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-OPT` },
     ]
@@ -591,6 +606,7 @@ exports.linter7_casing3 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `dcl-s`, expected: `DCL-S` },
     ]
@@ -625,6 +641,7 @@ exports.linter7_casing4 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `%trim`, expected: `%trim` },
     ]
@@ -664,6 +681,7 @@ exports.linter7_casing5 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `dcl-s`, expected: `Dcl-S` },
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
@@ -693,6 +711,7 @@ exports.linter7_casing6 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `*declare`, expected: `*upper` },
     ]
@@ -724,6 +743,7 @@ exports.linter7_casing7 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
       { operation: `*declare`, expected: `*upper` },
@@ -755,6 +775,7 @@ exports.linter7_casing8 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
       { operation: `*declare`, expected: `*LOWER` },
@@ -786,6 +807,7 @@ exports.linter7_casing9 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SpecificCasing: [
       { operation: `*bif`, expected: `*lower` },
     ]
@@ -819,6 +841,7 @@ exports.linter7_casing10 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -852,6 +875,7 @@ exports.linter7_casing11 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -902,6 +926,7 @@ exports.linter7_casing12 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -928,6 +953,7 @@ exports.linter8 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequiresParameter: true
   }, cache);
 
@@ -949,6 +975,7 @@ exports.linter_Do_Not_Require_Parameters_For_Control_Options = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequiresParameter: true
   }, cache);
 
@@ -969,6 +996,7 @@ exports.linter_Do_Not_Require_Parameters_For_Compile_Directives = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequiresParameter: true
   }, cache);
 
@@ -1001,6 +1029,7 @@ exports.linter9 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -1055,6 +1084,7 @@ exports.linter10 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoCTDATA: true
   }, cache);
 
@@ -1085,6 +1115,7 @@ exports.linter11 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     StringLiteralDupe: true
   }, cache);
 
@@ -1120,6 +1151,7 @@ exports.linter12 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -1156,6 +1188,7 @@ exports.linter13 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -1192,6 +1225,7 @@ exports.linter13_commentIndent = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     PrettyComments: true,
     indent: 2
   }, cache);
@@ -1260,6 +1294,7 @@ exports.linter14 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -1297,6 +1332,7 @@ exports.linter15 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     PrettyComments: true
   }, cache);
 
@@ -1334,6 +1370,7 @@ exports.linter16 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoGlobalSubroutines: true
   }, cache);
 
@@ -1379,6 +1416,7 @@ exports.linter16_with_leavesr = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoGlobalSubroutines: true
   }, cache);
 
@@ -1431,6 +1469,7 @@ exports.linter17 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoLocalSubroutines: true
   }, cache);
 
@@ -1459,6 +1498,7 @@ exports.linter18 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoGlobalsInProcedures: true
   }, cache);
 
@@ -1553,6 +1593,7 @@ exports.linter19 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoUnreferenced: true
   }, cache);
 
@@ -1617,6 +1658,7 @@ exports.linter20 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -1660,6 +1702,7 @@ exports.linter21 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoUnreferenced: true
   }, cache);
 
@@ -1690,6 +1733,7 @@ exports.linter22 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     PrototypeCheck: true
   }, cache);
 
@@ -1713,6 +1757,7 @@ exports.linter22_b = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     PrototypeCheck: true
   }, cache);
 
@@ -1743,6 +1788,7 @@ exports.linter23 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoUnreferenced: true
   }, cache);
 
@@ -1800,6 +1846,7 @@ exports.linter24 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoExternalTo: [
       `QSYGETPH`
     ]
@@ -1868,6 +1915,7 @@ exports.linter25 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoExternalTo: [
       `QSYGETPH`,
       `QSYRLSPH`
@@ -1908,6 +1956,7 @@ exports.linter26 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoUnreferenced: true
   }, cache);
 
@@ -1932,6 +1981,7 @@ exports.linter27 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoExecuteImmediate: true
   }, cache);
 
@@ -1955,6 +2005,7 @@ exports.linter28 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoExtProgramVariable: true
   }, cache);
 
@@ -1989,6 +2040,7 @@ exports.linter29 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2027,6 +2079,7 @@ exports.linter30 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2059,6 +2112,7 @@ exports.linter31_a = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2127,6 +2181,7 @@ exports.linter32 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2195,6 +2250,7 @@ exports.linter33 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncludeMustBeRelative: true
   }, cache);
 
@@ -2232,6 +2288,7 @@ exports.linter34 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     SQLHostVarCheck: true
   }, cache);
 
@@ -2267,6 +2324,7 @@ exports.linter35 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     ForceOptionalParens: true
   }, cache);
 
@@ -2296,6 +2354,7 @@ exports.linter36 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     ForceOptionalParens: true
   }, cache);
 
@@ -2323,6 +2382,7 @@ exports.linter37 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     UselessOperationCheck: true
   }, cache);
 
@@ -2423,6 +2483,7 @@ exports.linter38_subrefs = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     CollectReferences: true,
   }, cache);
 
@@ -2526,6 +2587,7 @@ exports.linter39 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequiresProcedureDescription: true
   }, cache);
 
@@ -2560,6 +2622,7 @@ exports.linter40 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequiresProcedureDescription: true
   }, cache);
 
@@ -2603,6 +2666,7 @@ exports.linter40_return = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     CollectReferences: true,
   }, cache);
 
@@ -2630,6 +2694,7 @@ exports.linter41 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequireBlankSpecial: true,
     StringLiteralDupe: true
   }, cache);
@@ -2683,6 +2748,7 @@ exports.linter42 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequireOtherBlock: true
   }, cache);
 
@@ -2723,6 +2789,7 @@ exports.linter43 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequireOtherBlock: true
   }, cache);
 
@@ -2765,6 +2832,7 @@ exports.linter44 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequireOtherBlock: true
   }, cache);
 
@@ -2809,6 +2877,7 @@ exports.issue_170 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoUnreferenced: true
   }, cache);
 
@@ -2833,6 +2902,7 @@ exports.issue_170a = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoUnreferenced: true
   }, cache);
 
@@ -2863,6 +2933,7 @@ exports.linter40_keywordrefs = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     CollectReferences: true,
     IncorrectVariableCase: true
   }, cache);
@@ -2896,6 +2967,7 @@ exports.linter_casing_on_error_not_a_variable = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     CollectReferences: true,
     IncorrectVariableCase: true
   }, cache);
@@ -2940,6 +3012,7 @@ exports.issue_175 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     NoUnreferenced: true
   }, cache);
 
@@ -2982,6 +3055,7 @@ exports.issue180 = async () => {
   const cache = await parser.getDocs(uri, lines);
 
   Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     CollectReferences: true,
   }, cache);
 }
@@ -3004,6 +3078,7 @@ exports.dcl_subf_issue184 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     UselessOperationCheck: true
   }, cache);
 
@@ -3041,6 +3116,7 @@ exports.dcl_parm_issue184 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     UselessOperationCheck: true
   }, cache);
 
@@ -3077,6 +3153,7 @@ exports.prettyCommentsChange = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     PrettyComments: true
   }, cache);
 
@@ -3144,6 +3221,7 @@ exports.issue_204 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     CollectReferences: true,
   }, cache);
 
@@ -3194,6 +3272,7 @@ exports.issue_237 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -3213,6 +3292,7 @@ exports.issue_234_a = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -3237,6 +3317,7 @@ exports.issue_234_b = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     IncorrectVariableCase: true
   }, cache);
 
@@ -3260,6 +3341,7 @@ exports.issue_238 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     indent: 2
   }, cache);
 
@@ -3302,6 +3384,7 @@ exports.issue_240 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     "NoExternalTo": [`QCMD`, `QP2TERM`, `QSH`, `SYSTEM`, `QCMDEXC`]
   }, cache);
 
@@ -3343,6 +3426,7 @@ exports.issue_239 = async () => {
   const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines);
   const { errors } = Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     RequiresParameter: true
   }, cache);
 

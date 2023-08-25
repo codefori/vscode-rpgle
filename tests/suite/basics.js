@@ -435,6 +435,7 @@ exports.indicators1 = async () => {
   const cache = await parser.getDocs(uri, lines);
 
   Linter.getErrors({ uri, content: lines }, {
+    Validator: true,
     CollectReferences: true,
   }, cache);
 
