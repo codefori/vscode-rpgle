@@ -82,9 +82,14 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					.filter(l => l !== undefined)
 					.map(l => ({name: sourceFile, library: l!}));
 
-				const member = await content?.memberResolve(memberName.toUpperCase(), files);
+				try {
+					const member = await content?.memberResolve(memberName.toUpperCase(), files);
 
-				return member;
+					return member;
+				} catch (e) {
+					console.log(e);
+					return undefined;
+				}
 			}
 		}
 	});
