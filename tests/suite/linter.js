@@ -6,6 +6,7 @@ const { default: Linter } = require(`../../language/linter`);
 const path = require(`path`);
 const { Range, Position } = require(`../../language/models/DataPoints`);
 
+const parser = parserSetup();
 const uri = `source.rpgle`;
 
 exports.linter_indent_multi_1 = async () => {
@@ -34,8 +35,7 @@ exports.linter_indent_multi_1 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -56,8 +56,7 @@ exports.linter_indent_multi_2 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -84,8 +83,7 @@ exports.linter_invalid_statement = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -111,8 +109,7 @@ exports.linter1_indent = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -148,8 +145,7 @@ exports.linter1_1_indent = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -182,8 +178,7 @@ exports.linter2_indent = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -227,8 +222,7 @@ exports.linter2_indent_other = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -268,8 +262,7 @@ exports.linter3_indent = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -305,8 +298,7 @@ exports.linter4 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireBlankSpecial: true
   }, cache);
@@ -342,8 +334,7 @@ exports.linter5 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -383,8 +374,7 @@ exports.linter6 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true
   }, cache);
@@ -412,8 +402,7 @@ exports.linter6_lf = async () => {
     `    `
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true,
     IncorrectVariableCase: true
@@ -456,8 +445,7 @@ exports.linter6_crlf = async () => {
 
   //const lines = `**FREE\r\n\r\nDcl-S Myotherthing char(10);\r\n\r\ndsply 'hello friends'\r\n      + 'hello friends' + ''\r\n    + myotherthing;`;
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true,
     IncorrectVariableCase: true
@@ -508,8 +496,7 @@ exports.linter7_casing1 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `if`, expected: `If` },
@@ -549,8 +536,7 @@ exports.linter7_casing2 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-OPT` },
@@ -588,8 +574,7 @@ exports.linter7_casing3 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `dcl-s`, expected: `DCL-S` },
@@ -622,8 +607,7 @@ exports.linter7_casing4 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `%trim`, expected: `%trim` },
@@ -661,8 +645,7 @@ exports.linter7_casing5 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `dcl-s`, expected: `Dcl-S` },
@@ -690,8 +673,7 @@ exports.linter7_casing6 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `*declare`, expected: `*upper` },
@@ -721,8 +703,7 @@ exports.linter7_casing7 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
@@ -752,8 +733,7 @@ exports.linter7_casing8 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `ctl-opt`, expected: `Ctl-Opt` },
@@ -783,8 +763,7 @@ exports.linter7_casing9 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
       { operation: `*bif`, expected: `*lower` },
@@ -816,8 +795,7 @@ exports.linter7_casing10 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -849,8 +827,7 @@ exports.linter7_casing11 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -899,8 +876,7 @@ exports.linter7_casing12 = async () => {
     `    sample.employee;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -925,8 +901,7 @@ exports.linter8 = async () => {
     `end-proc BASE36ADD;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresParameter: true
   }, cache);
@@ -946,8 +921,7 @@ exports.linter_Do_Not_Require_Parameters_For_Control_Options = async () => {
     `end-proc main ;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresParameter: true
   }, cache);
@@ -966,8 +940,7 @@ exports.linter_Do_Not_Require_Parameters_For_Compile_Directives = async () => {
     `end-pr;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresParameter: true
   }, cache);
@@ -998,8 +971,7 @@ exports.linter9 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -1052,8 +1024,7 @@ exports.linter10 = async () => {
     `Regina         12:33:00Vancouver      13:20:00`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoCTDATA: true
   }, cache);
@@ -1082,8 +1053,7 @@ exports.linter11 = async () => {
     `    `
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true
   }, cache);
@@ -1117,8 +1087,7 @@ exports.linter12 = async () => {
     `Endif;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -1153,8 +1122,7 @@ exports.linter13 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -1189,8 +1157,7 @@ exports.linter13_commentIndent = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true,
     indent: 2
@@ -1257,8 +1224,7 @@ exports.linter14 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -1294,8 +1260,7 @@ exports.linter15 = async () => {
     `return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true
   }, cache);
@@ -1331,8 +1296,7 @@ exports.linter16 = async () => {
     `Endsr;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalSubroutines: true
   }, cache);
@@ -1376,8 +1340,7 @@ exports.linter16_with_leavesr = async () => {
     `Endsr;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalSubroutines: true
   }, cache);
@@ -1428,8 +1391,7 @@ exports.linter17 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoLocalSubroutines: true
   }, cache);
@@ -1456,8 +1418,7 @@ exports.linter18 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalsInProcedures: true
   }, cache);
@@ -1550,8 +1511,7 @@ exports.linter19 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
@@ -1614,8 +1574,7 @@ exports.linter20 = async () => {
     `    INTO :myvariable2;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -1657,8 +1616,7 @@ exports.linter21 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
@@ -1687,8 +1645,7 @@ exports.linter22 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrototypeCheck: true
   }, cache);
@@ -1710,8 +1667,7 @@ exports.linter22_b = async () => {
     `Dcl-S theVar CHAR(20);`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrototypeCheck: true
   }, cache);
@@ -1740,8 +1696,7 @@ exports.linter23 = async () => {
     `End-Proc;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
@@ -1797,8 +1752,7 @@ exports.linter24 = async () => {
     `Return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExternalTo: [
       `QSYGETPH`
@@ -1865,8 +1819,7 @@ exports.linter25 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExternalTo: [
       `QSYGETPH`,
@@ -1905,8 +1858,7 @@ exports.linter26 = async () => {
     `Return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
@@ -1929,8 +1881,7 @@ exports.linter27 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExecuteImmediate: true
   }, cache);
@@ -1952,8 +1903,7 @@ exports.linter28 = async () => {
     `End-Pr;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoExtProgramVariable: true
   }, cache);
@@ -1986,8 +1936,7 @@ exports.linter29 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
@@ -2024,8 +1973,7 @@ exports.linter30 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
@@ -2056,8 +2004,7 @@ exports.linter31_a = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
@@ -2085,8 +2032,7 @@ exports.linter31_b = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ 
     uri, 
     content: lines,
@@ -2124,8 +2070,7 @@ exports.linter32 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
@@ -2153,8 +2098,7 @@ exports.linter32_b = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({
     uri,
     content: lines,
@@ -2192,8 +2136,7 @@ exports.linter33 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncludeMustBeRelative: true
   }, cache);
@@ -2229,8 +2172,7 @@ exports.linter34 = async () => {
     `    WHERE WORKDEPT = :deptNum;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SQLHostVarCheck: true
   }, cache);
@@ -2264,8 +2206,7 @@ exports.linter35 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     ForceOptionalParens: true
   }, cache);
@@ -2293,8 +2234,7 @@ exports.linter36 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     ForceOptionalParens: true
   }, cache);
@@ -2320,8 +2260,7 @@ exports.linter37 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     UselessOperationCheck: true
   }, cache);
@@ -2420,8 +2359,7 @@ exports.linter38_subrefs = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
   }, cache);
@@ -2523,8 +2461,7 @@ exports.linter39 = async () => {
     `end-proc BASE36ADD;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresProcedureDescription: true
   }, cache);
@@ -2557,8 +2494,7 @@ exports.linter40 = async () => {
     `end-proc BASE36ADD;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresProcedureDescription: true
   }, cache);
@@ -2600,8 +2536,7 @@ exports.linter40_return = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
   }, cache);
@@ -2627,8 +2562,7 @@ exports.linter41 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireBlankSpecial: true,
     StringLiteralDupe: true
@@ -2680,8 +2614,7 @@ exports.linter42 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireOtherBlock: true
   }, cache);
@@ -2720,8 +2653,7 @@ exports.linter43 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireOtherBlock: true
   }, cache);
@@ -2762,8 +2694,7 @@ exports.linter44 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequireOtherBlock: true
   }, cache);
@@ -2806,8 +2737,7 @@ exports.issue_170 = async () => {
     `Endsr;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
@@ -2830,8 +2760,7 @@ exports.issue_170a = async () => {
   ].join(`\n`);
 
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
@@ -2860,8 +2789,7 @@ exports.linter40_keywordrefs = async () => {
     `Dcl-s  somevar      Int(10) inz(randomLen);`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
     IncorrectVariableCase: true
@@ -2893,8 +2821,7 @@ exports.linter_casing_on_error_not_a_variable = async () => {
     `endmon;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
     IncorrectVariableCase: true
@@ -2937,8 +2864,7 @@ exports.issue_175 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoUnreferenced: true
   }, cache);
@@ -2979,7 +2905,7 @@ exports.issue180 = async () => {
   ].join(`\n`);
   
   const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
@@ -3001,8 +2927,7 @@ exports.dcl_subf_issue184 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     UselessOperationCheck: true
   }, cache);
@@ -3038,8 +2963,7 @@ exports.dcl_parm_issue184 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     UselessOperationCheck: true
   }, cache);
@@ -3074,8 +2998,7 @@ exports.prettyCommentsChange = async () => {
     `//comment with bad indent`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true
   }, cache);
@@ -3141,8 +3064,7 @@ exports.issue_204 = async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
   }, cache);
@@ -3191,8 +3113,7 @@ exports.issue_237 = async () => {
     `Return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -3210,8 +3131,7 @@ exports.issue_234_a = async () => {
     `DCL-S Pos         INT(5);`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -3234,8 +3154,7 @@ exports.issue_234_b = async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -3257,8 +3176,7 @@ exports.issue_238 = async () => {
     `Dcl-S MyParm2 Char(1) Const;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -3299,8 +3217,7 @@ exports.issue_240 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     "NoExternalTo": [`QCMD`, `QP2TERM`, `QSH`, `SYSTEM`, `QCMDEXC`]
   }, cache);
@@ -3340,8 +3257,7 @@ exports.issue_239 = async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     RequiresParameter: true
   }, cache);

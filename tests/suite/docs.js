@@ -3,6 +3,8 @@ const assert = require(`assert`);
 
 const { default: parserSetup } = require(`../parserSetup`);
 const { default: Linter } = require(`../../language/linter`);
+
+const parser = parserSetup();
 const uri = `source.rpgle`;
 
 exports.issue_202 = async () => {
@@ -24,8 +26,7 @@ exports.issue_202 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   const toLower = cache.find(`ToLower`);
 
@@ -78,8 +79,7 @@ exports.issue_231 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2,

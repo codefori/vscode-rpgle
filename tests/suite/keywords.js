@@ -4,6 +4,7 @@ const assert = require(`assert`);
 const {default: parserSetup} = require(`../parserSetup`);
 const {default: Linter} = require(`../../language/linter`);
 
+const parser = parserSetup();
 const uri = `source.rpgle`;
 
 exports.qualified1 = async () => {
@@ -17,8 +18,7 @@ exports.qualified1 = async () => {
     `Return`,
   ].join(`\n`);
   
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({uri, content: lines}, {
     QualifiedCheck: true,
   }, cache);
@@ -90,8 +90,7 @@ exports.ctdata1 = async () => {
     `order by RMLPID ,LTID ,EFFDATE`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
     indent: 2
   }, cache);
@@ -121,8 +120,7 @@ exports.ctdata2 = async () => {
     `Regina         12:33:00Vancouver      13:20:00`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(Object.keys(cache.keyword).length, 2);
   assert.strictEqual(cache.keyword[`DEBUG`], true);
@@ -153,8 +151,7 @@ exports.ctdata3 = async () => {
     `VVoluntary    Volntry`,
   ].join(`\n`);
   
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.files.length, 1);
   assert.strictEqual(cache.variables.length, 3);
@@ -173,8 +170,7 @@ exports.likeds1 = async () => {
     `//Yes`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 2);
   assert.strictEqual(cache.structs.length, 2);
@@ -205,8 +201,7 @@ exports.likeds2 = async () => {
     `End-Proc;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 2);
   assert.strictEqual(cache.structs.length, 1);
@@ -249,8 +244,7 @@ exports.overload1 = async () => {
     `End-PR;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
     indent: 2,
