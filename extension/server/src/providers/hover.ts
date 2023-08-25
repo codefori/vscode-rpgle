@@ -95,8 +95,8 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 					const includeDirective = Parser.getIncludeFromDirective(lineContent);
 					
 					if (includeDirective) {
-						const include = await parser.includeFileFetch(currentPath, includeDirective);
-						let displayName = includeDirective;
+						const include = await parser.includeFileFetch(currentPath, includeDirective.content);
+						let displayName = includeDirective.content;
 
 						if (include.found && include.uri) {
 							const foundUri = URI.parse(include.uri);

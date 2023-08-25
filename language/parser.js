@@ -122,7 +122,7 @@ export default class Parser {
 
   /**
 	 * @param {string} line 
-	 * @returns {string|undefined}
+	 * @returns {{content: string, isMember: boolean}|undefined}
 	 */
   static getIncludeFromDirective(line) {
     if (line.includes(`*`)) return; // Likely comment
@@ -138,14 +138,21 @@ export default class Parser {
     };
 
     if (directivePosition >= 0) {
-      return line.substring(directivePosition+directiveLength).trim();
+      let includeString = line.substring(directivePosition+directiveLength).trim();
+
+      const hasQuotes = (includeString.startsWith(`'`) && includeString.endsWith(`'`)) || (includeString.startsWith(`"`) && includeString.endsWith(`"`))
+      const isUnixPath = hasQuotes || (includeString.includes(`/`) && !includeString.includes(`,`));
+      return {
+        content: includeString,
+        isMember: !isUnixPath
+      };
     }
   }
 
   /**
    * @param {string} workingUri
    * @param {string} [content] 
-   * @param {{withIncludes?: boolean, ignoreCache?: boolean}} options
+   * @param {{withIncludes?: boolean, butIgnoreMembers?: boolean, ignoreCache?: boolean}} options
    * @returns {Promise<Cache|undefined>}
    */
   async getDocs(workingUri, content, options = {withIncludes: true}) {
@@ -302,13 +309,20 @@ export default class Parser {
         const includePath = Parser.getIncludeFromDirective(line);
 
         if (includePath) {
-          const include = await this.includeFileFetch(workingUri, includePath);
-          if (include.found) {
-            files[include.uri] = include.lines;
-            scopes[0].includes.push({
-              toPath: include.uri,
-              line: i
-            });
+          const isAllowed = includePath.isMember === false || (includePath.isMember && options.butIgnoreMembers !== true);
+
+          console.log({includePath, isAllowed});
+
+          if (isAllowed) {
+            const include = await this.includeFileFetch(workingUri, includePath.content);
+            console.log(include);
+            if (include.found) {
+              files[include.uri] = include.lines;
+              scopes[0].includes.push({
+                toPath: include.uri,
+                line: i
+              });
+            }
           }
         }
       }

@@ -9,7 +9,12 @@ import { URI } from 'vscode-uri';
 import { glob } from "glob";
 import * as path from "path";
 import { TextDocument } from 'vscode-languageserver-textdocument';
-const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
+const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc,rpgleh}`;
+
+interface iProject {
+	big?: boolean;
+	includePath?: string[]
+}
 
 export let includePath: {[workspaceUri: string]: string[]} = {};
 
@@ -59,11 +64,13 @@ export async function initialise() {
 
 async function loadWorkspace() {
 	const workspaces = await connection.workspace.getWorkspaceFolders();
+	let handleBigProjects = false;
 
 	if (workspaces) {
 		let uris: string[] = [];
 
-		workspaces.forEach((workspaceUri => {
+		for (const workspaceUri of workspaces) {
+
 			const folderPath = URI.parse(workspaceUri.uri).fsPath;
 
 			console.log(`Starting search of: ${folderPath}`);
@@ -93,14 +100,20 @@ async function loadWorkspace() {
 					path: base
 				}).toString();
 
-				updateIProj(iprojUri);
-			}
-		}));
+				const iproj = await updateIProj(iprojUri);
 
-		if (uris.length < 1000) {
-			for (const uri of uris) {
-				await loadLocalFile(uri);
+				if (iproj.big) {
+					handleBigProjects = true;
+				}
 			}
+		};
+
+		if (handleBigProjects) {
+			console.log(`Big mode detected!`);
+		}
+
+		if (uris.length < 1000 || handleBigProjects) {
+			Promise.allSettled(uris.map(uri => loadLocalFile(uri)));
 		} else {
 			console.log(`Disabling project mode for large project.`);
 			isEnabled = false;
@@ -108,7 +121,7 @@ async function loadWorkspace() {
 	}
 }
 
-async function updateIProj(uri: string) {
+async function updateIProj(uri: string): Promise<iProject> {
 	const workspace = await getWorkspaceFolder(uri);
 	if (workspace) {
 		const document = await getTextDoc(uri);
@@ -116,7 +129,7 @@ async function updateIProj(uri: string) {
 
 		if (content) {
 			try {
-				const asJson = JSON.parse(content);
+				const asJson = JSON.parse(content) as iProject;
 				if (asJson.includePath && Array.isArray(asJson.includePath)) {
 					const includeArray: any[] = asJson.includePath;
 
@@ -129,11 +142,15 @@ async function updateIProj(uri: string) {
 					}
 				}
 
+				return asJson;
+
 			} catch (e) {
 				console.log(`Unable to parse JSON in ${uri}.`);
 			}
 		}
 	}
+
+	return {};
 }
 
 async function loadLocalFile(uri: string) {
@@ -141,7 +158,7 @@ async function loadLocalFile(uri: string) {
 
 	if (document) {
 		const content = document?.getText();
-		const cache = await parser.getDocs(uri, content);
+		const cache = await parser.getDocs(uri, content, {withIncludes: true, butIgnoreMembers: true});
 		if (cache) {
 			if (content.length >= 6 && content.substring(0, 6).toUpperCase() === `**FREE`) {
 				Linter.getErrors({

@@ -78,7 +78,7 @@ export function initialise(context: ExtensionContext) {
 
 						case `streamfile`:
 							const config = instance.getConfig();
-							if (config.homeDirectory) {
+							if (config && config.homeDirectory) {
 								configPath = path.posix.join(config.homeDirectory, `.vscode`, `rpglint.json`)
 							}
 							break;
