@@ -73,7 +73,7 @@ const commonMatchers: Matcher[] = [
       { type: `asterisk` },
       {
         type: `word`, match: (word) =>
-          [`CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`, `KEY`, `SRCSTMT`, `NOPASS`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
+          [`CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`, `KEY`, `SRCSTMT`, `NOPASS`, `YES`, `NO`, `NODEBUGIO`, `TRIM`, `VARSIZE`, `CALLER`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
       }
     ],
     becomes: {
