@@ -17,6 +17,8 @@ enum ReadState {
   IN_COMMENT = "Comment"
 }
 
+const numReg = new RegExp(/^\d+$/)
+
 const commonMatchers: Matcher[] = [
   {
     name: `FORMAT_STATEMEMT`,
@@ -44,6 +46,18 @@ const commonMatchers: Matcher[] = [
   },
   {
     name: `IS_NUMBER`,
+    match: [
+      {
+        type: `word`,
+        match: (word) => numReg.test(word)
+      },
+    ],
+    becomes: {
+      type: `number`
+    }
+  },
+  {
+    name: `DEC_NUMBER`,
     match: [
       { type: `number` },
       { type: `dot` },
