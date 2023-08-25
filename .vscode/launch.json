@@ -39,7 +39,6 @@
 				"type": "npm",
 				"script": "compile:tests"
 			},
-			"args": ["issue_239"],
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}

@@ -81,6 +81,7 @@ export interface IssueRange {
   offset: Offset;
   type?: keyof Rules;
   newValue?: string;
+  message?: string;
 }
 
 export interface SelectBlock {

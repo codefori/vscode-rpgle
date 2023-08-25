@@ -7,6 +7,7 @@ import { Range, Position } from "./models/DataPoints";
 import opcodes from "./models/opcodes";
 import Document from "./document";
 import { IssueRange, Offset, Rules, SelectBlock } from "./parserTypes";
+import { validateTokens } from "./validator";
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -118,6 +119,13 @@ export default class Linter {
       const statement = docStatement.tokens;
       lineNumber = docStatement.range.line;
       currentIndent = docStatement.indent;
+
+      if (rules.InvalidToken) {
+
+      }
+
+      const possibleError = validateTokens(statement);
+      if (possibleError) errors.push(possibleError);
 
       if (currentIndent >= 0) {
         skipIndentCheck = false;
