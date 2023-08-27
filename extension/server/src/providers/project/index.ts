@@ -63,8 +63,11 @@ export async function initialise() {
 }
 
 async function loadWorkspace() {
+	const progress = await connection.window.createWorkDoneProgress();
+
 	const workspaces = await connection.workspace.getWorkspaceFolders();
 	let handleBigProjects = false;
+	progress.begin(`RPGLE`, undefined, `Loading workspaces`);
 
 	if (workspaces) {
 		let uris: string[] = [];
@@ -73,6 +76,7 @@ async function loadWorkspace() {
 
 			const folderPath = URI.parse(workspaceUri.uri).fsPath;
 
+			progress.report(`Starting search of ${workspaceUri.name}`);
 			console.log(`Starting search of: ${folderPath}`);
 			const files = glob.sync(projectFilesGlob, {
 				cwd: folderPath,
@@ -80,6 +84,7 @@ async function loadWorkspace() {
 				nocase: true,
 			});
 
+			progress.report(`Found RPGLE files: ${files.length}`);
 			console.log(`Found RPGLE files: ${files.length}`);
 
 			uris.push(...files.map(file => URI.from({
@@ -109,16 +114,25 @@ async function loadWorkspace() {
 		};
 
 		if (handleBigProjects) {
+			progress.report(`Big mode detected!`);
 			console.log(`Big mode detected!`);
 		}
 
 		if (uris.length < 1000 || handleBigProjects) {
-			Promise.allSettled(uris.map(uri => loadLocalFile(uri)));
+
+			await Promise.allSettled(uris.map((uri, i) => {
+				progress.report(`Loading ${i}/${uris.length}`);
+				return loadLocalFile(uri);
+			}));
+
 		} else {
+			progress.report(`Disabling project mode for large project.`);
 			console.log(`Disabling project mode for large project.`);
 			isEnabled = false;
 		}
 	}
+
+	progress.done();
 }
 
 async function updateIProj(uri: string): Promise<iProject> {
