@@ -3264,3 +3264,41 @@ exports.issue_239 = async () => {
 
   assert.strictEqual(errors.length, 0);
 }
+
+exports.issue_251 = async () => {
+  const lines = [
+    `**free`,
+    `ctl-opt debug  option(*nodebugio: *srcstmt) dftactgrp(*no) actgrp(*caller)`,
+    `main(Main);`,
+    `dcl-s STDDSC  packed(5:2) inz(9.0); //from Item Master External  DS`,
+    `dcl-c THE_DEFAULT_DISCOUNT 9;`,
+    `dcl-proc Main;`,
+    `    dsply %char(CalcDiscount(1000));`,
+    `    return;`,
+    `end-proc;`,
+    `dcl-proc CalcDiscount ;`,
+    `    dcl-pi CalcDiscount packed(7:2);`,
+    `        iCost packed(7:2) value;`,
+    `    end-pi;`,
+    `    // @rpglint-skip`,
+    `    STDDSC = The_Default_Discount;`,
+    `    if (wkChar = *blanks);`,
+    `    endif;`,
+    `    if iCost >= 10000;`,
+    `        wkDisc = (iCost*BigDisc)/100;`,
+    `    Else;`,
+    `        wkDisc = (iCost*STDDSC)/100;  // << Error here <<`,
+    `    endif;`,
+    `    Return wkDisc;`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    ForceOptionalParens: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.strictEqual(errors[0].type, `ForceOptionalParens`);
+  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `iCost >= 10000`);
+}

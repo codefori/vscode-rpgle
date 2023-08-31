@@ -727,7 +727,7 @@ export default class Linter {
                       if (statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`) {
                         errors.push({
                           type: `ForceOptionalParens`,
-                          offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                          offset: { position: statement[1].range.start, end: statement[statement.length - 1].range.end }
                         });
                       }
                     }
