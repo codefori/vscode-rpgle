@@ -235,7 +235,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 
 				const diagnostic = Diagnostic.create(
 					range,
-					Linter.getErrorText(error.type),
+					error.message || Linter.getErrorText(error.type!),
 					DiagnosticSeverity.Warning
 				);
 

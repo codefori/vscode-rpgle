@@ -175,6 +175,11 @@
 			"$id": "#/properties/RequireOtherBlock",
 			"type": "boolean",
 			"description": "Require SELECT blocks to have an OTHER block."
+		},
+		"Validator": {
+			"$id": "#/properties/Validator",
+			"type": "boolean",
+			"description": "Will add additional validation against RPGLE syntax. Useful for finding common code issue."
 		}
 	},
 	"additionalProperties": true

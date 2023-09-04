@@ -56,9 +56,15 @@ export interface Rules {
   IncludeMustBeRelative?: boolean;
   SQLHostVarCheck?: boolean;
   RequireOtherBlock?: boolean;
+  Validator?: boolean;
 
+  /** Not exposed rules below */
+  
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
+
+  InvalidDeclareNumber?: boolean;
+  UnexpectedEnd?: boolean;
 }
 
 export  interface DefinitionPosition {
@@ -73,15 +79,9 @@ export interface Offset {
 
 export interface IssueRange {
   offset: Offset;
-  type?: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|
-  "NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|
-  "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
-  "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
-  "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"|
-  "NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines"|"UnexpectedEnd"|
-  "NoUnreferenced"|"NoExternalTo"|"NoExecuteImmediate"|"NoExtProgramVariable"|"IncludeMustBeRelative"|
-  "SQLHostVarCheck"|"RequireOtherBlock";
+  type?: keyof Rules;
   newValue?: string;
+  message?: string;
 }
 
 export interface SelectBlock {

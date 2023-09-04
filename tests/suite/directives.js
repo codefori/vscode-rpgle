@@ -23,6 +23,7 @@ module.exports = {
 
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       indent: 2
     }, cache);
 
@@ -45,6 +46,7 @@ module.exports = {
 
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       indent: 2
     }, cache);
 
@@ -67,6 +69,7 @@ module.exports = {
 
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       indent: 2
     }, cache);
 
@@ -89,6 +92,7 @@ module.exports = {
 
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       indent: 2
     }, cache);
 
@@ -117,6 +121,7 @@ module.exports = {
     
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       IncorrectVariableCase: true
     }, cache);
 
@@ -143,6 +148,7 @@ module.exports = {
 
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       IncorrectVariableCase: true
     }, cache);
 
@@ -225,6 +231,7 @@ module.exports = {
     
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       NoGlobalsInProcedures: true
     }, cache);
 
@@ -288,6 +295,7 @@ module.exports = {
     
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       IncorrectVariableCase: true
     }, cache);
 
@@ -310,6 +318,7 @@ module.exports = {
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       PrettyComments: true
     }, cache);
 
@@ -332,6 +341,7 @@ module.exports = {
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       PrettyComments: true
     }, cache);
 
@@ -354,6 +364,7 @@ module.exports = {
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       PrettyComments: true
     }, cache);
 
@@ -383,6 +394,7 @@ module.exports = {
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
+      Validator: true,
       PrettyComments: true
     }, cache);
 

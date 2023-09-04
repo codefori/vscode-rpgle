@@ -7,6 +7,7 @@ import { Range, Position } from "./models/DataPoints";
 import opcodes from "./models/opcodes";
 import Document from "./document";
 import { IssueRange, Offset, Rules, SelectBlock } from "./parserTypes";
+import { validateTokens } from "./validator";
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -39,7 +40,8 @@ const errorText = {
   'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`,
   'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
   'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
-  'RequireOtherBlock': `OTHER block missing from SELECT block.`
+  'RequireOtherBlock': `OTHER block missing from SELECT block.`,
+  'Validator': `Token not expected.`
 };
 
 const skipRules = {
@@ -50,7 +52,7 @@ const skipRules = {
 };
 
 export default class Linter {
-  static getErrorText(error) {
+  static getErrorText(error: keyof Rules) {
     return errorText[error];
   }
 
@@ -117,6 +119,11 @@ export default class Linter {
       const statement = docStatement.tokens;
       lineNumber = docStatement.range.line;
       currentIndent = docStatement.indent;
+
+      if (rules.Validator) {
+        const possibleError = validateTokens(statement);
+        if (possibleError) errors.push(possibleError);
+      }
 
       if (currentIndent >= 0) {
         skipIndentCheck = false;
