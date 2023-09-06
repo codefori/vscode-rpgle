@@ -167,9 +167,10 @@ export default class Linter {
           let value;
           let isEmbeddedSQL = false;
 
-          if (statement.length >= 1) {
+          const isDirective = statement[0].type === `directive`;
 
-            if (statement[0].type === `directive`) {
+          if (statement.length >= 1) {
+            if (isDirective) {
               const directive = statement[0].value.toUpperCase();
               // We only want to process the EOF if it is not inside an IF scope
               if (directive === `/EOF` && directiveScope === 0) {
@@ -808,7 +809,7 @@ export default class Linter {
                       if ((isEmbeddedSQL === false || (isEmbeddedSQL && statement[i - 1] && statement[i - 1].type === `seperator`))) {
                         const possibleKeyword = (isDeclare || inPrototype || inStruct > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
 
-                        if (!possibleKeyword) {
+                        if (!possibleKeyword && !isDirective) {
                           const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
                           if (definedName && definedName !== part.value) {
                             errors.push({
