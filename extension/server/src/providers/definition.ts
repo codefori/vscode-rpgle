@@ -14,7 +14,7 @@ export default async function definitionProvider(handler: DefinitionParams): Pro
 			const possibleInclude = Parser.getIncludeFromDirective(editingLine);
 
 			if (possibleInclude) {
-				const include = await parser.includeFileFetch(currentPath, possibleInclude);
+				const include = await parser.includeFileFetch(currentPath, possibleInclude.content);
 				if (include.found && include.uri) {
 					return Location.create(include.uri, Range.create(0, 0, 0, 0));
 				}

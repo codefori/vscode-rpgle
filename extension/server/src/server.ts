@@ -29,6 +29,7 @@ import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats, parseMemberUri } from './data';
 import path = require('path');
 import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -124,11 +125,12 @@ let fetchingInProgress: { [fetchKey: string]: boolean } = {};
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
 	const uriPath = currentUri.path;
+	const isLocal = ![`streamfile`, `member`].includes(currentUri.scheme);
 
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
 
-	if (!fetchingInProgress[includeString]) {
+	if (fetchingInProgress[includeString] !== true || isLocal) {
 		fetchingInProgress[includeString] = true;
 
 		// Right now we are resolving based on the base file schema.
@@ -144,7 +146,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		}
 
 		if (isUnixPath) {
-			if (![`streamfile`, `member`].includes(currentUri.scheme)) {
+			if (isLocal) {
 				// Local file system search (scheme is usually file)
 				const workspaceFolders = await connection.workspace.getWorkspaceFolders();
 				let workspaceFolder: WorkspaceFolder | undefined;
@@ -153,10 +155,6 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				}
 
 				if (Project.isEnabled) {
-					// Project mode is enable. Let's do a search for the path.
-					validUri = await validateUri(cleanString, currentUri.scheme);
-
-				} else {
 					// Because project mode is disabled, likely due to the large workspace, we don't search
 					if (workspaceFolder) {
 						cleanString = path.posix.join(URI.parse(workspaceFolder.uri).path, cleanString)
@@ -170,7 +168,15 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 						: undefined;
 				}
 
-				if (!validUri) {
+				if (validUri) {
+					console.log(`Valid local: ${validUri}`);
+					const validSource = await readFile(cleanString, {encoding: `utf-8`});
+					return {
+						found: true,
+						uri: validUri,
+						lines: validSource.split(`\n`)
+					};
+				} else {
 					// Ok, no local file was found. Let's see if we can do a server lookup?
 					const foundStreamfile = await streamfileResolve(stringUri, [cleanString]);
 

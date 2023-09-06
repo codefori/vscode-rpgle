@@ -9,7 +9,12 @@ import { URI } from 'vscode-uri';
 import { glob } from "glob";
 import * as path from "path";
 import { TextDocument } from 'vscode-languageserver-textdocument';
-const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
+const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc,rpgleh}`;
+
+interface iProject {
+	big?: boolean;
+	includePath?: string[]
+}
 
 export let includePath: {[workspaceUri: string]: string[]} = {};
 
@@ -58,14 +63,20 @@ export async function initialise() {
 }
 
 async function loadWorkspace() {
+	const progress = await connection.window.createWorkDoneProgress();
+
 	const workspaces = await connection.workspace.getWorkspaceFolders();
+	let handleBigProjects = false;
+	progress.begin(`RPGLE`, undefined, `Loading workspaces`);
 
 	if (workspaces) {
 		let uris: string[] = [];
 
-		workspaces.forEach((workspaceUri => {
+		for (const workspaceUri of workspaces) {
+
 			const folderPath = URI.parse(workspaceUri.uri).fsPath;
 
+			progress.report(`Starting search of ${workspaceUri.name}`);
 			console.log(`Starting search of: ${folderPath}`);
 			const files = glob.sync(projectFilesGlob, {
 				cwd: folderPath,
@@ -73,6 +84,7 @@ async function loadWorkspace() {
 				nocase: true,
 			});
 
+			progress.report(`Found RPGLE files: ${files.length}`);
 			console.log(`Found RPGLE files: ${files.length}`);
 
 			uris.push(...files.map(file => URI.from({
@@ -93,22 +105,37 @@ async function loadWorkspace() {
 					path: base
 				}).toString();
 
-				updateIProj(iprojUri);
-			}
-		}));
+				const iproj = await updateIProj(iprojUri);
 
-		if (uris.length < 1000) {
-			for (const uri of uris) {
-				await loadLocalFile(uri);
+				if (iproj.big) {
+					handleBigProjects = true;
+				}
 			}
+		};
+
+		if (handleBigProjects) {
+			progress.report(`Big mode detected!`);
+			console.log(`Big mode detected!`);
+		}
+
+		if (uris.length < 1000 || handleBigProjects) {
+
+			await Promise.allSettled(uris.map((uri, i) => {
+				progress.report(`Loading ${i}/${uris.length}`);
+				return loadLocalFile(uri);
+			}));
+
 		} else {
+			progress.report(`Disabling project mode for large project.`);
 			console.log(`Disabling project mode for large project.`);
 			isEnabled = false;
 		}
 	}
+
+	progress.done();
 }
 
-async function updateIProj(uri: string) {
+async function updateIProj(uri: string): Promise<iProject> {
 	const workspace = await getWorkspaceFolder(uri);
 	if (workspace) {
 		const document = await getTextDoc(uri);
@@ -116,7 +143,7 @@ async function updateIProj(uri: string) {
 
 		if (content) {
 			try {
-				const asJson = JSON.parse(content);
+				const asJson = JSON.parse(content) as iProject;
 				if (asJson.includePath && Array.isArray(asJson.includePath)) {
 					const includeArray: any[] = asJson.includePath;
 
@@ -129,11 +156,15 @@ async function updateIProj(uri: string) {
 					}
 				}
 
+				return asJson;
+
 			} catch (e) {
 				console.log(`Unable to parse JSON in ${uri}.`);
 			}
 		}
 	}
+
+	return {};
 }
 
 async function loadLocalFile(uri: string) {
@@ -141,7 +172,7 @@ async function loadLocalFile(uri: string) {
 
 	if (document) {
 		const content = document?.getText();
-		const cache = await parser.getDocs(uri, content);
+		const cache = await parser.getDocs(uri, content, {withIncludes: true, butIgnoreMembers: true});
 		if (cache) {
 			if (content.length >= 6 && content.substring(0, 6).toUpperCase() === `**FREE`) {
 				Linter.getErrors({
