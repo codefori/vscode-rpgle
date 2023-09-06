@@ -828,9 +828,12 @@ export default class Linter {
                         const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
                         if (definedProcedure) {
                           let requiresBlock = false;
-                          // Don't require parms for procedures found in Ctl-Opt
-                          if (statement[0].value.toUpperCase() === `CTL-OPT` || statement[0].type === `directive`) {
+                          // Don't require parms for procedures found in Ctl-Opt or directives
+                          if (isDeclare || isDirective) {
                             // do nothing
+                          } else if (statement[i-2] && statement[i-2].type === `builtin` && statement[i-2].value?.toUpperCase() === `%PADDR`) {
+                            // Do nothing because you can pass a function to PADDR as a reference
+                            
                           } else if (statement.length <= i + 1) {
                             requiresBlock = true;
                           } else if (statement[i + 1].type !== `openbracket`) {

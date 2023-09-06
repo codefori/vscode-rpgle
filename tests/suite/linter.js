@@ -3302,3 +3302,54 @@ exports.issue_251 = async () => {
   assert.strictEqual(errors[0].type, `ForceOptionalParens`);
   assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `iCost >= 10000`);
 }
+
+exports.paddr_issue_250 = async () => {
+  const lines = [
+    `**FREE`,
+    `ctl-opt dftactgrp(*NO);`,
+    `dcl-s callback  pointer(*PROC);`,
+    `callback = %paddr('SOMEOTHERFUNCTION');`,
+    ``,
+    `.///`,
+    `// The following line will incorrectly be flagged in error.`,
+    `///`,
+    `callback = %paddr(someFunction);`,
+    ``,
+    ``,
+    `*inLR = *ON;`,
+    `return;`,
+    `dcl-proc someFunction;`,
+    `  dcl-pi *N int(10);`,
+    `    value1                    char(10) const;`,
+    `    value2                    char(10) const;`,
+    `  end-pi;`,
+    `  if value1 < value2;`,
+    `    return -1;`,
+    `  endif;`,
+    `  if value1 > value2;`,
+    `    return 1;`,
+    `  endif;`,
+    `  return 0;`,
+    `end-proc;`,
+    `dcl-proc someOtherFunction;`,
+    `  dcl-pi *N int(10);`,
+    `    value1                    int(10) const;`,
+    `    value2                    int(10) const;`,
+    `  end-pi;`,
+    `  if value1 < value2;`,
+    `    return -1;`,
+    `  endif;`,
+    `  if value1 > value2;`,
+    `    return 1;`,
+    `  endif;`,
+    `  return 0;`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    RequiresParameter: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 0);
+}
