@@ -58,9 +58,9 @@ export interface Rules {
   RequireOtherBlock?: boolean;
 
   /** Not for user definition */
-  InvalidDeclareNumber: void;
-  UnexpectedEnd: void;
-  SQLRunner: boolean;
+  InvalidDeclareNumber?: void;
+  UnexpectedEnd?: void;
+  SQLRunner?: boolean;
 
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
