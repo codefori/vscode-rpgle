@@ -182,6 +182,8 @@ export async function getLintOptions(workingUri: string) {
 	return result;
 }
 
+const hintDiagnositcs: (keyof Rules)[] = [`SQLRunner`]
+
 export async function refreshLinterDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 	if (isFree) {
@@ -200,6 +202,8 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 			const headers = await Project.getIncludes(document.uri);
 			availableIncludes = headers.map(header => header.relative);
 		}
+
+		options.SQLRunner = true;
 
 		try {
 			detail = Linter.getErrors({
@@ -236,7 +240,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 				const diagnostic = Diagnostic.create(
 					range,
 					Linter.getErrorText(error.type),
-					DiagnosticSeverity.Warning
+					error.type && hintDiagnositcs.includes(error.type) ? DiagnosticSeverity.Hint : DiagnosticSeverity.Warning
 				);
 
 				generalDiags.push(diagnostic);
@@ -391,6 +395,21 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 					actions.push(action);
 				}
 				break;
+
+			case `SQLRunner`:
+				if (error.newValue) {
+					action = CodeAction.create(`Run statement in Db2 for i`, CodeActionKind.Empty);
+					action.command = {
+						title: `Run statement`,
+						command: `vscode-db2i.runEditorStatement`,
+						arguments: [{
+							content: error.newValue,
+							qualifier: `statement`,
+							open: true,
+						}]
+					};
+					actions.push(action);
+				}
 		}
 	});
 
