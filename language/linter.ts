@@ -640,6 +640,7 @@ export default class Linter {
                       }
                     }
                     break;
+                    
                   case `EXEC`:
                     const statementOffset = { position: statement[0].range.start, end: statement[statement.length - 1].range.end };
                     isEmbeddedSQL = true;

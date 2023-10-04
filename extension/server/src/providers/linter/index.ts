@@ -406,6 +406,7 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 							content: error.newValue,
 							qualifier: `statement`,
 							open: true,
+							viewColumn: -2
 						}]
 					};
 					actions.push(action);
