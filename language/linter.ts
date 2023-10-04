@@ -698,11 +698,14 @@ export default class Linter {
 
                     if (rules.SQLRunner) {
                       // For running SQL statements
-                      errors.push({
-                        type: `SQLRunner`,
-                        offset: statementOffset,
-                        newValue: data.content.substring(statementOffset.position, statementOffset.end)
-                      });
+                      const validStatements = [`declare`, `with`, `select`].includes(statement[2].value.toLowerCase());
+                      if (validStatements) {
+                        errors.push({
+                          type: `SQLRunner`,
+                          offset: statementOffset,
+                          newValue: data.content.substring(statementOffset.position, statementOffset.end)
+                        });
+                      }
                     }
                     break;
 
