@@ -128,17 +128,26 @@ export default class Parser {
     if (line.includes(`*`)) return; // Likely comment
 
     const upperLine = line.toUpperCase();
-
+    let comment = -1;
+    
     let directivePosition = upperLine.indexOf(`/COPY `);
+    // Search comment AFTER the directive
+    comment = upperLine.indexOf(`//`, directivePosition);
     let directiveLength = 6;
 
     if (directivePosition === -1) {
       directivePosition = upperLine.indexOf(`/INCLUDE `);
+      // Search comment AFTER the directive
+      comment = upperLine.indexOf(`//`, directivePosition);
       directiveLength = 9
     };
 
     if (directivePosition >= 0) {
-      return line.substring(directivePosition+directiveLength).trim();
+      if (comment >= 0) {
+        return line.substring(directivePosition+directiveLength, comment).trim();
+      } else {
+        return line.substring(directivePosition+directiveLength).trim();
+      }
     }
   }
 
