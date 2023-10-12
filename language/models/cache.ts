@@ -10,17 +10,17 @@ const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().pa
 });
 
 export default class Cache {
-  keyword?: Keywords;
-  parameters?: Declaration[];
-  subroutines?: Declaration[];
-  procedures?: Declaration[];
-  files?: Declaration[];
-  variables?: Declaration[];
-  structs?: Declaration[];
-  constants?: Declaration[];
-  sqlReferences?: Declaration[];
-  indicators?: Declaration[];
-  includes?: IncludeStatement[];
+  keyword: Keywords;
+  parameters: Declaration[];
+  subroutines: Declaration[];
+  procedures: Declaration[];
+  files: Declaration[];
+  variables: Declaration[];
+  structs: Declaration[];
+  constants: Declaration[];
+  sqlReferences: Declaration[];
+  indicators: Declaration[];
+  includes: IncludeStatement[];
 
   constructor(cache: CacheProps = {}) {
     /** @type {import("../parserTypes").Keywords} */
