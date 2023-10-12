@@ -148,6 +148,17 @@ const commonMatchers: Matcher[] = [
     }
   },
   {
+    name: `WHEN-GROUP`,
+    match: [
+      { type: `word`, match: (word) => word.toUpperCase() === `WHEN` },
+      { type: `minus` },
+      { type: `word` },
+    ],
+    becomes: {
+      type: `word`
+    }
+  },
+  {
     name: `EVAL-CORR`,
     match: [
       { type: `word`, match: (word) => word.toUpperCase() === `EVAL` },
