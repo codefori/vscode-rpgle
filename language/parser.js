@@ -319,7 +319,7 @@ export default class Parser {
     let potentialName;
     let potentialNameUsed = false;
 
-    /** @type {"structs"|"procedures"} */
+    /** @type {"structs"|"procedures"|"constants"} */
     let currentGroup;
     let isFullyFree = false;
 
@@ -551,6 +551,43 @@ export default class Parser {
                 scope.variables.push(currentItem);
                 resetDefinition = true;
               }
+            }
+            break;
+
+          case `DCL-ENUM`:
+            if (currentItem === undefined) {
+              if (parts.length > 1) {
+                currentItem = new Declaration(`constant`);
+                currentItem.name = partsLower[1];
+                currentItem.keywords = parts.slice(2);
+                currentItem.description = currentDescription.join(`\n`);
+
+                currentItem.position = {
+                  path: file,
+                  line: statementStartingLine
+                };
+
+                currentItem.range = {
+                  start: statementStartingLine,
+                  end: statementStartingLine
+                };
+
+                currentItem.readParms = true;
+
+                currentGroup = `constants`;
+
+                currentDescription = [];
+              }
+            }
+            break;
+
+          case `END-ENUM`:
+            if (currentItem && currentItem.type === `constant`) {
+              currentItem.range.end = statementStartingLine;
+              
+              scope.constants.push(currentItem);
+
+              resetDefinition = true;
             }
             break;
 
@@ -882,7 +919,7 @@ export default class Parser {
                 }
               }
 
-              if (currentItem && [`procedure`, `struct`].includes(currentItem.type)) {
+              if (currentItem && [`procedure`, `struct`, `constant`].includes(currentItem.type)) {
                 if (currentItem.readParms && parts.length > 0) {
                   if (parts[0].startsWith(`DCL`)) {
                     parts.slice(1);
