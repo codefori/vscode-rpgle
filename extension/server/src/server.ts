@@ -29,6 +29,7 @@ import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats, parseMemberUri } from './data';
 import path = require('path');
 import { existsSync } from 'fs';
+import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -72,6 +73,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
 		result.capabilities.implementationProvider = true;
+		result.capabilities.renameProvider = {prepareProvider: true};
 	}
 
 	if (linterEnabled) {
@@ -290,6 +292,8 @@ if (languageToolsEnabled) {
 	connection.onCompletion(completionItemProvider);
 	connection.onHover(hoverProvider);
 	connection.onReferences(referenceProvider);
+	connection.onPrepareRename(renamePrepareProvider);
+	connection.onRenameRequest(renameRequestProvider);
 
 	// project specific
 	connection.onWorkspaceSymbol(workspaceSymbolProvider);
