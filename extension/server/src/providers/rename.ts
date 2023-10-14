@@ -29,7 +29,7 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
         );
       }
 
-      const def = refereneceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.refereneceByOffset(doc, document.offsetAt(currentPos));
 
       if (def) {
         const currentSelectedRef = def?.references.find(r => document.positionAt(r.offset.position).line === currentPos.line);
@@ -71,7 +71,7 @@ export async function renameRequestProvider(params: RenameParams): Promise<Works
         );
       }
 
-      const def = refereneceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.refereneceByOffset(doc, document.offsetAt(currentPos));
 
       if (def) {
         const edits: TextEdit[] = def.references.map(ref => ({
@@ -94,33 +94,4 @@ export async function renameRequestProvider(params: RenameParams): Promise<Works
   }
   
   return;
-}
-
-function refereneceByOffset(scope: Cache, offset: number): Declaration|undefined {
-  const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
-
-  for (const prop of props) {
-    const list = scope[prop] as unknown as Declaration[];
-    for (const def of list) {
-      let possibleRef: boolean;
-
-      // Search top level
-      possibleRef = def.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
-      if (possibleRef) return def;
-
-      // Search any subitems
-      if (def.subItems.length > 0) {
-        for (const subItem of def.subItems) {
-          possibleRef = subItem.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
-          if (possibleRef) return subItem;
-        }
-      }
-
-      // Search scope if any
-      if (def.scope) {
-        const inScope = refereneceByOffset(def.scope, offset);
-        if (possibleRef) return inScope;
-      }
-    }
-  }
 }
