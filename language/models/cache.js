@@ -220,7 +220,7 @@ export default class Cache {
         // Search scope if any
         if (def.scope) {
           const inScope = Cache.refereneceByOffset(def.scope, offset);
-          if (possibleRef) return inScope;
+          if (inScope) return inScope;
         }
       }
     }
