@@ -48,8 +48,6 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
               document.positionAt(currentSelectedRef.offset.position),
               document.positionAt(currentSelectedRef.offset.end)
             )
-          } else {
-            return selected.range;
           }
         }
       }

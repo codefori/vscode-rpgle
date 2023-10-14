@@ -848,58 +848,56 @@ export default class Linter {
                           }
                         }
                       }
+                    }
 
-                      if (rules.CollectReferences) {
-                        if (statement[i - 1] && statement[i - 1].type === `dot`) break;
 
-                        let defRef;
-                        if (currentProcedure && currentProcedure.scope) {
-                          defRef = currentProcedure.scope.find(upperName);
+                    if (rules.CollectReferences) {
+                      if (statement[i - 1] && statement[i - 1].type === `dot`) break;
 
-                          if (!defRef) {
-                            defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === upperName);
-                          }
-                        }
+                      let defRef;
+                      if (currentProcedure && currentProcedure.scope) {
+                        defRef = currentProcedure.scope.find(upperName);
 
                         if (!defRef) {
-                          defRef = globalScope.find(upperName);
+                          defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === upperName);
                         }
+                      }
 
-                        if (defRef) {
-                          // `defRef.position` is usually undefined for predefined indicators (INXX)
-                          if (defRef.position === undefined || (defRef.position && defRef.position.line !== lineNumber)) {
-                            defRef.references.push({
-                              offset: { position: part.range.start, end: part.range.end },
-                            });
-                          }
+                      if (!defRef) {
+                        defRef = globalScope.find(upperName);
+                      }
 
-                          if (defRef.keyword[`QUALIFIED`]) {
-                            let nextPartIndex = i + 1;
+                      if (defRef) {
+                        defRef.references.push({
+                          offset: { position: part.range.start, end: part.range.end },
+                        });
 
-                            if (statement[nextPartIndex]) {
-                              // First, check if there is an array call here and skip over it
-                              if (statement[nextPartIndex].type === `openbracket`) {
-                                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+                        if (defRef.keyword[`QUALIFIED`]) {
+                          let nextPartIndex = i + 1;
 
-                                if (nextPartIndex >= 0) nextPartIndex++;
-                              }
+                          if (statement[nextPartIndex]) {
+                            // First, check if there is an array call here and skip over it
+                            if (statement[nextPartIndex].type === `openbracket`) {
+                              nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
 
-                              // Check if the next part is a dot
-                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
-                                nextPartIndex++;
+                              if (nextPartIndex >= 0) nextPartIndex++;
+                            }
 
-                                // Check if the next part is a word
-                                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
-                                  const subItemPart = statement[nextPartIndex];
-                                  const subItemName = subItemPart.value.toUpperCase();
+                            // Check if the next part is a dot
+                            if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                              nextPartIndex++;
 
-                                  // Find the subitem
-                                  const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
-                                  if (subItemDef) {
-                                    subItemDef.references.push({
-                                      offset: { position: subItemPart.range.start, end: subItemPart.range.end },
-                                    });
-                                  }
+                              // Check if the next part is a word
+                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                                const subItemPart = statement[nextPartIndex];
+                                const subItemName = subItemPart.value.toUpperCase();
+
+                                // Find the subitem
+                                const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                                if (subItemDef) {
+                                  subItemDef.references.push({
+                                    offset: { position: subItemPart.range.start, end: subItemPart.range.end },
+                                  });
                                 }
                               }
                             }
@@ -1073,7 +1071,7 @@ export default class Linter {
         [...dec.constants, ...dec.variables]
           .filter(def => def.position.path === data.uri)
           .forEach(def => {
-            if (def.references.length === 0) {
+            if (def.references.length <= 1) {
               // Add an error to def
               const possibleStatement = doc.getStatementByLine(def.position.line);
               if (possibleStatement) {
@@ -1088,7 +1086,7 @@ export default class Linter {
         dec.subroutines
           .filter(def => def.position.path === data.uri && def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
           .forEach(def => {
-            if (def.references.length === 0) {
+            if (def.references.length <= 1) {
               // Add an error to def
               const possibleStatement = doc.getStatementByLine(def.position.line);
               if (possibleStatement) {
@@ -1104,7 +1102,7 @@ export default class Linter {
           .filter(struct => struct.position.path === data.uri)
           .forEach(proc => {
             if (!proc.keyword[`EXPORT`]) {
-              if (proc.references.length === 0) {
+              if (proc.references.length <= 1) {
                 // Add an error to proc
                 const possibleStatement = doc.getStatementByLine(proc.position.line);
                 if (possibleStatement) {
@@ -1117,7 +1115,7 @@ export default class Linter {
 
               if (!proc.keyword[`EXTPGM`] && !proc.keyword[`EXTPROC`]) {
                 proc.subItems.forEach(parm => {
-                  if (parm.references.length === 0) {
+                  if (parm.references.length <= 1) {
                     const possibleStatement = doc.getStatementByLine(parm.position.line);
                     if (possibleStatement) {
                       errors.push({
@@ -1134,13 +1132,13 @@ export default class Linter {
         dec.structs
           .filter(struct => struct.position.path === data.uri)
           .forEach(struct => {
-            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 0);
+            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 1);
 
-            if (struct.references.length === 0) {
+            if (struct.references.length <= 1) {
               // We only check the subfields if the parent is never references.
 
               struct.subItems.forEach(subf => {
-                if (subf.references.length === 0) {
+                if (subf.references.length <= 1) {
                   // Add an error to subf
                   const possibleStatement = doc.getStatementByLine(subf.position.line);
                   if (possibleStatement) {
