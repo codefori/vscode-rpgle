@@ -5,6 +5,7 @@ import { calculateOffset } from './linter';
 
 import * as Project from "./project";
 import { findAllLocalReferences } from './project/references';
+import Cache from '../../../../language/models/cache';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]|undefined> {
 	const uri = params.textDocument.uri;
@@ -12,18 +13,15 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 	const document = documents.get(uri);
 
 	if (document) {
-		const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-
-		let word = getWordRangeAtPosition(document, position)?.trim();
-
-		if (word) {
-      if (word.endsWith(`;`)) {
-        const pieces = word.split(`;`);
-        word = pieces[0];
-      }
-
+		const uri = params.textDocument.uri;
+		const currentPos = params.position;
+		const document = documents.get(uri);
+	
+		if (document) {
+			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
+	
 			const doc = await parser.getDocs(uri, document.getText());
-
+	
 			if (doc) {
 				if (isFree) {
 					Linter.getErrors(
@@ -37,8 +35,8 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 						doc
 					);
 				}
-
-				const def = doc.findDefinition(position.line, word);
+	
+				const def = Cache.refereneceByOffset(doc, document.offsetAt(currentPos));
 
 				if (def) {
 					if (Project.isEnabled) {

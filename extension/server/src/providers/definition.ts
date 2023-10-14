@@ -1,6 +1,7 @@
 import { DefinitionParams, Location, Definition, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
 import Parser from '../../../../language/parser';
+import Cache from '../../../../language/models/cache';
 
 export default async function definitionProvider(handler: DefinitionParams): Promise<Definition|null> {
 	const currentPath = handler.textDocument.uri;
@@ -20,21 +21,18 @@ export default async function definitionProvider(handler: DefinitionParams): Pro
 				}
 
 			} else {
-				const word = getWordRangeAtPosition(document, handler.position);
-				if (word) {
-					const def = doc.findDefinition(lineNumber, word);
+				const def = Cache.refereneceByOffset(doc, document.offsetAt(handler.position));
 
-					if (def) {
-						return Location.create(
-							def.position.path,
-							Range.create(
-								def.position.line,
-								0,
-								def.position.line,
-								0
-							)
-						);
-					}
+				if (def) {
+					return Location.create(
+						def.position.path,
+						Range.create(
+							def.position.line,
+							0,
+							def.position.line,
+							0
+						)
+					);
 				}
 			}
 		}
