@@ -101,7 +101,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 					const expandScope = (localCache: Cache) => {
 						for (const subItem of localCache.parameters) {
 							const item = CompletionItem.create(`${subItem.name}`);
-							item.kind = CompletionItemKind.Variable;
+							item.kind = CompletionItemKind.TypeParameter;
 							item.insertText = subItem.name;
 							item.detail = [`parameter`, ...subItem.keywords].join(` `);
 							item.documentation = subItem.description;
@@ -196,8 +196,24 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					expandScope(doc);
 
-					if (currentProcedure && currentProcedure.scope) {
-						expandScope(currentProcedure.scope);
+					if (currentProcedure) {
+						// If we have the entire scope, perfect
+						if (currentProcedure.scope) {
+							expandScope(currentProcedure.scope);
+						}
+
+						// subItems get moved to parameters when the procedure is ended correctly.
+						// So if the user is in the middle of a statement, then they still exist in the subItems
+						else if (currentProcedure.subItems.length > 0) {
+							for (const subItem of currentProcedure.subItems) {
+								const item = CompletionItem.create(`${subItem.name}`);
+								item.kind = CompletionItemKind.TypeParameter;
+								item.insertText = subItem.name;
+								item.detail = [`parameter`, ...subItem.keywords].join(` `);
+								item.documentation = subItem.description;
+								items.push(item);
+							}
+						}
 					}
 
 					if (isFree) {
