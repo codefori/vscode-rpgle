@@ -206,7 +206,7 @@ const commonMatchers: Matcher[] = [
     match: [
       { type: `word`, match: (word) => word.toUpperCase() === `ON` },
       { type: `minus` },
-      { type: `word`, match: (word) => word.toUpperCase() === `ERROR` },
+      { type: `word`, match: (word) => [`ERROR`, `EXCP`].includes(word.toUpperCase())},
     ],
     becomes: {
       type: `word`
