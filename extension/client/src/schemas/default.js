@@ -5,7 +5,6 @@ module.exports = {
   NoSELECTAll: true,
   UppercaseConstants: true,
   IncorrectVariableCase: true,
-  StringLiteralDupe: true,
   NoSQLJoins: true,
   PrettyComments: true,
   NoGlobalSubroutines: true,
