@@ -182,7 +182,7 @@ export async function getLintOptions(workingUri: string) {
 	return result;
 }
 
-const hintDiagnositcs: (keyof Rules)[] = [`SQLRunner`]
+const hintDiagnositcs: (keyof Rules)[] = [`SQLRunner`, `StringLiteralDupe`]
 
 export async function refreshLinterDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
@@ -203,7 +203,10 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 			availableIncludes = headers.map(header => header.relative);
 		}
 
-		options.SQLRunner = true;
+		// Turn on for SQLRunner suggestions
+		// options.SQLRunner = true;
+		
+		options.StringLiteralDupe = true;
 
 		try {
 			detail = Linter.getErrors({
@@ -353,10 +356,23 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 
 			case `SQLHostVarCheck`:
 			case `CopybookDirective`:
-			case `StringLiteralDupe`:
 			case `NoGlobalSubroutines`:
 				if (error.newValue) {
 					action = CodeAction.create(`Switch to '${error.newValue}'`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [
+								TextEdit.replace(errorRange, error.newValue)
+							]
+						},
+					}
+					actions.push(action);
+				}
+				break;
+
+			case `StringLiteralDupe`:
+				if (error.newValue) {
+					action = CodeAction.create(`Switch to '${error.newValue}'`, CodeActionKind.RefactorExtract);
 					action.edit = {
 						changes: {
 							[document.uri]: [
