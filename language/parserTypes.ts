@@ -57,6 +57,11 @@ export interface Rules {
   SQLHostVarCheck?: boolean;
   RequireOtherBlock?: boolean;
 
+  /** Not for user definition */
+  InvalidDeclareNumber?: void;
+  UnexpectedEnd?: void;
+  SQLRunner?: boolean;
+
   /** When true, will update Cache will references found in linter */
   CollectReferences?: boolean;
 }
@@ -73,14 +78,7 @@ export interface Offset {
 
 export interface IssueRange {
   offset: Offset;
-  type?: "BlankStructNamesCheck"|"QualifiedCheck"|"PrototypeCheck"|"ForceOptionalParens"|
-  "NoOCCURS"|"NoSELECTAll"|"UselessOperationCheck"|"UppercaseConstants"|"SpecificCasing"|
-  "InvalidDeclareNumber"|"IncorrectVariableCase"|"RequiresParameter"|
-  "RequiresProcedureDescription"|"StringLiteralDupe"|"RequireBlankSpecial"|
-  "CopybookDirective"|"UppercaseDirectives"|"NoSQLJoins"|"NoGlobalsInProcedures"|
-  "NoCTDATA"|"PrettyComments"|"NoGlobalSubroutines"|"NoLocalSubroutines"|"UnexpectedEnd"|
-  "NoUnreferenced"|"NoExternalTo"|"NoExecuteImmediate"|"NoExtProgramVariable"|"IncludeMustBeRelative"|
-  "SQLHostVarCheck"|"RequireOtherBlock";
+  type?: keyof Rules;
   newValue?: string;
 }
 

@@ -39,7 +39,8 @@ const errorText = {
   'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`,
   'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
   'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
-  'RequireOtherBlock': `OTHER block missing from SELECT block.`
+  'RequireOtherBlock': `OTHER block missing from SELECT block.`,
+  'SQLRunner': `Execute this statement through Db2 for i`
 };
 
 const skipRules = {
@@ -639,15 +640,18 @@ export default class Linter {
                       }
                     }
                     break;
+                    
                   case `EXEC`:
+                    const statementOffset = { position: statement[0].range.start, end: statement[statement.length - 1].range.end };
                     isEmbeddedSQL = true;
+
                     if (rules.NoSELECTAll) {
                       const selectIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `SELECT`);
                       const allIndex = statement.findIndex(part => part.value && part.value === `*`);
                       if (selectIndex >= 0) {
                         if (selectIndex + 1 === allIndex) {
                           errors.push({
-                            offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end },
+                            offset: statementOffset,
                             type: `NoSELECTAll`,
                           });
                         }
@@ -658,7 +662,7 @@ export default class Linter {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
                         errors.push({
                           type: `NoSQLJoins`,
-                          offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                          offset: statementOffset
                         });
                       }
                     }
@@ -671,7 +675,7 @@ export default class Linter {
                         if (executeIndex + 1 === immediateIndex) {
                           errors.push({
                             type: `NoExecuteImmediate`,
-                            offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                            offset: statementOffset
                           });
                         }
                       }
@@ -690,6 +694,18 @@ export default class Linter {
                           }
                         }
                       });
+                    }
+
+                    if (rules.SQLRunner) {
+                      // For running SQL statements
+                      const validStatements = [`declare`, `with`, `select`].includes(statement[2].value.toLowerCase());
+                      if (validStatements) {
+                        errors.push({
+                          type: `SQLRunner`,
+                          offset: statementOffset,
+                          newValue: data.content.substring(statementOffset.position, statementOffset.end)
+                        });
+                      }
                     }
                     break;
 
