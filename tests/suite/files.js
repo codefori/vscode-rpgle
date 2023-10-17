@@ -3,6 +3,7 @@ const assert = require(`assert`);
 
 const {default: parserSetup} = require(`../parserSetup`);
 
+const parser = parserSetup();
 const uri = `source.rpgle`;
   
 exports.simple_file = async () => {
@@ -16,8 +17,7 @@ exports.simple_file = async () => {
     `return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.files.length, 1);
   assert.strictEqual(cache.structs.length, 0);
@@ -50,8 +50,7 @@ exports.many_formats = async () => {
     `return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.files.length, 1);
 
@@ -83,8 +82,7 @@ exports.ds_extname = async () => {
     `return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.files.length, 0);
   assert.strictEqual(cache.structs.length, 1);
@@ -106,8 +104,7 @@ exports.ds_extname_no_alias = async () => {
     `return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.files.length, 0);
   assert.strictEqual(cache.structs.length, 1);
@@ -131,8 +128,7 @@ exports.ds_extname_alias = async () => {
     `return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.files.length, 0);
   assert.strictEqual(cache.structs.length, 1);
@@ -141,7 +137,7 @@ exports.ds_extname_alias = async () => {
   assert.strictEqual(dept.subItems.length, 5);
 
   assert.strictEqual(dept.subItems[0].name, `DEPTNO`);
-  assert.strictEqual(dept.subItems[1].name, `DEPT_NAME`);
+  assert.strictEqual(dept.subItems[1].name, `DEPTNAME`);
 }
 
 exports.file_prefix = async () => {
@@ -155,8 +151,7 @@ exports.file_prefix = async () => {
     `return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   const disp = cache.find(`display`);
   assert.strictEqual(disp.subItems[0].subItems[0].name, `DE1_OPTION`);

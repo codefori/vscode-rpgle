@@ -2,10 +2,10 @@
 const assert = require(`assert`);
 
 const {default: parserSetup} = require(`../parserSetup`);
-const {default: Linter} = require(`../../server/src/language/linter`);
+const {default: Linter} = require(`../../language/linter`);
 const path = require(`path`);
-const { Range, Position } = require(`../../server/src/language/models/DataPoints`);
 
+const parser = parserSetup();
 const uri = `source.rpgle`;
 
 module.exports = {
@@ -21,8 +21,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
     }, cache);
@@ -44,8 +43,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
     }, cache);
@@ -67,8 +65,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
     }, cache);
@@ -90,8 +87,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { indentErrors } = Linter.getErrors({uri, content: lines}, {
       indent: 2
     }, cache);
@@ -119,8 +115,7 @@ module.exports = {
       `End-Proc;`,
     ].join(`\n`);
     
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
       IncorrectVariableCase: true
     }, cache);
@@ -146,8 +141,7 @@ module.exports = {
       `return`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
       IncorrectVariableCase: true
     }, cache);
@@ -173,8 +167,7 @@ module.exports = {
       `                      *OFF= Do not convert any characters other than A-Z.`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const uppercase = cache.find(`UPPERCASE`);
     assert.strictEqual(uppercase.name, `UPPERCASE`);
@@ -194,8 +187,7 @@ module.exports = {
       `     D   Escaped                       n   Const Options(*NoPass)`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     assert.strictEqual(cache.procedures.length, 1);
 
@@ -231,8 +223,7 @@ module.exports = {
       `End-Proc;`,
     ].join(`\n`);
     
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
       NoGlobalsInProcedures: true
     }, cache);
@@ -256,8 +247,7 @@ module.exports = {
       `Return;`
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     assert.strictEqual(cache.includes.length, 1);
     assert.strictEqual(cache.includes[0].line, 4);
@@ -296,8 +286,7 @@ module.exports = {
       `End-Proc;`,
     ].join(`\n`);
     
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({uri, content: lines}, {
       IncorrectVariableCase: true
     }, cache);
@@ -318,24 +307,17 @@ module.exports = {
       `End-Proc;`
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
       PrettyComments: true
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(4, 0),
-        new Position(4, 8),
-      ),
-      offset: {
-        position: 0,
-        end: 8
-      },
+      offset: { position: 45, end: 53 }, type: `UnexpectedEnd`
     });
+
+    assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `End-Proc`);
   },
 
   incorrectEnd2: async () => {
@@ -347,24 +329,17 @@ module.exports = {
       `endsr;`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
       PrettyComments: true
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(4, 0),
-        new Position(4, 5),
-      ),
-      offset: {
-        position: 0,
-        end: 5
-      },
+      offset: { position: 48, end: 53 }, type: `UnexpectedEnd`
     });
+
+    assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `endsr`);
   },
 
   incorrectEnd3: async () => {
@@ -376,24 +351,17 @@ module.exports = {
       `end-proc;`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
       PrettyComments: true
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(4, 0),
-        new Position(4, 8),
-      ),
-      offset: {
-        position: 0,
-        end: 8
-      },
+      offset: { position: 44, end: 52 }, type: `UnexpectedEnd`
     });
+
+    assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `end-proc`);
   },
 
   incorrectEnd4: async () => {
@@ -412,23 +380,14 @@ module.exports = {
       `End-Proc;`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     const { errors } = Linter.getErrors({uri, content: lines}, {
       PrettyComments: true
     }, cache);
 
     assert.deepStrictEqual(errors[0], {
-      type: `UnexpectedEnd`,
-      range: new Range(
-        new Position(11, 0),
-        new Position(11, 8),
-      ),
-      offset: {
-        position: 0,
-        end: 8
-      },
+      offset: { position: 187, end: 195 }, type: `UnexpectedEnd`
     });
   },
 
@@ -459,8 +418,7 @@ module.exports = {
       `End-Ds;`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     assert.strictEqual(cache.structs.length, 2);
     
@@ -499,8 +457,7 @@ module.exports = {
       `     d  ff                         1024a`,
     ].join(`\n`);
 
-    const parser = parserSetup();
-    const cache = await parser.getDocs(uri, lines);
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
     assert.strictEqual(cache.structs.length, 1);
     

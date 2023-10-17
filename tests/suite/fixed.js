@@ -3,6 +3,7 @@ const assert = require(`assert`);
 
 const {default: parserSetup} = require(`../parserSetup`);
 
+const parser = parserSetup();
 const uri = `source.rpgle`;
   
 exports.fixed1 = async () => {
@@ -18,8 +19,7 @@ exports.fixed1 = async () => {
     `     C                   eval      *inlr = *on`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.files.length, 1);
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
@@ -59,8 +59,7 @@ exports.fixed2 = async () => {
     `     `,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 13, `Expect length of 13`);
 
@@ -87,8 +86,7 @@ exports.fixed3 = async () => {
     `     d  MsgQueNbr             25     28B 0`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
@@ -128,8 +126,7 @@ exports.fixed4 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
@@ -189,8 +186,7 @@ exports.fixed5 = async () => {
     `     d  InpRcdFmt             49     58`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 2, `Expect length of 2`);
@@ -218,8 +214,7 @@ exports.fixed6 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 8, `Expect length of 8`);
 
@@ -265,8 +260,7 @@ exports.fixed7 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
 
@@ -331,8 +325,7 @@ exports.fixed8 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.subroutines.length, 2);
   assert.strictEqual(cache.subroutines[0].name, `$QUSCRTUS`);
@@ -360,8 +353,7 @@ exports.fixed9 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.procedures.length, 2);
@@ -403,8 +395,7 @@ exports.fixed9_2 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.procedures.length, 2);
@@ -441,8 +432,7 @@ exports.fixed10 = async () => {
     `         return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   const dataDs = cache.find(`data`);
   assert.strictEqual(dataDs.name, `data`);
@@ -518,8 +508,7 @@ exports.fixedfree1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 3);
   assert.strictEqual(cache.variables.find(i => !i.keywords.includes(`CHAR(10)`)), undefined);
@@ -560,8 +549,7 @@ exports.fixed11 = async () => {
     `     D  VIEW                          1A`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   const F4DATE = cache.find(`F4DATE`);
   assert.strictEqual(F4DATE.subItems.length, 4);
@@ -606,8 +594,7 @@ exports.columnFix = async () => {
     `       end-pr;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.procedures.length, 3);
 
@@ -667,8 +654,7 @@ exports.comments1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.procedures.length, 6);
 
@@ -768,8 +754,7 @@ exports.ranges = async () => {
     `     D*                                             Page Fault Count`,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   const QUSLWT = cache.find(`QUSLWT`);
   assert.strictEqual(QUSLWT.keyword[`UNS`], `20`);
@@ -972,8 +957,7 @@ exports.def_ranges = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   const TYPEMST_T = cache.find(`TYPEMST_T`);
   assert.deepStrictEqual(TYPEMST_T.range, {
@@ -1030,8 +1014,7 @@ exports.ctl_opt_fixed = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
@@ -1072,3 +1055,67 @@ exports.fixedfree2 = async () => {
   assert.strictEqual(cache.cursors.length, 1);
   assert.strictEqual(cache.cursors[0].name, `C1`);
 };
+exports.call_opcode = async () => {
+  const lines = [
+    `     C     CreateNewBoardBEGSR`,
+    `     C                   EVAL      wWinMode = 'T'`,
+    `     C                   EVAL      wWinText = *BLANKS`,
+    `     C                   EVAL      wWinNumber = 0`,
+    `     C                   EVAL      wWinF3 = *OFF`,
+    `     C                   CALL      'BBSWINASKR'`,
+    `     C                   PARM                    wWinMode`,
+    `     C                   PARM                    wWinText`,
+    `     C                   PARM                    wWinNumber`,
+    `     C                   PARM                    wWinF3`,
+    `     C                   IF        wWinF3 = *OFF`,
+    `     C                   EVAL      BRDSHT = wWinText`,
+    `      * Convert it to Uppercase`,
+    `     C     cLo:cUp       XLATE     BRDSHT        BRDSHT`,
+    `     C                   EVAL      BRDLNG = BRDSHT`,
+    `     C                   EVAL      BRDALV = 99`,
+    `     C                   WRITE     RBOARD`,
+    `     C                   EXSR      ReLoadSFL`,
+    `     C                   ENDIF`,
+    `     C                   ENDSR`,
+    ``
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+
+  assert.strictEqual(cache.subroutines.length, 1);
+  assert.strictEqual(cache.procedures.length, 1);
+
+  const fixedCall = cache.find(`BBSWINASKR`)
+  assert.strictEqual(fixedCall.name, `BBSWINASKR`);
+  assert.strictEqual(fixedCall.keyword[`EXTPGM`], true);
+}
+
+exports.file_keywords = async () => {
+  const lines = [
+    ``,
+    `     forder     o    e             disk`,
+    `     fdetord    o    e           k disk`,
+    `     fTmpdetord uf a e           k disk    EXTDESC('DETORD')`,
+    `     f                                     EXTFILE(*EXTDESC)`,
+    `     f                                     rename(fdeto:tmprec)`,
+    `     ford100d   cf   e             workstn`,
+    `     F                                     indds(indds)`,
+    `     F                                     sfile(sfl01:rrn01)`,
+    `     F                                     Infds(Info)`,
+    ``,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+
+  assert.strictEqual(cache.files.length, 4);
+
+  const tmpdetord = cache.find(`Tmpdetord`);
+  assert.strictEqual(tmpdetord.keyword[`EXTDESC`], `'DETORD'`);
+  assert.strictEqual(tmpdetord.keyword[`EXTFILE`], `*EXTDESC`);
+  assert.strictEqual(tmpdetord.keyword[`RENAME`], `fdeto:tmprec`);
+
+  const ord100d = cache.find(`ord100d`);
+  assert.strictEqual(ord100d.keyword[`INDDS`], `indds`);
+  assert.strictEqual(ord100d.keyword[`SFILE`], `sfl01:rrn01`);
+  assert.strictEqual(ord100d.keyword[`INFDS`], `Info`);
+}

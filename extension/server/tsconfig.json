@@ -1,0 +1,21 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"target": "es2020",
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"sourceMap": true,
+		"outDir": "out",
+		"rootDir": "./../..",
+		"lib": [ "es2020" ],
+		"allowJs": true,
+		"composite": true
+	},
+	"include": [
+		"src",
+  	"../../language"
+	],
+	"exclude": [
+		"node_modules", ".vscode-test",
+	]
+}

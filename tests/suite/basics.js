@@ -3,8 +3,9 @@ const assert = require(`assert`);
 const path = require(`path`);
 
 const { default: parserSetup } = require(`../parserSetup`);
-const { default: Linter } = require(`../../server/src/language/linter`);
+const { default: Linter } = require(`../../language/linter`);
 
+const parser = parserSetup();
 const uri = `source.rpgle`;
 
 exports.test1 = async () => {
@@ -13,8 +14,7 @@ exports.test1 = async () => {
     `Dcl-s MyVariable CHAR(20);`
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
@@ -31,8 +31,7 @@ exports.test2 = async () => {
     `Dcl-s MyVariable2 CHAR(20);`
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
@@ -54,8 +53,7 @@ exports.test3 = async () => {
     `//Yes`
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
   assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
@@ -86,8 +84,7 @@ exports.test4 = async () => {
     `Endsr;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.subroutines.length, 1, `Expect length of 1`);
@@ -118,8 +115,7 @@ exports.test5 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
@@ -144,8 +140,7 @@ exports.test6 = async () => {
     `MyVariable2 = 'Hello world';`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -173,8 +168,7 @@ exports.test7 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
@@ -201,8 +195,7 @@ exports.test7_fixed = async () => {
     `     pGetArtDesc       e`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
@@ -219,8 +212,7 @@ exports.test8 = async () => {
     `Dcl-C theConstant 'Hello world';`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
@@ -246,8 +238,7 @@ exports.test9 = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
   assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
@@ -275,8 +266,7 @@ exports.test10 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(Object.keys(cache.keyword).length, 1);
   assert.strictEqual(cache.keyword[`DFTACTGRP`], `*NO`);
@@ -308,8 +298,7 @@ exports.test10_local_fixedcopy = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.includes.length, 1);
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -345,8 +334,7 @@ exports.test11 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.includes.length, 2);
   assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
@@ -386,8 +374,7 @@ exports.test12 = async () => {
     ``
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.includes.length, 1);
 
@@ -431,8 +418,7 @@ exports.indicators1 = async () => {
     `Return;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
@@ -471,8 +457,7 @@ exports.subds1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.structs.length, 1);
 
@@ -518,8 +503,7 @@ exports.range1 = async () => {
     ``,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.procedures.length, 2);
 
@@ -547,8 +531,7 @@ exports.range2 = async () => {
     `Dcl-S Eod          Ind;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.variables.length, 2);
   assert.strictEqual(cache.structs.length, 1);
@@ -579,8 +562,7 @@ exports.inline_end_pi = async () => {
     `       end-proc getHandle;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   const getHandle = cache.find(`getHandle`);
 
@@ -620,8 +602,7 @@ exports.issue_168 = async () => {
     `Return; `,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 }
 
 exports.issues_168a = async () => {
@@ -668,8 +649,7 @@ exports.issues_168a = async () => {
     `End-Proc aaa;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 }
 
 exports.issues_170b = async () => {
@@ -694,8 +674,7 @@ exports.issues_170b = async () => {
     `End-DS;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   const WkStnInd = cache.find(`WkStnInd`);
   assert.strictEqual(WkStnInd.name, `WkStnInd`);
@@ -722,8 +701,7 @@ exports.issues_dcl_subf = async () => {
     `end-ds;`,
   ].join(`\n`);
 
-  const parser = await parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   const inputsYo = cache.find(`inputsYo`);
   assert.strictEqual(inputsYo.subItems.length, 7);
@@ -760,7 +738,7 @@ exports.issue_195a = async () => {
   ].join(`\n`);
 
   const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   cache.clearReferences();
 }
@@ -818,10 +796,286 @@ exports.issue_195b = async () => {
   ].join(`\n`);
 
   const parser = parserSetup();
-  const cache = await parser.getDocs(uri, lines);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   assert.strictEqual(cache.procedures.length, 1);
 
   const DoProfileStuff = cache.find(`DoProfileStuff`);
   assert.strictEqual(DoProfileStuff.scope.procedures.length, 2);
+}
+
+exports.exec_1 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DFTACTGRP(*No);`,
+    ``,
+    `Dsply 'aaa';`,
+    `DSPLY '';`,
+    `Dsply 'aaa';`,
+    ``,
+    `EXEC SQL`,
+    `   Select nullif('aaa', '') from sysibm/sysdummy1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 1);
+  assert.strictEqual(cache.sqlReferences[0].name, `sysdummy1`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sysibm`);
+}
+
+exports.exec_2 = async () => {
+  const lines = [
+    `**free`,
+    `Dcl-s DeptNum Char(3);`,
+    ``,
+    `DeptNum = 'ABC';`,
+    ``,
+    `ClearSubfile();`,
+    ``,
+    `EXEC SQL DECLARE empCurA CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    `    FROM Employee`,
+    `    WHERE WORKDEPT = Deptnum;`,
+    ``,
+    `EXEC SQL DECLARE empCurB CURSOR FOR`,
+    `    SELECT EMPNO, FIRSTNME, LASTNAME, JOB`,
+    ``,
+    `    FROM sample.Employee`,
+    `    WHERE WORKDEPT = :deptNum;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+  assert.strictEqual(cache.sqlReferences[0].name, `Employee`);
+  assert.strictEqual(cache.sqlReferences[0].description, ``);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `Employee`);
+  assert.strictEqual(cache.sqlReferences[1].description, `sample`);
+}
+
+exports.exec_3 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `    FETCH NEXT FROM empCur       `,
+    `    INTO :myvariable2;`,
+    `EXEC SQL`,
+    `    EXECUTE IMMEDIATE :myvariable2;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 0);
+}
+
+exports.exec_4 = async () => {
+  const lines = [
+    `        dcl-s NULL pointer inz(*NULL);`,
+    `        dcl-s amount1 packed(7:2);`,
+    `        dcl-s amount2 packed(7:2);`,
+    `        dcl-s amount3 packed(7:2);`,
+    `        dcl-s amount4 packed(7:2);`,
+    `        dcl-s amount5 packed(7:2);`,
+    `        `,
+    `        // Watch null move left`,
+    `        Exec Sql`,
+    `          select`,
+    `            max(case when bonus < 900 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 800 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 700 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 600 then bonus else null end),`,
+    `        `,
+    `            max(case when bonus < 500 then bonus else null end)`,
+    `          into`,
+    `            :amount1,:amount2,:amount3,:amount4,:amount5`,
+    `          from`,
+    `            sample.employee;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 1);
+  assert.strictEqual(cache.sqlReferences[0].name, `employee`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+}
+
+exports.exec_5 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO sample.mytable(column) values(:MyVariable2);`,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO othertable(column) values(:MyVariable2);`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `mytable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `othertable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_6 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO sample.mytable`,
+    `  (column) values(:MyVariable2);`,
+    ``,
+    `EXEC SQL`,
+    `  INSERT INTO othertable`,
+    `  (column) values(:MyVariable2);`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `mytable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `othertable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_7 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  UPDATE sample.thetable set a=:MyVariable2`,
+    `  where id = 6;`,
+    ``,
+    `EXEC SQL`,
+    `  UPDATE cooltable set a=:MyVariable2`,
+    `  where id = 6;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `thetable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `cooltable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_8 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  DELETE from sample.thetable`,
+    `  where id = 6;`,
+    ``,
+    `EXEC SQL`,
+    `  DELETE from wooptable`,
+    `  where id = 6;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `thetable`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `wooptable`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_9 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Dcl-s MyVariable2 Char(20);  `,
+    ``,
+    `EXEC SQL`,
+    `  CALL sample.MyRandomProc(:MyVariable2);`,
+    ``,
+    `EXEC SQL`,
+    `  CALL OtherCoolProc(:MyVariable2);`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `MyRandomProc`);
+  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `OtherCoolProc`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
+}
+
+exports.exec_10 = async () => {
+  const lines = [
+    `        EXEC SQL`,
+    `          DECLARE C1 CURSOR FOR`,
+    `            SELECT MSGBRD, MSGSBD, MSGUID, MSGSBJ, MSGDAT, MSGTIM, MSGSND`,
+    `            FROM PSBORDS AS S JOIN PMESSGS AS M`,
+    `              ON S.SBRBRD = M.MSGBRD`,
+    `               AND S.SBRSHT = M.MSGSBD`,
+    `            WHERE MSGDAT = :cAuthUser`,
+    `            ORDER BY MSGDAT DESC, MSGTIM DESC;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+
+  assert.strictEqual(cache.sqlReferences[0].name, `PSBORDS`);
+  assert.strictEqual(cache.sqlReferences[0].description, ``);
+
+  assert.strictEqual(cache.sqlReferences[1].name, `PMESSGS`);
+  assert.strictEqual(cache.sqlReferences[1].description, ``);
 }

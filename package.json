@@ -12,12 +12,16 @@
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
 	"license": "MIT",
-	"version": "0.17.6",
+	"version": "0.21.4",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
 	"keywords": [
-		"rpg", "rpgle", "ibmi", "iseries", "as400"
+		"rpg",
+		"rpgle",
+		"ibmi",
+		"iseries",
+		"as400"
 	],
 	"categories": [
 		"Programming Languages",
@@ -75,32 +79,34 @@
 		"package": "vsce package",
 		"package:linter": "LANGUAGE_TOOLS_ENABLED=\"false\" FORMATTER_ENABLED=\"false\" vsce package",
 		"vscode:prepublish": "npm run webpack",
-		"webpack": "npm run clean && webpack --mode production --config ./client/webpack.config.js && webpack --mode production --config ./server/webpack.config.js",
-		"webpack:dev": "npm run clean && webpack --mode none --config ./client/webpack.config.js && webpack --mode none --config ./server/webpack.config.js",
+		"webpack": "npm run clean && webpack --mode production --config ./extension/client/webpack.config.js && webpack --mode production --config ./extension/server/webpack.config.js",
+		"webpack:dev": "npm run clean && webpack --mode none --config ./extension/client/webpack.config.js && webpack --mode none --config ./extension/server/webpack.config.js",
 		"clean": "rimraf out && rimraf client/out && rimraf server/out",
 		"compile": "tsc -b",
 		"compile:tests": "tsc -b ./tests/tsconfig.json",
-		"compile:client": "tsc -b ./client/tsconfig.json",
-		"compile:server": "tsc -b ./server/tsconfig.json",
+		"compile:client": "tsc -b ./extension/client/tsconfig.json",
+		"compile:server": "tsc -b ./extension/server/tsconfig.json",
 		"watch": "tsc -b -w",
-		"lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
-		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+		"lint": "eslint ./extension/client/src ./extension/server/src --ext .ts,.tsx",
+		"postinstall": "cd extension/client && npm install && cd ../server && npm install && cd ../..",
+		"cli:dev:rpglint": "cd cli/rpglint && npm run webpack:dev"
 	},
 	"devDependencies": {
+		"@halcyontech/vscode-ibmi-types": "^2.1.0",
 		"@types/mocha": "^9.1.0",
 		"@types/node": "^16.11.7",
 		"@typescript-eslint/eslint-plugin": "^5.30.0",
 		"@typescript-eslint/parser": "^5.30.0",
+		"esbuild-loader": "^3.0.1",
 		"eslint": "^8.13.0",
 		"glob": "^7.2.0",
 		"merge-options": "^3.0.4",
 		"mocha": "^9.2.1",
 		"rimraf": "^3.0.2",
 		"semver": "^7.3.5",
-		"ts-loader": "^9.3.1",
 		"tsx": "^3.11.0",
 		"typescript": "^4.8.4",
-		"webpack": "^5.24.3",
+		"webpack": "^5.76.0",
 		"webpack-cli": "^4.5.0"
 	}
 }

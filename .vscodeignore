@@ -1,12 +1,10 @@
-client
-server
 .github/**
 assets/**
+**/node_modules
 node_modules
 scripts
 .vscode/**
 .vscode-test/**
-test/**
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
@@ -14,3 +12,9 @@ vsc-extension-quickstart.md
 **/*.map
 **/.eslintrc.json
 tests
+cli
+language
+**/cli
+cli/**
+cli
+extension
