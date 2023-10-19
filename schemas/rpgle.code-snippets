@@ -690,6 +690,13 @@
 		],
 		"description": "%OCCUR gets or sets the current position of a multiple-occurrence data structure."
 	},
+	"%omitted": {
+		"prefix": "%omitted",
+		"body": [
+			"%omitted(${1:parameter_name})"
+		],
+		"description": "%OMITTED(parameter_name) returns *ON when *OMIT was passed. When %OMITTED(parameter_name) is true, the parameter must not be used."
+	},
 	"%open": {
 		"prefix": "%open",
 		"body": [
@@ -724,6 +731,13 @@
 			"%parser(${1:parser} :${2:(optional) options})"
 		],
 		"description": "%PARSER is used as the third operand of the DATA-INTO operation code to specify the program or procedure to do the parsing, and any options supported by the parser."
+	},
+	"%passed": {
+		"prefix": "%passed",
+		"body": [
+			"%passed(${1:parameter_name})"
+		],
+		"description": "%PASSED(parameter_name) returns *ON when the parameter was passed and not omitted. When %PASSED(parameter_name) is true, the parameter is available to be used."
 	},
 	"%proc": {
 		"prefix": "%proc",
