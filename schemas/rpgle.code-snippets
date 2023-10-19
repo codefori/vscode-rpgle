@@ -71,13 +71,27 @@
 	},
 	"select": {
 		"prefix": "select",
-		"description": "The select group conditionally processes one of several alternative sequences of operations.",
+		"description": "The SELECT group conditionally processes one of several alternative sequences of operations.",
 		"body": [
 			"select;",
 			"  when (${1});",
 			"    $0",
 			"  other;",
 			"    // handle other conditions",
+			"endsl;"
+		]
+	},
+	"select-operand": {
+		"prefix": "select-operand",
+		"description": "The SELECT with operand group conditionally processes one of several alternative sequences of operations according to the value of the operand.",
+		"body": [
+			"select ${1:operand};",
+			"  when-is (${2:value});",
+			"    ${3:// handle first condition};",
+			"  when-in %list('${4:list-element 1}':'${5:list-element 2}');",
+			"    ${6:// handle second condition};",
+			"  other;",
+			"    ${7:// handle other conditions};",
 			"endsl;"
 		]
 	},
