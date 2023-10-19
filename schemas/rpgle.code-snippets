@@ -123,6 +123,17 @@
 			"$0"
 		]
 	},
+	"enumeration": {
+		"prefix": "dcl-enum",
+		"description": "Declare enumeration",
+		"body": [
+			"dcl-enum ${1:name} ${2:qualified};",
+			"  ${3:CONSTANT1} ${4:value1};",
+			"  ${5:CONSTANT2} ${6:value2};",
+			"end-enum;",
+			"$0",
+		]
+	},
 	"prototype": {
 		"prefix": "dcl-pr",
 		"body": [
