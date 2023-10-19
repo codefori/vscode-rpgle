@@ -571,6 +571,13 @@
 		],
 		"description": "%KDS is allowed as the search argument for any keyed Input/Output operation (CHAIN, DELETE, READE, READPE, SETGT, SETLL) coded in a free-form group."
 	},
+	"%left": {
+		"prefix": "%left",
+		"body": [
+			"%left(${1:string} : ${2:length})$0"
+		],
+		"description": "%LEFT returns the leftmost characters of a string."
+	},
 	"%len": {
 		"prefix": "%len",
 		"body": [
@@ -787,6 +794,13 @@
 			"%replace(${1:replacement string} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to replace} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%REPLACE returns the character string produced by inserting a replacement string into the source string, starting at the start position and replacing the specified number of characters."
+	},
+	"%right": {
+		"prefix": "%right",
+		"body": [
+			"%right(${1:string} : ${2:length})$0"
+		],
+		"description": "%RIGHT returns the rightmost characters of a string."
 	},
 	"%scan": {
 		"prefix": "%scan",
