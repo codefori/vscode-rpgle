@@ -69,15 +69,17 @@ export default async function implementationProvider(params: ImplementationParam
 									const cache = parser.getParsedCache(possibleUri.value);
 									if (cache) {
 										const proc = cache.find(word);
-										return Location.create(
-											proc.position.path,
-											Range.create(
-												proc.position.line,
-												0,
-												proc.position.line,
-												0
-											)
-										);
+										if (proc) {
+											return Location.create(
+												proc.position.path,
+												Range.create(
+													proc.position.line,
+													0,
+													proc.position.line,
+													0
+												)
+											);
+										}
 									}
 								}
 							}

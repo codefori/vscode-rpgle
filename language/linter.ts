@@ -966,7 +966,7 @@ export default class Linter {
             opcode = statement[0].value.toUpperCase();
 
             if ([
-              `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ENDMON`, `ENDSR`, `WHEN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `ENDSL`
+              `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ON-EXCP`, `ENDMON`, `ENDSR`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `END-ENUM`, `ENDSL`
             ].includes(opcode)) {
               expectedIndent -= indent;
 
@@ -993,7 +993,7 @@ export default class Linter {
             }
 
             if ([
-              `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`
+              `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXCP`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`, `DCL-ENUM`
             ].includes(opcode)) {
               if ([`DCL-DS`, `DCL-PI`, `DCL-PR`].includes(opcode) && oneLineTriggers[opcode].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
                 //No change
