@@ -152,7 +152,7 @@ const commonMatchers: Matcher[] = [
     match: [
       { type: `word`, match: (word) => word.toUpperCase() === `WHEN` },
       { type: `minus` },
-      { type: `word` },
+      { type: `word`, match: (word) => [`IN`, `IS`].includes(word.toUpperCase())},
     ],
     becomes: {
       type: `word`
