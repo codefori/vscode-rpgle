@@ -3353,3 +3353,105 @@ exports.paddr_issue_250 = async () => {
 
   assert.strictEqual(errors.length, 0);
 }
+
+exports.new_select_1 = async () => {
+  const lines = [
+    `**free`,
+    `SELECT a.b(i).c(j);`,
+    `WHEN-IS 0;`,
+    `   // Handle a.b(i).c(j) = 0`,
+    `WHEN-IN %RANGE(5 : 20);`,
+    `   // Handle a.b(i).c(j) between 5 and 100`,
+    `WHEN-IN %LIST(2 : 3 : N : M + 1);`,
+    `   // Handle a.b(i).c(j) = 5, 10, N, or (M + 1)`,
+    `WHEN-IS N + 1;`,
+    `   // Handle a.b(i).c(j) = N + 1`,
+    `OTHER;`,
+    `   // Handle any other values for a.b(i).c(j)`,
+    `ENDSL;`,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 5);
+
+  // Expect all expected indent to be 2
+  assert.strictEqual(indentErrors.some(e => e.expectedIndent !== 2), false)
+}
+
+exports.new_select_2 = async () => {
+  const lines = [
+    `**free`,
+    `SELECT a.b(i).c(j);`,
+    `  WHEN-IS 0;`,
+    `   // Handle a.b(i).c(j) = 0`,
+    `  WHEN-IN %RANGE(5 : 20);`,
+    `   // Handle a.b(i).c(j) between 5 and 100`,
+    `  WHEN-IN %LIST(2 : 3 : N : M + 1);`,
+    `   // Handle a.b(i).c(j) = 5, 10, N, or (M + 1)`,
+    `  WHEN-IS N + 1;`,
+    `   // Handle a.b(i).c(j) = N + 1`,
+    `  OTHER;`,
+    `   // Handle any other values for a.b(i).c(j)`,
+    `ENDSL;`,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 0);
+}
+
+exports.on_excp_1 = async () => {
+  const lines = [
+    `**free`,
+    `DCL-F badfile DISK(10) USROPN;`,
+    `DCL-S status PACKED(5);`,
+    ``,
+    `MONITOR;`,
+    `  OPEN badfile;`,
+    `ON-EXCP 'CPF4101';`,
+    `  status = %status();`,
+    `  DSPLY ('Message CPF4101, status ' + %char(status)); //  1 `,
+    `ON-EXCP 'RNX1217';`,
+    `  DSPLY 'Message RNX1217';`,
+    `ON-ERROR 1217;`,
+    `  DSPLY 'Status 1217';`,
+    `ENDMON;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  assert.strictEqual(indentErrors.length, 0);
+}
+
+exports.on_excp_2 = async () => {
+  const lines = [
+    `**FREE`,
+    `monitor; `,
+    `on-error *all; `,
+    `dsply 'on error'; `,
+    `on-excp CPF0000;`,
+    `endmon;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+  
+  assert.strictEqual(indentErrors.length, 1);
+  assert.deepStrictEqual(indentErrors[0], {
+    line: 3,
+    expectedIndent: 2,
+    currentIndent: 0
+  });
+}

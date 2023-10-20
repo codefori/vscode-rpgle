@@ -1,3 +1,5 @@
+import { indicators1 } from "../../tests/suite";
+import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import Declaration from "./declaration";
 
 const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
@@ -8,11 +10,19 @@ const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().pa
 });
 
 export default class Cache {
-  /**
-   * 
-   * @param {import("../parserTypes").CacheProps} cache 
-   */
-  constructor(cache = {}) {
+  keyword: Keywords;
+  parameters: Declaration[];
+  subroutines: Declaration[];
+  procedures: Declaration[];
+  files: Declaration[];
+  variables: Declaration[];
+  structs: Declaration[];
+  constants: Declaration[];
+  sqlReferences: Declaration[];
+  indicators: Declaration[];
+  includes: IncludeStatement[];
+
+  constructor(cache: CacheProps = {}) {
     /** @type {import("../parserTypes").Keywords} */
     this.keyword = {};
 
@@ -62,7 +72,7 @@ export default class Cache {
         structs: [...this.structs, ...second.structs],
         constants: [...this.constants, ...second.constants],
         sqlReferences: [...this.sqlReferences, ...second.sqlReferences],
-        indicators: [...this.indicators, ...second.indicators]
+        indicators: [...this.indicators, ...second.indicators],
       });
     } else {
       return this;

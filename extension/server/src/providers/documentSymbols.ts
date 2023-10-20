@@ -64,18 +64,34 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						SymbolKind.Variable,
 						Range.create(def.position.line, 0, def.position.line, 0),
 						Range.create(def.position.line, 0, def.position.line, 0)
-					)),
+					))
+			);
 
-				...scope.constants
-					.filter(constant => constant.position && constant.position.path === currentPath)
-					.map(def => DocumentSymbol.create(
+			scope.constants
+				.filter(constant => constant.position && constant.position.path === currentPath)
+				.forEach(def => {
+					const constantDef = DocumentSymbol.create(
 						def.name,
 						def.keywords.join(` `).trim(),
 						SymbolKind.Constant,
 						Range.create(def.position.line, 0, def.position.line, 0),
 						Range.create(def.position.line, 0, def.position.line, 0)
-					))
-			);
+					);
+
+					if (def.subItems.length > 0) {
+						constantDef.children = def.subItems
+							.filter(subitem => subitem.position && subitem.position.path === currentPath)
+							.map(subitem => DocumentSymbol.create(
+								subitem.name,
+								subitem.keywords.join(` `).trim(),
+								SymbolKind.Property,
+								Range.create(subitem.position.line, 0, subitem.position.line, 0),
+								Range.create(subitem.position.line, 0, subitem.position.line, 0)
+							));
+					}
+
+					currentScopeDefs.push(constantDef);
+				})
 
 			scope.files
 				.filter(struct => struct.position && struct.position.path === currentPath)

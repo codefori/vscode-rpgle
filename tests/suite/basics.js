@@ -1079,3 +1079,41 @@ exports.exec_10 = async () => {
   assert.strictEqual(cache.sqlReferences[1].name, `PMESSGS`);
   assert.strictEqual(cache.sqlReferences[1].description, ``);
 }
+
+exports.enum_1 = async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `DCL-ENUM sizes; //  1 `,
+    `  tiny -1;`,
+    `  small 0;`,
+    `  medium 1;`,
+    `  large 2;`,
+    `END-ENUM;`,
+    ``,
+    `DCL-ENUM jobMsgQ QUALIFIED; //  2 `,
+    `  noWrap '*NOWRAP';`,
+    `  wrap '*WRAP';`,
+    `  prtWrap '*PRTWRAP';`,
+    `END-ENUM;`,
+    ``,
+    `DCL-S cmd VARCHAR(100);`,
+    `DCL-S array INT(10) DIM(5);`,
+    `DCL-DS item QUALIFIED;`,
+    `  size packed(5);`,
+    `END-DS;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.constants.length, 2);
+
+  const sizes = cache.find(`sizes`);
+  assert.strictEqual(sizes.name, `sizes`);
+  assert.strictEqual(sizes.subItems.length, 4);
+
+  const jobMsgQ = cache.find(`jobMsgQ`);
+  assert.strictEqual(jobMsgQ.name, `jobMsgQ`);
+  assert.strictEqual(jobMsgQ.subItems.length, 3);
+}

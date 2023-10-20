@@ -62,9 +62,14 @@ export default async function completionItemProvider(handler: CompletionParams):
 					
 					// Look at the parms or existing structs to find a possible reference
 					const possibleStruct: Declaration | undefined = [
+						// First we search the local procedure
 						currentProcedure && currentProcedure.scope ? currentProcedure.scope.parameters.find(parm => parm.name.toUpperCase() === preWord && parm.subItems.length > 0) : undefined,
 						currentProcedure && currentProcedure.scope ? currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === preWord) : undefined,
-						doc.structs.find(struct => struct.name.toUpperCase() === preWord)
+						currentProcedure && currentProcedure.scope ? currentProcedure.scope.constants.find(struct => struct.subItems.length > 0 && struct.name.toUpperCase() === preWord) : undefined,
+
+						// Then we search the globals
+						doc.structs.find(struct => struct.name.toUpperCase() === preWord),
+						doc.constants.find(struct => struct.subItems.length > 0 && struct.name.toUpperCase() === preWord)
 					].find(x => x); // find the first non-undefined item
 
 					if (possibleStruct && possibleStruct.keyword[`QUALIFIED`]) {
@@ -191,6 +196,17 @@ export default async function completionItemProvider(handler: CompletionParams):
 							item.detail = constant.keywords.join(` `);
 							item.documentation = constant.description;
 							items.push(item);
+
+							if (!constant.keyword[`QUALIFIED`]) {
+								constant.subItems.forEach((subItem: Declaration) => {
+									const item = CompletionItem.create(`${subItem.name}`);
+									item.kind = CompletionItemKind.Property;
+									item.insertText = `${subItem.name}`;
+									item.detail = subItem.keywords.join(` `);
+									item.documentation = subItem.description + ` (${constant.name})`;
+									items.push(item);
+								});
+							}
 						}
 					};
 
