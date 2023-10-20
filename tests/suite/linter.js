@@ -3378,8 +3378,6 @@ exports.new_select_1 = async () => {
 
   assert.strictEqual(indentErrors.length, 5);
 
-  console.log(indentErrors);
-
   // Expect all expected indent to be 2
   assert.strictEqual(indentErrors.some(e => e.expectedIndent !== 2), false)
 }
