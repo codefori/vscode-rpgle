@@ -201,19 +201,13 @@ export default class Cache {
     }
   }
 
-  /**
-   * 
-   * @param {Cache} scope 
-   * @param {number} offset 
-   * @returns {Declaration|undefined}
-   */
-  static refereneceByOffset(scope, offset) {
-    const props = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
+  static refereneceByOffset(scope: Cache, offset: number): Declaration|undefined {
+    const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
   
     for (const prop of props) {
-      const list = scope[prop];
+      const list = scope[prop] as unknown as Declaration[];
       for (const def of list) {
-        let possibleRef;
+        let possibleRef: boolean;
   
         // Search top level
         possibleRef = def.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
@@ -235,34 +229,4 @@ export default class Cache {
       }
     }
   }
-
-  // TS version for later:
-  // static refereneceByOffset(scope: Cache, offset: number): Declaration|undefined {
-  //   const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
-  
-  //   for (const prop of props) {
-  //     const list = scope[prop] as unknown as Declaration[];
-  //     for (const def of list) {
-  //       let possibleRef: boolean;
-  
-  //       // Search top level
-  //       possibleRef = def.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
-  //       if (possibleRef) return def;
-  
-  //       // Search any subitems
-  //       if (def.subItems.length > 0) {
-  //         for (const subItem of def.subItems) {
-  //           possibleRef = subItem.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
-  //           if (possibleRef) return subItem;
-  //         }
-  //       }
-  
-  //       // Search scope if any
-  //       if (def.scope) {
-  //         const inScope = refereneceByOffset(def.scope, offset);
-  //         if (possibleRef) return inScope;
-  //       }
-  //     }
-  //   }
-  // }
 }
