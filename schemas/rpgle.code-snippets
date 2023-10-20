@@ -71,13 +71,27 @@
 	},
 	"select": {
 		"prefix": "select",
-		"description": "The select group conditionally processes one of several alternative sequences of operations.",
+		"description": "The SELECT group conditionally processes one of several alternative sequences of operations.",
 		"body": [
 			"select;",
 			"  when (${1});",
 			"    $0",
 			"  other;",
 			"    // handle other conditions",
+			"endsl;"
+		]
+	},
+	"select-operand": {
+		"prefix": "select-operand",
+		"description": "The SELECT with operand group conditionally processes one of several alternative sequences of operations according to the value of the operand.",
+		"body": [
+			"select ${1:operand};",
+			"  when-is (${2:value});",
+			"    ${3:// handle first condition};",
+			"  when-in %list('${4:list-element 1}':'${5:list-element 2}');",
+			"    ${6:// handle second condition};",
+			"  other;",
+			"    ${7:// handle other conditions};",
 			"endsl;"
 		]
 	},
@@ -107,6 +121,17 @@
 			"dcl-ds ${1:name} ExtName('${2:object}') Qualified;",
 			"end-ds;",
 			"$0"
+		]
+	},
+	"enumeration": {
+		"prefix": "dcl-enum",
+		"description": "Declare enumeration",
+		"body": [
+			"dcl-enum ${1:name} ${2:qualified};",
+			"  ${3:CONSTANT1} ${4:value1};",
+			"  ${5:CONSTANT2} ${6:value2};",
+			"end-enum;",
+			"$0",
 		]
 	},
 	"prototype": {
@@ -557,6 +582,13 @@
 		],
 		"description": "%KDS is allowed as the search argument for any keyed Input/Output operation (CHAIN, DELETE, READE, READPE, SETGT, SETLL) coded in a free-form group."
 	},
+	"%left": {
+		"prefix": "%left",
+		"body": [
+			"%left(${1:string} : ${2:length})$0"
+		],
+		"description": "%LEFT returns the leftmost characters of a string."
+	},
 	"%len": {
 		"prefix": "%len",
 		"body": [
@@ -690,6 +722,13 @@
 		],
 		"description": "%OCCUR gets or sets the current position of a multiple-occurrence data structure."
 	},
+	"%omitted": {
+		"prefix": "%omitted",
+		"body": [
+			"%omitted(${1:parameter_name})"
+		],
+		"description": "%OMITTED(parameter_name) returns *ON when *OMIT was passed. When %OMITTED(parameter_name) is true, the parameter must not be used."
+	},
 	"%open": {
 		"prefix": "%open",
 		"body": [
@@ -725,6 +764,13 @@
 		],
 		"description": "%PARSER is used as the third operand of the DATA-INTO operation code to specify the program or procedure to do the parsing, and any options supported by the parser."
 	},
+	"%passed": {
+		"prefix": "%passed",
+		"body": [
+			"%passed(${1:parameter_name})"
+		],
+		"description": "%PASSED(parameter_name) returns *ON when the parameter was passed and not omitted. When %PASSED(parameter_name) is true, the parameter is available to be used."
+	},
 	"%proc": {
 		"prefix": "%proc",
 		"body": [
@@ -759,6 +805,13 @@
 			"%replace(${1:replacement string} :${2:source string} :${3:(optional) start position} :${4:(optional) source length to replace} :${5|*natural,*stdcharsize|})"
 		],
 		"description": "%REPLACE returns the character string produced by inserting a replacement string into the source string, starting at the start position and replacing the specified number of characters."
+	},
+	"%right": {
+		"prefix": "%right",
+		"body": [
+			"%right(${1:string} : ${2:length})$0"
+		],
+		"description": "%RIGHT returns the rightmost characters of a string."
 	},
 	"%scan": {
 		"prefix": "%scan",
