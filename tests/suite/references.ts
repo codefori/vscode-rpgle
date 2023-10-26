@@ -98,7 +98,21 @@ export async function references_3_enum() {
   assert.strictEqual(colorsConst.references.length, 2);
 }
 
-export async function references_4_subfield() {
+export async function references_4_subfield_a() {
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
+
+  Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true,
+  }, cache);
+
+  const greenSubfieldIndex = lines.indexOf(`var1 = COLORS.GREEN`) + 17;
+
+  const greenConst = Cache.refereneceByOffset(cache, greenSubfieldIndex);
+  assert.strictEqual(greenConst.name, `GREEN`);
+  assert.strictEqual(greenConst.references.length, 2);
+}
+
+export async function references_4_subfield_b() {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {

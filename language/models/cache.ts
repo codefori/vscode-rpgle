@@ -152,21 +152,17 @@ export default class Cache {
   }
 
   clearReferences() {
-    [...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
+    const fileStructs = this.files.map(file => file.subItems).flat();
+
+    [...fileStructs, ...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
       def.references = [];
+      def.subItems.forEach(sub => sub.references = []);
     });
 
     this.procedures.forEach(proc => {
       if (proc.scope) {
         proc.scope.clearReferences();
       }
-    });
-
-    const fileStructs = this.files.map(file => file.subItems).flat();
-    const allStructs = [...fileStructs, ...this.structs];
-
-    allStructs.forEach(struct => {
-      struct.subItems.forEach(sub => sub.references = []);
     });
   }
 
