@@ -199,7 +199,7 @@ export default class Cache {
     }
   }
 
-  static refereneceByOffset(scope: Cache, offset: number): Declaration|undefined {
+  static referenceByOffset(scope: Cache, offset: number): Declaration|undefined {
     const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
   
     for (const prop of props) {
