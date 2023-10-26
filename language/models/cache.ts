@@ -2,12 +2,14 @@ import { indicators1 } from "../../tests/suite";
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import Declaration from "./declaration";
 
-const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
-  const indDef = new Declaration(`variable`);
-  indDef.name = ind;
-  indDef.keywords = [`IND`];
-  return indDef;
-});
+const newInds = () => {
+  return [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
+    const indDef = new Declaration(`variable`);
+    indDef.name = ind;
+    indDef.keywords = [`IND`];
+    return indDef;
+  })
+};
 
 export default class Cache {
   keyword: Keywords;
@@ -51,7 +53,7 @@ export default class Cache {
     this.sqlReferences = cache.sqlReferences || [];
 
     /** @type {Declaration[]} */
-    this.indicators = cache.indicators || [...inds];
+    this.indicators = cache.indicators || [...newInds()];
 
     /** @type {import("../parserTypes").IncludeStatement[]} */
     this.includes = cache.includes || [];

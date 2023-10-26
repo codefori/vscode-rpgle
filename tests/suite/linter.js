@@ -2388,8 +2388,13 @@ exports.linter38_subrefs = async () => {
 
   const qualsubA = qualStructYes.subItems[0];
   assert.strictEqual(qualsubA.name, `qualsubA`);
-  assert.strictEqual(qualsubA.references.length, 1);
+  assert.strictEqual(qualsubA.references.length, 2);
+
   assert.deepStrictEqual(qualsubA.references[0], {
+    offset: { position: 274, end: 282 }
+  });
+
+  assert.deepStrictEqual(qualsubA.references[1], {
     offset: { position: 530, end: 538 }
   });
 
@@ -2429,17 +2434,21 @@ exports.linter38_subrefs = async () => {
 
   const boopABC = qualDimStructYup.subItems[0];
   assert.strictEqual(boopABC.name, `boopABC`);
-  assert.strictEqual(boopABC.references.length, 3);
+  assert.strictEqual(boopABC.references.length, 4);
 
   assert.deepStrictEqual(boopABC.references[0], {
-    offset: { position: 565, end: 572 }
+    offset: { position: 411, end: 418 }
   });
 
   assert.deepStrictEqual(boopABC.references[1], {
-    offset: { position: 612, end: 619 } 
+    offset: { position: 565, end: 572 }
   });
 
   assert.deepStrictEqual(boopABC.references[2], {
+    offset: { position: 612, end: 619 } 
+  });
+
+  assert.deepStrictEqual(boopABC.references[3], {
     offset: { position: 663, end: 670 }
   });
 }

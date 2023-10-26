@@ -456,7 +456,6 @@ export default class Linter {
                     break;
 
                   case `DCL-DS`:
-                    inStruct.push(value);
                     if (rules.NoOCCURS) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
                         errors.push({
@@ -491,6 +490,11 @@ export default class Linter {
                           offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
                       }
+                    }
+
+                    // If no one line ender is used, push current ds to scope
+                    if (!oneLineTriggers["DCL-DS"].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
+                      inStruct.push(value);
                     }
                     break;
 
@@ -559,6 +563,7 @@ export default class Linter {
                       }
                     }
                     break;
+                    
                   case `END-DS`:
                   case `END-ENUM`:
                     inStruct.pop();
