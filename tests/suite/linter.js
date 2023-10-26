@@ -2365,31 +2365,36 @@ exports.linter38_subrefs = async () => {
   }, cache);
 
   const subfa = cache.find(`subfa`);
-  assert.strictEqual(subfa.references.length, 1);
-  assert.deepStrictEqual(subfa.references[0], {
+  assert.strictEqual(subfa.references.length, 2);
+  assert.deepStrictEqual(subfa.references[1], {
     offset: { position: 469, end: 474 }
   });
 
   const structYesAlso = cache.find(`structYesAlso`);
-  assert.strictEqual(structYesAlso.references.length, 1);
-  assert.deepStrictEqual(structYesAlso.references[0], {
+  assert.strictEqual(structYesAlso.references.length, 2);
+  assert.deepStrictEqual(structYesAlso.references[1], {
     offset: { position: 485, end: 498 }
   });
 
   const subfc = structYesAlso.subItems[0];
   assert.strictEqual(subfc.name, `subfc`);
-  assert.strictEqual(subfc.references.length, 0);
+  assert.strictEqual(subfc.references.length, 1);
 
   const qualStructYes = cache.find(`qualStructYes`);
-  assert.strictEqual(qualStructYes.references.length, 1);
-  assert.deepStrictEqual(qualStructYes.references[0], {
+  assert.strictEqual(qualStructYes.references.length, 2);
+  assert.deepStrictEqual(qualStructYes.references[1], {
     offset: { position: 516, end: 529 }
   });
 
   const qualsubA = qualStructYes.subItems[0];
   assert.strictEqual(qualsubA.name, `qualsubA`);
-  assert.strictEqual(qualsubA.references.length, 1);
+  assert.strictEqual(qualsubA.references.length, 2);
+
   assert.deepStrictEqual(qualsubA.references[0], {
+    offset: { position: 274, end: 282 }
+  });
+
+  assert.deepStrictEqual(qualsubA.references[1], {
     offset: { position: 530, end: 538 }
   });
 
@@ -2397,49 +2402,53 @@ exports.linter38_subrefs = async () => {
   const subProc = procYes.scope;
 
   const localStructYes = subProc.find(`localStructYes`);
-  assert.strictEqual(localStructYes.references.length, 1);
-  assert.deepStrictEqual(localStructYes.references[0], {
+  assert.strictEqual(localStructYes.references.length, 2);
+  assert.deepStrictEqual(localStructYes.references[1], {
     offset: { position: 1158, end: 1172 }
   });
 
   const localStructAlsoYes = subProc.find(`localStructAlsoYes`);
-  assert.strictEqual(localStructAlsoYes.references.length, 0);
+  assert.strictEqual(localStructAlsoYes.references.length, 1);
 
   const subfe = localStructAlsoYes.subItems[0];
   assert.strictEqual(subfe.name, `subfe`);
-  assert.strictEqual(subfe.references.length, 1);
-  assert.deepStrictEqual(subfe.references[0], {
+  assert.strictEqual(subfe.references.length, 2);
+  assert.deepStrictEqual(subfe.references[1], {
     offset: { position: 1193, end: 1198 }
   });
 
   const qualDimStructYup = cache.find(`qualDimStructYup`);
-  assert.strictEqual(qualDimStructYup.references.length, 3)
+  assert.strictEqual(qualDimStructYup.references.length, 4)
 
-  assert.deepStrictEqual(qualDimStructYup.references[0], {
+  assert.deepStrictEqual(qualDimStructYup.references[1], {
     offset: { position: 545, end: 561 }
   });
 
-  assert.deepStrictEqual(qualDimStructYup.references[1], {
+  assert.deepStrictEqual(qualDimStructYup.references[2], {
     offset: { position: 578, end: 594 }
   });
 
-  assert.deepStrictEqual(qualDimStructYup.references[2], {
+  assert.deepStrictEqual(qualDimStructYup.references[3], {
     offset: { position: 625, end: 641 }
   });
 
   const boopABC = qualDimStructYup.subItems[0];
   assert.strictEqual(boopABC.name, `boopABC`);
-  assert.strictEqual(boopABC.references.length, 3);
+  assert.strictEqual(boopABC.references.length, 4);
 
   assert.deepStrictEqual(boopABC.references[0], {
-    offset: { position: 565, end: 572 }
+    offset: { position: 411, end: 418 }
   });
 
   assert.deepStrictEqual(boopABC.references[1], {
-    offset: { position: 612, end: 619 } 
+    offset: { position: 565, end: 572 }
   });
 
   assert.deepStrictEqual(boopABC.references[2], {
+    offset: { position: 612, end: 619 } 
+  });
+
+  assert.deepStrictEqual(boopABC.references[3], {
     offset: { position: 663, end: 670 }
   });
 }
@@ -2544,7 +2553,7 @@ exports.linter40_return = async () => {
   const procedure = cache.find(`InputIsValid`);
   const validationResult = procedure.scope.find(`validationResult`);
 
-  assert.strictEqual(validationResult.references.length, 6);
+  assert.strictEqual(validationResult.references.length, 7);
 }
 
 exports.linter41 = async () => {
@@ -2771,13 +2780,13 @@ exports.issue_170a = async () => {
   assert.strictEqual(SBM_DS.name, `SBM_DS`);
   assert.strictEqual(SBM_DS.subItems.length, 1);
   assert.strictEqual(SBM_DS.position.line, 2);
-  assert.strictEqual(SBM_DS.references.length, 0);
+  assert.strictEqual(SBM_DS.references.length, 1);
 
   const Move1 = SBM_DS.subItems[0];
   assert.strictEqual(Move1.name, `Move1`);
   assert.strictEqual(Object.keys(Move1.keyword).length, 2);
   assert.strictEqual(Move1.position.line, 3);
-  assert.strictEqual(Move1.references.length, 0);
+  assert.strictEqual(Move1.references.length, 1);
   
   assert.deepStrictEqual(errors.length, 2);
 }
@@ -2797,8 +2806,8 @@ exports.linter40_keywordrefs = async () => {
 
   const RANDOMLEN = cache.find(`RANDOMLEN`);
 
-  assert.strictEqual(RANDOMLEN.references.length, 1);
-  assert.deepStrictEqual(RANDOMLEN.references[0], {
+  assert.strictEqual(RANDOMLEN.references.length, 2);
+  assert.deepStrictEqual(RANDOMLEN.references[1], {
     offset: { position: 64, end: 73 }
   });
 
@@ -3072,13 +3081,13 @@ exports.issue_204 = async () => {
   // Global checks
 
   const printf = cache.find(`printf`);
-  assert.strictEqual(printf.references.length, 1);
+  assert.strictEqual(printf.references.length, 2);
 
   const person_t = cache.find(`person_t`);
-  assert.strictEqual(person_t.references.length, 4);
+  assert.strictEqual(person_t.references.length, 5);
 
   const myperson = cache.find(`myperson`);
-  assert.strictEqual(myperson.references.length, 4);
+  assert.strictEqual(myperson.references.length, 5);
 
   const global_person = cache.find(`person`);
   assert.strictEqual(global_person, null);
@@ -3086,17 +3095,17 @@ exports.issue_204 = async () => {
   // Proc A checks
 
   const PERSON_New = cache.find(`PERSON_New`);
-  assert.strictEqual(PERSON_New.references.length, 1);
+  assert.strictEqual(PERSON_New.references.length, 2);
   const PERSON_New_person = PERSON_New.scope.find(`person`);
-  assert.strictEqual(PERSON_New_person.references.length, 3);
+  assert.strictEqual(PERSON_New_person.references.length, 4);
   assert.strictEqual(PERSON_New_person.subItems.length, 2);
 
   // Proc B checks
 
   const PERSON_printNice = cache.find(`PERSON_printNice`);
-  assert.strictEqual(PERSON_printNice.references.length, 1);
+  assert.strictEqual(PERSON_printNice.references.length, 2);
   const printNice_person = PERSON_printNice.scope.find(`person`);
-  assert.strictEqual(printNice_person.references.length, 2);
+  assert.strictEqual(printNice_person.references.length, 3);
   assert.strictEqual(printNice_person.subItems.length, 2);
 }
 

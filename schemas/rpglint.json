@@ -68,7 +68,8 @@
 		"StringLiteralDupe": {
 			"$id": "#/properties/StringLiteralDupe",
 			"type": "boolean",
-			"description": "Duplicate string literals are not allowed."
+			"description": "Duplicate string literals suggestions are made. Enabled by default."
+			
 		},
 		"RequireBlankSpecial": {
 			"$id": "#/properties/RequireBlankSpecial",

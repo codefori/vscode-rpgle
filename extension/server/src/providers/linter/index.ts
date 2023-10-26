@@ -182,6 +182,8 @@ export async function getLintOptions(workingUri: string) {
 	return result;
 }
 
+const hintDiagnositcs: (keyof Rules)[] = [`SQLRunner`, `StringLiteralDupe`]
+
 export async function refreshLinterDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 	if (isFree) {
@@ -200,6 +202,11 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 			const headers = await Project.getIncludes(document.uri);
 			availableIncludes = headers.map(header => header.relative);
 		}
+
+		// Turn on for SQLRunner suggestions
+		// options.SQLRunner = true;
+		
+		options.StringLiteralDupe = true;
 
 		try {
 			detail = Linter.getErrors({
@@ -236,7 +243,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 				const diagnostic = Diagnostic.create(
 					range,
 					Linter.getErrorText(error.type),
-					DiagnosticSeverity.Warning
+					error.type && hintDiagnositcs.includes(error.type) ? DiagnosticSeverity.Hint : DiagnosticSeverity.Warning
 				);
 
 				generalDiags.push(diagnostic);
@@ -349,10 +356,23 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 
 			case `SQLHostVarCheck`:
 			case `CopybookDirective`:
-			case `StringLiteralDupe`:
 			case `NoGlobalSubroutines`:
 				if (error.newValue) {
 					action = CodeAction.create(`Switch to '${error.newValue}'`, CodeActionKind.QuickFix);
+					action.edit = {
+						changes: {
+							[document.uri]: [
+								TextEdit.replace(errorRange, error.newValue)
+							]
+						},
+					}
+					actions.push(action);
+				}
+				break;
+
+			case `StringLiteralDupe`:
+				if (error.newValue) {
+					action = CodeAction.create(`Switch to '${error.newValue}'`, CodeActionKind.RefactorExtract);
 					action.edit = {
 						changes: {
 							[document.uri]: [
@@ -391,6 +411,22 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 					actions.push(action);
 				}
 				break;
+
+			case `SQLRunner`:
+				if (error.newValue) {
+					action = CodeAction.create(`Run statement in Db2 for i`, CodeActionKind.Empty);
+					action.command = {
+						title: `Run statement`,
+						command: `vscode-db2i.runEditorStatement`,
+						arguments: [{
+							content: error.newValue,
+							qualifier: `statement`,
+							open: true,
+							viewColumn: -2
+						}]
+					};
+					actions.push(action);
+				}
 		}
 	});
 

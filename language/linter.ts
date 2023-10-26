@@ -7,6 +7,7 @@ import { Range, Position } from "./models/DataPoints";
 import opcodes from "./models/opcodes";
 import Document from "./document";
 import { IssueRange, Offset, Rules, SelectBlock } from "./parserTypes";
+import Declaration from "./models/declaration";
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -39,7 +40,8 @@ const errorText = {
   'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`,
   'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
   'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
-  'RequireOtherBlock': `OTHER block missing from SELECT block.`
+  'RequireOtherBlock': `OTHER block missing from SELECT block.`,
+  'SQLRunner': `Execute this statement through Db2 for i`
 };
 
 const skipRules = {
@@ -68,7 +70,7 @@ export default class Linter {
 
     let inProcedure = false;
     let inSubroutine = false;
-    let inStruct = 0;
+    let inStruct: string[] = [];
     let inPrototype = false;
     let inOnExit = false;
 
@@ -449,8 +451,11 @@ export default class Linter {
                     }
                     break;
 
+                  case `DCL-ENUM`:
+                    inStruct.push(value);
+                    break;
+
                   case `DCL-DS`:
-                    inStruct += 1;
                     if (rules.NoOCCURS) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
                         errors.push({
@@ -485,6 +490,11 @@ export default class Linter {
                           offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
                       }
+                    }
+
+                    // If no one line ender is used, push current ds to scope
+                    if (!oneLineTriggers["DCL-DS"].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
+                      inStruct.push(value);
                     }
                     break;
 
@@ -553,9 +563,12 @@ export default class Linter {
                       }
                     }
                     break;
+                    
                   case `END-DS`:
-                    inStruct -= 1;
+                  case `END-ENUM`:
+                    inStruct.pop();
                     break;
+
                   case `END-PROC`:
                     if (inProcedure === false || inSubroutine) {
                       errors.push({
@@ -639,15 +652,18 @@ export default class Linter {
                       }
                     }
                     break;
+
                   case `EXEC`:
+                    const statementOffset = { position: statement[0].range.start, end: statement[statement.length - 1].range.end };
                     isEmbeddedSQL = true;
+
                     if (rules.NoSELECTAll) {
                       const selectIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `SELECT`);
                       const allIndex = statement.findIndex(part => part.value && part.value === `*`);
                       if (selectIndex >= 0) {
                         if (selectIndex + 1 === allIndex) {
                           errors.push({
-                            offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end },
+                            offset: statementOffset,
                             type: `NoSELECTAll`,
                           });
                         }
@@ -658,7 +674,7 @@ export default class Linter {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
                         errors.push({
                           type: `NoSQLJoins`,
-                          offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                          offset: statementOffset
                         });
                       }
                     }
@@ -671,7 +687,7 @@ export default class Linter {
                         if (executeIndex + 1 === immediateIndex) {
                           errors.push({
                             type: `NoExecuteImmediate`,
-                            offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                            offset: statementOffset
                           });
                         }
                       }
@@ -690,6 +706,18 @@ export default class Linter {
                           }
                         }
                       });
+                    }
+
+                    if (rules.SQLRunner) {
+                      // For running SQL statements
+                      const validStatements = [`declare`, `with`, `select`].includes(statement[2].value.toLowerCase());
+                      if (validStatements) {
+                        errors.push({
+                          type: `SQLRunner`,
+                          offset: statementOffset,
+                          newValue: data.content.substring(statementOffset.position, statementOffset.end)
+                        });
+                      }
                     }
                     break;
 
@@ -807,7 +835,7 @@ export default class Linter {
                     if (rules.IncorrectVariableCase) {
                       // Check the casing of the reference matches the definition
                       if ((isEmbeddedSQL === false || (isEmbeddedSQL && statement[i - 1] && statement[i - 1].type === `seperator`))) {
-                        const possibleKeyword = (isDeclare || inPrototype || inStruct > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
+                        const possibleKeyword = (isDeclare || inPrototype || inStruct.length > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
 
                         if (!possibleKeyword && !isDirective) {
                           const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
@@ -831,9 +859,9 @@ export default class Linter {
                           // Don't require parms for procedures found in Ctl-Opt or directives
                           if (isDeclare || isDirective) {
                             // do nothing
-                          } else if (statement[i-2] && statement[i-2].type === `builtin` && statement[i-2].value?.toUpperCase() === `%PADDR`) {
+                          } else if (statement[i - 2] && statement[i - 2].type === `builtin` && statement[i - 2].value?.toUpperCase() === `%PADDR`) {
                             // Do nothing because you can pass a function to PADDR as a reference
-                            
+
                           } else if (statement.length <= i + 1) {
                             requiresBlock = true;
                           } else if (statement[i + 1].type !== `openbracket`) {
@@ -848,30 +876,47 @@ export default class Linter {
                           }
                         }
                       }
+                    }
 
-                      if (rules.CollectReferences) {
-                        if (statement[i - 1] && statement[i - 1].type === `dot`) break;
+                    if (rules.CollectReferences) {
+                      if (statement[i - 1] && statement[i - 1].type === `dot`) break;
 
-                        let defRef;
-                        if (currentProcedure && currentProcedure.scope) {
-                          defRef = currentProcedure.scope.find(upperName);
+                      // We might be referencing a subfield in a structure, so we grab the name in scope
+                      // then we actually do the lookup against that
+                      const parentDeclareBlock: string | undefined = inStruct[inStruct.length - 1];
+                      const inDeclareBlock = parentDeclareBlock && parentDeclareBlock.toUpperCase() !== upperName; 
+                      const lookupName = inDeclareBlock ? parentDeclareBlock : upperName;
 
-                          if (!defRef) {
-                            defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === upperName);
-                          }
-                        }
+                      let defRef: Declaration;
+                      if (currentProcedure && currentProcedure.scope) {
+                        defRef = currentProcedure.scope.find(lookupName);
 
                         if (!defRef) {
-                          defRef = globalScope.find(upperName);
+                          defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === lookupName);
                         }
+                      }
 
-                        if (defRef) {
-                          // `defRef.position` is usually undefined for predefined indicators (INXX)
-                          if (defRef.position === undefined || (defRef.position && defRef.position.line !== lineNumber)) {
+                      if (!defRef) {
+                        defRef = globalScope.find(lookupName);
+                      }
+
+                      if (defRef) {
+
+                        if (inDeclareBlock) {
+                          // If we did the lookup against a parent DS, look for the subfield and add the reference there
+                          defRef = defRef.subItems.find(sub => sub.name.toUpperCase() === upperName);
+
+                          if (defRef) {
                             defRef.references.push({
                               offset: { position: part.range.start, end: part.range.end },
                             });
                           }
+
+                        } else {
+
+                          defRef.references.push({
+                            offset: { position: part.range.start, end: part.range.end },
+                          });
 
                           if (defRef.keyword[`QUALIFIED`]) {
                             let nextPartIndex = i + 1;
@@ -961,7 +1006,7 @@ export default class Linter {
         // We don't report lint issues for a statement that is on the same line as the last statement
         // While this isn't technically possible in RPG, we still check it because it's not an indent error
 
-        if (doc.statements[si-1] === undefined || (doc.statements[si-1].range.line !== lineNumber)) {
+        if (doc.statements[si - 1] === undefined || (doc.statements[si - 1].range.line !== lineNumber)) {
           if (indentEnabled && skipIndentCheck === false) {
             opcode = statement[0].value.toUpperCase();
 
@@ -1010,7 +1055,7 @@ export default class Linter {
             }
 
           }
-          
+
           // Reset the rule back.
           currentRule = skipRules.none;
         }
@@ -1073,7 +1118,7 @@ export default class Linter {
         [...dec.constants, ...dec.variables]
           .filter(def => def.position.path === data.uri)
           .forEach(def => {
-            if (def.references.length === 0) {
+            if (def.references.length <= 1) {
               // Add an error to def
               const possibleStatement = doc.getStatementByLine(def.position.line);
               if (possibleStatement) {
@@ -1088,7 +1133,7 @@ export default class Linter {
         dec.subroutines
           .filter(def => def.position.path === data.uri && def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
           .forEach(def => {
-            if (def.references.length === 0) {
+            if (def.references.length <= 1) {
               // Add an error to def
               const possibleStatement = doc.getStatementByLine(def.position.line);
               if (possibleStatement) {
@@ -1104,7 +1149,7 @@ export default class Linter {
           .filter(struct => struct.position.path === data.uri)
           .forEach(proc => {
             if (!proc.keyword[`EXPORT`]) {
-              if (proc.references.length === 0) {
+              if (proc.references.length <= 1) {
                 // Add an error to proc
                 const possibleStatement = doc.getStatementByLine(proc.position.line);
                 if (possibleStatement) {
@@ -1117,7 +1162,7 @@ export default class Linter {
 
               if (!proc.keyword[`EXTPGM`] && !proc.keyword[`EXTPROC`]) {
                 proc.subItems.forEach(parm => {
-                  if (parm.references.length === 0) {
+                  if (parm.references.length <= 1) {
                     const possibleStatement = doc.getStatementByLine(parm.position.line);
                     if (possibleStatement) {
                       errors.push({
@@ -1134,13 +1179,13 @@ export default class Linter {
         dec.structs
           .filter(struct => struct.position.path === data.uri)
           .forEach(struct => {
-            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 0);
+            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 1);
 
-            if (struct.references.length === 0) {
+            if (struct.references.length <= 1) {
               // We only check the subfields if the parent is never references.
 
               struct.subItems.forEach(subf => {
-                if (subf.references.length === 0) {
+                if (subf.references.length <= 1) {
                   // Add an error to subf
                   const possibleStatement = doc.getStatementByLine(subf.position.line);
                   if (possibleStatement) {

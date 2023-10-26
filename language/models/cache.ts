@@ -2,12 +2,14 @@ import { indicators1 } from "../../tests/suite";
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import Declaration from "./declaration";
 
-const inds = [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
-  const indDef = new Declaration(`variable`);
-  indDef.name = ind;
-  indDef.keywords = [`IND`];
-  return indDef;
-});
+const newInds = () => {
+  return [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
+    const indDef = new Declaration(`variable`);
+    indDef.name = ind;
+    indDef.keywords = [`IND`];
+    return indDef;
+  })
+};
 
 export default class Cache {
   keyword: Keywords;
@@ -51,7 +53,7 @@ export default class Cache {
     this.sqlReferences = cache.sqlReferences || [];
 
     /** @type {Declaration[]} */
-    this.indicators = cache.indicators || [...inds];
+    this.indicators = cache.indicators || [...newInds()];
 
     /** @type {import("../parserTypes").IncludeStatement[]} */
     this.includes = cache.includes || [];
@@ -150,21 +152,17 @@ export default class Cache {
   }
 
   clearReferences() {
-    [...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
+    const fileStructs = this.files.map(file => file.subItems).flat();
+
+    [...fileStructs, ...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
       def.references = [];
+      def.subItems.forEach(sub => sub.references = []);
     });
 
     this.procedures.forEach(proc => {
       if (proc.scope) {
         proc.scope.clearReferences();
       }
-    });
-
-    const fileStructs = this.files.map(file => file.subItems).flat();
-    const allStructs = [...fileStructs, ...this.structs];
-
-    allStructs.forEach(struct => {
-      struct.subItems.forEach(sub => sub.references = []);
     });
   }
 
@@ -198,6 +196,35 @@ export default class Cache {
           proc.scope.fixProcedures();
         }
       })
+    }
+  }
+
+  static referenceByOffset(scope: Cache, offset: number): Declaration|undefined {
+    const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
+  
+    for (const prop of props) {
+      const list = scope[prop] as unknown as Declaration[];
+      for (const def of list) {
+        let possibleRef: boolean;
+  
+        // Search top level
+        possibleRef = def.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
+        if (possibleRef) return def;
+  
+        // Search any subitems
+        if (def.subItems.length > 0) {
+          for (const subItem of def.subItems) {
+            possibleRef = subItem.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
+            if (possibleRef) return subItem;
+          }
+        }
+  
+        // Search scope if any
+        if (def.scope) {
+          const inScope = Cache.referenceByOffset(def.scope, offset);
+          if (inScope) return inScope;
+        }
+      }
     }
   }
 }
