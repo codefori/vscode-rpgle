@@ -44,7 +44,9 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		const instance = getInstance();
 		if (instance && instance.getConnection()) {
 			const config = instance.getConfig();
-			return config.homeDirectory;
+			if (config) {
+				return config.homeDirectory;
+			}
 		}
 	})
 
@@ -103,13 +105,15 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		const content = instance?.getContent();
 		const config = instance?.getConfig()!;
 
-		if (includePaths.length === 0) {
-			includePaths.push(config.homeDirectory);
+		if (instance && content && config) {
+			if (includePaths.length === 0) {
+				includePaths.push(config.homeDirectory);
+			}
+
+			const resolvedPath = await content?.streamfileResolve(bases, includePaths);
+
+			return resolvedPath;
 		}
-
-		const resolvedPath = await content?.streamfileResolve(bases, includePaths);
-
-		return resolvedPath;
  });
 
 	/**
