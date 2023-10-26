@@ -7,6 +7,7 @@ import { Range, Position } from "./models/DataPoints";
 import opcodes from "./models/opcodes";
 import Document from "./document";
 import { IssueRange, Offset, Rules, SelectBlock } from "./parserTypes";
+import Declaration from "./models/declaration";
 
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
@@ -69,7 +70,7 @@ export default class Linter {
 
     let inProcedure = false;
     let inSubroutine = false;
-    let inStruct = 0;
+    let inStruct: string[] = [];
     let inPrototype = false;
     let inOnExit = false;
 
@@ -450,8 +451,12 @@ export default class Linter {
                     }
                     break;
 
+                  case `DCL-ENUM`:
+                    inStruct.push(value);
+                    break;
+
                   case `DCL-DS`:
-                    inStruct += 1;
+                    inStruct.push(value);
                     if (rules.NoOCCURS) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
                         errors.push({
@@ -555,8 +560,10 @@ export default class Linter {
                     }
                     break;
                   case `END-DS`:
-                    inStruct -= 1;
+                  case `END-ENUM`:
+                    inStruct.pop();
                     break;
+
                   case `END-PROC`:
                     if (inProcedure === false || inSubroutine) {
                       errors.push({
@@ -640,7 +647,7 @@ export default class Linter {
                       }
                     }
                     break;
-                    
+
                   case `EXEC`:
                     const statementOffset = { position: statement[0].range.start, end: statement[statement.length - 1].range.end };
                     isEmbeddedSQL = true;
@@ -823,7 +830,7 @@ export default class Linter {
                     if (rules.IncorrectVariableCase) {
                       // Check the casing of the reference matches the definition
                       if ((isEmbeddedSQL === false || (isEmbeddedSQL && statement[i - 1] && statement[i - 1].type === `seperator`))) {
-                        const possibleKeyword = (isDeclare || inPrototype || inStruct > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
+                        const possibleKeyword = (isDeclare || inPrototype || inStruct.length > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
 
                         if (!possibleKeyword && !isDirective) {
                           const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
@@ -847,9 +854,9 @@ export default class Linter {
                           // Don't require parms for procedures found in Ctl-Opt or directives
                           if (isDeclare || isDirective) {
                             // do nothing
-                          } else if (statement[i-2] && statement[i-2].type === `builtin` && statement[i-2].value?.toUpperCase() === `%PADDR`) {
+                          } else if (statement[i - 2] && statement[i - 2].type === `builtin` && statement[i - 2].value?.toUpperCase() === `%PADDR`) {
                             // Do nothing because you can pass a function to PADDR as a reference
-                            
+
                           } else if (statement.length <= i + 1) {
                             requiresBlock = true;
                           } else if (statement[i + 1].type !== `openbracket`) {
@@ -866,54 +873,73 @@ export default class Linter {
                       }
                     }
 
-
                     if (rules.CollectReferences) {
                       if (statement[i - 1] && statement[i - 1].type === `dot`) break;
 
-                      let defRef;
+                      // We might be referencing a subfield in a structure, so we grab the name in scope
+                      // then we actually do the lookup against that
+                      const parentDeclareBlock: string | undefined = inStruct[inStruct.length - 1];
+                      const inDeclareBlock = parentDeclareBlock && parentDeclareBlock.toUpperCase() !== upperName; 
+                      const lookupName = inDeclareBlock ? parentDeclareBlock : upperName;
+
+                      let defRef: Declaration;
                       if (currentProcedure && currentProcedure.scope) {
-                        defRef = currentProcedure.scope.find(upperName);
+                        defRef = currentProcedure.scope.find(lookupName);
 
                         if (!defRef) {
-                          defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === upperName);
+                          defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === lookupName);
                         }
                       }
 
                       if (!defRef) {
-                        defRef = globalScope.find(upperName);
+                        defRef = globalScope.find(lookupName);
                       }
 
                       if (defRef) {
-                        defRef.references.push({
-                          offset: { position: part.range.start, end: part.range.end },
-                        });
 
-                        if (defRef.keyword[`QUALIFIED`]) {
-                          let nextPartIndex = i + 1;
+                        if (inDeclareBlock) {
+                          // If we did the lookup against a parent DS, look for the subfield and add the reference there
+                          defRef = defRef.subItems.find(sub => sub.name.toUpperCase() === upperName);
 
-                          if (statement[nextPartIndex]) {
-                            // First, check if there is an array call here and skip over it
-                            if (statement[nextPartIndex].type === `openbracket`) {
-                              nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+                          if (defRef) {
+                            defRef.references.push({
+                              offset: { position: part.range.start, end: part.range.end },
+                            });
+                          }
 
-                              if (nextPartIndex >= 0) nextPartIndex++;
-                            }
+                        } else {
 
-                            // Check if the next part is a dot
-                            if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
-                              nextPartIndex++;
+                          defRef.references.push({
+                            offset: { position: part.range.start, end: part.range.end },
+                          });
 
-                              // Check if the next part is a word
-                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
-                                const subItemPart = statement[nextPartIndex];
-                                const subItemName = subItemPart.value.toUpperCase();
+                          if (defRef.keyword[`QUALIFIED`]) {
+                            let nextPartIndex = i + 1;
 
-                                // Find the subitem
-                                const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
-                                if (subItemDef) {
-                                  subItemDef.references.push({
-                                    offset: { position: subItemPart.range.start, end: subItemPart.range.end },
-                                  });
+                            if (statement[nextPartIndex]) {
+                              // First, check if there is an array call here and skip over it
+                              if (statement[nextPartIndex].type === `openbracket`) {
+                                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+
+                                if (nextPartIndex >= 0) nextPartIndex++;
+                              }
+
+                              // Check if the next part is a dot
+                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                                nextPartIndex++;
+
+                                // Check if the next part is a word
+                                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                                  const subItemPart = statement[nextPartIndex];
+                                  const subItemName = subItemPart.value.toUpperCase();
+
+                                  // Find the subitem
+                                  const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                                  if (subItemDef) {
+                                    subItemDef.references.push({
+                                      offset: { position: subItemPart.range.start, end: subItemPart.range.end },
+                                    });
+                                  }
                                 }
                               }
                             }
@@ -975,7 +1001,7 @@ export default class Linter {
         // We don't report lint issues for a statement that is on the same line as the last statement
         // While this isn't technically possible in RPG, we still check it because it's not an indent error
 
-        if (doc.statements[si-1] === undefined || (doc.statements[si-1].range.line !== lineNumber)) {
+        if (doc.statements[si - 1] === undefined || (doc.statements[si - 1].range.line !== lineNumber)) {
           if (indentEnabled && skipIndentCheck === false) {
             opcode = statement[0].value.toUpperCase();
 
@@ -1024,7 +1050,7 @@ export default class Linter {
             }
 
           }
-          
+
           // Reset the rule back.
           currentRule = skipRules.none;
         }
