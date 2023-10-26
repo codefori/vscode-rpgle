@@ -221,7 +221,7 @@ export default class Cache {
   
         // Search scope if any
         if (def.scope) {
-          const inScope = Cache.refereneceByOffset(def.scope, offset);
+          const inScope = Cache.referenceByOffset(def.scope, offset);
           if (inScope) return inScope;
         }
       }

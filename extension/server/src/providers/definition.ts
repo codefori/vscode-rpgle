@@ -25,7 +25,7 @@ export default async function definitionProvider(handler: DefinitionParams): Pro
 				let def: Declaration|undefined;
 
 				// First, we try and get the reference by offset
-				def = Cache.refereneceByOffset(doc, document.offsetAt(handler.position));
+				def = Cache.referenceByOffset(doc, document.offsetAt(handler.position));
 
 				if (def) {
 					return Location.create(

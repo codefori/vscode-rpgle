@@ -36,7 +36,7 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 					);
 				}
 	
-				const def = Cache.refereneceByOffset(doc, document.offsetAt(currentPos));
+				const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
 
 				if (def) {
 					if (Project.isEnabled) {

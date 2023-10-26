@@ -29,7 +29,7 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
         );
       }
 
-      const def = Cache.refereneceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
 
       if (def) {
         const currentSelectedRef = def?.references.find(r => document.positionAt(r.offset.position).line === currentPos.line);
@@ -71,7 +71,7 @@ export async function renameRequestProvider(params: RenameParams): Promise<Works
         );
       }
 
-      const def = Cache.refereneceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
 
       if (def) {
         const edits: TextEdit[] = def.references.map(ref => ({

@@ -65,7 +65,7 @@ export async function references_1_const() {
 
   const falseConstIndex = lines.indexOf(`dcl-c FALSE`) + 7;
 
-  const falseConst = Cache.refereneceByOffset(cache, falseConstIndex);
+  const falseConst = Cache.referenceByOffset(cache, falseConstIndex);
   assert.strictEqual(falseConst.name, `FALSE`);
   assert.notStrictEqual(falseConst.references.length, 0);
 }
@@ -79,7 +79,7 @@ export async function references_2_const() {
 
   const trueConstIndex = lines.indexOf(`var1 = TRUE`) + 7;
 
-  const trueConst = Cache.refereneceByOffset(cache, trueConstIndex);
+  const trueConst = Cache.referenceByOffset(cache, trueConstIndex);
   assert.strictEqual(trueConst.name, `TRUE`);
   assert.strictEqual(trueConst.references.length, 2);
 }
@@ -93,7 +93,7 @@ export async function references_3_enum() {
 
   const colorsConstIndex = lines.indexOf(`var1 = COLORS`) + 7;
 
-  const colorsConst = Cache.refereneceByOffset(cache, colorsConstIndex);
+  const colorsConst = Cache.referenceByOffset(cache, colorsConstIndex);
   assert.strictEqual(colorsConst.name, `COLORS`);
   assert.strictEqual(colorsConst.references.length, 2);
 }
@@ -107,7 +107,7 @@ export async function references_4_subfield_a() {
 
   const greenSubfieldIndex = lines.indexOf(`var1 = COLORS.GREEN`) + 17;
 
-  const greenConst = Cache.refereneceByOffset(cache, greenSubfieldIndex);
+  const greenConst = Cache.referenceByOffset(cache, greenSubfieldIndex);
   assert.strictEqual(greenConst.name, `GREEN`);
   assert.strictEqual(greenConst.references.length, 2);
 }
@@ -121,13 +121,13 @@ export async function references_4_subfield_b() {
 
   const greenSubfieldIndex = lines.indexOf(` GREEN 1`) + 3;
 
-  const greenConst = Cache.refereneceByOffset(cache, greenSubfieldIndex);
+  const greenConst = Cache.referenceByOffset(cache, greenSubfieldIndex);
   assert.strictEqual(greenConst.name, `GREEN`);
   assert.strictEqual(greenConst.references.length, 2);
 
   const refSubfieldIndex = lines.indexOf(` RED 2`) + 3;
 
-  const redConst = Cache.refereneceByOffset(cache, refSubfieldIndex);
+  const redConst = Cache.referenceByOffset(cache, refSubfieldIndex);
   assert.strictEqual(redConst.name, `RED`);
   assert.strictEqual(redConst.references.length, 1);
 }
@@ -141,7 +141,7 @@ export async function references_5() {
 
   const var1Index = lines.indexOf(`var1 = TRUE`);
 
-  const var1Var = Cache.refereneceByOffset(cache, var1Index);
+  const var1Var = Cache.referenceByOffset(cache, var1Index);
   assert.strictEqual(var1Var.name, `var1`);
   assert.strictEqual(var1Var.references.length, 5);
 }
@@ -157,11 +157,11 @@ export async function references_6_subfield_dim() {
   const varColorsIndex = baseIndex + 9;
   const redSubfieldIndex = baseIndex + 22;
 
-  const varColors = Cache.refereneceByOffset(cache, varColorsIndex);
+  const varColors = Cache.referenceByOffset(cache, varColorsIndex);
   assert.strictEqual(varColors.name, `varColors`);
   assert.strictEqual(varColors.references.length, 2);
 
-  const redSubfield = Cache.refereneceByOffset(cache, redSubfieldIndex);
+  const redSubfield = Cache.referenceByOffset(cache, redSubfieldIndex);
   assert.strictEqual(redSubfield.name, `red`);
   assert.strictEqual(redSubfield.references.length, 2);
 }
@@ -175,7 +175,7 @@ export async function references_7() {
 
   const declareAbcIndex = lines.indexOf(`dcl-proc abc`) + 10;
 
-  const varColors = Cache.refereneceByOffset(cache, declareAbcIndex);
+  const varColors = Cache.referenceByOffset(cache, declareAbcIndex);
   assert.strictEqual(varColors.name, `abc`);
   assert.strictEqual(varColors.references.length, 1);
 }
