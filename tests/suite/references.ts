@@ -151,3 +151,17 @@ export async function references_6_subfield_dim() {
   assert.strictEqual(redSubfield.name, `red`);
   assert.strictEqual(redSubfield.references.length, 2);
 }
+
+export async function references_7() {
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
+
+  Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true,
+  }, cache);
+
+  const declareAbcIndex = lines.indexOf(`dcl-proc abc`) + 10;
+
+  const varColors = Cache.refereneceByOffset(cache, declareAbcIndex);
+  assert.strictEqual(varColors.name, `abc`);
+  assert.strictEqual(varColors.references.length, 1);
+}
