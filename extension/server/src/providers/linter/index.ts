@@ -158,7 +158,7 @@ export async function getLintConfigUri(workingUri: string) {
 	return cleanString;
 }
 
-export async function getLintOptions(workingUri: string) {
+export async function getLintOptions(workingUri: string): Promise<Rules> {
 	const possibleUri = await getLintConfigUri(workingUri);
 	let result = {};
 
