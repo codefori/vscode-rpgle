@@ -1,6 +1,6 @@
 # vscode-rpgle README
 
-<img src="https://github.com/halcyon-tech/vscode-rpgle/blob/main/media/logo.png?raw=true" height="180px" align="right">
+<img src="https://github.com/codefori/vscode-rpgle/blob/main/media/logo.png?raw=true" height="180px" align="right">
 
 Adds functionality to assist in writing accurate, readable and consistent RPGLE, including:
 
@@ -13,7 +13,7 @@ Depends on the Code for IBM i extension due to source code living on the remote 
 
 ## Documentation
 
-Check out the [official documentation](https://halcyon-tech.github.io/docs/#/pages/extensions/rpgle/linter) for a usage guide.
+Check out the [official documentation](https://codefori.github.io/docs/#/pages/extensions/rpgle/linter) for a usage guide.
 
 # Developing
 
@@ -35,7 +35,7 @@ To run debug the extension and server, from the VS Code debugger:
 
 # Previous contributors
 
-Thanks so much to everyone [who has contributed](https://github.com/halcyon-tech/vscode-rpgle/graphs/contributors).
+Thanks so much to everyone [who has contributed](https://github.com/codefori/vscode-rpgle/graphs/contributors).
 
 - [@worksofliam](https://github.com/worksofliam)
 - [@SJLennon](https://github.com/SJLennon)
