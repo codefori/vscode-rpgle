@@ -1032,10 +1032,12 @@ export default class Parser {
               scope.files.push(currentItem);
             } else {
               currentItem = scope.files[scope.files.length-1];
-              currentItem.keywords = [
-                ...(currentItem.keywords ? currentItem.keywords : []),
-                ...fSpec.keywords
-              ]
+              if (currentItem) {
+                currentItem.keywords = [
+                  ...(currentItem.keywords ? currentItem.keywords : []),
+                  ...fSpec.keywords
+                ]
+              }
             }
             
             resetDefinition = true;
