@@ -1,5 +1,6 @@
 
 const assert = require(`assert`);
+const path = require(`path`);
 
 const {default: parserSetup} = require(`../parserSetup`);
 
@@ -415,6 +416,37 @@ exports.fixed9_2 = async () => {
   assert.strictEqual(theExtProcedure.keywords.includes(`EXTPROC`), true);
   assert.strictEqual(theExtProcedure.subItems.length, 1);
 };
+
+
+
+exports.fixed9_3 = async () => {
+  const lines = [
+    ``,
+    `         Ctl-Opt DftActGrp(*No);`,
+    `      /copy tests,eof4                            Call plist update program ESF`,
+    `      *COPY EQCPYLESRC,PLUPT_SB                   Call plist update program ESF`,
+    ``,
+    `         Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `         Dcl-C theConstant 'Hello world';`,
+    ``,
+    `         dsply theConstant;`,
+    ``,
+    `         Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+
+  const uppercase = cache.find(`UPPERCASE`);
+
+  const baseNameInclude = path.basename(uppercase.position.path);
+  assert.strictEqual(baseNameInclude, `eof4.rpgle`);
+}
 
 /**
    * Issue with detecting correct type on subfield.
