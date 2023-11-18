@@ -142,13 +142,26 @@ export default class Parser {
       directiveLength = 9
     };
 
+    /** @type {string|undefined} */
+    let directiveValue;
+    
     if (directivePosition >= 0) {
       if (comment >= 0) {
-        return line.substring(directivePosition+directiveLength, comment).trim();
+        directiveValue = line.substring(directivePosition+directiveLength, comment).trim();
       } else {
-        return line.substring(directivePosition+directiveLength).trim();
+        directiveValue = line.substring(directivePosition+directiveLength).trim();
       }
     }
+
+    if (directiveValue) {
+      const spaceIndex = directiveValue.indexOf(` `);
+      if (spaceIndex >= 0) {
+        directiveValue = directiveValue.substring(0, spaceIndex);
+      }
+
+      return directiveValue;
+    }
+
   }
 
   /**
@@ -1032,10 +1045,12 @@ export default class Parser {
               scope.files.push(currentItem);
             } else {
               currentItem = scope.files[scope.files.length-1];
-              currentItem.keywords = [
-                ...(currentItem.keywords ? currentItem.keywords : []),
-                ...fSpec.keywords
-              ]
+              if (currentItem) {
+                currentItem.keywords = [
+                  ...(currentItem.keywords ? currentItem.keywords : []),
+                  ...fSpec.keywords
+                ]
+              }
             }
             
             resetDefinition = true;

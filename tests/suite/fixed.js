@@ -1,5 +1,6 @@
 
 const assert = require(`assert`);
+const path = require(`path`);
 
 const {default: parserSetup} = require(`../parserSetup`);
 
@@ -415,6 +416,37 @@ exports.fixed9_2 = async () => {
   assert.strictEqual(theExtProcedure.keywords.includes(`EXTPROC`), true);
   assert.strictEqual(theExtProcedure.subItems.length, 1);
 };
+
+
+
+exports.fixed9_3 = async () => {
+  const lines = [
+    ``,
+    `         Ctl-Opt DftActGrp(*No);`,
+    `      /copy tests,eof4                            Call plist update program ESF`,
+    `      *COPY EQCPYLESRC,PLUPT_SB                   Call plist update program ESF`,
+    ``,
+    `         Dcl-s MyVariable2 Char(20);`,
+    ``,
+    `         Dcl-C theConstant 'Hello world';`,
+    ``,
+    `         dsply theConstant;`,
+    ``,
+    `         Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.includes.length, 1);
+  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+
+  const uppercase = cache.find(`UPPERCASE`);
+
+  const baseNameInclude = path.basename(uppercase.position.path);
+  assert.strictEqual(baseNameInclude, `eof4.rpgle`);
+}
 
 /**
    * Issue with detecting correct type on subfield.
@@ -1088,4 +1120,54 @@ exports.file_keywords = async () => {
   assert.strictEqual(ord100d.keyword[`INDDS`], `indds`);
   assert.strictEqual(ord100d.keyword[`SFILE`], `sfl01:rrn01`);
   assert.strictEqual(ord100d.keyword[`INFDS`], `Info`);
+}
+
+exports.plist_test = async () => {
+  const lines = [
+    ``,
+    `     ?*                                                                                       PLPVD`,
+    `     ?*  PLPVD  - Calling Plist for prompt/validate module driver                             PLPVD`,
+    `     ?*                                                                                       PLPVD`,
+    `     ?*  Kaprog - E3A                                                                         PLPVD`,
+    `     ?*                                                                                       PLPVD`,
+    `     ?*  @PGMID - Program name                                                                PLPVD`,
+    `     ?*  @FLN   - Field to prompt/validate on                                                 PLPVD`,
+    `     ?*  @SQN   - Sequence number of type of validation/prompt                                PLPVD`,
+    `     ?*  @PRMPT - Prompt mode ('Y' or 'N')                                                    PLPVD`,
+    `     ?*  CCN    - Communication array                                                         PLPVD`,
+    `     ?*  @ERMSG - Error message return field & parms                                          PLPVD`,
+    `     ?*  @NUM   - Numeric return field                                                        PLPVD`,
+    `     ?*  @CKEY  - Command key used from prompt screen return field                            PLPVD`,
+    `     ?*  @PPF   - Prompt performed flag ('Y' or 'N') returned                                 PLPVD`,
+    `     ?*  @DSCNTRL      - API Control Fields                                                   PLPVD`,
+    `     ?*  @DSSUPER      - API Supervisor Data                                                  PLPVD`,
+    `     ?*  @DSINCRM      - API Incremental Mode Control Fields                                  PLPVD`,
+    `     ?*  @DSPV         - PV Control Fields                                                    PLPVD`,
+    `     ?*  @DLFILTER     - DL Filter Data                                                       PLDLD`,
+    `     ?*  @DLLIST       - Array of DL row data                                                 PLDLD`,
+    `     ?*  @DLSELECTION  - DL Selected Item                                                     PLDLD`,
+    `     ?*                                                                                       PLDLD`,
+    `     C     PLPVD         PLIST`,
+    `     C                   PARM                    @PGMID           10`,
+    `     C                   PARM                    @FLN              6`,
+    `     C                   PARM                    @SQN              2 0`,
+    `     C                   PARM                    @PRMPT            1`,
+    `     C                   PARM                    CCN`,
+    `     C     DSEPMS        PARM      DSEPMS        @ERMSG           37`,
+    `     C                   PARM                    @NUM             15 0`,
+    `     C                   PARM                    @CKEY             2`,
+    `     C                   PARM                    @PPF              1`,
+    `     C                   PARM                    @DSCNTRL`,
+    `     C                   PARM                    @DSSUPER`,
+    `     C                   PARM                    @DSINCRM`,
+    `     C                   PARM                    @DSPV`,
+    `     C                   PARM                    @PVFILTER       256`,
+    `     C                   PARM                    @PVLIST        9999`,
+    `     C                   PARM                    @PVSELECTION    256`,
+    ``
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+
+  assert.strictEqual(cache.variables.length, 0);
 }
