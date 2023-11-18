@@ -213,6 +213,13 @@
 			"  CLOSE $1;",
 		]
 	},
+	"File definition": {
+		"prefix": "dcl-f",
+		"description": "File definition statement",
+		"body": [
+			"dcl-f ${1:name} usage(${2|*input,*output,*update,*delete|}) keyed;",
+		]
+	},
 	"workstation-basics": {
 		"prefix": "workstation-basics",
 		"description": "The basic definitions for a display file with a subfield",
