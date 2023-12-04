@@ -204,7 +204,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 		}
 
 		// Turn on for SQLRunner suggestions
-		// options.SQLRunner = true;
+		options.SQLRunner = true;
 		
 		options.StringLiteralDupe = true;
 
