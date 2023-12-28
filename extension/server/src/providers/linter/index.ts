@@ -314,6 +314,7 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 
 			case `SpecificCasing`:
 			case `IncorrectVariableCase`:
+			case `LowercaseDirectives`:
 			case `UppercaseDirectives`:
 				if (error.newValue) {
 					action = CodeAction.create(`Correct casing to '${error.newValue}'`, CodeActionKind.QuickFix);

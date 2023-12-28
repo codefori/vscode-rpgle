@@ -26,6 +26,7 @@ const errorText = {
   'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
   'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
   'CopybookDirective': `Directive does not match requirement.`,
+  'LowercaseDirectives': `Directives must be in lowercase.`,
   'UppercaseDirectives': `Directives must be in uppercase.`,
   'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
   'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
@@ -203,15 +204,6 @@ export default class Linter {
 
               case `directive`:
                 value = statement[0].value;
-                if (rules.UppercaseDirectives) {
-                  if (value !== value.toUpperCase()) {
-                    errors.push({
-                      offset: { position: statement[0].range.start, end: statement[0].range.end },
-                      type: `UppercaseDirectives`,
-                      newValue: value.toUpperCase()
-                    });
-                  }
-                }
 
                 if (rules.CopybookDirective || rules.IncludeMustBeRelative) {
                   if ([`/COPY`, `/INCLUDE`].includes(value.toUpperCase())) {
@@ -291,8 +283,13 @@ export default class Linter {
                     }
 
                     if (rules.CopybookDirective) {
-                      const correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
-                      if (value.toUpperCase() !== correctDirective) {
+                      let correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
+                      let correctValue = value.toUpperCase();
+                      if (rules.LowercaseDirectives) {
+                        correctDirective = correctDirective.toLowerCase();
+                        correctValue = value.toLowerCase();
+                      }
+                      if (correctValue !== correctDirective) {
                         errors.push({
                           offset: { position: statement[0].range.start, end: statement[0].range.end },
                           type: `CopybookDirective`,
@@ -302,6 +299,27 @@ export default class Linter {
                     }
                   }
                 }
+
+                if (rules.LowercaseDirectives) {
+                  if (value !== value.toLowerCase()) {
+                    errors.push({
+                      offset: { position: statement[0].range.start, end: statement[0].range.end },
+                      type: `LowercaseDirectives`,
+                      newValue: value.toLowerCase()
+                    });
+                  }
+                }
+
+                if (rules.UppercaseDirectives) {
+                  if (value !== value.toUpperCase()) {
+                    errors.push({
+                      offset: { position: statement[0].range.start, end: statement[0].range.end },
+                      type: `UppercaseDirectives`,
+                      newValue: value.toUpperCase()
+                    });
+                  }
+                }
+
                 break;
 
               case `declare`:
