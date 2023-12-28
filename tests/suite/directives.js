@@ -463,5 +463,111 @@ module.exports = {
     
     const someDs = cache.find(`someDs`);
     assert.strictEqual(someDs.keyword[`BASED`], undefined);
+  },
+
+  variable_case1: async () => {
+    const lines = [
+      `**FREE`,
+      `Ctl-Opt DftActGrp(*No);`,
+      `/copy './tests/rpgle/copy3.rpgle'`,
+      `Dcl-S MyCustomerName1 like(customername_t);`,
+      `Dcl-S MyCustomerName2 like(CustomerName_t);`,
+      `Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
+      `Dcl-S MyCustomerName4 like(CUSTOMERNAME_T);`,
+      `MyCustomerName1 = 'John Smith';`,
+      `dsply MyCustomerName1;`,
+      `Return;`
+    ].join(`\n`);
+
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+    const { errors } = Linter.getErrors({ uri, content: lines }, {
+      IncorrectVariableCase: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 3, `Expect length of 3`);
+
+    assert.deepStrictEqual(errors[0], {
+      offset: { position: 92, end: 106 },
+      type: `IncorrectVariableCase`,
+      newValue: `CustomerName_t`
+    });
+
+    assert.deepStrictEqual(errors[1], {
+      offset: { position: 180, end: 194 },
+      type: `IncorrectVariableCase`,
+      newValue: `CustomerName_t`
+    });
+
+    assert.deepStrictEqual(errors[2], {
+      offset: { position: 224, end: 238 },
+      type: `IncorrectVariableCase`,
+      newValue: `CustomerName_t`
+    });
+  },
+
+  uppercase1: async () => {
+    const lines = [
+      `**FREE`,
+      `Ctl-Opt DftActGrp(*No);`,
+      `/copy './tests/rpgle/copy1.rpgle'`,
+      `/Copy './tests/rpgle/copy2.rpgle'`,
+      `/COPY './tests/rpgle/copy3.rpgle'`,
+      `Dcl-S MyCustomerName1 like(CustomerName_t);`,
+      `MyCustomerName1 = 'John Smith';`,
+      `dsply MyCustomerName1;`,
+      `Return;`
+    ].join(`\n`);
+
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+    const { errors } = Linter.getErrors({ uri, content: lines }, {
+      UppercaseDirectives: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+
+    assert.deepStrictEqual(errors[0], {
+      offset: { position: 31, end: 36 },
+      type: `UppercaseDirectives`,
+      newValue: `/COPY`
+    });
+
+    assert.deepStrictEqual(errors[1], {
+      offset: { position: 65, end: 70 },
+      type: `UppercaseDirectives`,
+      newValue: `/COPY`
+    });
+  },
+
+  lowercase1: async () => {
+    const lines = [
+      `**FREE`,
+      `Ctl-Opt DftActGrp(*No);`,
+      `/copy './tests/rpgle/copy1.rpgle'`,
+      `/Copy './tests/rpgle/copy2.rpgle'`,
+      `/COPY './tests/rpgle/copy3.rpgle'`,
+      `Dcl-S MyCustomerName1 like(CustomerName_t);`,
+      `MyCustomerName1 = 'John Smith';`,
+      `dsply MyCustomerName1;`,
+      `Return;`
+    ].join(`\n`);
+
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+    const { errors } = Linter.getErrors({ uri, content: lines }, {
+      LowercaseDirectives: true
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+
+    assert.deepStrictEqual(errors[0], {
+      offset: { position: 65, end: 70 },
+      type: `LowercaseDirectives`,
+      newValue: `/copy`
+    });
+
+    assert.deepStrictEqual(errors[1], {
+      offset: { position: 99, end: 104 },
+      type: `LowercaseDirectives`,
+      newValue: `/copy`
+    });
   }
 }
