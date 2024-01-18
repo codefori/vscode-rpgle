@@ -27,7 +27,7 @@ const errorText = {
   'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
   'CopybookDirective': `Directive does not match requirement.`,
   'DirectiveCasing': `Does not match required case.`,
-  'UppercaseDirectives': `Directives must be in uppercase.`,
+  'UppercaseDirectives': `Directives must be in uppercase. UppercaseDirectives option is deprecated, consider using DirectiveCasing.`,
   'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
   'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
   'NoCTDATA': `\`CTDATA\` is not allowed.`,
