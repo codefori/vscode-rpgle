@@ -23,7 +23,8 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 				// Need to fetch the docs again incase comments were added
 				// as part of RequiresProcedureDescription
 				docs = await parser.getDocs(document.uri, document.getText(), {
-					ignoreCache: true
+					ignoreCache: true,
+					withIncludes: true
 				});
 
 				// Next up, let's fix all the other things!
