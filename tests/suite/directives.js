@@ -520,6 +520,39 @@ module.exports = {
 
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({ uri, content: lines }, {
+      DirectiveCasing: `upper`
+    }, cache);
+
+    assert.strictEqual(errors.length, 2, `Expect length of 2`);
+
+    assert.deepStrictEqual(errors[0], {
+      offset: { position: 31, end: 36 },
+      type: `DirectiveCasing`,
+      newValue: `/COPY`
+    });
+
+    assert.deepStrictEqual(errors[1], {
+      offset: { position: 65, end: 70 },
+      type: `DirectiveCasing`,
+      newValue: `/COPY`
+    });
+  },
+
+  uppercase2: async () => {
+    const lines = [
+      `**FREE`,
+      `Ctl-Opt DftActGrp(*No);`,
+      `/copy './tests/rpgle/copy1.rpgle'`,
+      `/Copy './tests/rpgle/copy2.rpgle'`,
+      `/COPY './tests/rpgle/copy3.rpgle'`,
+      `Dcl-S MyCustomerName1 like(CustomerName_t);`,
+      `MyCustomerName1 = 'John Smith';`,
+      `dsply MyCustomerName1;`,
+      `Return;`
+    ].join(`\n`);
+
+    const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+    const { errors } = Linter.getErrors({ uri, content: lines }, {
       UppercaseDirectives: true
     }, cache);
 
@@ -553,20 +586,20 @@ module.exports = {
 
     const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
     const { errors } = Linter.getErrors({ uri, content: lines }, {
-      LowercaseDirectives: true
+      DirectiveCasing: `lower`
     }, cache);
 
     assert.strictEqual(errors.length, 2, `Expect length of 2`);
 
     assert.deepStrictEqual(errors[0], {
       offset: { position: 65, end: 70 },
-      type: `LowercaseDirectives`,
+      type: `DirectiveCasing`,
       newValue: `/copy`
     });
 
     assert.deepStrictEqual(errors[1], {
       offset: { position: 99, end: 104 },
-      type: `LowercaseDirectives`,
+      type: `DirectiveCasing`,
       newValue: `/copy`
     });
   }

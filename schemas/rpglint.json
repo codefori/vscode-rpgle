@@ -85,10 +85,14 @@
 			],
 			"description": "Force which directive which must be used to include other source. (Copy or Include)"
 		},
-		"LowercaseDirectives": {
-			"$id": "#/properties/LowercaseDirectives",
-			"type": "boolean",
-			"description": "Directives must be in lowercase."
+		"DirectiveCase": {
+			"$id": "#/properties/DirectiveCase",
+			"type": "string",
+			"enum": [
+				"lower",
+				"upper"
+			],
+			"description": "The expected casing of directives (lower or upper)."
 		},
 		"UppercaseDirectives": {
 			"$id": "#/properties/UppercaseDirectives",

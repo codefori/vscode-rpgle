@@ -26,7 +26,7 @@ const errorText = {
   'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
   'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
   'CopybookDirective': `Directive does not match requirement.`,
-  'LowercaseDirectives': `Directives must be in lowercase.`,
+  'DirectiveCasing': `Does not match required case.`,
   'UppercaseDirectives': `Directives must be in uppercase.`,
   'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
   'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
@@ -285,7 +285,7 @@ export default class Linter {
                     if (rules.CopybookDirective) {
                       let correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
                       let correctValue = value.toUpperCase();
-                      if (rules.LowercaseDirectives) {
+                      if (rules.DirectiveCasing === `lower`) {
                         correctDirective = correctDirective.toLowerCase();
                         correctValue = value.toLowerCase();
                       }
@@ -300,12 +300,22 @@ export default class Linter {
                   }
                 }
 
-                if (rules.LowercaseDirectives) {
+                if (rules.DirectiveCasing === `lower`) {
                   if (value !== value.toLowerCase()) {
                     errors.push({
                       offset: { position: statement[0].range.start, end: statement[0].range.end },
-                      type: `LowercaseDirectives`,
+                      type: `DirectiveCasing`,
                       newValue: value.toLowerCase()
+                    });
+                  }
+                }
+
+                if (rules.DirectiveCasing === `upper`) {
+                  if (value !== value.toUpperCase()) {
+                    errors.push({
+                      offset: { position: statement[0].range.start, end: statement[0].range.end },
+                      type: `DirectiveCasing`,
+                      newValue: value.toUpperCase()
                     });
                   }
                 }
@@ -319,7 +329,6 @@ export default class Linter {
                     });
                   }
                 }
-
                 break;
 
               case `declare`:
