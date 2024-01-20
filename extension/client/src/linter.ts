@@ -10,6 +10,8 @@ export function initialise(context: ExtensionContext) {
 			const instance = getInstance();
 			const editor = window.activeTextEditor;
 
+			let exists = false;
+
 			if (editor && ![`member`, `streamfile`].includes(editor.document.uri.scheme)) {
 				const workspaces = workspace.workspaceFolders;
 				if (workspaces && workspaces.length > 0) {
@@ -44,14 +46,22 @@ export function initialise(context: ExtensionContext) {
 				}
 
 			} else if (instance && instance.getConnection()) {
+				const connection = instance.getConnection();
+				const content = instance.getContent();
+
 				/** @type {"member"|"streamfile"} */
 				let type = `member`;
 				let configPath: string | undefined;
 
 				if (filter && filter.description) {
 					// Bad way to get the library for the filter ..
-					const library = filter.description.split(`/`)[0];
+					const library = (filter.description.split(`/`)[0]).toLocaleUpperCase();
 					configPath = `${library}/VSCODE/RPGLINT.JSON`;
+
+					exists = (await connection.runCommand({
+						command: `CHKOBJ OBJ(${library}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
+						noLibList: true
+					})).code === 0;
 
 				} else if (editor) {
 					//@ts-ignore
@@ -74,12 +84,18 @@ export function initialise(context: ExtensionContext) {
 							});
 
 							configPath = memberUri.path;
+
+							exists = (await connection.runCommand({
+								command: `CHKOBJ OBJ(${memberPath.library!.toLocaleUpperCase()}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
+								noLibList: true
+							})).code === 0;
 							break;
 
 						case `streamfile`:
 							const config = instance.getConfig();
 							if (config.homeDirectory) {
 								configPath = path.posix.join(config.homeDirectory, `.vscode`, `rpglint.json`)
+								exists = (await connection.sendCommand({ command: `test -e ${configPath}` })).code === 0;
 							}
 							break;
 					}
@@ -90,12 +106,9 @@ export function initialise(context: ExtensionContext) {
 				if (configPath) {
 					console.log(`Current path: ${configPath}`);
 
-					const exists = await commands.executeCommand(`code-for-ibmi.openEditable`, configPath, 1);
-
-					if (!exists) {
-						const connection = instance.getConnection();
-						const content = instance.getContent();
-
+					if (exists) {
+						await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
+					} else {
 						window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${configPath}?`, `Yes`, `No`).then
 							(async (value) => {
 								if (value === `Yes`) {
@@ -157,10 +170,10 @@ export function initialise(context: ExtensionContext) {
 	)
 }
 
-function parseMemberUri(path: string): {asp?: string, library?: string, file?: string, name: string} {
-	const parts = path.split(`/`).map(s => s.split(`,`)).flat().filter(s => s.length >= 1);
+function parseMemberUri(fullPath: string): {asp?: string, library?: string, file?: string, name: string} {
+	const parts = fullPath.split(`/`).map(s => s.split(`,`)).flat().filter(s => s.length >= 1);
 	return {
-		name: parts[parts.length - 1],
+		name: path.parse(parts[parts.length - 1]).name,
 		file: parts[parts.length - 2],
 		library: parts[parts.length - 3],
 		asp: parts[parts.length - 4]
