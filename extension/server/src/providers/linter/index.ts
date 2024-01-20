@@ -462,14 +462,15 @@ export function getExtractProcedureAction(document: TextDocument, docs: Cache, r
 					const ref = validRefs[i].refs[y];
 
 					procedureBody = procedureBody.slice(0, ref.position) + newParamNames[i] + procedureBody.slice(ref.end);
+					ref.end += nameDiffSize;
 
 					// Then we need to update the offset of the next references
-					for (let z = i + 1; z < validRefs.length; z++) {
+					for (let z = i - 1; z >= 0; z--) {
 						for (let x = validRefs[z].refs.length - 1; x >= 0; x--) {
-							if (validRefs[z].refs[x].position > ref.position) {
+							if (validRefs[z].refs[x].position > ref.end) {
 								validRefs[z].refs[x] = {
-									position: validRefs[z].refs[x].position + (newParamNames[i].length - nameDiffSize),
-									end: validRefs[z].refs[x].end + (newParamNames[i].length - nameDiffSize)
+									position: validRefs[z].refs[x].position + nameDiffSize,
+									end: validRefs[z].refs[x].end + nameDiffSize
 								};
 							}
 						}
