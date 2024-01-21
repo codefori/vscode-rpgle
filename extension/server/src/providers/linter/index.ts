@@ -444,14 +444,16 @@ export function getExtractProcedureAction(document: TextDocument, docs: Cache, r
 
 			const nameDiffSize = 1; // Always once since we only add 'p' at the start
 			const newParamNames = validRefs.map(ref => `p${ref.dec.name}`);
-			let procedureBody = document.getText(range);
+			let procedureBody = document.getText(linesRange);
+
+			const rangeStartOffset = document.offsetAt(linesRange.start);
 
 			// Fix the found offset lengths to be relative to the new procedure
 			for (let i = validRefs.length - 1; i >= 0; i--) {
 				for (let y = validRefs[i].refs.length - 1; y >= 0; y--) {
 					validRefs[i].refs[y] = {
-						position: validRefs[i].refs[y].position - document.offsetAt(range.start),
-						end: validRefs[i].refs[y].end - document.offsetAt(range.start)
+						position: validRefs[i].refs[y].position - rangeStartOffset,
+						end: validRefs[i].refs[y].end - rangeStartOffset
 					};
 				}
 			}
