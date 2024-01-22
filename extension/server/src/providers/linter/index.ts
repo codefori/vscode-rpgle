@@ -435,11 +435,11 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 
 export function getExtractProcedureAction(document: TextDocument, docs: Cache, range: Range): CodeAction|undefined {
 	if (range.end.line > range.start.line) {
-		const references = docs.referencesInRange({position: document.offsetAt(range.start), end: document.offsetAt(range.end)});
+		const linesRange = Range.create(range.start.line, 0, range.end.line, 1000);
+		const references = docs.referencesInRange({position: document.offsetAt(linesRange.start), end: document.offsetAt(linesRange.end)});
 		const validRefs = references.filter(ref => [`struct`, `subitem`, `variable`].includes(ref.dec.type));
 
 		if (validRefs.length > 0) {
-			const linesRange = Range.create(range.start.line, 0, range.end.line, 1000);
 			const lastLine = document.offsetAt({line: document.lineCount, character: 0});
 
 			const nameDiffSize = 1; // Always once since we only add 'p' at the start
