@@ -1269,14 +1269,14 @@ exports.linter15 = async () => {
 
   assert.deepStrictEqual(errors[0], {
     offset: { position: 36, end: 38 },
-    type: 'PrettyComments',
-    newValue: '// '
+    type: `PrettyComments`,
+    newValue: `// `
   });
 
   assert.deepStrictEqual(errors[1], {
     offset: { position: 207, end: 209 },
-    type: 'PrettyComments',
-    newValue: '// '
+    type: `PrettyComments`,
+    newValue: `// `
   });
 };
 

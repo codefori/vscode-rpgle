@@ -1,5 +1,5 @@
 {
-	"$schema": "http://json-schema.org/draft-07/schema",
+	"$schema": "http://json-schema.org/draft-07/schema#",
 	"$id": "https://github.com/halcyon-tech/vscode-ibmi",
 	"type": "object",
 	"description": "Available lint configuration for RPGLE",
@@ -85,10 +85,20 @@
 			],
 			"description": "Force which directive which must be used to include other source. (Copy or Include)"
 		},
+		"DirectiveCase": {
+			"$id": "#/properties/DirectiveCase",
+			"type": "string",
+			"enum": [
+				"lower",
+				"upper"
+			],
+			"description": "The expected casing of directives (lower or upper)."
+		},
 		"UppercaseDirectives": {
 			"$id": "#/properties/UppercaseDirectives",
 			"type": "boolean",
-			"description": "Directives must be in uppercase."
+			"description": "Directives must be in uppercase.",
+			"deprecated": true
 		},
 		"NoSQLJoins": {
 			"$id": "#/properties/NoSQLJoins",

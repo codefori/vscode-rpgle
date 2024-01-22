@@ -43,3 +43,4 @@ Thanks so much to everyone [who has contributed](https://github.com/codefori/vsc
 - [@p-behr](https://github.com/p-behr)
 - [@chrjorgensen](https://github.com/chrjorgensen)
 - [@sebjulliand](https://github.com/sebjulliand)
+- [@richardm90](https://github.com/richardm90)

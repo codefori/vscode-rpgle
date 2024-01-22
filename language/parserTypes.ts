@@ -41,6 +41,7 @@ export interface Rules {
   literalMinimum?: number;
   RequireBlankSpecial?: boolean;
   CopybookDirective?: "copy"|"include";
+  DirectiveCasing?: "lower"|"upper";
   UppercaseDirectives?: boolean;
   NoSQLJoins?: boolean;
   NoGlobalsInProcedures?: boolean;

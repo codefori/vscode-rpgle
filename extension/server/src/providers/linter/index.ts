@@ -314,6 +314,7 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 
 			case `SpecificCasing`:
 			case `IncorrectVariableCase`:
+			case `DirectiveCasing`:
 			case `UppercaseDirectives`:
 				if (error.newValue) {
 					action = CodeAction.create(`Correct casing to '${error.newValue}'`, CodeActionKind.QuickFix);
@@ -342,7 +343,7 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 
 			case `RequireBlankSpecial`:
 				if (error.newValue) {
-					action = CodeAction.create(`Convert constant name to uppercase`, CodeActionKind.QuickFix);
+					action = CodeAction.create(`Convert empty string literal to *BLANK`, CodeActionKind.QuickFix);
 					action.edit = {
 						changes: {
 							[document.uri]: [
