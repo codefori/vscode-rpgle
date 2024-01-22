@@ -432,3 +432,83 @@ export function getActions(document: TextDocument, errors: IssueRange[]) {
 
 	return actions;
 }
+
+export function getExtractProcedureAction(document: TextDocument, docs: Cache, range: Range): CodeAction|undefined {
+	if (range.end.line > range.start.line) {
+		const linesRange = Range.create(range.start.line, 0, range.end.line, 1000);
+		const references = docs.referencesInRange({position: document.offsetAt(linesRange.start), end: document.offsetAt(linesRange.end)});
+		const validRefs = references.filter(ref => [`struct`, `subitem`, `variable`].includes(ref.dec.type));
+
+		if (validRefs.length > 0) {
+			const lastLine = document.offsetAt({line: document.lineCount, character: 0});
+
+			const nameDiffSize = 1; // Always once since we only add 'p' at the start
+			const newParamNames = validRefs.map(ref => `p${ref.dec.name}`);
+			let procedureBody = document.getText(linesRange);
+
+			const rangeStartOffset = document.offsetAt(linesRange.start);
+
+			// Fix the found offset lengths to be relative to the new procedure
+			for (let i = validRefs.length - 1; i >= 0; i--) {
+				for (let y = validRefs[i].refs.length - 1; y >= 0; y--) {
+					validRefs[i].refs[y] = {
+						position: validRefs[i].refs[y].position - rangeStartOffset,
+						end: validRefs[i].refs[y].end - rangeStartOffset
+					};
+				}
+			}
+
+			// Then let's fix the references to use the new names
+			for (let i = validRefs.length - 1; i >= 0; i--) {
+				for (let y = validRefs[i].refs.length - 1; y >= 0; y--) {
+					const ref = validRefs[i].refs[y];
+
+					procedureBody = procedureBody.slice(0, ref.position) + newParamNames[i] + procedureBody.slice(ref.end);
+					ref.end += nameDiffSize;
+
+					// Then we need to update the offset of the next references
+					for (let z = i - 1; z >= 0; z--) {
+						for (let x = validRefs[z].refs.length - 1; x >= 0; x--) {
+							if (validRefs[z].refs[x].position > ref.end) {
+								validRefs[z].refs[x] = {
+									position: validRefs[z].refs[x].position + nameDiffSize,
+									end: validRefs[z].refs[x].end + nameDiffSize
+								};
+							}
+						}
+					}
+				}
+			}
+
+			const newProcedure = [
+				`Dcl-Proc NewProcedure;`,
+				`  Dcl-Pi *N;`,
+					  ...validRefs.map((ref, i) => `    ${newParamNames[i]} ${ref.dec.type === `struct` ? `LikeDS` : `Like`}(${ref.dec.name});`),
+				`  End-Pi;`,
+				``,
+				procedureBody,
+				`End-Proc;`
+			].join(`\n`)
+
+			const newAction = CodeAction.create(`Extract to new procedure`, CodeActionKind.RefactorExtract);
+
+			// First do the exit
+			newAction.edit = {
+				changes: {
+					[document.uri]: [
+						TextEdit.replace(linesRange, `NewProcedure(${validRefs.map(r => r.dec.name).join(`:`)});`),
+						TextEdit.insert(document.positionAt(lastLine), `\n\n`+newProcedure)
+					]
+				},
+			};
+
+			// Then format the document
+			newAction.command = {
+				command: `editor.action.formatDocument`,
+				title: `Format`
+			};
+
+			return newAction;
+		}
+	}
+}

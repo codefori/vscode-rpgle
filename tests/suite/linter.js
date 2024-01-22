@@ -3464,3 +3464,40 @@ exports.on_excp_2 = async () => {
     currentIndent: 0
   });
 }
+
+exports.range_1 = async () => {
+  const lines = [
+    `**free`,
+    `ctl-opt debug  option(*nodebugio: *srcstmt) dftactgrp(*no) actgrp(*caller)`,
+    `main(Main);`,
+    `dcl-s x timestamp;`,
+    `dcl-s y timestamp;`,
+    `dcl-proc Main;`,
+    `  dsply %CHAR(CalcDiscount(10000));`,
+    `  dsply %char(CalcDiscount(1000));`,
+    `  x = %TIMESTAMP(y);`,
+    `  y = %TimeStamp(x);`,
+    `  return;`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true
+  }, cache);
+
+  const rangeRefs = cache.referencesInRange({position: 220, end: 260});
+  assert.strictEqual(rangeRefs.length, 2);
+  assert.ok(rangeRefs[0].dec.name === `x`);
+  assert.ok(rangeRefs[1].dec.name === `y`);
+
+  assert.deepStrictEqual(rangeRefs[0].refs, [
+    { position: 220, end: 221 },
+    { position: 256, end: 257 }
+  ]);
+
+  assert.deepStrictEqual(rangeRefs[1].refs, [
+    { position: 235, end: 236 },
+    { position: 241, end: 242 }
+  ]);
+}
