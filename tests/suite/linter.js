@@ -1305,20 +1305,17 @@ exports.linter16 = async () => {
 
   assert.deepStrictEqual(errors[0], {
     type: `NoGlobalSubroutines`,
-    offset: { position: 36, end: 54 },
-    newValue: `theSubroutine()`
+    offset: { position: 36, end: 54 }
   });
 
   assert.deepStrictEqual(errors[1], {
     offset: { position: 76, end: 81 },
-    type: `NoGlobalSubroutines`,
-    newValue: `Dcl-Proc`
+    type: `NoGlobalSubroutines`
   });
 
   assert.deepStrictEqual(errors[2], {
     offset: { position: 128, end: 133 },
-    type: `NoGlobalSubroutines`,
-    newValue: `End-Proc`
+    type: `NoGlobalSubroutines`
   });
 };
 
@@ -1349,26 +1346,22 @@ exports.linter16_with_leavesr = async () => {
 
   assert.deepStrictEqual(errors[0], {
     type: `NoGlobalSubroutines`,
-    offset: { position: 71, end: 89 },
-    newValue: `theSubroutine()`
+    offset: { position: 71, end: 89 }
   });
 
   assert.deepStrictEqual(errors[1], {
     offset: { position: 111, end: 116 },
-    type: `NoGlobalSubroutines`,
-    newValue: `Dcl-Proc`
+    type: `NoGlobalSubroutines`
   });
 
   assert.deepStrictEqual(errors[2], {
     type: `NoGlobalSubroutines`,
-    offset: { position: 156, end: 163 },
-    newValue: `return`
+    offset: { position: 156, end: 163 }
   });
 
   assert.deepStrictEqual(errors[3], {
     offset: { position: 205, end: 210 },
-    type: `NoGlobalSubroutines`,
-    newValue: `End-Proc`
+    type: `NoGlobalSubroutines`
   });
 };
 
