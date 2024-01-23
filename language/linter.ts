@@ -387,8 +387,7 @@ export default class Linter {
                       if (rules.NoGlobalSubroutines) {
                         errors.push({
                           offset: { position: statement[0].range.start, end: statement[0].range.end },
-                          type: `NoGlobalSubroutines`,
-                          newValue: `Dcl-Proc`
+                          type: `NoGlobalSubroutines`
                         });
                       }
                     }
@@ -584,8 +583,7 @@ export default class Linter {
                       if (rules.NoGlobalSubroutines) {
                         errors.push({
                           offset: { position: statement[0].range.start, end: statement[0].range.end },
-                          type: `NoGlobalSubroutines`,
-                          newValue: `End-Proc`
+                          type: `NoGlobalSubroutines`
                         });
                       }
                     }
@@ -661,8 +659,7 @@ export default class Linter {
                     if (rules.NoGlobalSubroutines && !inProcedure) {
                       errors.push({
                         type: `NoGlobalSubroutines`,
-                        offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end },
-                        newValue: `return`
+                        offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
                       });
                     }
                     break;
@@ -672,8 +669,7 @@ export default class Linter {
                         if (globalScope.subroutines.find(sub => sub.name.toUpperCase() === statement[1].value.toUpperCase())) {
                           errors.push({
                             type: `NoGlobalSubroutines`,
-                            offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end },
-                            newValue: `${statement[1].value}()`
+                            offset: { position: statement[0].range.start, end: statement[statement.length - 1].range.end }
                           });
                         }
                       }
