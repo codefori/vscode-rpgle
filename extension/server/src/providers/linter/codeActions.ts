@@ -1,5 +1,5 @@
 import { CodeAction, CodeActionKind, CodeActionParams, Range } from 'vscode-languageserver';
-import { getActions, getExtractProcedureAction, refreshLinterDiagnostics } from '.';
+import { getActions, getExtractProcedureAction, getSubroutineActions, refreshLinterDiagnostics } from '.';
 import { documents, parser } from '..';
 
 export default async function codeActionsProvider(params: CodeActionParams): Promise<CodeAction[]|undefined> {
@@ -13,6 +13,11 @@ export default async function codeActionsProvider(params: CodeActionParams): Pro
 			const docs = await parser.getDocs(document.uri);
 
 			if (docs) {
+				const subroutineOption = getSubroutineActions(document, docs, range);
+				if (subroutineOption) {
+					return [subroutineOption];
+				}
+
 				const extractOption = getExtractProcedureAction(document, docs, range);
 				if (extractOption) {
 					return [extractOption];
