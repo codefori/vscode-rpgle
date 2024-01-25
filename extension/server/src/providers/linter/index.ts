@@ -459,7 +459,7 @@ export function getSubroutineActions(document: TextDocument, docs: Cache, range:
 					  ...extracted.references.map((ref, i) => `    ${extracted.newParamNames[i]} ${ref.dec.type === `struct` ? `LikeDS` : `Like`}(${ref.dec.name});`),
 				`  End-Pi;`,
 				``,
-				extracted.newBody,
+				caseInsensitiveReplaceAll(extracted.newBody, `leavesr`, `return`),
 				`End-Proc;`
 			].join(`\n`)
 
@@ -531,6 +531,11 @@ export function getExtractProcedureAction(document: TextDocument, docs: Cache, r
 			return newAction;
 	}
 }
+
+function caseInsensitiveReplaceAll(text: string, search: string, replace: string) {
+	return text.replace(new RegExp(search, `gi`), replace);
+}
+	
 
 function createExtract(document: TextDocument, userRange: Range, docs: Cache) {
 	const range = Range.create(userRange.start.line, 0, userRange.end.line, 1000);
