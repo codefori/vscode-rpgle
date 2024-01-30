@@ -95,7 +95,7 @@ export function initialise(context: ExtensionContext) {
 							const config = instance.getConfig();
 							if (config.homeDirectory) {
 								configPath = path.posix.join(config.homeDirectory, `.vscode`, `rpglint.json`)
-								exists = (await connection.sendCommand({ command: `test -e ${configPath}` })).code === 0;
+								exists = await content.testStreamFile(configPath, `r`);
 							}
 							break;
 					}
