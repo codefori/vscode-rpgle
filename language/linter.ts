@@ -26,8 +26,7 @@ const errorText = {
   'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
   'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
   'CopybookDirective': `Directive does not match requirement.`,
-  'DirectiveCasing': `Does not match required case.`,
-  'UppercaseDirectives': `Directives must be in uppercase. UppercaseDirectives option is deprecated, consider using DirectiveCasing.`,
+  'DirectiveCase': `Does not match required case.`,
   'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
   'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
   'NoCTDATA': `\`CTDATA\` is not allowed.`,
@@ -285,7 +284,7 @@ export default class Linter {
                     if (rules.CopybookDirective) {
                       let correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
                       let correctValue = value.toUpperCase();
-                      if (rules.DirectiveCasing === `lower`) {
+                      if (rules.DirectiveCase === `lower`) {
                         correctDirective = correctDirective.toLowerCase();
                         correctValue = value.toLowerCase();
                       }
@@ -300,31 +299,21 @@ export default class Linter {
                   }
                 }
 
-                if (rules.DirectiveCasing === `lower`) {
+                if (rules.DirectiveCase === `lower`) {
                   if (value !== value.toLowerCase()) {
                     errors.push({
                       offset: { position: statement[0].range.start, end: statement[0].range.end },
-                      type: `DirectiveCasing`,
+                      type: `DirectiveCase`,
                       newValue: value.toLowerCase()
                     });
                   }
                 }
 
-                if (rules.DirectiveCasing === `upper`) {
+                if (rules.DirectiveCase === `upper`) {
                   if (value !== value.toUpperCase()) {
                     errors.push({
                       offset: { position: statement[0].range.start, end: statement[0].range.end },
-                      type: `DirectiveCasing`,
-                      newValue: value.toUpperCase()
-                    });
-                  }
-                }
-
-                if (rules.UppercaseDirectives) {
-                  if (value !== value.toUpperCase()) {
-                    errors.push({
-                      offset: { position: statement[0].range.start, end: statement[0].range.end },
-                      type: `UppercaseDirectives`,
+                      type: `DirectiveCase`,
                       newValue: value.toUpperCase()
                     });
                   }
