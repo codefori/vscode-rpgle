@@ -1,5 +1,5 @@
 import { indicators1 } from "../../tests/suite";
-import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
+import { CacheProps, IncludeStatement, Keywords, Offset } from "../parserTypes";
 import Declaration from "./declaration";
 
 const newInds = () => {
@@ -199,18 +199,37 @@ export default class Cache {
     }
   }
 
-  static referenceByOffset(scope: Cache, offset: number): Declaration|undefined {
+  referencesInRange(range: Offset): { dec: Declaration, refs: Offset[] }[] {
+    let list: { dec: Declaration, refs: Offset[] }[] = [];
+
+    for (let i = range.position; i <= range.end; i++) {
+      const ref = Cache.referenceByOffset(this, i);
+      if (ref) {
+        // No duplicates allowed
+        if (list.some(item => item.dec.name === ref.name)) continue;
+
+        list.push({
+          dec: ref,
+          refs: ref.references.filter(r => r.offset.position >= range.position && r.offset.end <= range.end).map(r => r.offset)
+        })
+      };
+    }
+
+    return list;
+  }
+
+  static referenceByOffset(scope: Cache, offset: number): Declaration | undefined {
     const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
-  
+
     for (const prop of props) {
       const list = scope[prop] as unknown as Declaration[];
       for (const def of list) {
         let possibleRef: boolean;
-  
+
         // Search top level
         possibleRef = def.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
         if (possibleRef) return def;
-  
+
         // Search any subitems
         if (def.subItems.length > 0) {
           for (const subItem of def.subItems) {
@@ -218,7 +237,7 @@ export default class Cache {
             if (possibleRef) return subItem;
           }
         }
-  
+
         // Search scope if any
         if (def.scope) {
           const inScope = Cache.referenceByOffset(def.scope, offset);

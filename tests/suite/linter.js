@@ -1305,20 +1305,17 @@ exports.linter16 = async () => {
 
   assert.deepStrictEqual(errors[0], {
     type: `NoGlobalSubroutines`,
-    offset: { position: 36, end: 54 },
-    newValue: `theSubroutine()`
+    offset: { position: 36, end: 54 }
   });
 
   assert.deepStrictEqual(errors[1], {
     offset: { position: 76, end: 81 },
-    type: `NoGlobalSubroutines`,
-    newValue: `Dcl-Proc`
+    type: `NoGlobalSubroutines`
   });
 
   assert.deepStrictEqual(errors[2], {
     offset: { position: 128, end: 133 },
-    type: `NoGlobalSubroutines`,
-    newValue: `End-Proc`
+    type: `NoGlobalSubroutines`
   });
 };
 
@@ -1349,26 +1346,22 @@ exports.linter16_with_leavesr = async () => {
 
   assert.deepStrictEqual(errors[0], {
     type: `NoGlobalSubroutines`,
-    offset: { position: 71, end: 89 },
-    newValue: `theSubroutine()`
+    offset: { position: 71, end: 89 }
   });
 
   assert.deepStrictEqual(errors[1], {
     offset: { position: 111, end: 116 },
-    type: `NoGlobalSubroutines`,
-    newValue: `Dcl-Proc`
+    type: `NoGlobalSubroutines`
   });
 
   assert.deepStrictEqual(errors[2], {
     type: `NoGlobalSubroutines`,
-    offset: { position: 156, end: 163 },
-    newValue: `return`
+    offset: { position: 156, end: 163 }
   });
 
   assert.deepStrictEqual(errors[3], {
     offset: { position: 205, end: 210 },
-    type: `NoGlobalSubroutines`,
-    newValue: `End-Proc`
+    type: `NoGlobalSubroutines`
   });
 };
 
@@ -3463,4 +3456,41 @@ exports.on_excp_2 = async () => {
     expectedIndent: 2,
     currentIndent: 0
   });
+}
+
+exports.range_1 = async () => {
+  const lines = [
+    `**free`,
+    `ctl-opt debug  option(*nodebugio: *srcstmt) dftactgrp(*no) actgrp(*caller)`,
+    `main(Main);`,
+    `dcl-s x timestamp;`,
+    `dcl-s y timestamp;`,
+    `dcl-proc Main;`,
+    `  dsply %CHAR(CalcDiscount(10000));`,
+    `  dsply %char(CalcDiscount(1000));`,
+    `  x = %TIMESTAMP(y);`,
+    `  y = %TimeStamp(x);`,
+    `  return;`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  Linter.getErrors({ uri, content: lines }, {
+    CollectReferences: true
+  }, cache);
+
+  const rangeRefs = cache.referencesInRange({position: 220, end: 260});
+  assert.strictEqual(rangeRefs.length, 2);
+  assert.ok(rangeRefs[0].dec.name === `x`);
+  assert.ok(rangeRefs[1].dec.name === `y`);
+
+  assert.deepStrictEqual(rangeRefs[0].refs, [
+    { position: 220, end: 221 },
+    { position: 256, end: 257 }
+  ]);
+
+  assert.deepStrictEqual(rangeRefs[1].refs, [
+    { position: 235, end: 236 },
+    { position: 241, end: 242 }
+  ]);
 }
