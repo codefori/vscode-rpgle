@@ -862,6 +862,11 @@ export default class Parser {
                   result.name = result.name.substring(0, openBracket);
                 }
 
+                // End bracket for sub-statements
+                if (result.name.endsWith(`)`)) {
+                  result.name = result.name.substring(0, result.name.length - 1);
+                }
+
                 return result;
               }
 

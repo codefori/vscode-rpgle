@@ -1080,6 +1080,30 @@ exports.exec_10 = async () => {
   assert.strictEqual(cache.sqlReferences[1].description, ``);
 }
 
+exports.exec_11 = async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `// sql statement causing the the bug, when you find the reference you are also bringing in the ) at the end.`,
+    `        Exec Sql Update PrdBlock`,
+    `            Set cgday     = :leastUtilDay,`,
+    `                cgcnstdpt = :pd$dept,`,
+    `                cgcnstjob = :pd$jobc`,
+    `            Where cgblock in (Select b2addid`,
+    `                                from prdblk2add) and`,
+    `                    cgday = 0;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 2);
+  assert.strictEqual(cache.sqlReferences[0].name, `PrdBlock`);
+  assert.strictEqual(cache.sqlReferences[1].name, `prdblk2add`);
+}
+
 exports.enum_1 = async () => {
   const lines = [
     `**free`,
