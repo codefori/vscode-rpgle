@@ -901,8 +901,6 @@ export default class Parser {
                     }
                   }
                 }
-                
-                resetDefinition = true;
               };
             }
             break;
