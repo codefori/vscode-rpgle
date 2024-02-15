@@ -863,23 +863,29 @@ export default class Parser {
                 }
 
                 // End bracket for sub-statements
-                if (result.name.endsWith(`)`)) {
+                if (result.name.endsWith(`)`) || result.name.endsWith(`,`)) {
                   result.name = result.name.substring(0, result.name.length - 1);
                 }
 
                 return result;
               }
 
-              parts.forEach((part, index) => {
+              let isContinued = false;
+              for (let index = 0; index < parts.length; index++) {
+                const part = parts[index];
+                let inBlock = preFileWords.includes(part);
+
                 if (
-                  preFileWords.includes(part) &&  // If this is true, usually means next word is the object
+                  (inBlock || isContinued) &&  // If this is true, usually means next word is the object
                   (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
                 ) {
                   if (index >= 0 && (index+1) < parts.length) {
                     const possibleFileName = partsLower[index+1];
+                    isContinued = (possibleFileName.endsWith(`,`) || (parts[index+2] === `,`));
+
                     const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
 
-                    if (!qualifiedObjectPath.name.startsWith(`:`)) {
+                    if (qualifiedObjectPath.name && !qualifiedObjectPath.name.startsWith(`:`)) {
                       const currentSqlItem = new Declaration(`file`);
                       currentSqlItem.name = qualifiedObjectPath.name;
 
@@ -897,7 +903,7 @@ export default class Parser {
                 }
                 
                 resetDefinition = true;
-              });
+              };
             }
             break;
 

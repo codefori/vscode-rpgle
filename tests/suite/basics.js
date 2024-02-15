@@ -1104,6 +1104,48 @@ exports.exec_11 = async () => {
   assert.strictEqual(cache.sqlReferences[1].name, `prdblk2add`);
 }
 
+exports.exec_12_a = async () => {
+  const lines = [
+    `**free`,
+    `exec sql declare c2 cursor for`,
+    `SELECT ARID, ARDESC, arstock, ARMINQTY,`,
+    `       ARCUSQTY, ARPURQTY, APPRICE, apref`,
+    `FROM article, artiprov`,
+    `WHERE arstock < ARMINQTY - arcusqty + arpurqty`,
+    `  and arid = aparid`,
+    `  AND apprid = :id`,
+    `order by arid ;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences[0].name, `article`);
+  assert.strictEqual(cache.sqlReferences[1].name, `artiprov`);
+  assert.strictEqual(cache.sqlReferences.length, 2);
+}
+
+exports.exec_12_b = async () => {
+  const lines = [
+    `**free`,
+    `exec sql declare c2 cursor for`,
+    `SELECT ARID, ARDESC, arstock, ARMINQTY,`,
+    `       ARCUSQTY, ARPURQTY, APPRICE, apref`,
+    `FROM article , artiprov`,
+    `WHERE arstock < ARMINQTY - arcusqty + arpurqty`,
+    `  and arid = aparid`,
+    `  AND apprid = :id`,
+    `order by arid ;`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences[0].name, `article`);
+  assert.strictEqual(cache.sqlReferences[1].name, `artiprov`);
+  assert.strictEqual(cache.sqlReferences.length, 2);
+}
+
 exports.enum_1 = async () => {
   const lines = [
     `**free`,
