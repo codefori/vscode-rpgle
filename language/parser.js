@@ -878,18 +878,21 @@ export default class Parser {
                   if (index >= 0 && (index+1) < parts.length) {
                     const possibleFileName = partsLower[index+1];
                     const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
-  
-                    const currentSqlItem = new Declaration(`file`);
-                    currentSqlItem.name = qualifiedObjectPath.name;
-                    currentSqlItem.keywords = [];
-                    currentSqlItem.description = qualifiedObjectPath.schema || ``;
-    
-                    currentSqlItem.position = {
-                      path: file,
-                      line: statementStartingLine
-                    };
-    
-                    scope.sqlReferences.push(currentSqlItem);
+
+                    if (!qualifiedObjectPath.name.startsWith(`:`)) {
+                      const currentSqlItem = new Declaration(`file`);
+                      currentSqlItem.name = qualifiedObjectPath.name;
+
+                      currentSqlItem.keywords = [];
+                      currentSqlItem.description = qualifiedObjectPath.schema || ``;
+      
+                      currentSqlItem.position = {
+                        path: file,
+                        line: statementStartingLine
+                      };
+      
+                      scope.sqlReferences.push(currentSqlItem);
+                    }
                   }
                 }
                 
