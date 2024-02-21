@@ -3494,3 +3494,64 @@ exports.range_1 = async () => {
     { position: 241, end: 242 }
   ]);
 }
+
+exports.sqlRunner1_1 = async () => {
+  const lines = [
+    `**free`,
+    `EXEC SQL`,
+    `  DECLARE CUSCUR CURSOR FOR`,
+    `    SELECT CUSNO FROM CUSTOMER;`,
+    ``,
+    `EXEC SQL`,
+    `  OPEN CUSCUR;`,
+    ``,
+    `EXEC SQL`,
+    `  FETCH NEXT FROM CUSCUR INTO :cust.CUSNO;`,
+    ``,
+    `EXEC SQL`,
+    `  CLOSE CUSCUR;`,
+    ``,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    SQLRunner: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    type: 'SQLRunner',
+    offset: { position: 7, end: 74 },
+    newValue: 'EXEC SQL\n  DECLARE CUSCUR CURSOR FOR\n    SELECT CUSNO FROM CUSTOMER'
+  });
+};
+
+exports.sqlRunner1_b = async () => {
+  const lines = [
+    `**free`,
+    `EXEC SQL DECLARE CUSCUR CURSOR FOR`,
+    `    SELECT CUSNO FROM CUSTOMER;`,
+    ``,
+    `EXEC SQL`,
+    `  OPEN CUSCUR;`,
+    ``,
+    `EXEC SQL`,
+    `  FETCH NEXT FROM CUSCUR INTO :cust.CUSNO;`,
+    ``,
+    `EXEC SQL`,
+    `  CLOSE CUSCUR;`,
+    ``,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    SQLRunner: true
+  }, cache);
+
+  assert.strictEqual(errors.length, 1);
+  assert.deepStrictEqual(errors[0], {
+    type: 'SQLRunner',
+    offset: { position: 7, end: 72 },
+    newValue: 'EXEC SQL DECLARE CUSCUR CURSOR FOR\n    SELECT CUSNO FROM CUSTOMER'
+  });
+};
