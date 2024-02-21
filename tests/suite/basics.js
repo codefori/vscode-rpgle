@@ -1146,6 +1146,29 @@ exports.exec_12_b = async () => {
   assert.strictEqual(cache.sqlReferences.length, 2);
 }
 
+exports.exec_13 = async () => {
+  const lines = [
+    `**FREE`,
+    `EXEC SQL`,
+    ` SELECT TRID `,
+    ` into :transaction.TRID `,
+    ` FROM FINAL TABLE (`,
+    `   INSERT INTO TRANSACTION`,
+    `   (TCUS, TDESC, TAMT)`,
+    `   VALUES`,
+    `   (`,
+    `     :cusno, :transaction.TDESC, :amount`,
+    `   )`,
+    ` );`,
+  ].join(`\n`);
+
+  const parser = parserSetup();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  assert.strictEqual(cache.sqlReferences.length, 1);
+  assert.strictEqual(cache.sqlReferences[0].name, `TRANSACTION`);
+}
+
 exports.enum_1 = async () => {
   const lines = [
     `**free`,

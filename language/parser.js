@@ -843,6 +843,7 @@ export default class Parser {
               // select * into :x from xx.xx
               // call xx.xx()
               const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
+              const ignoredWords = [`FINAL`, `SET`];
 
               const cleanupObjectRef = (content = ``) => {
                 const result = {
@@ -879,7 +880,7 @@ export default class Parser {
                   (inBlock || isContinued) &&  // If this is true, usually means next word is the object
                   (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
                 ) {
-                  if (index >= 0 && (index+1) < parts.length) {
+                  if (index >= 0 && (index+1) < parts.length && !ignoredWords.includes(parts[index+1])) {
                     const possibleFileName = partsLower[index+1];
                     isContinued = (possibleFileName.endsWith(`,`) || (parts[index+2] === `,`));
 
@@ -888,6 +889,8 @@ export default class Parser {
                     if (qualifiedObjectPath.name && !qualifiedObjectPath.name.startsWith(`:`)) {
                       const currentSqlItem = new Declaration(`file`);
                       currentSqlItem.name = qualifiedObjectPath.name;
+
+                      if (currentSqlItem.name)
 
                       currentSqlItem.keywords = [];
                       currentSqlItem.description = qualifiedObjectPath.schema || ``;
