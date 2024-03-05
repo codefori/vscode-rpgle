@@ -730,7 +730,6 @@ test('issue_195a', async () => {
     `End-Proc ScomponiStringa;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   cache.clearReferences();
@@ -788,7 +787,6 @@ test('issue_195b', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.procedures.length).toBe(1);
@@ -812,7 +810,6 @@ test('exec_1', async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(1);
@@ -841,7 +838,6 @@ test('exec_2', async () => {
     `    WHERE WORKDEPT = :deptNum;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -867,7 +863,6 @@ test('exec_3', async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(0);
@@ -900,7 +895,6 @@ test('exec_4', async () => {
     `            sample.employee;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(1);
@@ -923,7 +917,6 @@ test('exec_5', async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -952,7 +945,6 @@ test('exec_6', async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -981,7 +973,6 @@ test('exec_7', async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -1010,7 +1001,6 @@ test('exec_8', async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -1037,7 +1027,6 @@ test('exec_9', async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -1061,7 +1050,6 @@ test('exec_10', async () => {
     `            ORDER BY MSGDAT DESC, MSGTIM DESC;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -1089,7 +1077,6 @@ test('exec_11', async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(2);
@@ -1110,7 +1097,6 @@ test('exec_12_a', async () => {
     `order by arid ;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences[0].name).toBe(`article`);
@@ -1131,7 +1117,6 @@ test('exec_12_b', async () => {
     `order by arid ;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences[0].name).toBe(`article`);
@@ -1155,7 +1140,6 @@ test('exec_13', async () => {
     ` );`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.sqlReferences.length).toBe(1);
@@ -1186,7 +1170,6 @@ test('enum_1', async () => {
     `END-DS;`,
   ].join(`\n`);
 
-  const parser = setupParser();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.constants.length).toBe(2);
