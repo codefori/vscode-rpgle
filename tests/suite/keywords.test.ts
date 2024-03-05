@@ -1,13 +1,14 @@
 
-const assert = require(`assert`);
+import path from "path";
+import setupParser from "../parserSetup";
+import Linter from "../../language/linter";
+import Cache from "../../language/models/cache";
+import { test, expect } from "vitest";
 
-const {default: parserSetup} = require(`../parserSetup`);
-const {default: Linter} = require(`../../language/linter`);
-
-const parser = parserSetup();
+const parser = setupParser();
 const uri = `source.rpgle`;
 
-exports.qualified1 = async () => {
+test("qualified1", async () => {
   const lines = [
     `**FREE`,
     `Dcl-Ds Kx Likerec(TitXe :*Key);`,
@@ -23,10 +24,10 @@ exports.qualified1 = async () => {
     QualifiedCheck: true,
   }, cache);
   
-  assert.strictEqual(errors.length, 0, `Expect length of 0`);
-},
+  expect(errors.length).toBe(0);
+});
 
-exports.ctdata1 = async () => {
+test("ctdata1", async () => {
   const lines = [
     `**free`,
     `dcl-s myarray char(100) dim(10) ctdata;`,
@@ -95,10 +96,10 @@ exports.ctdata1 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
-},
+  expect(indentErrors.length).toBe(0);
+});
 
-exports.ctdata2 = async () => {
+test("ctdata2", async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug option(*nodebugio: *srcstmt);`,
@@ -122,15 +123,15 @@ exports.ctdata2 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
-  assert.strictEqual(Object.keys(cache.keyword).length, 2);
-  assert.strictEqual(cache.keyword[`DEBUG`], true);
-  assert.strictEqual(cache.keyword[`OPTION`], `*NODEBUGIO:*SRCSTMT`);
+  expect(Object.keys(cache.keyword).length).toBe(2);
+  expect(cache.keyword[`DEBUG`]).toBe(true);
+  expect(cache.keyword[`OPTION`]).toBe(`*NODEBUGIO:*SRCSTMT`);
 
-  assert.strictEqual(cache.variables.length, 1);
-  assert.strictEqual(cache.structs.length, 1);
-}
+  expect(cache.variables.length).toBe(1);
+  expect(cache.structs.length).toBe(1);
+});
 
-exports.ctdata3 = async () => {
+test("ctdata3", async () => {
   const lines = [
     `       DCL-F QSYSPRT PRINTER(132) USAGE(*OUTPUT) OFLIND(*INOF);`,
     ` `,
@@ -153,11 +154,11 @@ exports.ctdata3 = async () => {
   
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
-  assert.strictEqual(cache.files.length, 1);
-  assert.strictEqual(cache.variables.length, 3);
-}
+  expect(cache.files.length).toBe(1);
+  expect(cache.variables.length).toBe(3);
+});
 
-exports.likeds1 = async () => {
+test("likeds1", async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 CHAR(20);`,
@@ -172,16 +173,16 @@ exports.likeds1 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
-  assert.strictEqual(cache.variables.length, 2);
-  assert.strictEqual(cache.structs.length, 2);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.structs.length).toBe(2);
 
   const MyOtherStruct = cache.find(`MyOtherStruct`);
-  assert.strictEqual(MyOtherStruct.name, `MyOtherStruct`);
-  assert.strictEqual(MyOtherStruct.position.line, 7);
-  assert.strictEqual(MyOtherStruct.subItems.length, 2);
-},
+  expect(MyOtherStruct.name).toBe(`MyOtherStruct`);
+  expect(MyOtherStruct.position.line).toBe(7);
+  expect(MyOtherStruct.subItems.length).toBe(2);
+});
 
-exports.likeds2 = async () => {
+test("likeds2", async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 CHAR(20);`,
@@ -203,22 +204,22 @@ exports.likeds2 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
-  assert.strictEqual(cache.variables.length, 2);
-  assert.strictEqual(cache.structs.length, 1);
-  assert.strictEqual(cache.procedures.length, 1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.structs.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
 
   const myProc = cache.find(`myprocedure`);
-  assert.strictEqual(myProc.name, `myprocedure`);
-  assert.strictEqual(myProc.position.line, 9);
-  assert.strictEqual(myProc.subItems.length, 1);
+  expect(myProc.name).toBe(`myprocedure`);
+  expect(myProc.position.line).toBe(9);
+  expect(myProc.subItems.length).toBe(1);
 
   const parmInputDs = myProc.subItems[0];
-  assert.strictEqual(parmInputDs.name, `inputDS`);
-  assert.strictEqual(parmInputDs.position.line, 11);
-  assert.strictEqual(parmInputDs.subItems.length, 2);
-},
+  expect(parmInputDs.name).toBe(`inputDS`);
+  expect(parmInputDs.position.line).toBe(11);
+  expect(parmInputDs.subItems.length).toBe(2);
+});
 
-exports.overload1 = async () => {
+test("overload1", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -251,6 +252,6 @@ exports.overload1 = async () => {
     PrettyComments: true
   }, cache);
 
-  assert.strictEqual(cache.procedures.length, 4);
-  assert.strictEqual(indentErrors.length, 0);
-}
+  expect(cache.procedures.length).toBe(4);
+  expect(indentErrors.length).toBe(0);
+});
