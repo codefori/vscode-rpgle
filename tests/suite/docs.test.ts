@@ -1,7 +1,6 @@
-import path from "path";
+
 import setupParser from "../parserSetup";
 import Linter from "../../language/linter";
-import Cache from "../../language/models/cache";
 import { test, expect } from "vitest";
 
 const parser = setupParser();

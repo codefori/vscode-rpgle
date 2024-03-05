@@ -1,10 +1,8 @@
 
-import path from "path";
 import setupParser from "../parserSetup";
-import Linter from "../../language/linter";
-import Cache from "../../language/models/cache";
 import { test, expect } from "vitest";
 
+const parser = setupParser();
 const uri = `source.rpgle`;
 
 test("edit1", async () => {
@@ -32,8 +30,6 @@ test("edit1", async () => {
   ].join(`\n`);
 
   let currentDoc = ``;
-
-  const parser = setupParser();
 
   for (const char of lines) {
     currentDoc += char;
@@ -89,8 +85,6 @@ test("edit2", async () => {
   ].join(`\n`);
 
   let currentDoc = ``;
-
-  const parser = setupParser();
 
   for (const char of lines) {
     currentDoc += char;

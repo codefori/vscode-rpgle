@@ -1,7 +1,6 @@
 import setupParser from "../parserSetup";
 import Linter from "../../language/linter";
 import Cache from "../../language/models/cache";
-import assert from "assert";
 import { test, expect } from "vitest";
 
 
