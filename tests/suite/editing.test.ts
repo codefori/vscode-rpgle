@@ -1,7 +1,11 @@
-const { default: parserSetup } = require(`../parserSetup`);
+
+import setupParser from "../parserSetup";
+import { test, expect } from "vitest";
+
+const parser = setupParser();
 const uri = `source.rpgle`;
 
-exports.edit1 = async () => {
+test("edit1", async () => {
   const lines = [
     `     H ALTSEQ(*EXT) CURSYM('$') DATEDIT(*MDY) DATFMT(*MDY/) DEBUG(*YES)`,
     `     H DECEDIT('.') FORMSALIGN(*YES) FTRANS(*SRC) DFTNAME(name)`,
@@ -27,8 +31,6 @@ exports.edit1 = async () => {
 
   let currentDoc = ``;
 
-  const parser = parserSetup();
-
   for (const char of lines) {
     currentDoc += char;
 
@@ -36,9 +38,9 @@ exports.edit1 = async () => {
       ignoreCache: true
     });
   }
-}
+});
 
-exports.edit2 = async () => {
+test("edit2", async () => {
   const lines = [
     `**free`,
     `Ctl-opt datfmt(*iso) timfmt(*iso) alwnull(*usrctl) debug;`,
@@ -84,8 +86,6 @@ exports.edit2 = async () => {
 
   let currentDoc = ``;
 
-  const parser = parserSetup();
-
   for (const char of lines) {
     currentDoc += char;
 
@@ -93,9 +93,9 @@ exports.edit2 = async () => {
       ignoreCache: true
     });
   }
-}
+});
 
-exports.edit3 = async () => {
+test("edit3", async () => {
   const lines = [
     `      *  Field Definitions.`,
     `      * ~~~~~~~~~~~~~~~~~~~~~~~~`,
@@ -153,7 +153,7 @@ exports.edit3 = async () => {
 
   let currentDoc = ``;
 
-  const parser = parserSetup();
+  const parser = setupParser();
 
   for (const char of lines) {
     currentDoc += char;
@@ -162,4 +162,4 @@ exports.edit3 = async () => {
       ignoreCache: true
     });
   }
-}
+});

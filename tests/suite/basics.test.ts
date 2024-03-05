@@ -1,14 +1,13 @@
 
-const assert = require(`assert`);
-const path = require(`path`);
+import path from "path";
+import setupParser from "../parserSetup";
+import Linter from "../../language/linter";
+import { test, expect } from "vitest";
 
-const { default: parserSetup } = require(`../parserSetup`);
-const { default: Linter } = require(`../../language/linter`);
-
-const parser = parserSetup();
+const parser = setupParser();
 const uri = `source.rpgle`;
 
-exports.test1 = async () => {
+test('vitestTest1', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable CHAR(20);`
@@ -16,14 +15,14 @@ exports.test1 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
-}
+  expect(cache.variables.length).toBe(1);
+  expect(cache.variables[0].position.line).toBe(1);
+});
 
 /**
    * Multiple variable definition test
    */
-exports.test2 = async () => {
+test('vitestTest2', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable CHAR(20);`,
@@ -33,15 +32,12 @@ exports.test2 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
-  assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
-  assert.strictEqual(cache.variables[1].position.line, 3, `Index of 3 expected`);
-}
+  expect(cache.variables.length).toBe(2);
+  expect(cache.variables[0].position.line).toBe(1);
+  expect(cache.variables[1].position.line).toBe(3);
+});
 
-/**
-   * Variable definition and struct definition test
-   */
-exports.test3 = async () => {
+test('vitestTest3', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 CHAR(20);`,
@@ -55,25 +51,22 @@ exports.test3 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
-  assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.structs.length).toBe(1);
 
-  assert.strictEqual(cache.structs[0].subItems.length, 2, `Expect length of 2 subitems`);
+  expect(cache.structs[0].subItems.length).toBe(2);
 
-  assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
-  assert.strictEqual(cache.variables[1].position.line, 6, `Index of 6 expected`);
-  assert.strictEqual(cache.structs[0].position.line, 2, `Index of 2 expected`);
+  expect(cache.variables[0].position.line).toBe(1);
+  expect(cache.variables[1].position.line).toBe(6);
+  expect(cache.structs[0].position.line).toBe(2);
 
-  assert.deepStrictEqual(cache.structs[0].range, {
+  expect(cache.structs[0].range).toEqual({
     start: 2,
     end: 5
   });
-}
+});
 
-/**
-   * Variable and subroutine definition test
-   * */
-exports.test4 = async () => {
+test('vitestTest4', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 CHAR(20);`,
@@ -86,202 +79,202 @@ exports.test4 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.subroutines.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).toBe(1);
+  expect(cache.subroutines.length).toBe(1);
 
-  assert.strictEqual(cache.variables[0].position.line, 1, `Index of 1 expected`);
-  assert.strictEqual(cache.subroutines[0].range.start, 4, `Index of 4 expected`);
-  assert.strictEqual(cache.subroutines[0].range.end, 6);
-}
-
-/**
-   * Variable and procedure definition test
-   */
-exports.test5 = async () => {
-  const lines = [
-    `**FREE`,
-    ``,
-    `Dcl-s MyVariable2 CHAR(20);`,
-    ``,
-    `Dcl-Proc theProcedure;`,
-    `  MyVariable2 = 'Hello world';`,
-    `End-Proc;`,
-    ``,
-    `Dcl-Proc setValue;`,
-    `  Dcl-Pi *N;`,
-    `    newValue CHAR(20);`,
-    `  End-Pi;`,
-    `  MyVariable2 = newValue;`,
-    `End-Proc;`,
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
-
-  assert.strictEqual(cache.variables[0].position.line, 2, `Index of 2 expected`);
-  assert.strictEqual(cache.procedures[0].position.line, 4, `Index of 4 expected`);
-  assert.strictEqual(cache.procedures[1].position.line, 8, `Index of 8 expected`);
-
-  assert.strictEqual(cache.procedures[0].subItems.length, 0, `Expect length of 0`);
-  assert.strictEqual(cache.procedures[1].subItems.length, 1, `Expect length of 1`);
-}
-
-exports.test6 = async () => {
-  const lines = [
-    `**FREE`,
-    `Dcl-s MyVariable2 CHAR(20);`,
-    ``,
-    `Dcl-Pr TheProcedure;`,
-    `  parmA CHAR(20);`,
-    `End-Pr;`,
-    ``,
-    `MyVariable2 = 'Hello world';`,
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-}
+  expect(cache.variables[0].position.line).toBe(1);
+  expect(cache.subroutines[0].range.start).toBe(4);
+  expect(cache.subroutines[0].range.end).toBe(6);
+});
 
 /**
-   * Test procedure length.
-   * When Procedure is defined, the prototype is overridden.
-   */
-exports.test7 = async () => {
+  * Variable and procedure definition test
+  */
+test('vitestTest5', async () => {
   const lines = [
-    `**FREE`,
-    ``,
-    `Dcl-Pr TheProcedure;`,
-    `  parmA CHAR(20);`,
-    `End-Pr;`,
-    ``,
-    `Dcl-S theVar CHAR(20);`,
-    ``,
-    `Dcl-Proc theProcedure;`,
-    `  Dcl-Pi *N;`,
-    `    newValue Char(20);`,
-    `  End-Pi;`,
-    `  theVar = newValue;`,
-    `End-Proc;`,
+   `**FREE`,
+   ``,
+   `Dcl-s MyVariable2 CHAR(20);`,
+   ``,
+   `Dcl-Proc theProcedure;`,
+   `  MyVariable2 = 'Hello world';`,
+   `End-Proc;`,
+   ``,
+   `Dcl-Proc setValue;`,
+   `  Dcl-Pi *N;`,
+   `    newValue CHAR(20);`,
+   `  End-Pi;`,
+   `  MyVariable2 = newValue;`,
+   `End-Proc;`,
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
-}
+  expect(cache.variables.length).toBe(1);
+  expect(cache.procedures.length).toBe(2);
+
+  expect(cache.variables[0].position.line).toBe(2);
+  expect(cache.procedures[0].position.line).toBe(4);
+  expect(cache.procedures[1].position.line).toBe(8);
+
+  expect(cache.procedures[0].subItems.length).toBe(0);
+  expect(cache.procedures[1].subItems.length).toBe(1);
+});
+
+test('vitestTest6', async () => {
+  const lines = [
+   `**FREE`,
+   `Dcl-s MyVariable2 CHAR(20);`,
+   ``,
+   `Dcl-Pr TheProcedure;`,
+   `  parmA CHAR(20);`,
+   `End-Pr;`,
+   ``,
+   `MyVariable2 = 'Hello world';`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.variables.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
+});
 
 /**
-   * Test procedure length.
-   * When Procedure is defined, the prototype is overridden.
-   */
-exports.test7_fixed = async () => {
+  * Test procedure length.
+  * When Procedure is defined, the prototype is overridden.
+  */
+test('vitestTest7', async () => {
   const lines = [
-    `     DGetArtDesc       PR            50A    extproc`,
-    `     D ARID                           6A    value`,
-    ``,
-    `     PGetArtDesc       B                     export`,
-    `     DGetArtDesc       PI                   like(ardesc)`,
-    `     D P_ARID                         6A    value`,
-    `      /free`,
-    `         chainARTICLE1(P_ARID`,
-    `               );`,
-    `         return ARDESC;`,
-    `      /end-free`,
-    `     pGetArtDesc       e`,
+   `**FREE`,
+   ``,
+   `Dcl-Pr TheProcedure;`,
+   `  parmA CHAR(20);`,
+   `End-Pr;`,
+   ``,
+   `Dcl-S theVar CHAR(20);`,
+   ``,
+   `Dcl-Proc theProcedure;`,
+   `  Dcl-Pi *N;`,
+   `    newValue Char(20);`,
+   `  End-Pi;`,
+   `  theVar = newValue;`,
+   `End-Proc;`,
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
-}
+  expect(cache.variables.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures[0].subItems.length).toBe(1);
+});
 
 /**
-   * Constant definition test
-   * */
-exports.test8 = async () => {
+  * Test procedure length.
+  * When Procedure is defined, the prototype is overridden.
+  */
+test('vitestTest7_fixed', async () => {
   const lines = [
-    `**FREE`,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `Dcl-C theConstant 'Hello world';`,
+   `     DGetArtDesc       PR            50A    extproc`,
+   `     D ARID                           6A    value`,
+   ``,
+   `     PGetArtDesc       B                     export`,
+   `     DGetArtDesc       PI                   like(ardesc)`,
+   `     D P_ARID                         6A    value`,
+   `      /free`,
+   `         chainARTICLE1(P_ARID`,
+   `               );`,
+   `         return ARDESC;`,
+   `      /end-free`,
+   `     pGetArtDesc       e`,
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
-}
+  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures[0].subItems.length).toBe(1);
+});
 
 /**
-   * Check that local variables are not in global scope
-   */
-exports.test9 = async () => {
+  * Constant definition test
+  * */
+test('vitestTest8', async () => {
   const lines = [
-    `**FREE`,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `Dcl-C theConstant 'Hello world';`,
-    ``,
-    `Dcl-Proc theProcedure;`,
-    `  Dcl-Pi *N;`,
-    `    newValue Char(20);`,
-    `  End-Pi;`,
-    `  Dcl-S localVar Char(20);`,
-    `  localVar = newValue;`,
-    `  MyVariable2 = localVar;`,
-    `End-Proc;`,
+   `**FREE`,
+   `Dcl-s MyVariable2 Char(20);`,
+   ``,
+   `Dcl-C theConstant 'Hello world';`,
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
-}
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+});
 
 /**
-   * Test copybook
-   * */
-exports.test10 = async () => {
+  * Check that local variables are not in global scope
+  */
+test('vitestTest9', async () => {
   const lines = [
-    `**FREE`,
-    ``,
-    `Ctl-Opt DftActGrp(*No);`,
-    ``,
-    `/copy './tests/rpgle/copy1.rpgle'`,
-    ``,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `Dcl-C theConstant 'Hello world';`,
-    ``,
-    `CallP theExtProcedure(myVariable);`,
-    ``,
-    `Return;`
+   `**FREE`,
+   `Dcl-s MyVariable2 Char(20);`,
+   ``,
+   `Dcl-C theConstant 'Hello world';`,
+   ``,
+   `Dcl-Proc theProcedure;`,
+   `  Dcl-Pi *N;`,
+   `    newValue Char(20);`,
+   `  End-Pi;`,
+   `  Dcl-S localVar Char(20);`,
+   `  localVar = newValue;`,
+   `  MyVariable2 = localVar;`,
+   `End-Proc;`,
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(Object.keys(cache.keyword).length, 1);
-  assert.strictEqual(cache.keyword[`DFTACTGRP`], `*NO`);
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures[0].subItems.length).toBe(1);
+});
+
+/**
+  * Test copybook
+  * */
+test('vitestTest10', async () => {
+  const lines = [
+   `**FREE`,
+   ``,
+   `Ctl-Opt DftActGrp(*No);`,
+   ``,
+   `/copy './tests/rpgle/copy1.rpgle'`,
+   ``,
+   `Dcl-s MyVariable2 Char(20);`,
+   ``,
+   `Dcl-C theConstant 'Hello world';`,
+   ``,
+   `CallP theExtProcedure(myVariable);`,
+   ``,
+   `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(Object.keys(cache.keyword).length).toBe(1);
+  expect(cache.keyword[`DFTACTGRP`]).toBe(`*NO`);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures[0].subItems.length).toBe(1);
 
   const baseNameInclude = path.basename(cache.procedures[0].position.path);
-  assert.strictEqual(baseNameInclude, `copy1.rpgle`, `Path is incorrect`);
-  assert.strictEqual(cache.procedures[0].position.line, 2, `Index of 3 expected`);
-}
+  expect(baseNameInclude).toBe(`copy1.rpgle`);
+  expect(cache.procedures[0].position.line).toBe(2);
+});
 
-exports.test10_local_fixedcopy = async () => {
+test('test10_local_fixedcopy', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -300,21 +293,21 @@ exports.test10_local_fixedcopy = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
 
   const uppercase = cache.find(`UPPERCASE`);
 
   const baseNameInclude = path.basename(uppercase.position.path);
-  assert.strictEqual(baseNameInclude, `eof4.rpgle`, `Path is incorrect`);
-}
+  expect(baseNameInclude).toBe(`eof4.rpgle`);
+});
 
 /**
    * Test many copybooks
    * */
-exports.test11 = async () => {
+test('test11', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -336,16 +329,16 @@ exports.test11 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.includes.length, 2);
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 2, `Expect length of 2`);
-  assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.structs[0].subItems.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
-}
+  expect(cache.includes.length).toBe(2);
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(2);
+  expect(cache.structs.length).toBe(1);
+  expect(cache.structs[0].subItems.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures[0].subItems.length).toBe(1);
+});
 
-exports.test12 = async () => {
+test('test12', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -376,36 +369,36 @@ exports.test12 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.includes.length, 1);
+  expect(cache.includes.length).toBe(1);
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
 
   // One prototype and one declared
-  assert.strictEqual(cache.procedures.length, 2, `Expect length of 2`);
+  expect(cache.procedures.length).toBe(2);
 
   // Valid names
-  assert.strictEqual(cache.procedures[0].name, `theExtProcedure`, `Expect valid name`);
-  assert.strictEqual(cache.procedures[1].name, `theLocalProc`, `Expect valid name`);
+  expect(cache.procedures[0].name).toBe(`theExtProcedure`);
+  expect(cache.procedures[1].name).toBe(`theLocalProc`);
 
   const theLocalProc = cache.find(`theLocalProc`);
 
-  assert.deepStrictEqual(theLocalProc.range, {
+  expect(theLocalProc.range).toEqual({
     start: 16,
     end: 23
   });
 
   // Has a parameter
-  assert.strictEqual(theLocalProc.subItems.length, 1, `Expect length of 1`);
+  expect(theLocalProc.subItems.length).toBe(1);
 
   // Has a local scope
-  assert.strictEqual(theLocalProc.scope !== undefined, true, `Should have a scope`);
+  expect(theLocalProc.scope !== undefined).toBe(true);
 
   // Should have a local variable
-  assert.strictEqual(theLocalProc.scope.variables.length, 1, `Expect length of 1`);
-};
+  expect(theLocalProc.scope.variables.length).toBe(1);
+});
 
-exports.indicators1 = async () => {
+test('indicators1', async () => {
   const lines = [
     `**FREE`,
     `Dcl-S MyVar char(10);`,
@@ -426,11 +419,11 @@ exports.indicators1 = async () => {
 
   const in10 = cache.find(`IN10`);
 
-  assert.strictEqual(in10.references.length, 2);
-};
+  expect(in10.references.length).toBe(2);
+});
 
 
-exports.subds1 = async () => {
+test('subds1', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -459,22 +452,22 @@ exports.subds1 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.structs.length, 1);
+  expect(cache.structs.length).toBe(1);
 
   const DsChangingNodeRole = cache.find(`DsChangingNodeRole`);
-  assert.strictEqual(DsChangingNodeRole.name, `DsChangingNodeRole`);
-  assert.strictEqual(DsChangingNodeRole.position.line, 2);
+  expect(DsChangingNodeRole.name).toBe(`DsChangingNodeRole`);
+  expect(DsChangingNodeRole.position.line).toBe(2);
 
-  assert.strictEqual(DsChangingNodeRole.subItems.length, 13);
-  assert.strictEqual(DsChangingNodeRole.subItems[12].name, `Role`);
+  expect(DsChangingNodeRole.subItems.length).toBe(13);
+  expect(DsChangingNodeRole.subItems[12].name).toBe(`Role`);
 
-  assert.deepStrictEqual(DsChangingNodeRole.range, {
+  expect(DsChangingNodeRole.range).toEqual({
     start: 2,
     end: 19
   });
-};
+});
 
-exports.range1 = async () => {
+test('range1', async () => {
   const lines = [
     `**FREE`,
     `///`,
@@ -505,23 +498,23 @@ exports.range1 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.procedures.length, 2);
+  expect(cache.procedures.length).toBe(2);
 
   const json_getDelims = cache.find(`json_getDelims`);
-  assert.deepStrictEqual(json_getDelims.range, {
+  expect(json_getDelims.range).toEqual({
     start: 11,
     end: 11
   });
 
   const json_getDelimiters = cache.find(`json_setDelimiters`);
-  assert.strictEqual(json_getDelimiters.subItems.length, 1);
-  assert.deepStrictEqual(json_getDelimiters.range, {
+  expect(json_getDelimiters.subItems.length).toBe(1);
+  expect(json_getDelimiters.range).toEqual({
     start: 21,
     end: 23
   });
-};
+});
 
-exports.range2 = async () => {
+test('range2', async () => {
   const lines = [
     `**free`,
     `Dcl-S  FullCmd      Char(32);`,
@@ -533,18 +526,18 @@ exports.range2 = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.variables.length, 2);
-  assert.strictEqual(cache.structs.length, 1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.structs.length).toBe(1);
 
   const ABCD = cache.find(`ABCD`);
-  assert.strictEqual(ABCD.keyword[`LIKEDS`], `BBOOP`);
-  assert.deepStrictEqual(ABCD.range, {
+  expect(ABCD.keyword[`LIKEDS`]).toBe(`BBOOP`);
+  expect(ABCD.range).toEqual({
     start: 2,
     end: 2
   });
-}
+});
 
-exports.inline_end_pi = async () => {
+test('inline_end_pi', async () => {
   const lines = [
     `       dcl-proc getHandle;`,
     ``,
@@ -566,11 +559,11 @@ exports.inline_end_pi = async () => {
 
   const getHandle = cache.find(`getHandle`);
 
-  assert.strictEqual(getHandle.keyword[`LIKE`], `HANDLE_T`);
-  assert.strictEqual(getHandle.keyword[`END-PI`], undefined);
-}
+  expect(getHandle.keyword[`LIKE`]).toBe(`HANDLE_T`);
+  expect(getHandle.keyword[`END-PI`]).toBeUndefined();
+});
 
-exports.issue_168 = async () => {
+test('issue_168', async () => {
   const lines = [
     `**free`,
     `Ctl-opt datfmt(*iso) timfmt(*iso) alwnull(*usrctl) debug;`,
@@ -603,9 +596,9 @@ exports.issue_168 = async () => {
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-}
+});
 
-exports.issues_168a = async () => {
+test('issues_168a', async () => {
   const lines = [
     `**free`,
     `Ctl-opt datfmt(*iso) timfmt(*iso) alwnull(*usrctl) debug;`,
@@ -650,9 +643,9 @@ exports.issues_168a = async () => {
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-}
+});
 
-exports.issues_170b = async () => {
+test('issues_170b', async () => {
   const lines = [
     `**free`,
     ``,
@@ -677,16 +670,16 @@ exports.issues_170b = async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   const WkStnInd = cache.find(`WkStnInd`);
-  assert.strictEqual(WkStnInd.name, `WkStnInd`);
-  assert.strictEqual(WkStnInd.subItems.length, 11);
+  expect(WkStnInd.name).toBe(`WkStnInd`);
+  expect(WkStnInd.subItems.length).toBe(11);
 
   const error = cache.find(`Error`);
-  assert.strictEqual(error.name, `Error`);
-  assert.strictEqual(error.keyword[`IND`], true);
-  assert.strictEqual(error.keyword[`POS`], `25`);
-}
+  expect(error.name).toBe(`Error`);
+  expect(error.keyword[`IND`]).toBe(true);
+  expect(error.keyword[`POS`]).toBe(`25`);
+});
 
-exports.issues_dcl_subf = async () => {
+test('issues_dcl_subf', async () => {
   const lines = [
     `**free`,
     ``,
@@ -704,13 +697,13 @@ exports.issues_dcl_subf = async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   const inputsYo = cache.find(`inputsYo`);
-  assert.strictEqual(inputsYo.subItems.length, 7);
+  expect(inputsYo.subItems.length).toBe(7);
 
   const boop_Addr1 = inputsYo.subItems[0];
-  assert.strictEqual(boop_Addr1.name, `boop_Addr1`);
-}
+  expect(boop_Addr1.name).toBe(`boop_Addr1`);
+});
 
-exports.issue_195a = async () => {
+test('issue_195a', async () => {
   const lines = [
     `**free`,
     `//***********************************************************************`,
@@ -737,13 +730,12 @@ exports.issue_195a = async () => {
     `End-Proc ScomponiStringa;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   cache.clearReferences();
-}
+});
 
-exports.issue_195b = async () => {
+test('issue_195b', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -795,16 +787,15 @@ exports.issue_195b = async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.procedures.length, 1);
+  expect(cache.procedures.length).toBe(1);
 
   const DoProfileStuff = cache.find(`DoProfileStuff`);
-  assert.strictEqual(DoProfileStuff.scope.procedures.length, 2);
-}
+  expect(DoProfileStuff.scope.procedures.length).toBe(2);
+});
 
-exports.exec_1 = async () => {
+test('exec_1', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -819,15 +810,14 @@ exports.exec_1 = async () => {
     `Return;`
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 1);
-  assert.strictEqual(cache.sqlReferences[0].name, `sysdummy1`);
-  assert.strictEqual(cache.sqlReferences[0].description, `sysibm`);
-}
+  expect(cache.sqlReferences.length).toBe(1);
+  expect(cache.sqlReferences[0].name).toBe(`sysdummy1`);
+  expect(cache.sqlReferences[0].description).toBe(`sysibm`);
+});
 
-exports.exec_2 = async () => {
+test('exec_2', async () => {
   const lines = [
     `**free`,
     `Dcl-s DeptNum Char(3);`,
@@ -848,18 +838,17 @@ exports.exec_2 = async () => {
     `    WHERE WORKDEPT = :deptNum;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
-  assert.strictEqual(cache.sqlReferences[0].name, `Employee`);
-  assert.strictEqual(cache.sqlReferences[0].description, ``);
+  expect(cache.sqlReferences.length).toBe(2);
+  expect(cache.sqlReferences[0].name).toBe(`Employee`);
+  expect(cache.sqlReferences[0].description).toBe(``);
 
-  assert.strictEqual(cache.sqlReferences[1].name, `Employee`);
-  assert.strictEqual(cache.sqlReferences[1].description, `sample`);
-}
+  expect(cache.sqlReferences[1].name).toBe(`Employee`);
+  expect(cache.sqlReferences[1].description).toBe(`sample`);
+});
 
-exports.exec_3 = async () => {
+test('exec_3', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -874,13 +863,12 @@ exports.exec_3 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 0);
-}
+  expect(cache.sqlReferences.length).toBe(0);
+});
 
-exports.exec_4 = async () => {
+test('exec_4', async () => {
   const lines = [
     `        dcl-s NULL pointer inz(*NULL);`,
     `        dcl-s amount1 packed(7:2);`,
@@ -907,15 +895,14 @@ exports.exec_4 = async () => {
     `            sample.employee;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 1);
-  assert.strictEqual(cache.sqlReferences[0].name, `employee`);
-  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
-}
+  expect(cache.sqlReferences.length).toBe(1);
+  expect(cache.sqlReferences[0].name).toBe(`employee`);
+  expect(cache.sqlReferences[0].description).toBe(`sample`);
+});
 
-exports.exec_5 = async () => {
+test('exec_5', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -930,19 +917,18 @@ exports.exec_5 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
+  expect(cache.sqlReferences.length).toBe(2);
 
-  assert.strictEqual(cache.sqlReferences[0].name, `mytable`);
-  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+  expect(cache.sqlReferences[0].name).toBe(`mytable`);
+  expect(cache.sqlReferences[0].description).toBe(`sample`);
 
-  assert.strictEqual(cache.sqlReferences[1].name, `othertable`);
-  assert.strictEqual(cache.sqlReferences[1].description, ``);
-}
+  expect(cache.sqlReferences[1].name).toBe(`othertable`);
+  expect(cache.sqlReferences[1].description).toBe(``);
+});
 
-exports.exec_6 = async () => {
+test('exec_6', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -959,19 +945,18 @@ exports.exec_6 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
+  expect(cache.sqlReferences.length).toBe(2);
 
-  assert.strictEqual(cache.sqlReferences[0].name, `mytable`);
-  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+  expect(cache.sqlReferences[0].name).toBe(`mytable`);
+  expect(cache.sqlReferences[0].description).toBe(`sample`);
 
-  assert.strictEqual(cache.sqlReferences[1].name, `othertable`);
-  assert.strictEqual(cache.sqlReferences[1].description, ``);
-}
+  expect(cache.sqlReferences[1].name).toBe(`othertable`);
+  expect(cache.sqlReferences[1].description).toBe(``);
+});
 
-exports.exec_7 = async () => {
+test('exec_7', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -988,19 +973,18 @@ exports.exec_7 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
+  expect(cache.sqlReferences.length).toBe(2);
 
-  assert.strictEqual(cache.sqlReferences[0].name, `thetable`);
-  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+  expect(cache.sqlReferences[0].name).toBe(`thetable`);
+  expect(cache.sqlReferences[0].description).toBe(`sample`);
 
-  assert.strictEqual(cache.sqlReferences[1].name, `cooltable`);
-  assert.strictEqual(cache.sqlReferences[1].description, ``);
-}
+  expect(cache.sqlReferences[1].name).toBe(`cooltable`);
+  expect(cache.sqlReferences[1].description).toBe(``);
+});
 
-exports.exec_8 = async () => {
+test('exec_8', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1017,19 +1001,18 @@ exports.exec_8 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
+  expect(cache.sqlReferences.length).toBe(2);
 
-  assert.strictEqual(cache.sqlReferences[0].name, `thetable`);
-  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+  expect(cache.sqlReferences[0].name).toBe(`thetable`);
+  expect(cache.sqlReferences[0].description).toBe(`sample`);
 
-  assert.strictEqual(cache.sqlReferences[1].name, `wooptable`);
-  assert.strictEqual(cache.sqlReferences[1].description, ``);
-}
+  expect(cache.sqlReferences[1].name).toBe(`wooptable`);
+  expect(cache.sqlReferences[1].description).toBe(``);
+});
 
-exports.exec_9 = async () => {
+test('exec_9', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1044,19 +1027,18 @@ exports.exec_9 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
+  expect(cache.sqlReferences.length).toBe(2);
 
-  assert.strictEqual(cache.sqlReferences[0].name, `MyRandomProc`);
-  assert.strictEqual(cache.sqlReferences[0].description, `sample`);
+  expect(cache.sqlReferences[0].name).toBe(`MyRandomProc`);
+  expect(cache.sqlReferences[0].description).toBe(`sample`);
 
-  assert.strictEqual(cache.sqlReferences[1].name, `OtherCoolProc`);
-  assert.strictEqual(cache.sqlReferences[1].description, ``);
-}
+  expect(cache.sqlReferences[1].name).toBe(`OtherCoolProc`);
+  expect(cache.sqlReferences[1].description).toBe(``);
+});
 
-exports.exec_10 = async () => {
+test('exec_10', async () => {
   const lines = [
     `        EXEC SQL`,
     `          DECLARE C1 CURSOR FOR`,
@@ -1068,19 +1050,18 @@ exports.exec_10 = async () => {
     `            ORDER BY MSGDAT DESC, MSGTIM DESC;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
+  expect(cache.sqlReferences.length).toBe(2);
 
-  assert.strictEqual(cache.sqlReferences[0].name, `PSBORDS`);
-  assert.strictEqual(cache.sqlReferences[0].description, ``);
+  expect(cache.sqlReferences[0].name).toBe(`PSBORDS`);
+  expect(cache.sqlReferences[0].description).toBe(``);
 
-  assert.strictEqual(cache.sqlReferences[1].name, `PMESSGS`);
-  assert.strictEqual(cache.sqlReferences[1].description, ``);
-}
+  expect(cache.sqlReferences[1].name).toBe(`PMESSGS`);
+  expect(cache.sqlReferences[1].description).toBe(``);
+});
 
-exports.exec_11 = async () => {
+test('exec_11', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1096,15 +1077,14 @@ exports.exec_11 = async () => {
     `return;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 2);
-  assert.strictEqual(cache.sqlReferences[0].name, `PrdBlock`);
-  assert.strictEqual(cache.sqlReferences[1].name, `prdblk2add`);
-}
+  expect(cache.sqlReferences.length).toBe(2);
+  expect(cache.sqlReferences[0].name).toBe(`PrdBlock`);
+  expect(cache.sqlReferences[1].name).toBe(`prdblk2add`);
+});
 
-exports.exec_12_a = async () => {
+test('exec_12_a', async () => {
   const lines = [
     `**free`,
     `exec sql declare c2 cursor for`,
@@ -1117,15 +1097,14 @@ exports.exec_12_a = async () => {
     `order by arid ;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences[0].name, `article`);
-  assert.strictEqual(cache.sqlReferences[1].name, `artiprov`);
-  assert.strictEqual(cache.sqlReferences.length, 2);
-}
+  expect(cache.sqlReferences[0].name).toBe(`article`);
+  expect(cache.sqlReferences[1].name).toBe(`artiprov`);
+  expect(cache.sqlReferences.length).toBe(2);
+});
 
-exports.exec_12_b = async () => {
+test('exec_12_b', async () => {
   const lines = [
     `**free`,
     `exec sql declare c2 cursor for`,
@@ -1138,15 +1117,14 @@ exports.exec_12_b = async () => {
     `order by arid ;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences[0].name, `article`);
-  assert.strictEqual(cache.sqlReferences[1].name, `artiprov`);
-  assert.strictEqual(cache.sqlReferences.length, 2);
-}
+  expect(cache.sqlReferences[0].name).toBe(`article`);
+  expect(cache.sqlReferences[1].name).toBe(`artiprov`);
+  expect(cache.sqlReferences.length).toBe(2);
+});
 
-exports.exec_13 = async () => {
+test('exec_13', async () => {
   const lines = [
     `**FREE`,
     `EXEC SQL`,
@@ -1162,14 +1140,13 @@ exports.exec_13 = async () => {
     ` );`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.sqlReferences.length, 1);
-  assert.strictEqual(cache.sqlReferences[0].name, `TRANSACTION`);
-}
+  expect(cache.sqlReferences.length).toBe(1);
+  expect(cache.sqlReferences[0].name).toBe(`TRANSACTION`);
+});
 
-exports.enum_1 = async () => {
+test('enum_1', async () => {
   const lines = [
     `**free`,
     ``,
@@ -1193,16 +1170,15 @@ exports.enum_1 = async () => {
     `END-DS;`,
   ].join(`\n`);
 
-  const parser = parserSetup();
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.constants.length, 2);
+  expect(cache.constants.length).toBe(2);
 
   const sizes = cache.find(`sizes`);
-  assert.strictEqual(sizes.name, `sizes`);
-  assert.strictEqual(sizes.subItems.length, 4);
+  expect(sizes.name).toBe(`sizes`);
+  expect(sizes.subItems.length).toBe(4);
 
   const jobMsgQ = cache.find(`jobMsgQ`);
-  assert.strictEqual(jobMsgQ.name, `jobMsgQ`);
-  assert.strictEqual(jobMsgQ.subItems.length, 3);
-}
+  expect(jobMsgQ.name).toBe(`jobMsgQ`);
+  expect(jobMsgQ.subItems.length).toBe(3);
+});

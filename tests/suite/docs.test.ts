@@ -1,13 +1,12 @@
 
-const assert = require(`assert`);
+import setupParser from "../parserSetup";
+import Linter from "../../language/linter";
+import { test, expect } from "vitest";
 
-const { default: parserSetup } = require(`../parserSetup`);
-const { default: Linter } = require(`../../language/linter`);
-
-const parser = parserSetup();
+const parser = setupParser();
 const uri = `source.rpgle`;
 
-exports.issue_202 = async () => {
+test("issue_202", async () => {
   const lines = [
     `**free`,
     `///`,
@@ -30,24 +29,24 @@ exports.issue_202 = async () => {
 
   const toLower = cache.find(`ToLower`);
 
-  assert.strictEqual(toLower.description, `This procedure will take a string and transform it to lowercase`);
+  expect(toLower.description).toBe(`This procedure will take a string and transform it to lowercase`);
 
   const tags = toLower.tags;
-  assert.deepStrictEqual(tags[0], {
+  expect(tags[0]).toEqual({
     tag: `param`,
     content: `The string`
   });
 
-  assert.deepStrictEqual(tags[1], {
+  expect(tags[1]).toEqual({
     tag: `return`,
     content: `The lowercase value`
   });
 
   const stringInParam = toLower.subItems[0];
-  assert.strictEqual(stringInParam.description, `The string`);
-}
+  expect(stringInParam.description).toBe(`The string`);
+});
 
-exports.issue_231 = async () => {
+test("issue_231", async () => {
   const lines = [
     `**FREE`,
     `Ctl-Opt Main(MainLine);`,
@@ -86,6 +85,6 @@ exports.issue_231 = async () => {
     PrettyComments: true,
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0);
-  assert.strictEqual(errors.length, 0);
-}
+  expect(indentErrors.length).toBe(0);
+  expect(errors.length).toBe(0);
+});

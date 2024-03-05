@@ -2,7 +2,7 @@ on: pull_request
     
 jobs:
   release:
-    name: Validation
+    name: Create PR build
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'build')
     steps:
