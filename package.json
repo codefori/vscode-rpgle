@@ -75,7 +75,8 @@
 		}
 	},
 	"scripts": {
-		"test": "vitest",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"package": "vsce package",
 		"package:linter": "LANGUAGE_TOOLS_ENABLED=\"false\" FORMATTER_ENABLED=\"false\" vsce package",
 		"vscode:prepublish": "npm run webpack",

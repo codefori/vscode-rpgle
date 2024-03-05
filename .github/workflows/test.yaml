@@ -1,0 +1,16 @@
+on:
+  pull_request:
+    paths:
+      - 'language/**'
+    
+jobs:
+  release:
+    name: Test runner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - run: npm install
+      - run: node ./node_modules/eslint/bin/eslint src/** --no-error-on-unmatched-pattern
+      - run: npm run test
