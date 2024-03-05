@@ -1,12 +1,14 @@
 
-const assert = require(`assert`);
+import path from "path";
+import setupParser from "../parserSetup";
+import Linter from "../../language/linter";
+import Cache from "../../language/models/cache";
+import { test, expect } from "vitest";
 
-const {default: parserSetup} = require(`../parserSetup`);
-
-const parser = parserSetup();
+const parser = setupParser();
 const uri = `source.rpgle`;
   
-exports.simple_file = async () => {
+test("simple_file", async () => {
   const lines = [
     `**free`,
     ``,
@@ -19,27 +21,27 @@ exports.simple_file = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.files.length, 1);
-  assert.strictEqual(cache.structs.length, 0);
+  expect(cache.files.length).toBe(1);
+  expect(cache.structs.length).toBe(0);
 
   const fileDef = cache.find(`employee`);
-  assert.strictEqual(fileDef.name, `employee`);
-  assert.strictEqual(fileDef.keyword[`DISK`], true);
-  assert.strictEqual(fileDef.keyword[`USAGE`], `*INPUT`);
+  expect(fileDef.name).toBe(`employee`);
+  expect(fileDef.keyword[`DISK`]).toBe(true);
+  expect(fileDef.keyword[`USAGE`]).toBe(`*INPUT`);
 
   // file record formats should be expanded into the subitems
-  assert.strictEqual(fileDef.subItems.length, 1);
+  expect(fileDef.subItems.length).toBe(1);
 
   const empRdcFmt = fileDef.subItems[0];
 
-  assert.strictEqual(empRdcFmt.name, `EMPLOYEE`);
+  expect(empRdcFmt.name).toBe(`EMPLOYEE`);
 
-  assert.strictEqual(empRdcFmt.subItems[1].keywords[0], `VARCHAR(12)`);																	   
+  expect(empRdcFmt.subItems[1].keywords[0]).toBe(`VARCHAR(12)`);																	   
   // 14 fields inside of this record format
-  assert.strictEqual(empRdcFmt.subItems.length, 14);
-};
+  expect(empRdcFmt.subItems.length).toBe(14);
+});
 
-exports.many_formats = async () => {
+test("many_formats", async () => {
   const lines = [
     `**free`,
     ``,
@@ -52,25 +54,25 @@ exports.many_formats = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.files.length, 1);
+  expect(cache.files.length).toBe(1);
 
   const fileDef = cache.find(`emps`);
-  assert.strictEqual(fileDef.name, `emps`);
-  assert.strictEqual(fileDef.keyword[`WORKSTN`], true);
+  expect(fileDef.name).toBe(`emps`);
+  expect(fileDef.keyword[`WORKSTN`]).toBe(true);
 
   // file record formats should be expanded into the subitems
-  assert.strictEqual(fileDef.subItems.length, 2);
+  expect(fileDef.subItems.length).toBe(2);
 
   const sfldta = fileDef.subItems[0];
-  assert.strictEqual(sfldta.name, `SFLDTA`);
-  assert.strictEqual(sfldta.subItems.length, 5);
+  expect(sfldta.name).toBe(`SFLDTA`);
+  expect(sfldta.subItems.length).toBe(5);
 
   const sflctl = fileDef.subItems[1];
-  assert.strictEqual(sflctl.name, `SFLCTL`);
-  assert.strictEqual(sflctl.subItems.length, 1);
-};
+  expect(sflctl.name).toBe(`SFLCTL`);
+  expect(sflctl.subItems.length).toBe(1);
+});
 
-exports.ds_extname = async () => {
+test("ds_extname", async () => {
   const lines = [
     `**free`,
     ``,
@@ -84,15 +86,15 @@ exports.ds_extname = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.files.length, 0);
-  assert.strictEqual(cache.structs.length, 1);
+  expect(cache.files.length).toBe(0);
+  expect(cache.structs.length).toBe(1);
 
   const structDef = cache.find(`employee`);
-  assert.strictEqual(structDef.name, `Employee`);
-  assert.strictEqual(structDef.subItems.length, 14);
-};
+  expect(structDef.name).toBe(`Employee`);
+  expect(structDef.subItems.length).toBe(14);
+});
 
-exports.ds_extname_no_alias = async () => {
+test("ds_extname_no_alias", async () => {
   const lines = [
     `**free`,
     ``,
@@ -106,17 +108,17 @@ exports.ds_extname_no_alias = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.files.length, 0);
-  assert.strictEqual(cache.structs.length, 1);
+  expect(cache.files.length).toBe(0);
+  expect(cache.structs.length).toBe(1);
 
   const dept = cache.find(`dept`);
-  assert.strictEqual(dept.subItems.length, 5);
+  expect(dept.subItems.length).toBe(5);
 
-  assert.strictEqual(dept.subItems[0].name, `DEPTNO`);
-  assert.strictEqual(dept.subItems[1].name, `DEPTNAME`);
-}
+  expect(dept.subItems[0].name).toBe(`DEPTNO`);
+  expect(dept.subItems[1].name).toBe(`DEPTNAME`);
+});
 
-exports.ds_extname_alias = async () => {
+test("ds_extname_alias", async () => {
   const lines = [
     `**free`,
     ``,
@@ -130,17 +132,17 @@ exports.ds_extname_alias = async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  assert.strictEqual(cache.files.length, 0);
-  assert.strictEqual(cache.structs.length, 1);
+  expect(cache.files.length).toBe(0);
+  expect(cache.structs.length).toBe(1);
 
   const dept = cache.find(`dept`);
-  assert.strictEqual(dept.subItems.length, 5);
+  expect(dept.subItems.length).toBe(5);
 
-  assert.strictEqual(dept.subItems[0].name, `DEPTNO`);
-  assert.strictEqual(dept.subItems[1].name, `DEPTNAME`);
-}
+  expect(dept.subItems[0].name).toBe(`DEPTNO`);
+  expect(dept.subItems[1].name).toBe(`DEPTNAME`);
+});
 
-exports.file_prefix = async () => {
+test("file_prefix", async () => {
   const lines = [
     `**free`,
     ``,
@@ -154,5 +156,5 @@ exports.file_prefix = async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   const disp = cache.find(`display`);
-  assert.strictEqual(disp.subItems[0].subItems[0].name, `DE1_OPTION`);
-}
+  expect(disp.subItems[0].subItems[0].name).toBe(`DE1_OPTION`);
+});
