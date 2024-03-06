@@ -20,11 +20,4 @@ module.exports = withDefaults({
     filename: `server.js`,
     path: path.join(__dirname, `..`, `..`, `out`)
   },
-  plugins: [
-    new webpack.DefinePlugin({
-      'process.env.LANGUAGE_TOOLS_ENABLED': process.env.LANGUAGE_TOOLS_ENABLED || `true`,
-      'process.env.LINTER_ENABLED': process.env.LINTER_ENABLED || `true`,
-      'process.env.FORMATTER_ENABLED': process.env.FORMATTER_ENABLED || `true`,
-    }),
-  ],
 });

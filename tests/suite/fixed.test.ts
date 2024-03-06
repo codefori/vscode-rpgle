@@ -1,13 +1,12 @@
 
-const assert = require(`assert`);
-const path = require(`path`);
+import path from "path";
+import setupParser from "../parserSetup";
+import { test, expect } from "vitest";
 
-const {default: parserSetup} = require(`../parserSetup`);
-
-const parser = parserSetup();
+const parser = setupParser();
 const uri = `source.rpgle`;
-  
-exports.fixed1 = async () => {
+
+test('fixed1', async () => {
   const lines = [
     ``,
     `     FINVMST    IF   E           K DISK`,
@@ -20,24 +19,24 @@ exports.fixed1 = async () => {
     `     C                   eval      *inlr = *on`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.files.length, 1);
-  assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
+  expect(cache.files.length).to.equal(1);
+  expect(cache.variables.length).to.equal(2);
 
   const wkCorp = cache.variables[0];
-  assert.strictEqual(wkCorp.name, `wkCorp`);
-  assert.strictEqual(wkCorp.position.line, 3);
-  assert.strictEqual(wkCorp.keywords[0], `CHAR(10)`);
-  assert.strictEqual(wkCorp.keywords[1], `INZ('100')`);
+  expect(wkCorp.name).to.equal('wkCorp');
+  expect(wkCorp.position.line).to.equal(3);
+  expect(wkCorp.keywords[0]).to.equal('CHAR(10)');
+  expect(wkCorp.keywords[1]).to.equal(`INZ('100')`);
 
   const wkInvoice = cache.variables[1];
-  assert.strictEqual(wkInvoice.name, `wkInvoice`);
-  assert.strictEqual(wkInvoice.position.line, 4);
-  assert.strictEqual(wkInvoice.keywords[0], `CHAR(15)`);
-};
+  expect(wkInvoice.name).to.equal('wkInvoice');
+  expect(wkInvoice.position.line).to.equal(4);
+  expect(wkInvoice.keywords[0]).to.equal('CHAR(15)');
+});
 
-exports.fixed2 = async () => {
+test('fixed2', async () => {
   const lines = [
     ``,
     `      *`,
@@ -60,19 +59,19 @@ exports.fixed2 = async () => {
     `     `,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 13, `Expect length of 13`);
+  expect(cache.variables.length).to.equal(13);
 
   const CHARFields = cache.variables.filter(v => v.keywords[0].startsWith(`CHAR`));
-  assert.strictEqual(CHARFields.length, 12, `Expect length of 12`);
+  expect(CHARFields.length).to.equal(12);
 
   const countVar = cache.variables.find(v => v.name === `Count`);
-  assert.strictEqual(countVar.keywords[0], `PACKED(4:0)`);
-  assert.strictEqual(countVar.keyword[`PACKED`], `4:0`)
-};
+  expect(countVar.keywords[0]).to.equal(`PACKED(4:0)`);
+  expect(countVar.keyword[`PACKED`]).to.equal(`4:0`);
+});
 
-exports.fixed3 = async () => {
+test('fixed3', async () => {
   const lines = [
     `     d Worktype        s             10    INZ('*OUTQ')`,
     ``,
@@ -87,27 +86,26 @@ exports.fixed3 = async () => {
     `     d  MsgQueNbr             25     28B 0`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
-    
+  expect(cache.variables.length).to.equal(1);
+  expect(cache.structs.length).to.equal(1);
+
   const Worktype = cache.variables[0];
-  assert.strictEqual(Worktype.name, `Worktype`);
-  assert.strictEqual(Worktype.position.line, 0);
-  assert.strictEqual(Worktype.keywords[0], `CHAR(10)`);
-  assert.strictEqual(Worktype.keywords[1], `INZ('*OUTQ')`);
-  assert.strictEqual(Worktype.keyword[`CHAR`], `10`);
-  assert.strictEqual(Worktype.keyword[`INZ`], `'*OUTQ'`);
+  expect(Worktype.name).to.equal('Worktype');
+  expect(Worktype.position.line).to.equal(0);
+  expect(Worktype.keywords[0]).to.equal('CHAR(10)');
+  expect(Worktype.keywords[1]).to.equal(`INZ('*OUTQ')`);
+  expect(Worktype.keyword[`CHAR`]).to.equal('10');
+  expect(Worktype.keyword[`INZ`]).to.equal(`'*OUTQ'`);
 
   const DS = cache.structs[0];
-  assert.strictEqual(DS.name, `*N`);
-  assert.strictEqual(DS.position.line, 3);
-  assert.strictEqual(DS.subItems.length, 7);
-  assert.strictEqual(DS.subItems.find(i => !i.keyword[`BINDEC`]), undefined);
-};
+  expect(DS.name).to.equal('*N');
+  expect(DS.position.line).to.equal(3);
+  expect(DS.subItems.length).to.equal(7);
+});
 
-exports.fixed4 = async () => {
+test('fixed4', async () => {
   const lines = [
     ``,
     `     d InType          s             10`,
@@ -127,26 +125,26 @@ exports.fixed4 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
-  assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).to.equal(2);
+  expect(cache.structs.length).to.equal(1);
 
   const InType = cache.find(`InType`);
-  assert.strictEqual(InType.name, `InType`);
-  assert.strictEqual(InType.position.line, 1);
+  expect(InType.name).to.equal(`InType`);
+  expect(InType.position.line).to.equal(1);
 
   const Worktype = cache.variables[1];
-  assert.strictEqual(Worktype.name, `Worktype`);
-  assert.strictEqual(Worktype.position.line, 14);
+  expect(Worktype.name).to.equal(`Worktype`);
+  expect(Worktype.position.line).to.equal(14);
 
   const InputDs = cache.structs[0];
-  assert.strictEqual(InputDs.name, `InputDs`);
-  assert.strictEqual(InputDs.position.line, 6);
-  assert.strictEqual(InputDs.subItems.length, 7);
-};
+  expect(InputDs.name).to.equal(`InputDs`);
+  expect(InputDs.position.line).to.equal(6);
+  expect(InputDs.subItems.length).to.equal(7);
+});
 
-exports.fixed5 = async () => {
+test('fixed5', async () => {
   const lines = [
     ``,
     `      *`,
@@ -187,21 +185,21 @@ exports.fixed5 = async () => {
     `     d  InpRcdFmt             49     58`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
-  assert.strictEqual(cache.structs.length, 2, `Expect length of 2`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).to.equal(2);
+  expect(cache.structs.length).to.equal(2);
+  expect(cache.procedures.length).to.equal(1);
 
   const RtvObjD = cache.procedures[0];
-  assert.strictEqual(RtvObjD.name, `RtvObjD`);
-  assert.strictEqual(RtvObjD.position.line, 18);
-  assert.strictEqual(RtvObjD.keywords.join(` `).trim(), `EXTPGM( 'QUSROBJD' )`);
-  assert.strictEqual(RtvObjD.keyword[`EXTPGM`], `'QUSROBJD'`);
-  assert.strictEqual(RtvObjD.subItems.length, 6);
-};
+  expect(RtvObjD.name).to.equal(`RtvObjD`);
+  expect(RtvObjD.position.line).to.equal(18);
+  expect(RtvObjD.keywords.join(` `).trim()).to.equal(`EXTPGM( 'QUSROBJD' )`);
+  expect(RtvObjD.keyword[`EXTPGM`]).to.equal(`'QUSROBJD'`);
+  expect(RtvObjD.subItems.length).to.equal(6);
+});
 
-exports.fixed6 = async () => {
+test('fixed6', async () => {
   const lines = [
     ``,
     `0.00 DDATE0            S               D                                             130124`,
@@ -215,34 +213,34 @@ exports.fixed6 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 8, `Expect length of 8`);
+  expect(cache.variables.length).to.equal(8);
 
   const lenVar = cache.find(`len`);
-  assert.strictEqual(lenVar.name, `len`);
-  assert.strictEqual(lenVar.position.line, 6);
-  assert.strictEqual(lenVar.keywords[0], `INT(5)`);
-  assert.strictEqual(lenVar.keyword[`INT`], `5`);
+  expect(lenVar.name).to.equal(`len`);
+  expect(lenVar.position.line).to.equal(6);
+  expect(lenVar.keywords[0]).to.equal(`INT(5)`);
+  expect(lenVar.keyword[`INT`]).to.equal(`5`);
 
   const date2Var = cache.find(`DATE2`);
-  assert.strictEqual(date2Var.name, `DATE2`);
-  assert.strictEqual(date2Var.position.line, 3);
-  assert.strictEqual(date2Var.keywords[0], `DATE`);
-  assert.strictEqual(date2Var.keyword[`DATE`], true);
-  assert.strictEqual(date2Var.keywords[1], `DATFMT(*JIS)`);
-  assert.strictEqual(date2Var.keyword[`DATFMT`], `*JIS`);
+  expect(date2Var.name).to.equal(`DATE2`);
+  expect(date2Var.position.line).to.equal(3);
+  expect(date2Var.keywords[0]).to.equal(`DATE`);
+  expect(date2Var.keyword[`DATE`]).to.equal(true);
+  expect(date2Var.keywords[1]).to.equal(`DATFMT(*JIS)`);
+  expect(date2Var.keyword[`DATFMT`]).to.equal(`*JIS`);
 
   const time0Var = cache.find(`TIME0`);
-  assert.strictEqual(time0Var.name, `TIME0`);
-  assert.strictEqual(time0Var.position.line, 7);
-  assert.strictEqual(time0Var.keywords[0], `TIME`);
-  assert.strictEqual(time0Var.keyword[`TIME`], true);
-  assert.strictEqual(time0Var.keywords[1], `INZ(T'10.12.15')`);
-  assert.strictEqual(time0Var.keyword[`INZ`], `T'10.12.15'`);
-};
+  expect(time0Var.name).to.equal(`TIME0`);
+  expect(time0Var.position.line).to.equal(7);
+  expect(time0Var.keywords[0]).to.equal(`TIME`);
+  expect(time0Var.keyword[`TIME`]).to.equal(true);
+  expect(time0Var.keywords[1]).to.equal(`INZ(T'10.12.15')`);
+  expect(time0Var.keyword[`INZ`]).to.equal(`T'10.12.15'`);
+});
 
-exports.fixed7 = async () => {
+test('fixed7', async () => {
   const lines = [
     ``,
     `       // -----------------------`,
@@ -261,21 +259,21 @@ exports.fixed7 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+  expect(cache.procedures.length).to.equal(1);
 
   const Obj_Next = cache.find(`Obj_Next`);
-  assert.strictEqual(Obj_Next.name, `Obj_Next`);
-  assert.strictEqual(Obj_Next.position.line, 3);
-  assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
-  assert.strictEqual(Obj_Next.keyword[`EXPORT`], true);
-  assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
-  assert.strictEqual(Obj_Next.keyword[`LIKEDS`], `OBJECTDS`);
-  assert.strictEqual(Obj_Next.subItems.length, 0);
-};
+  expect(Obj_Next.name).to.equal(`Obj_Next`);
+  expect(Obj_Next.position.line).to.equal(3);
+  expect(Obj_Next.keywords.includes(`EXPORT`)).to.equal(true);
+  expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
+  expect(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`)).to.equal(true);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.subItems.length).to.equal(0);
+});
 
-exports.fixed8 = async () => {
+test('fixed8', async () => {
   const lines = [
     ``,
     `      **========================================================================`,
@@ -326,14 +324,14 @@ exports.fixed8 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.subroutines.length, 2);
-  assert.strictEqual(cache.subroutines[0].name, `$QUSCRTUS`);
-  assert.strictEqual(cache.subroutines[1].name, `$QUSLMBR`);
-};
+  expect(cache.subroutines.length).to.equal(2);
+  expect(cache.subroutines[0].name).to.equal(`$QUSCRTUS`);
+  expect(cache.subroutines[1].name).to.equal(`$QUSLMBR`);
+});
 
-exports.fixed9 = async () => {
+test('fixed9', async () => {
   const lines = [
     ``,
     `       // -----------------------`,
@@ -354,28 +352,28 @@ exports.fixed9 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.procedures.length, 2);
+  expect(cache.includes.length).to.equal(1);
+  expect(cache.procedures.length).to.equal(2);
 
   const Obj_Next = cache.find(`Obj_Next`);
-  assert.strictEqual(Obj_Next.name, `Obj_Next`);
-  assert.strictEqual(Obj_Next.position.line, 5);
-  assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
-  assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
-  assert.strictEqual(Obj_Next.keyword[`EXPORT`], true);
-  assert.strictEqual(Obj_Next.keyword[`LIKEDS`], `OBJECTDS`);
-  assert.strictEqual(Obj_Next.subItems.length, 0);
+  expect(Obj_Next.name).to.equal(`Obj_Next`);
+  expect(Obj_Next.position.line).to.equal(5);
+  expect(Obj_Next.keywords.includes(`EXPORT`)).to.equal(true);
+  expect(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`)).to.equal(true);
+  expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
-  assert.strictEqual(theExtProcedure.name, `theExtProcedure`);
-  assert.strictEqual(theExtProcedure.position.line, 2);
-  assert.strictEqual(theExtProcedure.keywords.includes(`EXTPROC`), true);
-  assert.strictEqual(theExtProcedure.subItems.length, 1);
-};
+  expect(theExtProcedure.name).to.equal(`theExtProcedure`);
+  expect(theExtProcedure.position.line).to.equal(2);
+  expect(theExtProcedure.keywords.includes(`EXTPROC`)).to.equal(true);
+  expect(theExtProcedure.subItems.length).to.equal(1);
+});
 
-exports.fixed9_2 = async () => {
+test('fixed9_2', async () => {
   const lines = [
     ``,
     `       // -----------------------`,
@@ -396,30 +394,28 @@ exports.fixed9_2 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.procedures.length, 2);
+  expect(cache.includes.length).to.equal(1);
+  expect(cache.procedures.length).to.equal(2);
 
   const Obj_Next = cache.find(`Obj_Next`);
-  assert.strictEqual(Obj_Next.name, `Obj_Next`);
-  assert.strictEqual(Obj_Next.position.line, 5);
-  assert.strictEqual(Obj_Next.keywords.includes(`EXPORT`), true);
-  assert.strictEqual(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`), true);
-  assert.strictEqual(Obj_Next.keyword[`EXPORT`], true);
-  assert.strictEqual(Obj_Next.keyword[`LIKEDS`], `OBJECTDS`);
-  assert.strictEqual(Obj_Next.subItems.length, 0);
+  expect(Obj_Next.name).to.equal(`Obj_Next`);
+  expect(Obj_Next.position.line).to.equal(5);
+  expect(Obj_Next.keywords.includes(`EXPORT`)).to.equal(true);
+  expect(Obj_Next.keywords.includes(`LIKEDS(OBJECTDS)`)).to.equal(true);
+  expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
-  assert.strictEqual(theExtProcedure.name, `theExtProcedure`);
-  assert.strictEqual(theExtProcedure.position.line, 2);
-  assert.strictEqual(theExtProcedure.keywords.includes(`EXTPROC`), true);
-  assert.strictEqual(theExtProcedure.subItems.length, 1);
-};
+  expect(theExtProcedure.name).to.equal(`theExtProcedure`);
+  expect(theExtProcedure.position.line).to.equal(2);
+  expect(theExtProcedure.keywords.includes(`EXTPROC`)).to.equal(true);
+  expect(theExtProcedure.subItems.length).to.equal(1);
+});
 
-
-
-exports.fixed9_3 = async () => {
+test('fixed9_3', async () => {
   const lines = [
     ``,
     `         Ctl-Opt DftActGrp(*No);`,
@@ -435,23 +431,20 @@ exports.fixed9_3 = async () => {
     `         Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
+  expect(cache.includes.length).to.equal(1);
+  expect(cache.variables.length).to.equal(1, `Expect length of 1`);
+  expect(cache.constants.length).to.equal(1, `Expect length of 1`);
+  expect(cache.procedures.length).to.equal(1, `Expect length of 1`);
 
   const uppercase = cache.find(`UPPERCASE`);
 
   const baseNameInclude = path.basename(uppercase.position.path);
-  assert.strictEqual(baseNameInclude, `eof4.rpgle`);
-}
+  expect(baseNameInclude).to.equal(`eof4.rpgle`);
+});
 
-/**
-   * Issue with detecting correct type on subfield.
-   */
-exports.fixed10 = async () => {
+test('fixed10', async () => {
   const lines = [
     `     d  data           ds                  inz`,
     `     d   arid                         6`,
@@ -464,27 +457,27 @@ exports.fixed10 = async () => {
     `         return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
   const dataDs = cache.find(`data`);
-  assert.strictEqual(dataDs.name, `data`);
-  assert.strictEqual(dataDs.subItems.length, 4);
+  expect(dataDs.name).to.equal(`data`);
+  expect(dataDs.subItems.length).to.equal(4);
 
-  assert.strictEqual(dataDs.range.start, 0);
-  assert.strictEqual(dataDs.range.end, 4);
+  expect(dataDs.range.start).to.equal(0);
+  expect(dataDs.range.end).to.equal(4);
 
   const rrn02 = cache.find(`rrn02`);
-  assert.strictEqual(rrn02.name, `rrn02`);
-  assert.strictEqual(rrn02.keywords.includes(`PACKED(7:2)`), true);
-  assert.strictEqual(rrn02.keyword[`PACKED`], `7:2`);
+  expect(rrn02.name).to.equal(`rrn02`);
+  expect(rrn02.keywords.includes(`PACKED(7:2)`)).to.equal(true);
+  expect(rrn02.keyword[`PACKED`]).to.equal(`7:2`);
 
   const arsalePr = dataDs.subItems[3];
-  assert.strictEqual(arsalePr.name, `arsalePr`);
-  assert.strictEqual(arsalePr.keywords.includes(`ZONED(7:2)`), true);
-  assert.strictEqual(arsalePr.keyword[`ZONED`], `7:2`);
-};
+  expect(arsalePr.name).to.equal(`arsalePr`);
+  expect(arsalePr.keywords.includes(`ZONED(7:2)`)).to.equal(true);
+  expect(arsalePr.keyword[`ZONED`]).to.equal(`7:2`);
+});
 
-exports.fixedfree1 = async () => {
+test('fixedfree1', async () => {
   const lines = [
     `      *  Field Definitions.`,
     `      * ~~~~~~~~~~~~~~~~~~~~~~~~`,
@@ -540,33 +533,33 @@ exports.fixedfree1 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 3);
-  assert.strictEqual(cache.variables.find(i => !i.keywords.includes(`CHAR(10)`)), undefined);
+  expect(cache.variables.length).to.equal(3);
+  expect(cache.variables.find(i => !i.keywords.includes(`CHAR(10)`))).to.be.undefined;
 
-  assert.strictEqual(cache.subroutines.length, 0);
+  expect(cache.subroutines.length).to.equal(0);
 
-  assert.strictEqual(cache.procedures.length, 1);
-    
+  expect(cache.procedures.length).to.equal(1);
+
   const Obj_List = cache.find(`Obj_List`);
-  assert.strictEqual(Obj_List.name, `Obj_List`);
-  assert.strictEqual(Obj_List.range.start, 6);
-  assert.strictEqual(Obj_List.range.end, 50);
-  assert.strictEqual(Obj_List.position.line, 6);
-  assert.strictEqual(Obj_List.keywords.includes(`EXPORT`), true);
-  assert.strictEqual(Obj_List.keyword[`EXPORT`], true);
-  assert.strictEqual(Obj_List.subItems.length, 3);
+  expect(Obj_List.name).to.equal(`Obj_List`);
+  expect(Obj_List.range.start).to.equal(6);
+  expect(Obj_List.range.end).to.equal(50);
+  expect(Obj_List.position.line).to.equal(6);
+  expect(Obj_List.keywords.includes(`EXPORT`)).to.equal(true);
+  expect(Obj_List.keyword[`EXPORT`]).to.equal(true);
+  expect(Obj_List.subItems.length).to.equal(3);
 
-  assert.strictEqual(Obj_List.subItems.find(i => !i.keywords.includes(`CHAR(10)`)), undefined);
-  assert.strictEqual(Obj_List.subItems.find(i => !i.keywords.includes(`CONST`)), undefined);
+  expect(Obj_List.subItems.find(i => !i.keywords.includes(`CHAR(10)`))).to.be.undefined;
+  expect(Obj_List.subItems.find(i => !i.keywords.includes(`CONST`))).to.be.undefined;
 
   const scope = Obj_List.scope;
-  assert.strictEqual(scope.subroutines.length, 1);
-  assert.strictEqual(scope.variables.length, 1);
-};
+  expect(scope.subroutines.length).to.equal(1);
+  expect(scope.variables.length).to.equal(1);
+});
 
-exports.fixed11 = async () => {
+test('fixed11', async () => {
   const lines = [
     `     D F4DATE          PR`,
     `     D                                1`,
@@ -581,34 +574,34 @@ exports.fixed11 = async () => {
     `     D  VIEW                          1A`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
   const F4DATE = cache.find(`F4DATE`);
-  assert.strictEqual(F4DATE.subItems.length, 4);
-  assert.strictEqual(F4DATE.range.start, 0);
-  assert.strictEqual(F4DATE.range.end, 4);
+  expect(F4DATE.subItems.length).to.equal(4);
+  expect(F4DATE.range.start).to.equal(0);
+  expect(F4DATE.range.end).to.equal(4);
 
   const parm1 = F4DATE.subItems[0];
-  assert.strictEqual(parm1.keywords[0], `CHAR(1)`);
+  expect(parm1.keywords[0]).to.equal(`CHAR(1)`);
 
   const parm2 = F4DATE.subItems[1];
-  assert.strictEqual(parm2.keywords[0], `CHAR(15)`);
+  expect(parm2.keywords[0]).to.equal(`CHAR(15)`);
 
   const parm3 = F4DATE.subItems[2];
-  assert.strictEqual(parm3.keywords[0], `CHAR(6)`);
-  assert.strictEqual(parm3.keywords[1], `OPTIONS(*NOPASS)`);
+  expect(parm3.keywords[0]).to.equal(`CHAR(6)`);
+  expect(parm3.keywords[1]).to.equal(`OPTIONS(*NOPASS)`);
 
   const parm4 = F4DATE.subItems[3];
-  assert.strictEqual(parm4.keywords[0], `CHAR(1)`);
-  assert.strictEqual(parm4.keywords[1], `OPTIONS(*NOPASS)`);
+  expect(parm4.keywords[0]).to.equal(`CHAR(1)`);
+  expect(parm4.keywords[1]).to.equal(`OPTIONS(*NOPASS)`);
 
   const F4DATEDS = cache.find(`F4DATEDS`);
-  assert.strictEqual(F4DATEDS.subItems.length, 4);
-  assert.strictEqual(F4DATEDS.range.start, 6);
-  assert.strictEqual(F4DATEDS.range.end, 10);
-};
+  expect(F4DATEDS.subItems.length).to.equal(4);
+  expect(F4DATEDS.range.start).to.equal(6);
+  expect(F4DATEDS.range.end).to.equal(10);
+});
 
-exports.columnFix = async () => {
+test('columnFix', async () => {
   const lines = [
     `       Dcl-pr abcd1         Extpgm('ABC049');`,
     `         ParentProductSearch           zoned(11);`,
@@ -626,30 +619,30 @@ exports.columnFix = async () => {
     `       end-pr;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.procedures.length, 3);
+  expect(cache.procedures.length).to.equal(3);
 
   const abcd1 = cache.find(`abcd1`);
-  assert.deepStrictEqual(abcd1.range, {
+  expect(abcd1.range).to.deep.equal({
     start: 0,
     end: 4
   });
 
   const abcd2 = cache.find(`abcd2`);
-  assert.deepStrictEqual(abcd2.range, {
+  expect(abcd2.range).to.deep.equal({
     start: 5,
     end: 10
   });
 
   const abcd3 = cache.find(`abcd3`);
-  assert.deepStrictEqual(abcd3.range, {
+  expect(abcd3.range).to.deep.equal({
     start: 11,
     end: 13
   });
-};
+});
 
-exports.comments1 = async () => {
+test('comments1', async () => {
   const lines = [
     `       //=== Prototypes for SRV_MSG routines ========================`,
     `       //============================================================`,
@@ -686,54 +679,54 @@ exports.comments1 = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.procedures.length, 6);
+  expect(cache.procedures.length).to.equal(6);
 
   const SndMsgPgmQ = cache.find(`SndMsgPgmQ`);
-  assert.strictEqual(SndMsgPgmQ.subItems.length, 4);
-  assert.deepStrictEqual(SndMsgPgmQ.range,  {
+  expect(SndMsgPgmQ.subItems.length).to.equal(4);
+  expect(SndMsgPgmQ.range).to.deep.equal({
     start: 2,
     end: 7
   });
 
   const ClrMsgPgmQ = cache.find(`ClrMsgPgmQ`);
-  assert.strictEqual(ClrMsgPgmQ.subItems.length, 1);
-  assert.deepStrictEqual(ClrMsgPgmQ.range,  {
+  expect(ClrMsgPgmQ.subItems.length).to.equal(1);
+  expect(ClrMsgPgmQ.range).to.deep.equal({
     start: 9,
     end: 10
   });
 
   const SndEscMsg = cache.find(`SndEscMsg`);
-  assert.strictEqual(SndEscMsg.subItems.length, 1);
-  assert.deepStrictEqual(SndEscMsg.range,  {
+  expect(SndEscMsg.subItems.length).to.equal(1);
+  expect(SndEscMsg.range).to.deep.equal({
     start: 13,
     end: 14
   });
 
   const SndInfMsg = cache.find(`SndInfMsg`);
-  assert.strictEqual(SndInfMsg.subItems.length, 1);
-  assert.deepStrictEqual(SndInfMsg.range,  {
+  expect(SndInfMsg.subItems.length).to.equal(1);
+  expect(SndInfMsg.range).to.deep.equal({
     start: 17,
     end: 18
   });
 
   const JobLogMsg = cache.find(`JobLogMsg`);
-  assert.strictEqual(JobLogMsg.subItems.length, 1);
-  assert.deepStrictEqual(JobLogMsg.range,  {
+  expect(JobLogMsg.subItems.length).to.equal(1);
+  expect(JobLogMsg.range).to.deep.equal({
     start: 21,
     end: 22
   });
 
   const Show = cache.find(`Show`);
-  assert.strictEqual(Show.subItems.length, 3);
-  assert.deepStrictEqual(Show.range,  {
+  expect(Show.subItems.length).to.equal(3);
+  expect(Show.range).to.deep.equal({
     start: 25,
     end: 28
   });
-};
+});
 
-exports.ranges = async () => {
+test('ranges', async () => {
   const lines = [
     `     D******************************************************************`,
     `     D*Record structure for QUSRJOBI JOBI1000 format`,
@@ -786,19 +779,19 @@ exports.ranges = async () => {
     `     D*                                             Page Fault Count`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
   const QUSLWT = cache.find(`QUSLWT`);
-  assert.strictEqual(QUSLWT.keyword[`UNS`], `20`);
+  expect(QUSLWT.keyword[`UNS`]).to.equal(`20`);
 
   const QUSUUDBP = cache.find(`QUSUUDBP`);
-  assert.strictEqual(QUSUUDBP.keyword[`INT`], `10`);
+  expect(QUSUUDBP.keyword[`INT`]).to.equal(`10`);
 
   const QUSUN19 = cache.find(`QUSUN19`);
-  assert.strictEqual(QUSUN19.keyword[`CHAR`], `10`);
-}
+  expect(QUSUN19.keyword[`CHAR`]).to.equal(`10`);
+});
 
-exports.def_ranges = async () => {
+test('def_ranges', async () => {
   const lines = [
     `      * ********************************************************************/`,
     `      *                                                                    *`,
@@ -989,40 +982,40 @@ exports.def_ranges = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
   const TYPEMST_T = cache.find(`TYPEMST_T`);
-  assert.deepStrictEqual(TYPEMST_T.range, {
+  expect(TYPEMST_T.range).to.deep.equal({
     start: 16,
     end: 16
   });
 
   const TYPEMST_Ds = cache.find(`TYPEMST_Ds`);
-  assert.deepStrictEqual(TYPEMST_Ds.range, {
+  expect(TYPEMST_Ds.range).to.deep.equal({
     start: 37,
     end: 39
   });
 
   const TYPEMST_F = cache.find(`TYPEMST_F`);
-  assert.deepStrictEqual(TYPEMST_F.range, {
+  expect(TYPEMST_F.range).to.deep.equal({
     start: 41,
     end: 41
   });
 
   const $ErrorDS_TYPEMST = cache.find(`$ErrorDS_TYPEMST`);
-  assert.deepStrictEqual($ErrorDS_TYPEMST.range, {
+  expect($ErrorDS_TYPEMST.range).to.deep.equal({
     start: 164,
     end: 167
   });
 
   const $Validate_TYPEMST = cache.find(`$Validate_TYPEMST`);
-  assert.deepStrictEqual($Validate_TYPEMST.range, {
+  expect($Validate_TYPEMST.range).to.deep.equal({
     start: 45,
     end: 48
   });
-};
+});
 
-exports.ctl_opt_fixed = async () => {
+test('ctl_opt_fixed', async () => {
   const lines = [
     `     H ALTSEQ(*EXT) CURSYM('$') DATEDIT(*MDY) DATFMT(*MDY/) DEBUG(*YES)`,
     `     H DECEDIT('.') FORMSALIGN(*YES) FTRANS(*SRC) DFTNAME(name)`,
@@ -1046,18 +1039,18 @@ exports.ctl_opt_fixed = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 2, `Expect length of 2`);
-  assert.strictEqual(cache.structs.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).to.equal(2);
+  expect(cache.structs.length).to.equal(1);
 
-  assert.strictEqual(Object.keys(cache.keyword).length, 11);
-  assert.strictEqual(cache.keyword[`FTRANS`], `*SRC`);
-  assert.strictEqual(cache.keyword[`DATFMT`], `*MDY/`);
-  assert.strictEqual(cache.keyword[`COPYRIGHT`], `'(C) Copyright ABC Programming - 1995'`);
-};
+  expect(Object.keys(cache.keyword).length).to.equal(11);
+  expect(cache.keyword[`FTRANS`]).to.equal(`*SRC`);
+  expect(cache.keyword[`DATFMT`]).to.equal(`*MDY/`);
+  expect(cache.keyword[`COPYRIGHT`]).to.equal(`'(C) Copyright ABC Programming - 1995'`);
+});
 
-exports.call_opcode = async () => {
+test('call_opcode', async () => {
   const lines = [
     `     C     CreateNewBoardBEGSR`,
     `     C                   EVAL      wWinMode = 'T'`,
@@ -1082,17 +1075,17 @@ exports.call_opcode = async () => {
     ``
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.subroutines.length, 1);
-  assert.strictEqual(cache.procedures.length, 1);
+  expect(cache.subroutines.length).to.equal(1);
+  expect(cache.procedures.length).to.equal(1);
 
   const fixedCall = cache.find(`BBSWINASKR`)
-  assert.strictEqual(fixedCall.name, `BBSWINASKR`);
-  assert.strictEqual(fixedCall.keyword[`EXTPGM`], true);
-}
+  expect(fixedCall.name).to.equal(`BBSWINASKR`);
+  expect(fixedCall.keyword[`EXTPGM`]).to.equal(true);
+});
 
-exports.file_keywords = async () => {
+test('file_keywords', async () => {
   const lines = [
     ``,
     `     forder     o    e             disk`,
@@ -1107,22 +1100,22 @@ exports.file_keywords = async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.files.length, 4);
+  expect(cache.files.length).to.equal(4);
 
   const tmpdetord = cache.find(`Tmpdetord`);
-  assert.strictEqual(tmpdetord.keyword[`EXTDESC`], `'DETORD'`);
-  assert.strictEqual(tmpdetord.keyword[`EXTFILE`], `*EXTDESC`);
-  assert.strictEqual(tmpdetord.keyword[`RENAME`], `fdeto:tmprec`);
+  expect(tmpdetord.keyword[`EXTDESC`]).to.equal(`'DETORD'`);
+  expect(tmpdetord.keyword[`EXTFILE`]).to.equal(`*EXTDESC`);
+  expect(tmpdetord.keyword[`RENAME`]).to.equal(`fdeto:tmprec`);
 
   const ord100d = cache.find(`ord100d`);
-  assert.strictEqual(ord100d.keyword[`INDDS`], `indds`);
-  assert.strictEqual(ord100d.keyword[`SFILE`], `sfl01:rrn01`);
-  assert.strictEqual(ord100d.keyword[`INFDS`], `Info`);
-}
+  expect(ord100d.keyword[`INDDS`]).to.equal(`indds`);
+  expect(ord100d.keyword[`SFILE`]).to.equal(`sfl01:rrn01`);
+  expect(ord100d.keyword[`INFDS`]).to.equal(`Info`);
+});
 
-exports.plist_test = async () => {
+test('plist_test', async () => {
   const lines = [
     ``,
     `     ?*                                                                                       PLPVD`,
@@ -1167,7 +1160,7 @@ exports.plist_test = async () => {
     ``
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  assert.strictEqual(cache.variables.length, 0);
-}
+  expect(cache.variables.length).to.equal(0);
+});

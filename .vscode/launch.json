@@ -39,7 +39,7 @@
 				"type": "npm",
 				"script": "compile:tests"
 			},
-			"args": [],
+			"args": ["sqlRunner1"],
 			"env": {
 				"INCLUDE_DIR": "${workspaceFolder}"
 			}

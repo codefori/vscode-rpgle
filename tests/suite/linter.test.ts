@@ -1,15 +1,13 @@
 
-const assert = require(`assert`);
+import path from "path";
+import setupParser from "../parserSetup";
+import Linter from "../../language/linter";
+import { test, expect } from "vitest";
 
-const { default: parserSetup } = require(`../parserSetup`);
-const { default: Linter } = require(`../../language/linter`);
-const path = require(`path`);
-const { Range, Position } = require(`../../language/models/DataPoints`);
-
-const parser = parserSetup();
+const parser = setupParser();
 const uri = `source.rpgle`;
 
-exports.linter_indent_multi_1 = async () => {
+test("linter_indent_multi_1", async () => {
   const lines = [
     `**FREE`,
     `Begsr shouldBeGood;`,
@@ -40,10 +38,10 @@ exports.linter_indent_multi_1 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0, `There should be no errors`);
-};
+  expect(indentErrors.length).toBe(0);
+});
 
-exports.linter_indent_multi_2 = async () => {
+test("linter_indent_multi_2", async () => {
   const lines = [
     `**FREE`,
     `Begsr shouldError;`,
@@ -61,20 +59,13 @@ exports.linter_indent_multi_2 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 1, `There should be 1 error`);
+  expect(indentErrors.length).toBe(1);
+  expect(indentErrors[0].line).toBe(5);
+  expect(indentErrors[0].currentIndent).toBe(5);
+  expect(indentErrors[0].expectedIndent).toBe(4);
+});
 
-  // TODO: we aren't count this yet
-  // assert.strictEqual(indentErrors[0].line, 3, `First error should be index 3`);
-  // assert.strictEqual(indentErrors[0].currentIndent, 1, `Actual indent should be 1`);
-  // assert.strictEqual(indentErrors[0].expectedIndent, 2, `Expected indent should be 2`);
-
-  assert.strictEqual(indentErrors[0].line, 5, `Second error should be index 5`);
-  assert.strictEqual(indentErrors[0].currentIndent, 5, `Actual indent should be 5`);
-  
-  assert.strictEqual(indentErrors[0].expectedIndent, 4, `Expected indent should be 4`);
-};
-
-exports.linter_invalid_statement = async () => {
+test("linter_invalid_statement", async () => {
   const lines = [
     `**FREE`,
     `Dcl-s abcd char(5); Dsply 'This is bad but shouldn't error';`,
@@ -88,10 +79,10 @@ exports.linter_invalid_statement = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0, `There should be 1 error`);
-};
+  expect(indentErrors.length).toBe(0);
+});
 
-exports.linter1_indent = async () => {
+test("linter1_indent", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -114,87 +105,87 @@ exports.linter1_indent = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 1, `Expect length of 1`);
-  assert.strictEqual(indentErrors[0].line, 11, `Index of 9 expected`);
-  assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
-  assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
-};
+  expect(indentErrors.length).toBe(1);
+  expect(indentErrors[0].line).toBe(11);
+  expect(indentErrors[0].currentIndent).toBe(0);
+  expect(indentErrors[0].expectedIndent).toBe(2);
+});
 
 /**
-   * Testing spaces before the EOL
-   */
-exports.linter1_1_indent = async () => {
+  * Testing spaces before the EOL
+  */
+test("linter1_1_indent", async () => {
   const lines = [
-    `**FREE`,
-    ``,
-    `Ctl-Opt DFTACTGRP(*No);`,
-    ``,
-    `// Prototype`,
-    `Dcl-Pr printf Int(10) ExtProc('printf');`,
-    `  format Pointer Value Options(*String); `, //This space at the end was causing an indent error on the next line
-    `END-PR;`,
-    ``,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `myVariable2 = *blank;`,
-    ``,
-    `If myVariable2 = *blank;`,
-    `  // Inside if`,
-    `  MyVariable2 = 'Hello world';`,
-    `Endif;`,
-    `Return;`
+   `**FREE`,
+   ``,
+   `Ctl-Opt DFTACTGRP(*No);`,
+   ``,
+   `// Prototype`,
+   `Dcl-Pr printf Int(10) ExtProc('printf');`,
+   `  format Pointer Value Options(*String); `, //This space at the end was causing an indent error on the next line
+   `END-PR;`,
+   ``,
+   `Dcl-s MyVariable2 Char(20);`,
+   ``,
+   `myVariable2 = *blank;`,
+   ``,
+   `If myVariable2 = *blank;`,
+   `  // Inside if`,
+   `  MyVariable2 = 'Hello world';`,
+   `Endif;`,
+   `Return;`
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-    indent: 2
+   indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
-};
+  expect(indentErrors.length).toBe(0);
+});
 
-exports.linter2_indent = async () => {
+test("linter2_indent", async () => {
   const lines = [
-    `**FREE`,
-    ``,
-    `Ctl-Opt DFTACTGRP(*No);`,
-    ``,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `myVariable2 = *blank;`,
-    ``,
-    `If myVariable2 = *blank;`,
-    `  // Inside if`,
-    `MyVariable2 = 'Hello world';`,
-    `  Select;`,
-    `    When myVariable2 = *blank;`,
-    `      // First when`,
-    `      MyVariable2 = 'Still blank?';`,
-    `    When myVariable2 = 'YOYOYO';`,
-    `      // Second when`,
-    `        MyVariable2 = 'YOYOYO';`,
-    `  Endsl;`,
-    `Endif;`,
-    `Return;`
+   `**FREE`,
+   ``,
+   `Ctl-Opt DFTACTGRP(*No);`,
+   ``,
+   `Dcl-s MyVariable2 Char(20);`,
+   ``,
+   `myVariable2 = *blank;`,
+   ``,
+   `If myVariable2 = *blank;`,
+   `  // Inside if`,
+   `MyVariable2 = 'Hello world';`,
+   `  Select;`,
+   `    When myVariable2 = *blank;`,
+   `      // First when`,
+   `      MyVariable2 = 'Still blank?';`,
+   `    When myVariable2 = 'YOYOYO';`,
+   `      // Second when`,
+   `        MyVariable2 = 'YOYOYO';`,
+   `  Endsl;`,
+   `Endif;`,
+   `Return;`
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-    indent: 2
+   indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 2, `Expect length of 2`);
+  expect(indentErrors.length).toBe(2);
 
-  assert.strictEqual(indentErrors[0].line, 10, `Index of 9 expected`);
-  assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
-  assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
+  expect(indentErrors[0].line).toBe(10);
+  expect(indentErrors[0].currentIndent).toBe(0);
+  expect(indentErrors[0].expectedIndent).toBe(2);
 
-  assert.strictEqual(indentErrors[1].line, 17, `Index of 17 expected`);
-  assert.strictEqual(indentErrors[1].currentIndent, 8, `Value of 8 expected`);
-  assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
-};
+  expect(indentErrors[1].line).toBe(17);
+  expect(indentErrors[1].currentIndent).toBe(8);
+  expect(indentErrors[1].expectedIndent).toBe(6);
+});
 
-exports.linter2_indent_other = async () => {
+test('linter2_indent_other', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -227,18 +218,16 @@ exports.linter2_indent_other = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 2, `Expect length of 2`);
+  expect(indentErrors.length).to.equal(2);
+  expect(indentErrors[0].line).to.equal(10);
+  expect(indentErrors[0].currentIndent).to.equal(0);
+  expect(indentErrors[0].expectedIndent).to.equal(2);
+  expect(indentErrors[1].line).to.equal(17);
+  expect(indentErrors[1].currentIndent).to.equal(8);
+  expect(indentErrors[1].expectedIndent).to.equal(6);
+});
 
-  assert.strictEqual(indentErrors[0].line, 10, `Index of 9 expected`);
-  assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
-  assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
-
-  assert.strictEqual(indentErrors[1].line, 17, `Index of 14 expected`);
-  assert.strictEqual(indentErrors[1].currentIndent, 8, `Value of 8 expected`);
-  assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
-};
-
-exports.linter3_indent = async () => {
+test('linter3_indent', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -267,22 +256,19 @@ exports.linter3_indent = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
+  expect(indentErrors.length).to.equal(3);
+  expect(indentErrors[0].line).to.equal(9);
+  expect(indentErrors[0].currentIndent).to.equal(0);
+  expect(indentErrors[0].expectedIndent).to.equal(2);
+  expect(indentErrors[1].line).to.equal(14);
+  expect(indentErrors[1].currentIndent).to.equal(8);
+  expect(indentErrors[1].expectedIndent).to.equal(6);
+  expect(indentErrors[2].line).to.equal(18);
+  expect(indentErrors[2].currentIndent).to.equal(2);
+  expect(indentErrors[2].expectedIndent).to.equal(0);
+});
 
-  assert.strictEqual(indentErrors[0].line, 9, `Index of 9 expected`);
-  assert.strictEqual(indentErrors[0].currentIndent, 0, `Value of 0 expected`);
-  assert.strictEqual(indentErrors[0].expectedIndent, 2, `Value of 2 expected`);
-
-  assert.strictEqual(indentErrors[1].line, 14, `Index of 14 expected`);
-  assert.strictEqual(indentErrors[1].currentIndent, 8, `Value of 8 expected`);
-  assert.strictEqual(indentErrors[1].expectedIndent, 6, `Value of 6 expected`);
-
-  assert.strictEqual(indentErrors[2].line, 18, `Index of 18 expected`);
-  assert.strictEqual(indentErrors[2].currentIndent, 2, `Value of 2 expected`);
-  assert.strictEqual(indentErrors[2].expectedIndent, 0, `Value of 0 expected`);
-};
-
-exports.linter4 = async () => {
+test('linter4', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -303,20 +289,18 @@ exports.linter4 = async () => {
     RequireBlankSpecial: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
+  expect(errors.length).to.equal(2);
+  expect(errors[0].type).to.equal('RequireBlankSpecial');
+  expect(errors[0].offset.position).to.equal(76);
+  expect(errors[0].offset.end).to.equal(78);
+  expect(errors[0].newValue).to.equal('*BLANK');
+  expect(errors[1].type).to.equal('RequireBlankSpecial');
+  expect(errors[1].offset.position).to.equal(98);
+  expect(errors[1].offset.end).to.equal(100);
+  expect(errors[1].newValue).to.equal('*BLANK');
+});
 
-  assert.strictEqual(errors[0].type, `RequireBlankSpecial`, `Expect RequireBlankSpecial`);
-  assert.strictEqual(errors[0].offset.position, 76);
-  assert.strictEqual(errors[0].offset.end, 78);
-  assert.strictEqual(errors[0].newValue, `*BLANK`, `Value of *BLANK expected`);
-
-  assert.strictEqual(errors[1].type, `RequireBlankSpecial`, `Expect RequireBlankSpecial`);
-  assert.strictEqual(errors[1].offset.position, 98, `Index of 17 expected`);
-  assert.strictEqual(errors[1].offset.end, 100, `Index of 19 expected`);
-  assert.strictEqual(errors[1].newValue, `*BLANK`, `Value of *BLANK expected`);
-};
-
-exports.linter5 = async () => {
+test('linter5', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -339,20 +323,18 @@ exports.linter5 = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
+  expect(errors.length).to.equal(2);
+  expect(errors[0].type).to.equal('IncorrectVariableCase');
+  expect(errors[0].offset.position).to.equal(62);
+  expect(errors[0].offset.end).to.equal(73);
+  expect(errors[0].newValue).to.equal('MyVariable2');
+  expect(errors[1].type).to.equal('IncorrectVariableCase');
+  expect(errors[1].offset.position).to.equal(122);
+  expect(errors[1].offset.end).to.equal(133);
+  expect(errors[1].newValue).to.equal('MyVariable2');
+});
 
-  assert.strictEqual(errors[0].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
-  assert.strictEqual(errors[0].offset.position, 62);
-  assert.strictEqual(errors[0].offset.end, 73);
-  assert.strictEqual(errors[0].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
-
-  assert.strictEqual(errors[1].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
-  assert.strictEqual(errors[1].offset.position, 122);
-  assert.strictEqual(errors[1].offset.end, 133);
-  assert.strictEqual(errors[1].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
-};
-
-exports.linter6 = async () => {
+test('linter6', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -379,18 +361,16 @@ exports.linter6 = async () => {
     StringLiteralDupe: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
+  expect(errors.length).to.equal(2);
+  expect(errors[0].type).to.equal('StringLiteralDupe');
+  expect(errors[0].offset.position).to.equal(239);
+  expect(errors[0].offset.end).to.equal(247);
+  expect(errors[1].type).to.equal('StringLiteralDupe');
+  expect(errors[1].offset.position).to.equal(271);
+  expect(errors[1].offset.end).to.equal(279);
+});
 
-  assert.strictEqual(errors[0].type, `StringLiteralDupe`, `Expect StringLiteralDupe`);
-  assert.strictEqual(errors[0].offset.position, 239);
-  assert.strictEqual(errors[0].offset.end, 247);
-
-  assert.strictEqual(errors[1].type, `StringLiteralDupe`, `Expect StringLiteralDupe`);
-  assert.strictEqual(errors[1].offset.position, 271);
-  assert.strictEqual(errors[1].offset.end, 279);
-};
-
-exports.linter6_lf = async () => {
+test('linter6_lf', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -408,30 +388,28 @@ exports.linter6_lf = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 3, `Expect length of 3`);
+  expect(errors.length).to.equal(3);
 
-  const line = new Range(new Position(4, 0), new Position(6, 18));
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).to.deep.equal({
     offset: { position: 95, end: 107 },
-    type: `IncorrectVariableCase`,
-    newValue: `Myotherthing`
+    type: 'IncorrectVariableCase',
+    newValue: 'Myotherthing'
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 44, end: 59 },
-    type: `StringLiteralDupe`,
+    type: 'StringLiteralDupe',
     newValue: undefined
   });
 
-  assert.deepStrictEqual(errors[2], {
+  expect(errors[2]).to.deep.equal({
     offset: { position: 68, end: 83 },
-    type: `StringLiteralDupe`,
+    type: 'StringLiteralDupe',
     newValue: undefined
   });
-};
+});
 
-exports.linter6_crlf = async () => {
+test('linter6_crlf', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -443,38 +421,34 @@ exports.linter6_crlf = async () => {
     `    `
   ].join(`\r\n`);
 
-  //const lines = `**FREE\r\n\r\nDcl-S Myotherthing char(10);\r\n\r\ndsply 'hello friends'\r\n      + 'hello friends' + ''\r\n    + myotherthing;`;
-
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     StringLiteralDupe: true,
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 3, `Expect length of 3`);
+  expect(errors.length).to.equal(3);
 
-  const line = new Range(new Position(4, 0), new Position(6, 18));
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).to.deep.equal({
     offset: { position: 101, end: 113 },
-    type: `IncorrectVariableCase`,
-    newValue: `Myotherthing`
+    type: 'IncorrectVariableCase',
+    newValue: 'Myotherthing'
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 48, end: 63 },
-    type: `StringLiteralDupe`,
+    type: 'StringLiteralDupe',
     newValue: undefined
   });
 
-  assert.deepStrictEqual(errors[2], {
+  expect(errors[2]).to.deep.equal({
     offset: { position: 73, end: 88 },
-    type: `StringLiteralDupe`,
+    type: 'StringLiteralDupe',
     newValue: undefined
   });
-};
+});
 
-exports.linter7_casing1 = async () => {
+test('linter7_casing1', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -499,22 +473,22 @@ exports.linter7_casing1 = async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     SpecificCasing: [
-      { operation: `if`, expected: `If` },
-      { operation: `endif`, expected: `Endif` },
-      { operation: `select`, expected: `SELECT` },
+      { operation: 'if', expected: 'If' },
+      { operation: 'endif', expected: 'Endif' },
+      { operation: 'select', expected: 'SELECT' },
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
+  expect(errors.length).to.equal(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).to.deep.equal({
     offset: { position: 141, end: 147 },
-    type: `SpecificCasing`,
-    newValue: `SELECT`
+    type: 'SpecificCasing',
+    newValue: 'SELECT'
   });
-};
+});
 
-exports.linter7_casing2 = async () => {
+test("linter7_casing2", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -543,16 +517,15 @@ exports.linter7_casing2 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
     offset: { position: 8, end: 15 },
     type: `SpecificCasing`,
     newValue: `Ctl-OPT`
   });
-};
+});
 
-exports.linter7_casing3 = async () => {
+test("linter7_casing3", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -581,16 +554,15 @@ exports.linter7_casing3 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
     offset: { position: 33, end: 38 },
     type: `SpecificCasing`,
     newValue: `DCL-S`
   });
-};
+});
 
-exports.linter7_casing4 = async () => {
+test("linter7_casing4", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -614,16 +586,15 @@ exports.linter7_casing4 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
     offset: { position: 164, end: 169 },
     type: `SpecificCasing`,
     newValue: `%trim`
   });
-};
+});
 
-exports.linter7_casing5 = async () => {
+test("linter7_casing5", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -653,10 +624,10 @@ exports.linter7_casing5 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 0, `Expect length of 0`);
-};
+  expect(errors.length).toBe(0);
+});
 
-exports.linter7_casing6 = async () => {
+test("linter7_casing6", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -680,13 +651,13 @@ exports.linter7_casing6 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 3, `Expect length of 3`);
-  assert.strictEqual(errors[0].newValue, `CTL-OPT`);
-  assert.strictEqual(errors[1].newValue, `DCL-S`);
-  assert.strictEqual(errors[2].newValue, `DCL-S`);
-};
+  expect(errors.length).toBe(3);
+  expect(errors[0].newValue).toBe(`CTL-OPT`);
+  expect(errors[1].newValue).toBe(`DCL-S`);
+  expect(errors[2].newValue).toBe(`DCL-S`);
+});
 
-exports.linter7_casing7 = async () => {
+test("linter7_casing7", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -711,12 +682,12 @@ exports.linter7_casing7 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
-  assert.strictEqual(errors[0].newValue, `DCL-S`);
-  assert.strictEqual(errors[1].newValue, `DCL-S`);
-};
+  expect(errors.length).toBe(2);
+  expect(errors[0].newValue).toBe(`DCL-S`);
+  expect(errors[1].newValue).toBe(`DCL-S`);
+});
 
-exports.linter7_casing8 = async () => {
+test("linter7_casing8", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -741,12 +712,12 @@ exports.linter7_casing8 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
-  assert.strictEqual(errors[0].newValue, `dcl-s`);
-  assert.strictEqual(errors[1].newValue, `dcl-s`);
-};
+  expect(errors.length).toBe(2);
+  expect(errors[0].newValue).toBe(`dcl-s`);
+  expect(errors[1].newValue).toBe(`dcl-s`);
+});
 
-exports.linter7_casing9 = async () => {
+test("linter7_casing9", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -770,11 +741,11 @@ exports.linter7_casing9 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
-  assert.strictEqual(errors[0].newValue, `%trim`);
-};
+  expect(errors.length).toBe(1);
+  expect(errors[0].newValue).toBe(`%trim`);
+});
 
-exports.linter7_casing10 = async () => {
+test('linter7_casing10', async () => {
   const lines = [
     `**free`,
     ``,
@@ -800,13 +771,13 @@ exports.linter7_casing10 = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
-  assert.strictEqual(errors[0].offset.position, 178);
-  assert.strictEqual(errors[0].offset.end, 188);
-  assert.strictEqual(errors[0].newValue, `sFirstName`)
-};
+  expect(errors.length).to.equal(1);
+  expect(errors[0].offset.position).to.equal(178);
+  expect(errors[0].offset.end).to.equal(188);
+  expect(errors[0].newValue).to.equal('sFirstName');
+});
 
-exports.linter7_casing11 = async () => {
+test('linter7_casing11', async () => {
   const lines = [
     `**free`,
     ``,
@@ -832,22 +803,22 @@ exports.linter7_casing11 = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2);
+  expect(errors.length).to.equal(2);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).to.deep.equal({
     offset: { position: 121, end: 127 },
-    type: `IncorrectVariableCase`,
-    newValue: `sEmpNo`
+    type: 'IncorrectVariableCase',
+    newValue: 'sEmpNo'
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 179, end: 189 },
-    type: `IncorrectVariableCase`,
-    newValue: `sFirstName`
+    type: 'IncorrectVariableCase',
+    newValue: 'sFirstName'
   });
-};
+});
 
-exports.linter7_casing12 = async () => {
+test('linter7_casing12', async () => {
   const lines = [
     `**free`,
     ``,
@@ -881,10 +852,10 @@ exports.linter7_casing12 = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).to.equal(0);
+});
 
-exports.linter8 = async () => {
+test('linter8', async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
@@ -906,13 +877,14 @@ exports.linter8 = async () => {
     RequiresParameter: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
-  assert.deepStrictEqual(errors[0], {
-    offset: { position: 236, end: 245 }, type: `RequiresParameter`
+  expect(errors.length).to.equal(1);
+  expect(errors[0]).to.deep.equal({
+    offset: { position: 236, end: 245 },
+    type: 'RequiresParameter'
   });
-};
+});
 
-exports.linter_Do_Not_Require_Parameters_For_Control_Options = async () => {
+test('linter_Do_Not_Require_Parameters_For_Control_Options', async () => {
   const lines = [
     `**FREE`,
     `ctl-opt main(main) ;`,
@@ -926,10 +898,10 @@ exports.linter_Do_Not_Require_Parameters_For_Control_Options = async () => {
     RequiresParameter: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0, `Unexpected RequiresParamters error`);
-};
+  expect(errors.length).to.equal(0);
+});
 
-exports.linter_Do_Not_Require_Parameters_For_Compile_Directives = async () => {
+test('linter_Do_Not_Require_Parameters_For_Compile_Directives', async () => {
   const lines = [
     `**FREE`,
     `/if defined(MYPROCEDURE);`,
@@ -945,13 +917,10 @@ exports.linter_Do_Not_Require_Parameters_For_Compile_Directives = async () => {
     RequiresParameter: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0, `Unexpected RequiresParamters error`);
-};
+  expect(errors.length).to.equal(0);
+});
 
-/**
-   * Check that local variables are not in global scope
-   */
-exports.linter9 = async () => {
+test('linter9', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -976,33 +945,33 @@ exports.linter9 = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).to.equal(1);
+  expect(cache.constants.length).to.equal(1);
+  expect(cache.procedures.length).to.equal(1);
+  expect(cache.procedures[0].subItems.length).to.equal(1);
 
-  assert.strictEqual(errors.length, 3, `Expect length of 3`);
+  expect(errors.length).to.equal(3);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).to.deep.equal({
     offset: { position: 194, end: 202 },
-    type: `IncorrectVariableCase`,
-    newValue: `localVar`
+    type: 'IncorrectVariableCase',
+    newValue: 'localVar'
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 217, end: 228 },
-    type: `IncorrectVariableCase`,
-    newValue: `MyVariable2`
+    type: 'IncorrectVariableCase',
+    newValue: 'MyVariable2'
   });
 
-  assert.deepStrictEqual(errors[2], {
+  expect(errors[2]).to.deep.equal({
     offset: { position: 231, end: 239 },
-    type: `IncorrectVariableCase`,
-    newValue: `localVar`
+    type: 'IncorrectVariableCase',
+    newValue: 'localVar'
   });
-};
+});
 
-exports.linter10 = async () => {
+test('linter10', async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug option(*nodebugio: *srcstmt);`,
@@ -1029,18 +998,20 @@ exports.linter10 = async () => {
     NoCTDATA: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
+  expect(errors.length).to.equal(2);
 
-  assert.deepStrictEqual(errors[0], {
-    type: `NoCTDATA`, offset: { position: 51, end: 89 }
+  expect(errors[0]).to.deep.equal({
+    type: 'NoCTDATA',
+    offset: { position: 51, end: 89 }
   });
 
-  assert.deepStrictEqual(errors[1], {
-    offset: { position: 222, end: 230 }, type: `NoCTDATA`
+  expect(errors[1]).to.deep.equal({
+    offset: { position: 222, end: 230 },
+    type: 'NoCTDATA'
   });
-};
+});
 
-exports.linter11 = async () => {
+test('linter11', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1058,24 +1029,22 @@ exports.linter11 = async () => {
     StringLiteralDupe: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
+  expect(errors.length).to.equal(2);
 
-  const line = new Range(new Position(5, 0), new Position(7, 12));
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).to.deep.equal({
     offset: { position: 73, end: 88 },
-    type: `StringLiteralDupe`,
-    newValue: `HELLO`
+    type: 'StringLiteralDupe',
+    newValue: 'HELLO'
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 97, end: 112 },
-    type: `StringLiteralDupe`,
-    newValue: `HELLO`
+    type: 'StringLiteralDupe',
+    newValue: 'HELLO'
   });
-};
+});
 
-exports.linter12 = async () => {
+test('linter12', async () => {
   const lines = [
     `**free`,
     `If 2 = 2;`,
@@ -1092,10 +1061,10 @@ exports.linter12 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
-};
+  expect(indentErrors.length).to.equal(0);
+});
 
-exports.linter13 = async () => {
+test('linter13', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1127,10 +1096,10 @@ exports.linter13 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
-};
+  expect(indentErrors.length).to.equal(0);
+});
 
-exports.linter13_commentIndent = async () => {
+test('linter13_commentIndent', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1163,65 +1132,37 @@ exports.linter13_commentIndent = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 3, `Expect length of 3`);
+  expect(indentErrors.length).to.equal(3);
 
-  assert.deepStrictEqual(indentErrors[0], {
+  expect(indentErrors[0]).to.deep.equal({
     currentIndent: 2,
     expectedIndent: 0,
     line: 9
   });
 
-  assert.deepStrictEqual(indentErrors[1], {
+  expect(indentErrors[1]).to.deep.equal({
     currentIndent: 0,
     expectedIndent: 2,
     line: 15
   });
 
-  assert.deepStrictEqual(indentErrors[2], {
+  expect(indentErrors[2]).to.deep.equal({
     currentIndent: 6,
     expectedIndent: 2,
     line: 20
   });
-};
+});
 
-exports.linter14 = async () => {
+test('linter14', async () => {
   const lines = [
-    `**FREE`,
-    `//--------------------------------------------------------------------------------------------------`,
-    `// Append a single quote. This procedure exists to make other code more readable.`,
-    `//--------------------------------------------------------------------------------------------------`,
-    `DCL-PROC Q;`,
-    `  DCL-PI Q VARCHAR(2048);`,
-    `    in_str VARCHAR(2048) CONST OPTIONS(*TRIM);`,
-    `  END-PI;`,
-    `  `,
-    `  DCL-C C_QUOTE '''';`,
-    `  DCL-S is_abend IND INZ(*OFF);`,
-    `  DCL-S return_str LIKE(in_str);`,
-    `  `,
-    `  return_str = %TRIM(C_QUOTE + in_str + C_QUOTE);`,
-    `  RETURN return_str;`,
-    `  // End of procedure`,
-    `  `,
-    `  ON-EXIT is_abend;`,
-    `    // Exit handler`,
-    `    IF is_abend;`,
-    `      return_str = 'This is a string';`,
-    `    ENDIF;`,
-    `END-PROC Q;`,
-    ``,
-    `// New procedure`,
-    `Dcl-Proc theProcedure;`,
-    `  Dcl-Pi *N;`,
-    `    newValue Char(20);`,
-    `  End-Pi;`,
-    `  // comment with right indent`,
-    `  Dcl-S localVar Char(20);`,
-    `  localvar = newValue;`,
-    `  // but valid indent`,
-    `  // with another line`,
-    `  Myvariable2 = localvar;`,
-    `End-Proc;`,
+    `**free`,
+    `If 2 = 2;`,
+    `  localvar = 'Hello' + `,
+    `    'World';`,
+    `Else;`,
+    `  buyralg_setbu_aprordr(buyralg_getbu_aprordr + `,
+    `    arrayapr(wkind));  // 10-26-2016`,
+    `Endif;`,
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
@@ -1229,10 +1170,10 @@ exports.linter14 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0, `Expect length of 0`);
-};
+  expect(indentErrors.length).to.equal(0);
+});
 
-exports.linter15 = async () => {
+test('linter15', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1265,25 +1206,25 @@ exports.linter15 = async () => {
     PrettyComments: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 5`);
+  expect(errors.length).to.equal(2);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).to.deep.equal({
     offset: { position: 36, end: 38 },
-    type: `PrettyComments`,
-    newValue: `// `
+    type: 'PrettyComments',
+    newValue: '// '
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 207, end: 209 },
-    type: `PrettyComments`,
-    newValue: `// `
+    type: 'PrettyComments',
+    newValue: '// '
   });
-};
+});
 
 /**
-   * Subroutine check test
-   * */
-exports.linter16 = async () => {
+ * Subroutine check test
+ */
+test('linter16', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 Char(20);`,
@@ -1301,25 +1242,22 @@ exports.linter16 = async () => {
     NoGlobalSubroutines: true
   }, cache);
 
-  assert.strictEqual(errors.length, 3, `Expect length of 3`);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).to.equal(3);
+  expect(errors[0]).to.deep.equal({
     type: `NoGlobalSubroutines`,
     offset: { position: 36, end: 54 }
   });
-
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 76, end: 81 },
     type: `NoGlobalSubroutines`
   });
-
-  assert.deepStrictEqual(errors[2], {
+  expect(errors[2]).to.deep.equal({
     offset: { position: 128, end: 133 },
     type: `NoGlobalSubroutines`
   });
-};
+});
 
-exports.linter16_with_leavesr = async () => {
+test('linter16_with_leavesr', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s SomeNum int(5);`,
@@ -1342,33 +1280,29 @@ exports.linter16_with_leavesr = async () => {
     NoGlobalSubroutines: true
   }, cache);
 
-  assert.strictEqual(errors.length, 4, `Expect length of 3`);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).to.equal(4);
+  expect(errors[0]).to.deep.equal({
     type: `NoGlobalSubroutines`,
     offset: { position: 71, end: 89 }
   });
-
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 111, end: 116 },
     type: `NoGlobalSubroutines`
   });
-
-  assert.deepStrictEqual(errors[2], {
+  expect(errors[2]).to.deep.equal({
     type: `NoGlobalSubroutines`,
     offset: { position: 156, end: 163 }
   });
-
-  assert.deepStrictEqual(errors[3], {
+  expect(errors[3]).to.deep.equal({
     offset: { position: 205, end: 210 },
     type: `NoGlobalSubroutines`
   });
-};
+});
 
 /**
-   * Subroutine in procedure check test
-   * */
-exports.linter17 = async () => {
+ * Subroutine in procedure check test
+ */
+test('linter17', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 Char(20);`,
@@ -1389,14 +1323,13 @@ exports.linter17 = async () => {
     NoLocalSubroutines: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1, `Expect length of 1`);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).to.equal(1);
+  expect(errors[0]).to.deep.equal({
     type: `NoLocalSubroutines`, offset: { position: 119, end: 138 }
   });
-};
+});
 
-exports.linter18 = async () => {
+test('linter18', async () => {
   const lines = [
     `**FREE`,
     `Dcl-s MyVariable2 Char(20);`,
@@ -1416,20 +1349,18 @@ exports.linter18 = async () => {
     NoGlobalsInProcedures: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2, `Expect length of 2`);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).to.equal(2);
+  expect(errors[0]).to.deep.equal({
     offset: { position: 123, end: 134 },
     type: `NoGlobalsInProcedures`
   });
-
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     offset: { position: 164, end: 175 },
     type: `NoGlobalsInProcedures`
   });
-}
+});
 
-exports.linter19 = async () => {
+test('linter19', async () => {
   const lines = [
     `**free`,
     ``,
@@ -1509,54 +1440,43 @@ exports.linter19 = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.strictEqual(errors.length, 11);
-
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).to.equal(11);
+  expect(errors[0]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 66, end: 86 }
   });
-
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 1089, end: 1104 } 
   });
-
-  assert.deepStrictEqual(errors[2], {
+  expect(errors[2]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 160, end: 176 } 
   });
-
-  assert.deepStrictEqual(errors[3], {
+  expect(errors[3]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 139, end: 154 }
   });
-
-  assert.deepStrictEqual(errors[4], {
+  expect(errors[4]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 337, end: 354 }
   });
-
-  assert.deepStrictEqual(errors[5], {
+  expect(errors[5]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 302, end: 331 }
   });
-
-  assert.deepStrictEqual(errors[6], {
+  expect(errors[6]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 539, end: 566 }
   });
-
-  assert.deepStrictEqual(errors[7], {
+  expect(errors[7]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 735, end: 749 }
   });
-
-  assert.deepStrictEqual(errors[8], {
+  expect(errors[8]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 705, end: 725 }
   });
-
-  assert.deepStrictEqual(errors[9], {
+  expect(errors[9]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 893, end: 910 }
   });
-
-  assert.deepStrictEqual(errors[10], {
+  expect(errors[10]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 849, end: 883 }
   });
-}
+});
 
-exports.linter20 = async () => {
+test('linter20', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1572,15 +1492,14 @@ exports.linter20 = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).to.equal(1);
+  expect(errors[0].type).to.equal(`IncorrectVariableCase`);
+  expect(errors[0].offset.position).to.equal(92);
+  expect(errors[0].offset.end).to.equal(103);
+  expect(errors[0].newValue).to.equal(`MyVariable2`);
+});
 
-  assert.strictEqual(errors[0].type, `IncorrectVariableCase`, `Expect IncorrectVariableCase`);
-  assert.strictEqual(errors[0].offset.position, 92);
-  assert.strictEqual(errors[0].offset.end, 103);
-  assert.strictEqual(errors[0].newValue, `MyVariable2`, `Value of MyVariable2 expected`);
-};
-
-exports.linter21 = async () => {
+test('linter21', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1614,13 +1533,13 @@ exports.linter21 = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).to.equal(1);
+  expect(errors[0]).to.deep.equal({
     type: `NoUnreferenced`, offset: { position: 257, end: 270 }
   });
-}
+});
 
-exports.linter22 = async () => {
+test('linter22', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1643,13 +1562,13 @@ exports.linter22 = async () => {
     PrototypeCheck: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).to.equal(1);
+  expect(errors[0]).to.deep.equal({
     type: `PrototypeCheck`, offset: { position: 8, end: 27 }
   });
-}
+});
 
-exports.linter22_b = async () => {
+test('linter22_b', async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1665,10 +1584,10 @@ exports.linter22_b = async () => {
     PrototypeCheck: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).to.equal(0);
+});
 
-exports.linter23 = async () => {
+test("linter23", async () => {
   const lines = [
     `**free`,
     ``,
@@ -1694,10 +1613,10 @@ exports.linter23 = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.linter24 = async () => {
+test("linter24", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1752,15 +1671,15 @@ exports.linter24 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
     type: `NoExternalTo`, offset: { position: 95, end: 132 }
   });
 
-  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `Dcl-PR GetProfile  ExtPgm('QSYGETPH')`);
-}
+  expect(lines.substring(errors[0].offset.position, errors[0].offset.end)).toBe(`Dcl-PR GetProfile  ExtPgm('QSYGETPH')`);
+});
 
-exports.linter25 = async () => {
+test("linter25", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1820,22 +1739,22 @@ exports.linter25 = async () => {
     ]
   }, cache);
 
-  assert.strictEqual(errors.length, 2);
+  expect(errors.length).toBe(2);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     type: `NoExternalTo`, offset: { position: 163, end: 200 }
   });
 
-  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `Dcl-PR GetProfile  ExtPgm('QSYGETPH')`);
+  expect(lines.substring(errors[0].offset.position, errors[0].offset.end)).toBe(`Dcl-PR GetProfile  ExtPgm('QSYGETPH')`);
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).toEqual({
     type: `NoExternalTo`, offset: { position: 506, end: 544 }
   });
 
-  assert.strictEqual(lines.substring(errors[1].offset.position, errors[1].offset.end), `Dcl-Pr CloseProfile ExtPgm('QSYRLSPH')`);
-}
+  expect(lines.substring(errors[1].offset.position, errors[1].offset.end)).toBe(`Dcl-Pr CloseProfile ExtPgm('QSYRLSPH')`);
+});
 
-exports.linter26 = async () => {
+test("linter26", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1856,10 +1775,10 @@ exports.linter26 = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.linter27 = async () => {
+test("linter27", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1879,13 +1798,13 @@ exports.linter27 = async () => {
     NoExecuteImmediate: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
     type: `NoExecuteImmediate`, offset: { position: 105, end: 148 }
   });
-}
+});
 
-exports.linter28 = async () => {
+test("linter28", async () => {
   const lines = [
     `**free`,
     `Dcl-Pr APGM extpgm(myvarNotused);`,
@@ -1901,18 +1820,18 @@ exports.linter28 = async () => {
     NoExtProgramVariable: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2);
+  expect(errors.length).toBe(2);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 26, end: 38 }, type: `NoExtProgramVariable`
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).toEqual({
     offset: { position: 81, end: 93 }, type: `NoExtProgramVariable`
   });
-}
+});
 
-exports.linter29 = async () => {
+test("linter29", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1934,22 +1853,22 @@ exports.linter29 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.includes[0].line, 4);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.includes[0].line).toBe(4);
 
-  assert.strictEqual(cache.variables.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.constants.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures.length, 1, `Expect length of 1`);
-  assert.strictEqual(cache.procedures[0].subItems.length, 1, `Expect length of 1`);
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures[0].subItems.length).toBe(1);
 
   const baseNameInclude = path.basename(cache.procedures[0].position.path);
-  assert.strictEqual(baseNameInclude, `copy1.rpgle`, `Path is incorrect`);
-  assert.strictEqual(cache.procedures[0].position.line, 2, `Index of 3 expected`);
+  expect(baseNameInclude).toBe("copy1.rpgle");
+  expect(cache.procedures[0].position.line).toBe(2);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.linter30 = async () => {
+test("linter30", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -1971,16 +1890,16 @@ exports.linter30 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).toBe(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 39, end: 49 },
     type: `IncludeMustBeRelative`,
     newValue: undefined
   });
-}
+});
 
-exports.linter31_a = async () => {
+test("linter31_a", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2002,13 +1921,13 @@ exports.linter31_a = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.includes[0].line, 4);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.includes[0].line).toBe(4);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.linter31_b = async () => {
+test("linter31_b", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2026,27 +1945,27 @@ exports.linter31_b = async () => {
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
-  const { errors } = Linter.getErrors({ 
-    uri, 
+  const { errors } = Linter.getErrors({
+    uri,
     content: lines,
     availableIncludes: [`tests/rpgle/copy1.rpgle`]
   }, {
     IncludeMustBeRelative: true,
   }, cache);
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.includes[0].line, 4);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.includes[0].line).toBe(4);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).toBe(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 39, end: 50 },
     type: `IncludeMustBeRelative`,
     newValue: `'tests/rpgle/copy1.rpgle'`
   });
-}
+});
 
-exports.linter32 = async () => {
+test("linter32", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2068,13 +1987,13 @@ exports.linter32 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.includes[0].line, 4);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.includes[0].line).toBe(4);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.linter32_b = async () => {
+test("linter32_b", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2100,19 +2019,19 @@ exports.linter32_b = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.includes[0].line, 4);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.includes[0].line).toBe(4);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).toBe(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 39, end: 52 },
     type: `IncludeMustBeRelative`,
     newValue: `'tests/rpgle/copy1.rpgle'`
   });
-}
+});
 
-exports.linter33 = async () => {
+test("linter33", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2134,17 +2053,17 @@ exports.linter33 = async () => {
     IncludeMustBeRelative: true
   }, cache);
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.includes[0].line, 4);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.includes[0].line).toBe(4);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).toBe(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 39, end: 65 }, type: `IncludeMustBeRelative`
   });
-}
+});
 
-exports.linter34 = async () => {
+test("linter34", async () => {
   const lines = [
     `**free`,
     `Dcl-s DeptNum Char(3);`,
@@ -2170,16 +2089,16 @@ exports.linter34 = async () => {
     SQLHostVarCheck: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).toBe(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 183, end: 190 },
     type: `SQLHostVarCheck`,
     newValue: `:Deptnum`
   });
-}
+});
 
-exports.linter35 = async () => {
+test("linter35", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2204,10 +2123,10 @@ exports.linter35 = async () => {
     ForceOptionalParens: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.linter36 = async () => {
+test("linter36", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2232,10 +2151,10 @@ exports.linter36 = async () => {
     ForceOptionalParens: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.linter37 = async () => {
+test("linter37", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2258,18 +2177,18 @@ exports.linter37 = async () => {
     UselessOperationCheck: true
   }, cache);
 
-  assert.strictEqual(cache.includes.length, 1);
-  assert.strictEqual(cache.includes[0].line, 4);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.includes[0].line).toBe(4);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).toBe(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 129, end: 135 },
     type: `UselessOperationCheck`
   });
-}
+});
 
-exports.linter38_subrefs = async () => {
+test("linter38_subrefs", async () => {
   const lines = [
     `**free`,
     ``,
@@ -2358,36 +2277,36 @@ exports.linter38_subrefs = async () => {
   }, cache);
 
   const subfa = cache.find(`subfa`);
-  assert.strictEqual(subfa.references.length, 2);
-  assert.deepStrictEqual(subfa.references[1], {
+  expect(subfa.references.length).toBe(2);
+  expect(subfa.references[1]).toEqual({
     offset: { position: 469, end: 474 }
   });
 
   const structYesAlso = cache.find(`structYesAlso`);
-  assert.strictEqual(structYesAlso.references.length, 2);
-  assert.deepStrictEqual(structYesAlso.references[1], {
+  expect(structYesAlso.references.length).toBe(2);
+  expect(structYesAlso.references[1]).toEqual({
     offset: { position: 485, end: 498 }
   });
 
   const subfc = structYesAlso.subItems[0];
-  assert.strictEqual(subfc.name, `subfc`);
-  assert.strictEqual(subfc.references.length, 1);
+  expect(subfc.name).toBe(`subfc`);
+  expect(subfc.references.length).toBe(1);
 
   const qualStructYes = cache.find(`qualStructYes`);
-  assert.strictEqual(qualStructYes.references.length, 2);
-  assert.deepStrictEqual(qualStructYes.references[1], {
+  expect(qualStructYes.references.length).toBe(2);
+  expect(qualStructYes.references[1]).toEqual({
     offset: { position: 516, end: 529 }
   });
 
   const qualsubA = qualStructYes.subItems[0];
-  assert.strictEqual(qualsubA.name, `qualsubA`);
-  assert.strictEqual(qualsubA.references.length, 2);
+  expect(qualsubA.name).toBe(`qualsubA`);
+  expect(qualsubA.references.length).toBe(2);
 
-  assert.deepStrictEqual(qualsubA.references[0], {
+  expect(qualsubA.references[0]).toEqual({
     offset: { position: 274, end: 282 }
   });
 
-  assert.deepStrictEqual(qualsubA.references[1], {
+  expect(qualsubA.references[1]).toEqual({
     offset: { position: 530, end: 538 }
   });
 
@@ -2395,58 +2314,58 @@ exports.linter38_subrefs = async () => {
   const subProc = procYes.scope;
 
   const localStructYes = subProc.find(`localStructYes`);
-  assert.strictEqual(localStructYes.references.length, 2);
-  assert.deepStrictEqual(localStructYes.references[1], {
+  expect(localStructYes.references.length).toBe(2);
+  expect(localStructYes.references[1]).toEqual({
     offset: { position: 1158, end: 1172 }
   });
 
   const localStructAlsoYes = subProc.find(`localStructAlsoYes`);
-  assert.strictEqual(localStructAlsoYes.references.length, 1);
+  expect(localStructAlsoYes.references.length).toBe(1);
 
   const subfe = localStructAlsoYes.subItems[0];
-  assert.strictEqual(subfe.name, `subfe`);
-  assert.strictEqual(subfe.references.length, 2);
-  assert.deepStrictEqual(subfe.references[1], {
+  expect(subfe.name).toBe(`subfe`);
+  expect(subfe.references.length).toBe(2);
+  expect(subfe.references[1]).toEqual({
     offset: { position: 1193, end: 1198 }
   });
 
   const qualDimStructYup = cache.find(`qualDimStructYup`);
-  assert.strictEqual(qualDimStructYup.references.length, 4)
+  expect(qualDimStructYup.references.length).toBe(4)
 
-  assert.deepStrictEqual(qualDimStructYup.references[1], {
+  expect(qualDimStructYup.references[1]).toEqual({
     offset: { position: 545, end: 561 }
   });
 
-  assert.deepStrictEqual(qualDimStructYup.references[2], {
+  expect(qualDimStructYup.references[2]).toEqual({
     offset: { position: 578, end: 594 }
   });
 
-  assert.deepStrictEqual(qualDimStructYup.references[3], {
+  expect(qualDimStructYup.references[3]).toEqual({
     offset: { position: 625, end: 641 }
   });
 
   const boopABC = qualDimStructYup.subItems[0];
-  assert.strictEqual(boopABC.name, `boopABC`);
-  assert.strictEqual(boopABC.references.length, 4);
+  expect(boopABC.name).toBe(`boopABC`);
+  expect(boopABC.references.length).toBe(4);
 
-  assert.deepStrictEqual(boopABC.references[0], {
+  expect(boopABC.references[0]).toEqual({
     offset: { position: 411, end: 418 }
   });
 
-  assert.deepStrictEqual(boopABC.references[1], {
+  expect(boopABC.references[1]).toEqual({
     offset: { position: 565, end: 572 }
   });
 
-  assert.deepStrictEqual(boopABC.references[2], {
+  expect(boopABC.references[2]).toEqual({
     offset: { position: 612, end: 619 } 
   });
 
-  assert.deepStrictEqual(boopABC.references[3], {
+  expect(boopABC.references[3]).toEqual({
     offset: { position: 663, end: 670 }
   });
-}
+});
 
-exports.linter39 = async () => {
+test("linter39", async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
@@ -2468,14 +2387,14 @@ exports.linter39 = async () => {
     RequiresProcedureDescription: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
     type: `RequiresProcedureDescription`,
     offset: { position: 59, end: 84 }
   });
-};
+});
 
-exports.linter40 = async () => {
+test("linter40", async () => {
   const lines = [
     `**FREE`,
     `ctl-opt debug nomain option(*nodebugio: *srcstmt) ;`,
@@ -2501,10 +2420,10 @@ exports.linter40 = async () => {
     RequiresProcedureDescription: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-};
+  expect(errors.length).toEqual(0);
+});
 
-exports.linter40_return = async () => {
+test("linter40_return", async () => {
   const lines = [
     `**free`,
     `Dcl-Proc InputIsValid;`,
@@ -2546,10 +2465,10 @@ exports.linter40_return = async () => {
   const procedure = cache.find(`InputIsValid`);
   const validationResult = procedure.scope.find(`validationResult`);
 
-  assert.strictEqual(validationResult.references.length, 7);
-}
+  expect(validationResult.references.length).toEqual(7);
+});
 
-exports.linter41 = async () => {
+test("linter41", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2570,28 +2489,28 @@ exports.linter41 = async () => {
     StringLiteralDupe: true
   }, cache);
 
-  assert.strictEqual(errors.length, 3);
+  expect(errors.length).toEqual(3);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     offset: { position: 52, end: 54 },
     type: `RequireBlankSpecial`,
     newValue: `*BLANK`
   });
 
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).toEqual({
     offset: { position: 39, end: 44 },
     type: `StringLiteralDupe`,
     newValue: undefined
   });
 
-  assert.deepStrictEqual(errors[2], {
+  expect(errors[2]).toEqual({
     offset: { position: 62, end: 67 },
     type: `StringLiteralDupe`,
     newValue: undefined
   });
-}
+});
 
-exports.linter42 = async () => {
+test("linter42", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2621,13 +2540,13 @@ exports.linter42 = async () => {
     RequireOtherBlock: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toEqual(1);
+  expect(errors[0]).toEqual({
     type: `RequireOtherBlock`, offset: { position: 339, end: 344 }
   });
-};
+});
 
-exports.linter43 = async () => {
+test("linter43", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2660,10 +2579,10 @@ exports.linter43 = async () => {
     RequireOtherBlock: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-};
+  expect(errors.length).toEqual(0);
+});
 
-exports.linter44 = async () => {
+test("linter44", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2701,16 +2620,16 @@ exports.linter44 = async () => {
     RequireOtherBlock: true
   }, cache);
 
-  assert.strictEqual(errors.length, 2);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(2);
+  expect(errors[0]).toEqual({
     type: `RequireOtherBlock`, offset: { position: 552, end: 557 }
   });
-  assert.deepStrictEqual(errors[1], {
+  expect(errors[1]).toEqual({
     type: `RequireOtherBlock`, offset: { position: 561, end: 566 }
   });
-};
+});
 
-exports.issue_170 = async () => {
+test("issue_170", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2744,10 +2663,10 @@ exports.issue_170 = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.deepStrictEqual(errors.length, 0);
-};
+  expect(errors.length).toBe(0);
+});
 
-exports.issue_170a = async () => {
+test("issue_170a", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2767,24 +2686,24 @@ exports.issue_170a = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.strictEqual(cache.structs.length, 1);
+  expect(cache.structs.length).toBe(1);
 
   const SBM_DS = cache.find(`SBM_DS`);
-  assert.strictEqual(SBM_DS.name, `SBM_DS`);
-  assert.strictEqual(SBM_DS.subItems.length, 1);
-  assert.strictEqual(SBM_DS.position.line, 2);
-  assert.strictEqual(SBM_DS.references.length, 1);
+  expect(SBM_DS.name).toBe(`SBM_DS`);
+  expect(SBM_DS.subItems.length).toBe(1);
+  expect(SBM_DS.position.line).toBe(2);
+  expect(SBM_DS.references.length).toBe(1);
 
   const Move1 = SBM_DS.subItems[0];
-  assert.strictEqual(Move1.name, `Move1`);
-  assert.strictEqual(Object.keys(Move1.keyword).length, 2);
-  assert.strictEqual(Move1.position.line, 3);
-  assert.strictEqual(Move1.references.length, 1);
+  expect(Move1.name).toBe(`Move1`);
+  expect(Object.keys(Move1.keyword).length).toBe(2);
+  expect(Move1.position.line).toBe(3);
+  expect(Move1.references.length).toBe(1);
   
-  assert.deepStrictEqual(errors.length, 2);
-}
+  expect(errors.length).toBe(2);
+});
 
-exports.linter40_keywordrefs = async () => {
+test("linter40_keywordrefs", async () => {
   const lines = [
     `**free`,
     `Dcl-C  RANDOMLEN    286;`,
@@ -2799,20 +2718,20 @@ exports.linter40_keywordrefs = async () => {
 
   const RANDOMLEN = cache.find(`RANDOMLEN`);
 
-  assert.strictEqual(RANDOMLEN.references.length, 2);
-  assert.deepStrictEqual(RANDOMLEN.references[1], {
+  expect(RANDOMLEN.references.length).toBe(2);
+  expect(RANDOMLEN.references[1]).toEqual({
     offset: { position: 64, end: 73 }
   });
 
-  assert.strictEqual(errors.length, 1);
-  assert.deepStrictEqual(errors[0], {
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
     offset: { position: 64, end: 73 },
     type: `IncorrectVariableCase`,
     newValue: `RANDOMLEN`
   });
-}
+});
 
-exports.linter_casing_on_error_not_a_variable = async () => {
+test("linter_casing_on_error_not_a_variable", async () => {
   const lines = [
     `**free`,
     `dcl-c  ERROR  -1;`,
@@ -2829,10 +2748,10 @@ exports.linter_casing_on_error_not_a_variable = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0, `on-error should not throw a variable casing error`);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.issue_175 = async () => {
+test("issue_175", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -2871,10 +2790,10 @@ exports.issue_175 = async () => {
     NoUnreferenced: true
   }, cache);
 
-  assert.deepStrictEqual(errors.length, 0);
-};
+  expect(errors.length).toBe(0);
+});
 
-exports.issue180 = async () => {
+test("issue180", async () => {
   const lines = [
     `**free`,
     `Begsr Checkemp;`,
@@ -2906,224 +2825,14 @@ exports.issue180 = async () => {
     `Endsr;`,
   ].join(`\n`);
   
-  const parser = await parserSetup();
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
 
   Linter.getErrors({ uri, content: lines }, {
     CollectReferences: true,
   }, cache);
-}
+});
 
-exports.dcl_subf_issue184 = async () => {
-  const lines = [
-    `**FREE`,
-    ``,
-    `Ctl-Opt DftActGrp(*No);`,
-    ``,
-    `DCL-DS *N;`,
-    `   DCL-SUBF select CHAR(10);`,
-    `   name CHAR(10);`,
-    `   DCL-SUBF address CHAR(25);`,
-    `END-DS;`,
-    ``,
-    `Return;`
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    UselessOperationCheck: true
-  }, cache);
-
-  assert.strictEqual(errors.length, 1);
-
-  assert.deepStrictEqual(errors[0], {
-    offset: { position: 94, end: 103 }, type: `UselessOperationCheck`
-  });
-
-  const selectVar = cache.find(`select`);
-  assert.strictEqual(selectVar.name, `select`);
-
-  const nameVar = cache.find(`name`);
-  assert.strictEqual(nameVar.name, `name`);
-
-  const addressVar = cache.find(`address`);
-  assert.strictEqual(addressVar.name, `address`);
-}
-
-exports.dcl_parm_issue184 = async () => {
-  const lines = [
-    `**FREE`,
-    ``,
-    `Ctl-Opt DftActGrp(*No);`,
-    ``,
-    `DCL-PR myProc;`,
-    `   DCL-PARM select CHAR(10);`,
-    `   name CHAR(10);`,
-    `   DCL-PARM address CHAR(25);`,
-    `END-PR;`,
-    ``,
-    `Return;`
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    UselessOperationCheck: true
-  }, cache);
-
-  assert.strictEqual(errors.length, 1);
-
-  assert.deepStrictEqual(errors[0], {
-    offset: { position: 98, end: 107 }, type: `UselessOperationCheck`
-  });
-
-  const myProc = cache.find(`myProc`);
-  assert.strictEqual(myProc.name, `myProc`);
-
-  const parms = myProc.subItems;
-  assert.strictEqual(parms[0].name, `select`);
-  assert.strictEqual(parms[1].name, `name`);
-  assert.strictEqual(parms[2].name, `address`);
-}
-
-exports.prettyCommentsChange = async () => {
-  const lines = [
-    `**FREE`,
-    ``,
-    `Ctl-Opt DFTACTGRP(*No);`,
-    ``,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `// my constant`,
-    `//`,
-    `// second line`,
-    `Dcl-C theConstant 'Hello world';`,
-    `//comment with bad indent`,
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    PrettyComments: true
-  }, cache);
-
-  assert.strictEqual(errors.length, 1);
-
-  assert.deepStrictEqual(errors[0], {
-    offset: { position: 128, end: 130 },
-    type: `PrettyComments`,
-    newValue: `// `
-  });
-};
-
-exports.issue_204 = async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `ctl-opt dftactgrp(*no);`,
-    ``,
-    `///`,
-    `// printf`,
-    `// Print to standard out`,
-    `// @param String value pointer`,
-    `///`,
-    `dcl-pr printf int(10) extproc('printf');`,
-    `  format pointer value options(*string);`,
-    `end-pr;`,
-    ``,
-    `dcl-ds person_t qualified template;`,
-    `  name  int(10);`,
-    `  age   char(50);`,
-    `end-ds;`,
-    ``,
-    `dcl-ds myperson likeds(person_t);`,
-    ``,
-    `myperson = PERSON_New();`,
-    `myperson.name = 'Liam Barry';`,
-    `myperson.age = 25;`,
-    `PERSON_printNice(myperson);`,
-    ``,
-    `return;`,
-    ``,
-    `dcl-proc PERSON_New;`,
-    `  dcl-pi *n LikeDS(person_t) end-pi;`,
-    `  // This is the constructor`,
-    `  // Maybe parameters to set the defaults?`,
-    ``,
-    `  dcl-ds person likeds(person_t);`,
-    ``,
-    `  // Set defaults`,
-    `  person.name = '';`,
-    `  person.age = 0;`,
-    ``,
-    `  return person;`,
-    `end-proc;`,
-    ``,
-    `dcl-proc PERSON_printNice;`,
-    `  dcl-pi *n;`,
-    `    person likeds(person_t);`,
-    `  end-pi;`,
-    ``,
-    `  printf(%trim(person.name) + ' ' + %char(person.age));`,
-    `end-proc;`,
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
-  Linter.getErrors({ uri, content: lines }, {
-    CollectReferences: true,
-  }, cache);
-
-  // Global checks
-
-  const printf = cache.find(`printf`);
-  assert.strictEqual(printf.references.length, 2);
-
-  const person_t = cache.find(`person_t`);
-  assert.strictEqual(person_t.references.length, 5);
-
-  const myperson = cache.find(`myperson`);
-  assert.strictEqual(myperson.references.length, 5);
-
-  const global_person = cache.find(`person`);
-  assert.strictEqual(global_person, null);
-
-  // Proc A checks
-
-  const PERSON_New = cache.find(`PERSON_New`);
-  assert.strictEqual(PERSON_New.references.length, 2);
-  const PERSON_New_person = PERSON_New.scope.find(`person`);
-  assert.strictEqual(PERSON_New_person.references.length, 4);
-  assert.strictEqual(PERSON_New_person.subItems.length, 2);
-
-  // Proc B checks
-
-  const PERSON_printNice = cache.find(`PERSON_printNice`);
-  assert.strictEqual(PERSON_printNice.references.length, 2);
-  const printNice_person = PERSON_printNice.scope.find(`person`);
-  assert.strictEqual(printNice_person.references.length, 3);
-  assert.strictEqual(printNice_person.subItems.length, 2);
-}
-
-exports.issue_237 = async () => {
-  const lines = [
-    `**FREE`,
-    `If MyVar <> ThatValue //This is fine`,
-    `;`,
-    `  DoThisCode();`,
-    `Else;`,
-    `  CoThatCOde();`,
-    `Endif;`,
-    `*INLR = *ON;`,
-    `Return;`,
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
-  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-    indent: 2
-  }, cache);
-
-  assert.strictEqual(indentErrors.length, 0);
-}
-
-exports.issue_234_a = async () => {
+test("issue_234_a", async () => {
   const lines = [
     `**free`,
     `DCL-DS MagicDS QUALIFIED;`,
@@ -3138,11 +2847,11 @@ exports.issue_234_a = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
 
-exports.issue_234_b = async () => {
+test("issue_234_b", async () => {
   const lines = [
     `**free`,
     `ctl-opt debug  option(*nodebugio: *srcstmt) dftactgrp(*no) actgrp(*caller)`,
@@ -3161,10 +2870,10 @@ exports.issue_234_b = async () => {
     IncorrectVariableCase: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.issue_238 = async () => {
+test("issue_238", async () => {
   const lines = [
     `**FREE`,
     `/Copy Qcpysrc,Hspecle`,
@@ -3183,10 +2892,10 @@ exports.issue_238 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0);
-}
+  expect(indentErrors.length).toBe(0);
+});
 
-exports.issue_240 = async () => {
+test("issue_240", async () => {
   const lines = [
     `**FREE`,
     ``,
@@ -3224,9 +2933,9 @@ exports.issue_240 = async () => {
     "NoExternalTo": [`QCMD`, `QP2TERM`, `QSH`, `SYSTEM`, `QCMDEXC`]
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
+  expect(errors.length).toBe(1);
 
-  assert.deepStrictEqual(errors[0], {
+  expect(errors[0]).toEqual({
     type: `NoExternalTo`,
     offset: {
       position: 344,
@@ -3234,10 +2943,10 @@ exports.issue_240 = async () => {
     }
   });
 
-  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `dcl-pr QCMDEXC  extpgm('QCMDEXC')`);
-}
+  expect(lines.substring(errors[0].offset.position, errors[0].offset.end)).toBe(`dcl-pr QCMDEXC  extpgm('QCMDEXC')`);
+});
 
-exports.issue_239 = async () => {
+test("issue_239", async () => {
   const lines = [
     `**FREE`,
     `ctl-opt dftactgrp(*NO);`,
@@ -3264,10 +2973,10 @@ exports.issue_239 = async () => {
     RequiresParameter: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.issue_251 = async () => {
+test("issue_251", async () => {
   const lines = [
     `**free`,
     `ctl-opt debug  option(*nodebugio: *srcstmt) dftactgrp(*no) actgrp(*caller)`,
@@ -3300,12 +3009,12 @@ exports.issue_251 = async () => {
     ForceOptionalParens: true
   }, cache);
 
-  assert.strictEqual(errors.length, 1);
-  assert.strictEqual(errors[0].type, `ForceOptionalParens`);
-  assert.strictEqual(lines.substring(errors[0].offset.position, errors[0].offset.end), `iCost >= 10000`);
-}
+  expect(errors.length).toBe(1);
+  expect(errors[0].type).toBe(`ForceOptionalParens`);
+  expect(lines.substring(errors[0].offset.position, errors[0].offset.end)).toBe(`iCost >= 10000`);
+});
 
-exports.paddr_issue_250 = async () => {
+test('paddr_issue_250', async () => {
   const lines = [
     `**FREE`,
     `ctl-opt dftactgrp(*NO);`,
@@ -3353,10 +3062,10 @@ exports.paddr_issue_250 = async () => {
     RequiresParameter: true
   }, cache);
 
-  assert.strictEqual(errors.length, 0);
-}
+  expect(errors.length).toBe(0);
+});
 
-exports.new_select_1 = async () => {
+test('new_select_1', async () => {
   const lines = [
     `**free`,
     `SELECT a.b(i).c(j);`,
@@ -3378,13 +3087,13 @@ exports.new_select_1 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 5);
+  expect(indentErrors.length).toBe(5);
 
   // Expect all expected indent to be 2
-  assert.strictEqual(indentErrors.some(e => e.expectedIndent !== 2), false)
-}
+  expect(indentErrors.some(e => e.expectedIndent !== 2)).toBe(false);
+});
 
-exports.new_select_2 = async () => {
+test('new_select_2', async () => {
   const lines = [
     `**free`,
     `SELECT a.b(i).c(j);`,
@@ -3406,10 +3115,10 @@ exports.new_select_2 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0);
-}
+  expect(indentErrors.length).toBe(0);
+});
 
-exports.on_excp_1 = async () => {
+test('on_excp_1', async () => {
   const lines = [
     `**free`,
     `DCL-F badfile DISK(10) USROPN;`,
@@ -3432,10 +3141,10 @@ exports.on_excp_1 = async () => {
     indent: 2
   }, cache);
 
-  assert.strictEqual(indentErrors.length, 0);
-}
+  expect(indentErrors.length).toBe(0);
+});
 
-exports.on_excp_2 = async () => {
+test('on_excp_2', async () => {
   const lines = [
     `**FREE`,
     `monitor; `,
@@ -3450,15 +3159,15 @@ exports.on_excp_2 = async () => {
     indent: 2
   }, cache);
   
-  assert.strictEqual(indentErrors.length, 1);
-  assert.deepStrictEqual(indentErrors[0], {
+  expect(indentErrors.length).toBe(1);
+  expect(indentErrors[0]).toEqual({
     line: 3,
     expectedIndent: 2,
     currentIndent: 0
   });
-}
+});
 
-exports.range_1 = async () => {
+test('range_1', async () => {
   const lines = [
     `**free`,
     `ctl-opt debug  option(*nodebugio: *srcstmt) dftactgrp(*no) actgrp(*caller)`,
@@ -3480,17 +3189,78 @@ exports.range_1 = async () => {
   }, cache);
 
   const rangeRefs = cache.referencesInRange({position: 220, end: 260});
-  assert.strictEqual(rangeRefs.length, 2);
-  assert.ok(rangeRefs[0].dec.name === `x`);
-  assert.ok(rangeRefs[1].dec.name === `y`);
+  expect(rangeRefs.length).toBe(2);
+  expect(rangeRefs[0].dec.name).toBe(`x`);
+  expect(rangeRefs[1].dec.name).toBe(`y`);
 
-  assert.deepStrictEqual(rangeRefs[0].refs, [
+  expect(rangeRefs[0].refs).toEqual([
     { position: 220, end: 221 },
     { position: 256, end: 257 }
   ]);
 
-  assert.deepStrictEqual(rangeRefs[1].refs, [
+  expect(rangeRefs[1].refs).toEqual([
     { position: 235, end: 236 },
     { position: 241, end: 242 }
   ]);
-}
+});
+
+test('sqlRunner1_1', async () => {
+  const lines = [
+    `**free`,
+    `EXEC SQL`,
+    `  DECLARE CUSCUR CURSOR FOR`,
+    `    SELECT CUSNO FROM CUSTOMER;`,
+    ``,
+    `EXEC SQL`,
+    `  OPEN CUSCUR;`,
+    ``,
+    `EXEC SQL`,
+    `  FETCH NEXT FROM CUSCUR INTO :cust.CUSNO;`,
+    ``,
+    `EXEC SQL`,
+    `  CLOSE CUSCUR;`,
+    ``,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    SQLRunner: true
+  }, cache);
+
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
+    type: 'SQLRunner',
+    offset: { position: 7, end: 74 },
+    newValue: 'EXEC SQL\n  DECLARE CUSCUR CURSOR FOR\n    SELECT CUSNO FROM CUSTOMER'
+  });
+});
+
+test('sqlRunner1_b', async () => {
+  const lines = [
+    `**free`,
+    `EXEC SQL DECLARE CUSCUR CURSOR FOR`,
+    `    SELECT CUSNO FROM CUSTOMER;`,
+    ``,
+    `EXEC SQL`,
+    `  OPEN CUSCUR;`,
+    ``,
+    `EXEC SQL`,
+    `  FETCH NEXT FROM CUSCUR INTO :cust.CUSNO;`,
+    ``,
+    `EXEC SQL`,
+    `  CLOSE CUSCUR;`,
+    ``,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    SQLRunner: true
+  }, cache);
+
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toEqual({
+    type: 'SQLRunner',
+    offset: { position: 7, end: 72 },
+    newValue: 'EXEC SQL DECLARE CUSCUR CURSOR FOR\n    SELECT CUSNO FROM CUSTOMER'
+  });
+});

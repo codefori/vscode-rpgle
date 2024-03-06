@@ -1,8 +1,8 @@
-
 import setupParser from "../parserSetup";
 import Linter from "../../language/linter";
 import Cache from "../../language/models/cache";
-import assert from "assert";
+import { test, expect } from "vitest";
+
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -56,7 +56,7 @@ const lines = [
   `end-proc;`,
 ].join(`\n`);
 
-export async function references_1_const() {
+test("references_1_const", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -66,11 +66,11 @@ export async function references_1_const() {
   const falseConstIndex = lines.indexOf(`dcl-c FALSE`) + 7;
 
   const falseConst = Cache.referenceByOffset(cache, falseConstIndex);
-  assert.strictEqual(falseConst.name, `FALSE`);
-  assert.notStrictEqual(falseConst.references.length, 0);
-}
+  expect(falseConst.name).toBe(`FALSE`);
+  expect(falseConst.references.length).not.toBe(0);
+});
 
-export async function references_2_const() {
+test("references_2_const", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -80,11 +80,11 @@ export async function references_2_const() {
   const trueConstIndex = lines.indexOf(`var1 = TRUE`) + 7;
 
   const trueConst = Cache.referenceByOffset(cache, trueConstIndex);
-  assert.strictEqual(trueConst.name, `TRUE`);
-  assert.strictEqual(trueConst.references.length, 2);
-}
+  expect(trueConst.name).toBe(`TRUE`);
+  expect(trueConst.references.length).toBe(2);
+});
 
-export async function references_3_enum() {
+test("references_3_enum", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -94,11 +94,11 @@ export async function references_3_enum() {
   const colorsConstIndex = lines.indexOf(`var1 = COLORS`) + 7;
 
   const colorsConst = Cache.referenceByOffset(cache, colorsConstIndex);
-  assert.strictEqual(colorsConst.name, `COLORS`);
-  assert.strictEqual(colorsConst.references.length, 2);
-}
+  expect(colorsConst.name).toBe(`COLORS`);
+  expect(colorsConst.references.length).toBe(2);
+});
 
-export async function references_4_subfield_a() {
+test("references_4_subfield_a", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -108,11 +108,11 @@ export async function references_4_subfield_a() {
   const greenSubfieldIndex = lines.indexOf(`var1 = COLORS.GREEN`) + 17;
 
   const greenConst = Cache.referenceByOffset(cache, greenSubfieldIndex);
-  assert.strictEqual(greenConst.name, `GREEN`);
-  assert.strictEqual(greenConst.references.length, 2);
-}
+  expect(greenConst.name).toBe(`GREEN`);
+  expect(greenConst.references.length).toBe(2);
+});
 
-export async function references_4_subfield_b() {
+test("references_4_subfield_b", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -122,17 +122,17 @@ export async function references_4_subfield_b() {
   const greenSubfieldIndex = lines.indexOf(` GREEN 1`) + 3;
 
   const greenConst = Cache.referenceByOffset(cache, greenSubfieldIndex);
-  assert.strictEqual(greenConst.name, `GREEN`);
-  assert.strictEqual(greenConst.references.length, 2);
+  expect(greenConst.name).toBe(`GREEN`);
+  expect(greenConst.references.length).toBe(2);
 
   const refSubfieldIndex = lines.indexOf(` RED 2`) + 3;
 
   const redConst = Cache.referenceByOffset(cache, refSubfieldIndex);
-  assert.strictEqual(redConst.name, `RED`);
-  assert.strictEqual(redConst.references.length, 1);
-}
+  expect(redConst.name).toBe(`RED`);
+  expect(redConst.references.length).toBe(1);
+});
 
-export async function references_5() {
+test("references_5", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -142,11 +142,11 @@ export async function references_5() {
   const var1Index = lines.indexOf(`var1 = TRUE`);
 
   const var1Var = Cache.referenceByOffset(cache, var1Index);
-  assert.strictEqual(var1Var.name, `var1`);
-  assert.strictEqual(var1Var.references.length, 5);
-}
+  expect(var1Var.name).toBe(`var1`);
+  expect(var1Var.references.length).toBe(5);
+});
 
-export async function references_6_subfield_dim() {
+test("references_6_subfield_dim", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -158,15 +158,15 @@ export async function references_6_subfield_dim() {
   const redSubfieldIndex = baseIndex + 22;
 
   const varColors = Cache.referenceByOffset(cache, varColorsIndex);
-  assert.strictEqual(varColors.name, `varColors`);
-  assert.strictEqual(varColors.references.length, 2);
+  expect(varColors.name).toBe(`varColors`);
+  expect(varColors.references.length).toBe(2);
 
   const redSubfield = Cache.referenceByOffset(cache, redSubfieldIndex);
-  assert.strictEqual(redSubfield.name, `red`);
-  assert.strictEqual(redSubfield.references.length, 2);
-}
+  expect(redSubfield.name).toBe(`red`);
+  expect(redSubfield.references.length).toBe(2);
+});
 
-export async function references_7() {
+test("references_7", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
 
   Linter.getErrors({ uri, content: lines }, {
@@ -176,6 +176,6 @@ export async function references_7() {
   const declareAbcIndex = lines.indexOf(`dcl-proc abc`) + 10;
 
   const varColors = Cache.referenceByOffset(cache, declareAbcIndex);
-  assert.strictEqual(varColors.name, `abc`);
-  assert.strictEqual(varColors.references.length, 1);
-}
+  expect(varColors.name).toEqual(`abc`);
+  expect(varColors.references.length).toEqual(1);
+});
