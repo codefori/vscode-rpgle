@@ -276,9 +276,6 @@ export default class Parser {
           }
 
           if ([`EXTNAME`].includes(tag)) {
-            if (!ds.keywords.includes(`QUALIFIED`))
-              ds.keywords.push(`QUALIFIED`);
-
             // Fetch from external definitions
             const recordFormats = await this.fetchTable(keywordValue, ds.keywords.length.toString(), ds.keywords.includes(`ALIAS`));
 
@@ -298,15 +295,15 @@ export default class Parser {
             }
 
           } else {
+            // We need to add qualified as it is qualified by default.
+            if (!ds.keywords.includes(`QUALIFIED`))
+            ds.keywords.push(`QUALIFIED`);
+
             // Fetch from local definitions
             for (let i = scopes.length - 1; i >= 0; i--) {
               const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
               if (valuePointer) {
                 ds.subItems = valuePointer.subItems;
-    
-                // We need to add qualified as it is qualified by default.
-                if (!ds.keywords.includes(`QUALIFIED`))
-                  ds.keywords.push(`QUALIFIED`);
                 return;
               }
             }
