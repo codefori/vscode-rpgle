@@ -722,7 +722,7 @@ export default class Linter {
 
                     if (rules.SQLRunner) {
                       // For running SQL statements
-                      const validStatements = [`declare`, `with`, `select`].includes(statement[2].value.toLowerCase());
+                      const validStatements = [`declare`, `with`, `select`, `merge`, `update`].includes(statement.find((t, i) => i >= 2 && t.type !== `newline`)?.value.toLowerCase());
                       if (validStatements) {
                         errors.push({
                           type: `SQLRunner`,
