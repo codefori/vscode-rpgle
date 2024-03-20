@@ -1,7 +1,7 @@
 import path = require('path');
 import { Uri, workspace, RelativePattern, commands } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import {getInstance} from './base';
+import { getInstance } from './base';
 import { projectFilesGlob } from "./configuration";
 import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
 
@@ -53,7 +53,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	/**
 	 * Gets the text content for a provided Uri
 	 */
-	 client.onRequest("getFile", async (stringUri: string): Promise<string | undefined> => {
+	client.onRequest("getFile", async (stringUri: string): Promise<string | undefined> => {
 		// Always assumes URI is valid. Use getUri first
 		const uri = Uri.parse(stringUri);
 		try {
@@ -62,7 +62,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 			if (doc) {
 				return doc.getText();
 			}
-		} catch (e) {}
+		} catch (e) { }
 
 		return;
 	});
@@ -70,9 +70,9 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	/**
 	 * Resolves member paths
 	 */
-	 client.onRequest("memberResolve", async (parms: string[]): Promise<IBMiMember | undefined> => {
+	client.onRequest("memberResolve", async (parms: string[]): Promise<IBMiMember | undefined> => {
 		let memberName = parms[0], sourceFile = parms[1];
-		
+
 		const instance = getInstance();
 
 		if (instance) {
@@ -82,10 +82,10 @@ export default function buildRequestHandlers(client: LanguageClient) {
 			if (config && content) {
 				const files = [config?.currentLibrary, ...config?.libraryList!]
 					.filter(l => l !== undefined)
-					.map(l => ({name: sourceFile, library: l!}));
+					.map(l => ({ name: sourceFile, library: l! }));
 
 				try {
-					const member = await content?.memberResolve(memberName.toUpperCase(), files);
+					const member = await content?.memberResolve(memberName, files);
 
 					return member;
 				} catch (e) {
@@ -96,7 +96,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		}
 	});
 
-	client.onRequest("streamfileResolve", async (parms: any[]): Promise<string|undefined> => {
+	client.onRequest("streamfileResolve", async (parms: any[]): Promise<string | undefined> => {
 		const bases: string[] = parms[0];
 		const includePaths: string[] = parms[1];
 
@@ -114,7 +114,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 
 			return resolvedPath;
 		}
- });
+	});
 
 	/**
 	 * Gets the column information for a provided file
@@ -169,7 +169,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		return [];
 	});
 
-	client.onRequest(`symbolLookup`, async (data: { symbol?: string, binders: { lib?: string, name: string }[] }): Promise<{[symbol: string]: string[]} | undefined> => {
+	client.onRequest(`symbolLookup`, async (data: { symbol?: string, binders: { lib?: string, name: string }[] }): Promise<{ [symbol: string]: string[] } | undefined> => {
 		const { symbol, binders } = data;
 		const instance = getInstance();
 
@@ -192,7 +192,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 						`where TABLE_SCHEMA = 'QSYS2' and TABLE_NAME = 'BOUND_MODULE_INFO' and COLUMN_NAME = 'SOURCE_STREAM_FILE_PATH'`,
 						`limit 1`
 					].join(` `);
-					
+
 					const rows: any[] = await content.runSQL(statement);
 					streamFileSupported = (rows.length >= 1);
 				}
@@ -232,7 +232,7 @@ export default function buildRequestHandlers(client: LanguageClient) {
 				try {
 					const rows: any[] = await content.runSQL(statement);
 
-					let symbolFiles: {[symbol: string]: string[]} = {};
+					let symbolFiles: { [symbol: string]: string[] } = {};
 
 					rows.forEach(row => {
 						let uri;
