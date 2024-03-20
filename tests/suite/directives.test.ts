@@ -517,53 +517,20 @@ test('uppercase1', async () => {
 
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
   const { errors } = Linter.getErrors({ uri, content: lines }, {
-    DirectiveCasing: `upper`
+    DirectiveCase: `upper`
   }, cache);
 
   expect(errors.length).toBe(2);
 
   expect(errors[0]).toEqual({
     offset: { position: 31, end: 36 },
-    type: `DirectiveCasing`,
+    type: `DirectiveCase`,
     newValue: `/COPY`
   });
 
   expect(errors[1]).toEqual({
     offset: { position: 65, end: 70 },
-    type: `DirectiveCasing`,
-    newValue: `/COPY`
-  });
-})
-
-test('uppercase2', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/copy './tests/rpgle/copy1.rpgle'`,
-    `/Copy './tests/rpgle/copy2.rpgle'`,
-    `/COPY './tests/rpgle/copy3.rpgle'`,
-    `Dcl-S MyCustomerName1 like(CustomerName_t);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    UppercaseDirectives: true
-  }, cache);
-
-  expect(errors.length).toBe(2);
-
-  expect(errors[0]).toEqual({
-    offset: { position: 31, end: 36 },
-    type: `UppercaseDirectives`,
-    newValue: `/COPY`
-  });
-
-  expect(errors[1]).toEqual({
-    offset: { position: 65, end: 70 },
-    type: `UppercaseDirectives`,
+    type: `DirectiveCase`,
     newValue: `/COPY`
   });
 })
@@ -583,20 +550,20 @@ test('lowercase1', async () => {
 
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
   const { errors } = Linter.getErrors({ uri, content: lines }, {
-    DirectiveCasing: `lower`
+    DirectiveCase: `lower`
   }, cache);
 
   expect(errors.length).toBe(2);
 
   expect(errors[0]).toEqual({
     offset: { position: 65, end: 70 },
-    type: `DirectiveCasing`,
+    type: `DirectiveCase`,
     newValue: `/copy`
   });
 
   expect(errors[1]).toEqual({
     offset: { position: 99, end: 104 },
-    type: `DirectiveCasing`,
+    type: `DirectiveCase`,
     newValue: `/copy`
   });
 })
