@@ -19,6 +19,7 @@ import {
 
 import { projectFilesGlob } from './configuration';
 import buildRequestHandlers from './requests';
+import { registerBlockAssist } from './blocks';
 
 let client: LanguageClient;
 
@@ -74,6 +75,7 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
+	registerBlockAssist(context);
 
 	// context.subscriptions.push(...initBuilder(client));
 
