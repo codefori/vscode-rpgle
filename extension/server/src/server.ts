@@ -30,6 +30,7 @@ import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
+import { foldingRangeProvider } from './providers/foldingRange';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -67,6 +68,7 @@ connection.onInitialize((params: InitializeParams) => {
 	};
 
 	if (languageToolsEnabled) {
+		result.capabilities.foldingRangeProvider = true;
 		result.capabilities.documentSymbolProvider = true;
 		result.capabilities.definitionProvider = true;
 		result.capabilities.completionProvider = {
@@ -289,6 +291,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 
 if (languageToolsEnabled) {
 	// regular language stuff
+	connection.onFoldingRanges(foldingRangeProvider);
 	connection.onDocumentSymbol(documentSymbolProvider);
 	connection.onDefinition(definitionProvider);
 	connection.onCompletion(completionItemProvider);

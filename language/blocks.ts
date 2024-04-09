@@ -1,26 +1,26 @@
 
-export interface Block {
+export interface BlockRange {
   indent: number;
   start: number;
   end?: number;
 }
 
 const mixed = [`ELSE`, `ELSEIF`, `WHEN`, `OTHER`];
-const openers = [`IF`, `IFEQ`, `IFNE`, `IFLE`, `IFGE`, `IFGT`, `IFLT`, `SELECT`, `DOW`, `DOU`, `MONITOR`, ...mixed];
-const closers = [`ENDIF`, `ENDDO`, `ENDSL`, `ENDMON`, ...mixed];
+const openers = [`IF`, `IFEQ`, `IFNE`, `IFLE`, `IFGE`, `IFGT`, `IFLT`, `SELECT`, `DOW`, `DOU`, `MONITOR`, `BEGSR`, ...mixed];
+const closers = [`ENDIF`, `ENDDO`, `ENDSL`, `ENDMON`, `ENDSR`, ...mixed];
 
 /**
  * @param content RPGLE non-**free code
  * @returns Blocks
  */
-export function getBlockRanges(content: string): Block[] {
+export function getBlockRanges(content: string): BlockRange[] {
   if (content.length < 6 || content.substring(0, 6).toLowerCase() === '**free') return [];
 
   const eol = content.includes('\r\n') ? '\r\n' : '\n';
   const lines = content.split(eol);
 
-  let blocks = [];
-  let currentBlocks = [];
+  let blocks: BlockRange[] = [];
+  let currentBlocks: BlockRange[] = [];
 
   let indent = -1;
   let lineNumber = -1;
@@ -76,14 +76,14 @@ export function getBlockRanges(content: string): Block[] {
         const lastBlock = currentBlocks.pop();
         indent--;
         if (lastBlock) {
-          lastBlock.end = lineNumber;
+          lastBlock.end = lineNumber-1;
           blocks.push(lastBlock);
         }
       }
 
       if (openers.includes(currentOp)) {
         indent++;
-        currentBlocks.push({ indent, start: lineNumber });
+        currentBlocks.push({ indent, start: lineNumber, end: lineNumber });
       }
     }
   }
