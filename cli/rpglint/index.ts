@@ -115,6 +115,14 @@ async function main() {
 
 		try {
 			const content = readFileSync(filePath, { encoding: `utf-8` });
+			const eol = content.includes(`\r\n`) ? `\r\n` : `\n`;
+			const eolIndexes: number[] = [];
+
+			for (let i = 0; i < content.length; i++) {
+				if (content.substring(i, i + eol.length) === eol) {
+					eolIndexes.push(i);
+				}
+			}
 
 			if (content.length > 6 && content.substring(0, 6).toLowerCase() === `**free`) {
 				const docs = await parser.getDocs(
@@ -145,7 +153,9 @@ async function main() {
 		
 							if (lintResult.errors.length) {
 								lintResult.errors.forEach(error => {
-									console.log(`${filePath}:${error.range.start.line + 1}:${error.range.start.character}:${Linter.getErrorText(error.type)}`);
+									const line = eolIndexes.findIndex(index => index > error.offset.position);
+									const offset = error.offset.position - (eolIndexes[line-1] || 0);
+									console.log(`${filePath}:${line+1}:${offset}:${Linter.getErrorText(error.type)}`);
 								});
 							}
 							break;
@@ -162,7 +172,9 @@ async function main() {
 		
 							if (lintResult.errors.length) {
 								lintResult.errors.forEach(error => {
-									console.log(`\tLine ${error.range.start.line + 1}, column ${error.range.start.character}: ${Linter.getErrorText(error.type)}`);
+									const line = eolIndexes.findIndex(index => index > error.offset.position);
+									const offset = error.offset.position - (eolIndexes[line-1] || 0);
+									console.log(`\tLine ${line+1}, column ${offset}: ${Linter.getErrorText(error.type)}`);
 								});
 							}
 							break;
