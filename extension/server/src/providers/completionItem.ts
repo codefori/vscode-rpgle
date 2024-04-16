@@ -47,7 +47,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 				let preWord = getWordRangeAtPosition(document, currentPosition);
 
 				// Uh oh! Maybe we found dim struct?
-				if (preWord) {
+				if (preWord && preWord.includes(`)`)) {
 					const startBracket = currentLine.lastIndexOf(`(`, currentPosition.character);
 
 					if (startBracket > -1) {
