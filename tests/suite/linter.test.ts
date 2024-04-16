@@ -3282,3 +3282,24 @@ test(`snd-msg casing #309`, async () => {
 
   expect(errors.length).toBe(0);
 });
+
+test(`define and undefine directives #310`, async () => {
+  const lines = [
+    `**free`,
+    `/define #stuff`,
+    `// do exciting things here`,
+    `/undefine #stuff`,
+    `dcl-ds gPSDS psds qualified;`,
+    `  pgmName *proc;`,
+    `end-ds;`,
+    `*inlr = *on;`,
+    `return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  expect(indentErrors.length).toBe(0);
+});
