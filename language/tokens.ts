@@ -148,6 +148,17 @@ const commonMatchers: Matcher[] = [
     }
   },
   {
+    name: `SND-MSG`,
+    match: [
+      { type: `word`, match: (word) => word.toUpperCase() === `SND` },
+      { type: `minus` },
+      { type: `word`, match: (word) => word.toUpperCase() === `MSG` },
+    ],
+    becomes: {
+      type: `word`
+    }
+  },
+  {
     name: `WHEN-GROUP`,
     match: [
       { type: `word`, match: (word) => word.toUpperCase() === `WHEN` },

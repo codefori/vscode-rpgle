@@ -3264,3 +3264,21 @@ test('sqlRunner1_b', async () => {
     newValue: 'EXEC SQL DECLARE CUSCUR CURSOR FOR\n    SELECT CUSNO FROM CUSTOMER'
   });
 });
+
+test(`snd-msg casing #309`, async () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-S Msg Varchar(64);`,
+    `Msg = 'My message to the joblog';`,
+    `SND-MSG *INFO %MSG( 'MSG9997' : 'WFIMSGF' :Msg ) %TARGET( *SELF );`,
+    `*INLR = *ON;`,
+    `Return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  expect(errors.length).toBe(0);
+});
