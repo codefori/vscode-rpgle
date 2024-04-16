@@ -744,10 +744,12 @@ export default class Parser {
                 end: statementStartingLine
               };
 
+              currentItem.scope = new Cache();
+
               scope.procedures.push(currentItem);
               resetDefinition = true;
 
-              scopes.push(new Cache());
+              scopes.push(currentItem.scope);
             }
             break;
 
@@ -794,7 +796,7 @@ export default class Parser {
               currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
               if (currentItem && currentItem.type === `procedure`) {
-                currentItem.scope = scopes.pop();
+                scopes.pop();
                 currentItem.range.end = statementStartingLine;
                 resetDefinition = true;
               }
@@ -1161,10 +1163,12 @@ export default class Parser {
                     end: currentItem.position.line
                   };
 
+                  currentItem.scope = new Cache();
+
                   scope.procedures.push(currentItem);
                   resetDefinition = true;
 
-                  scopes.push(new Cache());
+                  scopes.push(currentItem.scope);
                 }
               } else {
                 if (scopes.length > 1) {
@@ -1172,7 +1176,7 @@ export default class Parser {
                   currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
                   if (currentItem && currentItem.type === `procedure`) {
-                    currentItem.scope = scopes.pop();
+                    scopes.pop();
                     currentItem.range.end = lineNumber;
                     resetDefinition = true;
                   }
