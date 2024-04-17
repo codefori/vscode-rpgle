@@ -35,7 +35,7 @@ const commonMatchers: Matcher[] = [
       { type: `divide` },
       {
         type: `word`,
-        match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINED`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`, `CHARCOUNT`].includes(word.toUpperCase())
+        match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINE`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`, `CHARCOUNT`].includes(word.toUpperCase())
       },
     ],
     becomes: {
