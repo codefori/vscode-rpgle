@@ -55,7 +55,13 @@ export function initialise(context: ExtensionContext) {
 
 				if (filter && filter.description) {
 					// Bad way to get the library for the filter ..
-					const library = (filter.description.split(`/`)[0]).toLocaleUpperCase();
+					const library: string = (filter.description.split(`/`)[0]).toLocaleUpperCase();
+
+					if (library.includes(`*`)) {
+						window.showErrorMessage(`Cannot show lint config for a library filter.`);
+						return;
+					}
+
 					configPath = `${library}/VSCODE/RPGLINT.JSON`;
 
 					exists = (await connection.runCommand({
