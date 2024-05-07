@@ -178,7 +178,7 @@
 	"snd-msg": {
 		"prefix": "snd-msg",
 		"body": [
-			"snd-msg ${1|*INFO,*ESCAPE|} ${2:%TARGET(${3|*SELF,*CALLER,program-or-procedure|})) };"
+			"snd-msg ${1|*COMP,*DIAG,*ESCAPE,*INFO,*NOTIFY,*STATUS|} ${2:%target(${3|*CALLER,*CTLBDY,*EXT,*PGMBDY,*SELF,program-or-procedure|})) };"
 		],
 		"description": "The SND-MSG operation sends an informational message or an exception message. The message can be sent to any procedure on the call stack, including the current procedure. The message appears in the joblog after it is sent."
 	},
