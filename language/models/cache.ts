@@ -1,4 +1,3 @@
-import { indicators1 } from "../../tests/suite";
 import { CacheProps, IncludeStatement, Keywords, Offset } from "../parserTypes";
 import Declaration from "./declaration";
 
