@@ -1146,6 +1146,27 @@ test('exec_13', async () => {
   expect(cache.sqlReferences[0].name).toBe(`TRANSACTION`);
 });
 
+test(`exec_14`, async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `exec sql declare c1 cursor for `,
+    `        with temp as (`,
+    `          select`,
+    `           field1,`,
+    `           field2`,
+    `          from table1`,
+    `        )`,
+    `Select * from temp;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  console.log(cache.sqlReferences);
+  expect(cache.sqlReferences.length).toBe(1);
+  expect(cache.sqlReferences[0].name).toBe(`table1`);
+});
+
 test('enum_1', async () => {
   const lines = [
     `**free`,

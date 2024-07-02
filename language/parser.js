@@ -871,6 +871,18 @@ export default class Parser {
               }
 
               let isContinued = false;
+
+              /** @type {string[]} */
+              let ignoreCtes = [];
+
+              if (parts.includes(`WITH`)) {
+                for (let index = 4; index < parts.length; index++) {
+                  if (parts[index].startsWith(`AS`) && (parts[index].endsWith(`(`) || parts[index+1] === `(`)) {
+                    ignoreCtes.push(parts[index-1].toUpperCase());
+                  }
+                }
+              }
+
               for (let index = 0; index < parts.length; index++) {
                 const part = parts[index];
                 let inBlock = preFileWords.includes(part);
@@ -885,7 +897,7 @@ export default class Parser {
 
                     const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
 
-                    if (qualifiedObjectPath.name && !qualifiedObjectPath.name.startsWith(`:`)) {
+                    if (qualifiedObjectPath.name && !qualifiedObjectPath.name.startsWith(`:`) && !ignoreCtes.includes(qualifiedObjectPath.name.toUpperCase())) {
                       const currentSqlItem = new Declaration(`file`);
                       currentSqlItem.name = qualifiedObjectPath.name;
 
