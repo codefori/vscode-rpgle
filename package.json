@@ -38,7 +38,7 @@
 				"vscode-rpgle.showFixedFormatOutline": {
 					"type": "boolean",
 					"default": false,
-					"description": "Will provide column assist for writing fixed format RPGLE (RPG3 and RPGIV)."
+					"description": "Will provide column assist for writing fixed format RPGLE."
 				}
 			}
 		},
