@@ -62,6 +62,20 @@
 				"command": "vscode-rpgle.openLintConfig",
 				"title": "Open RPGLE lint configuration",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.rpgleColumnAssistant",
+				"title": "Launch Column Assistant",
+				"category": "RPGLE",
+				"enablement": "editorLangId == rpgle"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "vscode-rpgle.rpgleColumnAssistant",
+				"key": "shift+f4",
+				"mac": "shift+f4",
+				"when": "editorLangId == rpgle"
 			}
 		],
 		"menus": {
@@ -92,7 +106,7 @@
 		"cli:dev:rpglint": "cd cli/rpglint && npm run webpack:dev"
 	},
 	"devDependencies": {
-		"@halcyontech/vscode-ibmi-types": "^2.1.0",
+		"@halcyontech/vscode-ibmi-types": "^2.11.0",
 		"@types/node": "^18.16.1",
 		"@typescript-eslint/eslint-plugin": "^5.30.0",
 		"@typescript-eslint/parser": "^5.30.0",
