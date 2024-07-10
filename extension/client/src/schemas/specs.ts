@@ -1,4 +1,7 @@
-module.exports = {
+export type SpecFieldValue = {value: string, text: string};
+export type SpecFieldDef = {id: string, name: string, start: number, end: number, values?: SpecFieldValue[], padStart?: boolean}
+
+export const specs: {[spec: string]: SpecFieldDef[]} = {
   C: [
     {
       id: `controlLevel`,
