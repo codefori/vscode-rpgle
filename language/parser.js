@@ -303,7 +303,18 @@ export default class Parser {
             for (let i = scopes.length - 1; i >= 0; i--) {
               const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
               if (valuePointer) {
-                ds.subItems = valuePointer.subItems;
+                // Only use same subItems if local definition is from same path
+                if (ds.position.path === valuePointer.position.path) {
+                  ds.subItems = valuePointer.subItems;
+                } else {
+                  // Clone subitems for correct line assignment
+                  valuePointer.subItems.forEach((item) => {
+                    const newItem = item.clone();
+                    newItem.position.line = ds.position.line;
+                    ds.subItems.push(newItem);
+                  });
+                }
+
                 return;
               }
             }
