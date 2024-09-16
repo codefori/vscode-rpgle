@@ -1,0 +1,4 @@
+**free
+// data structure for file SomeFile
+dcl-ds GlobalStruct extname('EMPLOYEE') qualified template;
+end-ds;

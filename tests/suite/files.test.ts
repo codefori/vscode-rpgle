@@ -156,3 +156,35 @@ test("file_prefix", async () => {
   const disp = cache.find(`display`);
   expect(disp.subItems[0].subItems[0].name).toBe(`DE1_OPTION`);
 });
+
+test('file DS in a copy book', async () => {
+  const lines = [
+    `**free`,
+    `ctl-opt main(Main);`,
+    `/copy './tests/rpgle/file1.rpgleinc'`,
+    ``,
+    `dcl-proc Main;`,
+    `dcl-pi *n;`,
+    `end-pi;`,
+    ``,
+    `dcl-ds SomeStruct likeds(GlobalStruct) inz;`,
+    ``,
+    `end-proc;`,
+  ].join(`\n`);
+
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  const globalStruct = cache.find(`GlobalStruct`);
+  expect(globalStruct.subItems.length).toBeGreaterThan(0);
+
+  const mainProc = cache.find(`Main`);
+
+  expect(mainProc).toBeDefined();
+
+  const someStruct = mainProc.scope.find(`SomeStruct`);
+  expect(someStruct).toBeDefined();
+  expect(someStruct.subItems.length).toBeGreaterThan(0);
+
+  expect(someStruct.subItems).toMatchObject(globalStruct.subItems);
+})
