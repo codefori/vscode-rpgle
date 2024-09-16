@@ -253,3 +253,19 @@ test("overload1", async () => {
   expect(cache.procedures.length).toBe(4);
   expect(indentErrors.length).toBe(0);
 });
+
+test(`extproc1`, async () => {
+  const lines = [
+    `**free`,
+    `dcl-pr APIVAL01S_iws_validate int(10) extproc(*dclcase);`,
+    `  i_validationsDs                 likeds(APIVAL01S_validationsDs) dim(APIVAL01S_MAX_DIM);`,
+    `  i_data                          varchar(APIVAL01S_DATA_LEN)     dim(APIVAL01S_MAX_DIM);`,
+    `  o_errorJson                     varchar(APIVAL01S_JSON_LEN);`,
+    `end-pr;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+
+  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures[0].name).toBe(`APIVAL01S_iws_validate`);
+})
