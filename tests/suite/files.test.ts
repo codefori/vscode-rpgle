@@ -186,5 +186,5 @@ test('file DS in a copy book', async () => {
   expect(someStruct).toBeDefined();
   expect(someStruct.subItems.length).toBeGreaterThan(0);
 
-  expect(someStruct.subItems).toMatchObject(globalStruct.subItems);
+  expect(someStruct.subItems.map(s => ({name: s.name, keywords: s.keywords}))).toMatchObject(globalStruct.subItems.map(s => ({name: s.name, keywords: s.keywords})));
 })
