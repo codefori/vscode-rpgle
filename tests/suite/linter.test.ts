@@ -3303,3 +3303,46 @@ test(`define and undefine directives #310`, async () => {
 
   expect(indentErrors.length).toBe(0);
 });
+
+test('linter with non-free copybook', async () => {
+  const lines = [
+    `**Free`,
+    `Ctl-Opt Main(Engage_Usage_Report);`,
+    `Ctl-Opt Debug Option(*SrcStmt);`,
+    `Ctl-Opt ActGrp(*Caller);`,
+    `Ctl-opt Bnddir('PCRPROCS');`,
+    `Ctl-opt ExtBinInt(*Yes);`,
+    ` `,
+    `/copy './tests/rpgle/fixed1.rpgleinc'`,
+    ` `,
+    `Dcl-Proc Engage_Usage_Report;`,
+    ` `,
+    `  Dcl-Pi Engage_Usage_Report;`,
+    `    p_mode Char(3) Options(*NoPass);`,
+    `  End-Pi;`,
+    ``,
+    `  dcl-s abnormal_exit ind;`,
+    ` `,
+    `  If %parms() > 0 and %Addr(p_mode) <> *Null;`,
+    ` `,
+    `  Else;`,
+    ` `,
+    `  Endif;`,
+    ` `,
+    `  Clean_Up();`,
+    ` `,
+    `  On-Exit abnormal_exit;`,
+    ``,
+    `End-Proc Engage_Usage_Report;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+
+  expect(cache.includes.length).toBe(1);
+
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  expect(errors.length).toBe(0);
+})

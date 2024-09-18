@@ -1,0 +1,29 @@
+         
+         // CONSTANTS
+         
+         dcl-c a 'hello';
+
+         Dcl-ds t_onemod_strc0p Extname('STRC0P') Qualified Template;
+         End-ds;
+
+        // --------------------------------------------------------------------------
+        //  Table Name: STRDLP
+        //  Purpose: Schedule Time Details
+        // --------------------------------------------------------------------------
+         Dcl-ds t_onemod_strcasdasd0p Extname('DDDDD') Qualified Template;
+         End-ds;
+       dcl-pr invoice_approve_cash_refund
+              likeds(t_invoice_process_cash_refund_rtn);
+         p_system_key char(30) const; //system key (str/inv/cnt/dtl)
+         p_salesman packed(5:0) const; //salesman
+         p_note like(invoice_process_cash_refund_note) const; //note
+       end-pr;
+
+       Dcl-PR invoice_get_invoice;
+         store Zoned(3:0) const;
+         invoice Zoned(7:0) const;
+         details LikeDS(invoice_get_invoice_sales_detail_ds)
+           dim(invoice_max_details);
+         count_details Zoned(3:0);
+         error Like(TError);
+       End-Pr;
