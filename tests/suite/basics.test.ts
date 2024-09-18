@@ -1203,3 +1203,46 @@ test('enum_1', async () => {
   expect(jobMsgQ.name).toBe(`jobMsgQ`);
   expect(jobMsgQ.subItems.length).toBe(3);
 });
+
+test('keywords over multiple lines', async () => {
+  const lines = [
+    `       Dcl-PR invoice_get_invoice;`,
+    `         store Zoned(3:0) const;`,
+    `         invoice Zoned(7:0) const;`,
+    `         details LikeDS(invoice_get_invoice_sales_detail_ds)`,
+    `           dim(invoice_max_details);`,
+    `         count_details Zoned(3:0);`,
+    `         error Like(TError);`,
+    `       End-Pr;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.procedures.length).toBe(1);
+  const invoice_get_invoice = cache.find(`invoice_get_invoice`);
+  expect(invoice_get_invoice.subItems.length).toBe(5);
+
+  const storeParm = invoice_get_invoice.subItems[0];
+  expect(storeParm.name).toBe(`store`);
+  expect(storeParm.keyword[`ZONED`]).toBe(`3:0`);
+  expect(storeParm.keyword[`CONST`]).toBe(true);
+
+  const invoiceParm = invoice_get_invoice.subItems[1];
+  expect(invoiceParm.name).toBe(`invoice`);
+  expect(invoiceParm.keyword[`ZONED`]).toBe(`7:0`);
+  expect(invoiceParm.keyword[`CONST`]).toBe(true);
+
+  const detailParm = invoice_get_invoice.subItems[2];
+  console.log(detailParm);
+  expect(detailParm.name).toBe(`details`);
+  expect(detailParm.keyword[`LIKEDS`]).toBe(`INVOICE_GET_INVOICE_SALES_DETAIL_DS`);
+  expect(detailParm.keyword[`DIM`]).toBe(`INVOICE_MAX_DETAILS`);
+
+  const count_details = invoice_get_invoice.subItems[3];
+  expect(count_details.name).toBe(`count_details`);
+  expect(count_details.keyword[`ZONED`]).toBe(`3:0`);
+
+  const error = invoice_get_invoice.subItems[4];
+  expect(error.name).toBe(`error`);
+  expect(error.keyword[`LIKE`]).toBe(`TERROR`);
+})
