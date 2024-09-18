@@ -126,6 +126,7 @@ export default class Parser {
 	 */
   static getIncludeFromDirective(line) {
     if (line.includes(`*`)) return; // Likely comment
+    if (line.includes(`//`)) return; // Likely comment
 
     const upperLine = line.toUpperCase();
     let comment = -1;
@@ -297,7 +298,7 @@ export default class Parser {
           } else {
             // We need to add qualified as it is qualified by default.
             if (!ds.keywords.includes(`QUALIFIED`))
-            ds.keywords.push(`QUALIFIED`);
+              ds.keywords.push(`QUALIFIED`);
 
             // Fetch from local definitions
             for (let i = scopes.length - 1; i >= 0; i--) {

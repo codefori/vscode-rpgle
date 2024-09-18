@@ -500,7 +500,29 @@ test('variable_case1', async () => {
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
-})
+});
+
+test('variable_case1 commented out', async () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No);`,
+    `// /copy './tests/rpgle/copy3.rpgle'`,
+    `Dcl-S MyCustomerName1 like(customername_t);`,
+    `Dcl-S MyCustomerName2 like(CustomerName_t);`,
+    `Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
+    `Dcl-S MyCustomerName4 like(CUSTOMERNAME_T);`,
+    `MyCustomerName1 = 'John Smith';`,
+    `dsply MyCustomerName1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  expect(errors.length).toBe(0);
+});
 
 test('uppercase1', async () => {
   const lines = [
