@@ -3345,4 +3345,62 @@ test('linter with non-free copybook', async () => {
   }, cache);
 
   expect(errors.length).toBe(0);
+});
+
+test('constant replace picking up wrong variable #330', async () => {
+  const lines = [
+    `**Free`,
+    `Ctl-Opt Main(Proc_Name);`,
+    `Ctl-Opt Debug Option(*SrcStmt:*NoDebugIO);`,
+    `Ctl-Opt ActGrp(*Caller);`,
+    `Ctl-opt ExtBinInt(*Yes); `,
+    ``,
+    `Dcl-Proc Proc_1; `,
+    ``,
+    `  Dcl-Pi Proc_1 Char(20);`,
+``,
+    `  End-Pi;`,
+    `  `,
+    `  Dcl-s altError Char(20);`,
+``,
+    `  Dcl-c basicError 'Invalid credentials';`,
+``,
+    `  altError = 'Invalid credentials';`,
+``,
+    `  Return basicError;`,
+``,
+    `On-Exit;`,
+    `End-Proc Proc_1;`,
+``,
+    `Dcl-Proc Proc_2;`,
+``,
+    `  Dcl-Pi Proc_2 Char(20);`,
+``,
+    `  End-Pi;`,
+``,
+    `  Return 'Invalid credentials';`,
+``,
+    `On-Exit;`,
+    `End-Proc Proc_2;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    StringLiteralDupe: true
+  }, cache);
+
+  console.log(errors);
+  expect(errors.length).toBe(2);
+  
+  expect(errors[0]).toMatchObject({
+    offset: { position: 270, end: 291 },
+    type: 'StringLiteralDupe',
+    newValue: 'basicError'
+  });
+
+  expect(errors[1]).toMatchObject({
+    offset: { position: 408, end: 429 },
+    type: 'StringLiteralDupe',
+    newValue: undefined
+  });
 })
