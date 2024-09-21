@@ -107,7 +107,7 @@ export default class Linter {
 
     const selectBlocks: SelectBlock[] = [];
 
-    const stringLiterals: { value: string, definition?: string, list: { offset: Offset }[] }[] = [];
+    const stringLiterals: { value: string, list: { line: number, offset: Offset }[] }[] = [];
 
     let directiveScope = 0;
     let currentRule = skipRules.none;
@@ -412,23 +412,6 @@ export default class Linter {
                           type: `UppercaseConstants`,
                           newValue: value.toUpperCase()
                         });
-                      }
-                    }
-
-                    if (rules.StringLiteralDupe) {
-                      if (statement[2].type === `string`) {
-                        let foundBefore = stringLiterals.find(literal => literal.value === statement[2].value);
-
-                        // If it does not exist on our list, we can add it
-                        if (!foundBefore) {
-                          foundBefore = {
-                            definition: value,
-                            value: statement[2].value,
-                            list: []
-                          };
-
-                          stringLiterals.push(foundBefore);
-                        }
                       }
                     }
                     break;
@@ -989,6 +972,7 @@ export default class Linter {
 
                       // Then add our new found literal location to the list
                       foundBefore.list.push({
+                        line: lineNumber,
                         offset: { position: part.range.start, end: part.range.end }
                       });
                     }
@@ -1080,10 +1064,11 @@ export default class Linter {
       stringLiterals.forEach(literal => {
         if (literal.list.length >= literalMinimum) {
           literal.list.forEach(location => {
+            const possibleConst = globalScope.findConstByValue(location.line, literal.value);
             errors.push({
-              ...location,
+              offset: location.offset,
               type: `StringLiteralDupe`,
-              newValue: literal.definition
+              newValue: possibleConst ? possibleConst.name : undefined
             });
           });
         }

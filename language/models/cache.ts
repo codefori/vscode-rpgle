@@ -184,6 +184,28 @@ export default class Cache {
     }
   }
 
+  findConstByValue(lineNumber: number, value: string) {
+    const upperValue = value.toUpperCase(); // Keywords are stored in uppercase
+
+    // If they're typing inside of a procedure, let's get the stuff from there too
+    const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+
+    if (currentProcedure && currentProcedure.scope) {
+      console.log(currentProcedure.scope.constants);
+      const localDef = currentProcedure.scope.constants.find(def => def.keyword[upperValue] === true);
+
+      if (localDef) {
+        return localDef;
+      }
+    }
+
+    const globalDef = this.constants.find(def => def.keyword[upperValue] === true);
+
+    if (globalDef) {
+      return globalDef;
+    }
+  }
+
   /**
    * Move all procedure subItems (the paramaters) into the cache
    */
