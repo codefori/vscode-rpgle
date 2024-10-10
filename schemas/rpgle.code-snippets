@@ -561,6 +561,13 @@
 		],
 		"description": "%HANDLER is used to identify a procedure to handle an event or a series of events. %HANDLER does not return a value, and it can only be specified as the first operand of XML-SAX, XML-INTO and DATA-INTO."
 	},
+	"%hival": {
+		"prefix": "%hival",
+		"body": [
+			"%hival(${1:variable or enum})"
+		],
+		"description": "%HIVAL returns the highest possible value of a variable or the highest value in an enumeration."
+	},
 	"%hours": {
 		"prefix": "%hours",
 		"body": [
@@ -651,6 +658,13 @@
 			"%lookupge(${1:argument} :${2:array} :${3:(optional) start index} :${4:(optional) number of elements})"
 		],
 		"description": "%LOOKUPGE returns the array index of the item in the array that is an exact match, or the value that is closest to argument but greater than argument."
+	},
+	"%loval": {
+		"prefix": "%loval",
+		"body": [
+			"%loval(${1:variable or enum})"
+		],
+		"description": "%LOVAL returns the lowest possible value of a variable or the lowest value in an enumeration."
 	},
 	"%lower": {
 		"prefix": "%lower",
