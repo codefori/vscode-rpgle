@@ -1162,7 +1162,6 @@ test(`exec_14`, async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  console.log(cache.sqlReferences);
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`table1`);
 });
@@ -1233,7 +1232,6 @@ test('keywords over multiple lines', async () => {
   expect(invoiceParm.keyword[`CONST`]).toBe(true);
 
   const detailParm = invoice_get_invoice.subItems[2];
-  console.log(detailParm);
   expect(detailParm.name).toBe(`details`);
   expect(detailParm.keyword[`LIKEDS`]).toBe(`INVOICE_GET_INVOICE_SALES_DETAIL_DS`);
   expect(detailParm.keyword[`DIM`]).toBe(`INVOICE_MAX_DETAILS`);
