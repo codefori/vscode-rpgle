@@ -191,7 +191,6 @@ export default class Cache {
     const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
     if (currentProcedure && currentProcedure.scope) {
-      console.log(currentProcedure.scope.constants);
       const localDef = currentProcedure.scope.constants.find(def => def.keyword[upperValue] === true);
 
       if (localDef) {

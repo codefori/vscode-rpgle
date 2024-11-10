@@ -9,6 +9,9 @@ import Document from "./document";
 import { IssueRange, Offset, Rules, SelectBlock } from "./parserTypes";
 import Declaration from "./models/declaration";
 
+const BANNED_FROM_INCLUDES = [`NoUnreferenced`];
+const INCLUDE_EXTENSIONS = [`rpgleinc`, `rpgleh`];
+
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
   'QualifiedCheck': `Struct names must be qualified (\`QUALIFIED\`).`,
@@ -59,6 +62,14 @@ export default class Linter {
   static getErrors(data: { uri: string, content: string, availableIncludes?: string[] }, rules: Rules, globalScope?: Cache) {
     const indentEnabled = rules.indent !== undefined;
     const indent = rules.indent || 2;
+
+    const uriExtension = data.uri.split('.').pop().toLowerCase();
+
+    if (INCLUDE_EXTENSIONS.includes(uriExtension)) {
+      for (const banned of BANNED_FROM_INCLUDES) {
+        rules[banned] = false;
+      }
+    }
 
     // Excluding indent
     const ruleCount = Object.keys(rules).length - (rules.indent ? 1 : 0);
