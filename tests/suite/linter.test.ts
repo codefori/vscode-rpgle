@@ -6,6 +6,7 @@ import { test, expect } from "vitest";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
+const includeUri = `source.rpgleinc`;
 
 test("linter_indent_multi_1", async () => {
   const lines = [
@@ -3389,7 +3390,6 @@ test('constant replace picking up wrong variable #330', async () => {
     StringLiteralDupe: true
   }, cache);
 
-  console.log(errors);
   expect(errors.length).toBe(2);
   
   expect(errors[0]).toMatchObject({
@@ -3403,4 +3403,25 @@ test('constant replace picking up wrong variable #330', async () => {
     type: 'StringLiteralDupe',
     newValue: undefined
   });
-})
+});
+
+test('Linter running on rpgleinc', async () => {
+  const lines = [
+    `**free`,
+    `Dcl-S CustomerName_t varchar(40) template;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(includeUri, lines, { ignoreCache: true, withIncludes: true });
+  const { errors } = Linter.getErrors({ uri: includeUri, content: lines }, {
+    IncorrectVariableCase: true,
+    NoUnreferenced: true,
+    SpecificCasing: [{operation: "dcl-s", expected: `DCL-S`}]
+  }, cache);
+
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toMatchObject({
+    offset: { position: 7, end: 12 },
+    type: 'SpecificCasing',
+    newValue: 'DCL-S'
+  });
+});
