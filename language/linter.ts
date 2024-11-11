@@ -63,7 +63,10 @@ export default class Linter {
     const indentEnabled = rules.indent !== undefined;
     const indent = rules.indent || 2;
 
-    const uriExtension = data.uri.split('.').pop().toLowerCase();
+    let uriExtension = data.uri.split('.').pop().toLowerCase();
+    if (uriExtension.includes(`?`)) {
+      uriExtension = uriExtension.split(`?`)[0];
+    }
 
     if (INCLUDE_EXTENSIONS.includes(uriExtension)) {
       for (const banned of BANNED_FROM_INCLUDES) {
