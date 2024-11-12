@@ -398,6 +398,66 @@ test('test12', async () => {
   expect(theLocalProc.scope.variables.length).toBe(1);
 });
 
+test('test13', async () => {
+  const lines = [
+    `**FREE`,
+    ``,
+    `Ctl-Opt DftActGrp(*No);`,
+    ``,
+    `/copy './tests/rpgle/copy1.rpgle' // Test copy`,
+    ``,
+    `Dcl-S globalVar Char(20);`,
+    ``,
+    `Dcl-C theConstant 'Hello world';`,
+    ``,
+    `globalVar = theConstant;`,
+    ``,
+    `theLocalProc(globalVar);`,
+    ``,
+    `Return;`,
+    ``,
+    `Dcl-Proc theLocalProc;`,
+    `  Dcl-Pi *N;`,
+    `    newValue Char(20);`,
+    `  End-Pi;`,
+    `  Dcl-S localVar Char(20);`,
+    `  localVar = %trimr(newValue) + '!';`,
+    `  globalVar = localVar;`,
+    `End-Proc;`,
+    ``
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.includes.length).toBe(1);
+
+  expect(cache.variables.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+
+  // One prototype and one declared
+  expect(cache.procedures.length).toBe(2);
+
+  // Valid names
+  expect(cache.procedures[0].name).toBe(`theExtProcedure`);
+  expect(cache.procedures[1].name).toBe(`theLocalProc`);
+
+  const theLocalProc = cache.find(`theLocalProc`);
+
+  expect(theLocalProc.range).toEqual({
+    start: 16,
+    end: 23
+  });
+
+  // Has a parameter
+  expect(theLocalProc.subItems.length).toBe(1);
+
+  // Has a local scope
+  expect(theLocalProc.scope !== undefined).toBe(true);
+
+  // Should have a local variable
+  expect(theLocalProc.scope.variables.length).toBe(1);
+});
+
 test('indicators1', async () => {
   const lines = [
     `**FREE`,
