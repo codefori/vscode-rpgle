@@ -179,24 +179,7 @@ export default class Parser {
 
     if (!content) return null;
 
-    /** @type {{[path: string]: string[]}} */
-    const files = {};
-
     let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
-
-    let currentTitle = undefined, currentDescription = [];
-    /** @type {{tag: string, content: string}[]} */
-    let currentTags = [];
-
-    /** @type {Declaration} */
-    let currentItem;
-    /** @type {Declaration} */
-    let currentSub;
-    let currentProcName;
-
-    let resetDefinition = false; //Set to true when you're done defining a new item
-    let docs = false; // If section is for ILEDocs
-    let lineNumber, parts, partsLower, pieces;
 
     /** @type {Cache[]} */
     let scopes = [];
@@ -250,116 +233,38 @@ export default class Parser {
       return objectName;
     };
 
-    /**
-     * Expands LIKEDS, LIKEREC and EXTNAME.
-     * @param {string} file
-     * @param {Declaration} ds 
-     */
-    const expandDs = async (file, ds) => {
-      const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
-      for (const tag of tags) {
-        const keyword = ds.keywords.find(keyword => keyword.startsWith(`${tag}(`) && keyword.endsWith(`)`));
-        if (keyword) {
-          let keywordValue = keyword.substring(tag.length+1, keyword.length - 1).toUpperCase();
-
-          if (keywordValue.includes(`:`)) {
-            const parms = keywordValue.split(`:`).filter(part => part.trim().startsWith(`*`) === false);
-
-            if (parms.length > 0) {
-              keywordValue = parms[0];
-            } else {
-              break;
-            }
-          }
-
-          if (keywordValue.startsWith(`'`) && keywordValue.endsWith(`'`)) {
-            keywordValue = keywordValue.substring(1, keywordValue.length - 1);
-          }
-
-          if ([`EXTNAME`].includes(tag)) {
-            // Fetch from external definitions
-            const recordFormats = await this.fetchTable(keywordValue, ds.keywords.length.toString(), ds.keywords.includes(`ALIAS`));
-
-            if (recordFormats.length > 0) {
-
-              // Got to fix the positions for the defintions to be the declare.
-              recordFormats.forEach(recordFormat => {
-                recordFormat.subItems.forEach(subItem => {
-                  subItem.position = {
-                    path: file,
-                    line: lineNumber
-                  };
-                });
-
-                ds.subItems.push(...recordFormat.subItems);
-              });
-            }
-
-          } else {
-            // We need to add qualified as it is qualified by default.
-            if (!ds.keywords.includes(`QUALIFIED`))
-              ds.keywords.push(`QUALIFIED`);
-
-            // Fetch from local definitions
-            for (let i = scopes.length - 1; i >= 0; i--) {
-              const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
-              if (valuePointer) {
-                // Only use same subItems if local definition is from same path
-                if (ds.position.path === valuePointer.position.path) {
-                  ds.subItems = valuePointer.subItems;
-                } else {
-                  // Clone subitems for correct line assignment
-                  valuePointer.subItems.forEach((item) => {
-                    const newItem = item.clone();
-                    newItem.position.line = ds.position.line;
-                    ds.subItems.push(newItem);
-                  });
-                }
-
-                return;
-              }
-            }
-          }
-        }
-      }
-    };
-
-    if (options.withIncludes && this.includeFileFetch) {
-    //First loop is for copy/include statements
-      for (let i = baseLines.length - 1; i >= 0; i--) {
-        let line = baseLines[i]; //Paths are case insensitive so it's okay
-        if (line === ``) continue;
-
-        const includePath = Parser.getIncludeFromDirective(line);
-
-        if (includePath) {
-          const include = await this.includeFileFetch(workingUri, includePath);
-          if (include.found) {
-            files[include.uri] = include.lines;
-            scopes[0].includes.push({
-              toPath: include.uri,
-              line: i
-            });
-          }
-        }
-      }
-    }
-
-    files[workingUri] = baseLines;
-
     let potentialName;
     let potentialNameUsed = false;
 
     /** @type {"structs"|"procedures"|"constants"} */
     let currentGroup;
-    let isFullyFree = false;
+
+    /** @type {string[]} */
+    let definedMacros = [];
 
     //Now the real work
-    for (const file of Object.keys(files)) {
-      if (files[file].length === 0) continue;
-      lineNumber = -1;
+    /**
+     * @param {string} file 
+     * @param {string[]} lines 
+     */
+    const parseContent = async (file, lines) => {
+      if (lines.length === 0) return;
 
-      isFullyFree = files[file][0].toUpperCase().startsWith(`**FREE`);
+      let currentTitle = undefined, currentDescription = [];
+      /** @type {{tag: string, content: string}[]} */
+      let currentTags = [];
+
+      /** @type {Declaration} */
+      let currentItem;
+      /** @type {Declaration} */
+      let currentSub;
+      let currentProcName;
+
+      let resetDefinition = false; //Set to true when you're done defining a new item
+      let docs = false; // If section is for ILEDocs
+      let lineNumber = -1, parts, partsLower, pieces;
+
+      let isFullyFree = lines[0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
 
       /** @type {string|undefined} */
@@ -367,9 +272,88 @@ export default class Parser {
       /** @type {number|undefined} */
       let statementStartingLine;
 
-      let directIfScope = 0;
+      /** @type {{condition: boolean}[]} */
+      let directIfScope = [];
 
-      for (let line of files[file]) {
+      let lineCanRun = () => {
+        return directIfScope.length === 0 || directIfScope.every(scope => scope.condition);
+      }
+
+      /**
+       * Expands LIKEDS, LIKEREC and EXTNAME.
+       * @param {string} file
+       * @param {Declaration} ds 
+       */
+      const expandDs = async (file, ds) => {
+        const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
+        for (const tag of tags) {
+          const keyword = ds.keywords.find(keyword => keyword.startsWith(`${tag}(`) && keyword.endsWith(`)`));
+          if (keyword) {
+            let keywordValue = keyword.substring(tag.length+1, keyword.length - 1).toUpperCase();
+
+            if (keywordValue.includes(`:`)) {
+              const parms = keywordValue.split(`:`).filter(part => part.trim().startsWith(`*`) === false);
+
+              if (parms.length > 0) {
+                keywordValue = parms[0];
+              } else {
+                break;
+              }
+            }
+
+            if (keywordValue.startsWith(`'`) && keywordValue.endsWith(`'`)) {
+              keywordValue = keywordValue.substring(1, keywordValue.length - 1);
+            }
+
+            if ([`EXTNAME`].includes(tag)) {
+              // Fetch from external definitions
+              const recordFormats = await this.fetchTable(keywordValue, ds.keywords.length.toString(), ds.keywords.includes(`ALIAS`));
+
+              if (recordFormats.length > 0) {
+
+                // Got to fix the positions for the defintions to be the declare.
+                recordFormats.forEach(recordFormat => {
+                  recordFormat.subItems.forEach(subItem => {
+                    subItem.position = {
+                      path: file,
+                      line: lineNumber
+                    };
+                  });
+
+                  ds.subItems.push(...recordFormat.subItems);
+                });
+              }
+
+            } else {
+              // We need to add qualified as it is qualified by default.
+              if (!ds.keywords.includes(`QUALIFIED`))
+                ds.keywords.push(`QUALIFIED`);
+
+              // Fetch from local definitions
+              for (let i = scopes.length - 1; i >= 0; i--) {
+                const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
+                if (valuePointer) {
+                  // Only use same subItems if local definition is from same path
+                  if (ds.position.path === valuePointer.position.path) {
+                    ds.subItems = valuePointer.subItems;
+                  } else {
+                    // Clone subitems for correct line assignment
+                    valuePointer.subItems.forEach((item) => {
+                      const newItem = item.clone();
+                      newItem.position.line = ds.position.line;
+                      ds.subItems.push(newItem);
+                    });
+                  }
+
+                  return;
+                }
+              }
+            }
+          }
+        }
+      };
+
+      for (let line of lines) {
         const scope = scopes[scopes.length - 1];
         let spec;
 
@@ -387,7 +371,7 @@ export default class Parser {
           const comment = line[6];
           spec = line[5].toUpperCase();
 
-          if (comment === `*`) {
+          if ([spec, comment].includes(`*`)) {
             continue;
           }
 
@@ -437,27 +421,77 @@ export default class Parser {
           const lineIsComment = line.startsWith(`//`);
 
           if (!lineIsComment) {
-            if (parts[0] === `/EOF` && directIfScope === 0) {
+            if (parts[0] === `/EOF` && lineCanRun()) {
               // End of parsing for this file
-              break;
-            } else
-              if (parts[0] === `/IF`) {
-              // Directive IF
-                directIfScope += 1;
-                continue;
-              } else
-                if (parts[0] === `/ENDIF`) {
-                  // Directive ENDIF
-                  directIfScope -= 1;
-                  continue;
-                } else
-                  if (directIfScope > 0) {
-                    // Ignore lines inside the IF scope.
-                    continue;
-                  } else
-                    if (line.startsWith(`/`)) {
-                      continue;
+              return;
+            } else {
+              switch (parts[0]) {
+              case `/COPY`:
+              case `/INCLUDE`:
+                if (options.withIncludes && this.includeFileFetch && lineCanRun()) {
+                  const includePath = Parser.getIncludeFromDirective(line);
+          
+                  if (includePath) {
+                    const include = await this.includeFileFetch(workingUri, includePath);
+                    if (include.found) {
+                      await parseContent(include.uri, include.lines);
+                      scopes[0].includes.push({
+                        toPath: include.uri,
+                        line: lineNumber
+                      });
                     }
+                  }
+                }
+                continue;
+              case `/IF`:
+                // Not conditions can run
+                let condition = false;
+                let hasNot = (parts[1] === `NOT`);
+                let expr = parts.slice(hasNot ? 2 : 1).join(` `);
+                let keywords = Parser.expandKeywords(expr.split(` `));
+
+                if (typeof keywords[`DEFINED`] === `string`) {
+                  condition = definedMacros.includes(keywords[`DEFINED`]);
+                }
+
+                if (hasNot) condition = !condition;
+
+                directIfScope.push({condition: condition});
+                continue;
+              case `/ELSE`:
+                if (directIfScope.length > 0) {
+                  directIfScope[directIfScope.length - 1].condition = !directIfScope[directIfScope.length - 1].condition;
+                }
+                continue;
+              case `/ELSEIF`:
+                if (directIfScope.length > 0) {
+                  directIfScope.pop();
+                  directIfScope.push({condition: false});
+                }
+                continue;
+              case `/ENDIF`:
+                if (directIfScope.length > 0) {
+                  directIfScope.pop();
+                }
+                continue;
+
+              case `/DEFINE`:
+                if (lineCanRun()) {
+                  definedMacros.push(parts[1]);
+                }
+
+                continue;
+              default:
+                if (line.startsWith(`/`)) {
+                  continue;
+                }
+                if (!lineCanRun()) {
+                  // Ignore lines inside the IF scope.
+                  continue;
+                }
+                break;
+              }
+            }
           }
 
           if (pieces.length > 1 && pieces[1].includes(`//`)) line = pieces[0] + `;`;
@@ -1022,7 +1056,7 @@ export default class Parser {
 
         } else {
           // Fixed format!
-          if (directIfScope > 0) {
+          if (!lineCanRun()) {
             // Ignore lines inside the IF scope.
             continue;
           }
@@ -1390,6 +1424,8 @@ export default class Parser {
         }
       }
     }
+
+    await parseContent(workingUri, baseLines);
 
     if (scopes.length > 0) {
       scopes[0].keyword = Parser.expandKeywords(keywords);

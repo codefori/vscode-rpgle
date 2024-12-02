@@ -1,0 +1,9 @@
+**free
+
+/IF NOT DEFINED(QRPGLEH_RPMAR001)
+/DEFINE QRPGLEH_RPMAR001
+
+dcl-pr rpmar001_test extpgm('RPMAR001');
+end-pr;
+
+/ENDIF
