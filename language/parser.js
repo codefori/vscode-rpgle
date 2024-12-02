@@ -434,11 +434,17 @@ export default class Parser {
                   if (includePath) {
                     const include = await this.includeFileFetch(workingUri, includePath);
                     if (include.found) {
-                      await parseContent(include.uri, include.lines);
                       scopes[0].includes.push({
                         toPath: include.uri,
                         line: lineNumber
                       });
+                      
+                      try {
+                        await parseContent(include.uri, include.lines);
+                      } catch (e) {
+                        console.log(`Error parsing include: ${include.uri}`);
+                        console.log(e);
+                      }
                     }
                   }
                 }
