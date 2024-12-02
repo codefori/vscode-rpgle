@@ -589,3 +589,40 @@ test('lowercase1', async () => {
     newValue: `/copy`
   });
 })
+
+test('macro defined test 1', async () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No);`,
+    `/copy './tests/rpgle/copy4.rpgleinc'`,
+    `Dcl-S MyCustomerName1 char(5);`,
+    `MyCustomerName1 = 'John Smith';`,
+    `dsply MyCustomerName1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+
+  console.log(cache.procedures);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.procedures.length).toBe(1);
+})
+
+test('macro defined test 2', async () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No);`,
+    `/DEFINE QRPGLEH_RPMAR001`,
+    `/copy './tests/rpgle/copy4.rpgleinc'`,
+    `Dcl-S MyCustomerName1 char(5);`,
+    `MyCustomerName1 = 'John Smith';`,
+    `dsply MyCustomerName1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+
+  console.log(cache.procedures);
+  expect(cache.includes.length).toBe(1);
+  expect(cache.procedures.length).toBe(0);
+})
