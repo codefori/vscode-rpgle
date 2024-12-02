@@ -914,8 +914,8 @@ export default class Parser {
                       currentSqlItem.name = qualifiedObjectPath.name;
 
                       if (currentSqlItem.name)
-
                         currentSqlItem.keywords = [];
+                      
                       currentSqlItem.description = qualifiedObjectPath.schema || ``;
       
                       currentSqlItem.position = {
