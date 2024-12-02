@@ -126,7 +126,7 @@ export default class Parser {
 	 */
   static getIncludeFromDirective(line) {
     if (line.includes(`*`)) return; // Likely comment
-    if (line.includes(`//`)) return; // Likely comment
+    if (line.trim().startsWith(`//`)) return; // Likely comment
 
     const upperLine = line.toUpperCase();
     let comment = -1;
@@ -441,23 +441,23 @@ export default class Parser {
               // End of parsing for this file
               break;
             } else
-            if (parts[0] === `/IF`) {
+              if (parts[0] === `/IF`) {
               // Directive IF
-              directIfScope += 1;
-              continue;
-            } else
-            if (parts[0] === `/ENDIF`) {
-              // Directive ENDIF
-              directIfScope -= 1;
-              continue;
-            } else
-            if (directIfScope > 0) {
-              // Ignore lines inside the IF scope.
-              continue;
-            } else
-            if (line.startsWith(`/`)) {
-              continue;
-            }
+                directIfScope += 1;
+                continue;
+              } else
+                if (parts[0] === `/ENDIF`) {
+                  // Directive ENDIF
+                  directIfScope -= 1;
+                  continue;
+                } else
+                  if (directIfScope > 0) {
+                    // Ignore lines inside the IF scope.
+                    continue;
+                  } else
+                    if (line.startsWith(`/`)) {
+                      continue;
+                    }
           }
 
           if (pieces.length > 1 && pieces[1].includes(`//`)) line = pieces[0] + `;`;
@@ -671,9 +671,9 @@ export default class Parser {
             if (dsScopes.length === 1) {
               scope.structs.push(dsScopes.pop());
             } else
-            if (dsScopes.length > 1) {
-              dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
-            }
+              if (dsScopes.length > 1) {
+                dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
+              }
             break;
         
           case `DCL-PR`:
@@ -914,8 +914,8 @@ export default class Parser {
                       currentSqlItem.name = qualifiedObjectPath.name;
 
                       if (currentSqlItem.name)
-
-                      currentSqlItem.keywords = [];
+                        currentSqlItem.keywords = [];
+                      
                       currentSqlItem.description = qualifiedObjectPath.schema || ``;
       
                       currentSqlItem.position = {
