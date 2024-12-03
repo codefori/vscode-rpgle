@@ -1,6 +1,6 @@
 {
   "name": "@halcyontech/rpglint",
-  "version": "0.26.4",
+  "version": "0.27.0",
   "description": "rpglint CLI tool",
   "bin": {
     "rpglint": "./dist/index.js"
