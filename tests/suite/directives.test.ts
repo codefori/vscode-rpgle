@@ -625,4 +625,23 @@ test('macro defined test 2', async () => {
   console.log(cache.procedures);
   expect(cache.includes.length).toBe(1);
   expect(cache.procedures.length).toBe(0);
+});
+
+
+test('depth test', async () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No);`,
+    `/copy './tests/rpgle/depth1.rpgleinc'`,
+    `Dcl-S MyCustomerName1 char(5);`,
+    `MyCustomerName1 = 'John Smith';`,
+    `dsply MyCustomerName1;`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+
+  console.log(cache.procedures);
+  expect(cache.includes.length).toBe(2);
+  expect(cache.variables.length).toBe(3);
 })
