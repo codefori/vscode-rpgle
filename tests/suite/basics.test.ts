@@ -1222,7 +1222,6 @@ test(`exec_14`, async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  console.log(cache.sqlReferences);
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`table1`);
 });

@@ -59,7 +59,7 @@ const commonMatchers: Matcher[] = [
       { type: `asterisk` },
       {
         type: `word`, match: (word) =>
-          [`CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
+          [`PSSR`, `CTDATA`, `BLANK`, `BLANKS`, `ZERO`, `ZEROS`, `ON`, `OFF`, `NULL`, `ISO`, `MDY`, `DMY`, `EUR`, `YMD`, `USA`, `SECONDS`, `S`, `MINUTES`, `MN`, `HOURS`, `H`, `DAYS`, `D`, `MONTHS`, `M`, `YEARS`, `Y`, `HIVAL`, `END`, `LOVAL`, `START`, `N`, `OMIT`, `STRING`, `CWIDEN`, `CONVERT`].includes(word.toUpperCase()) || word.toUpperCase().startsWith(`IN`)
       }
     ],
     becomes: {
