@@ -1,5 +1,5 @@
 import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-languageserver';
-import { documents, parser } from '.';
+import { documents, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
 
 export default async function documentSymbolProvider(handler: DocumentSymbolParams): Promise<DocumentSymbol[]> {
@@ -22,7 +22,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				.forEach(proc => {
 					const procDef = DocumentSymbol.create(
 						proc.name,
-						proc.keywords.join(` `).trim(),
+						prettyKeywords(proc.keyword),
 						SymbolKind.Function,
 						Range.create(proc.range.start, 0, proc.range.end, 0),
 						Range.create(proc.range.start, 0, proc.range.start, 0),
@@ -33,7 +33,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						.filter(subitem => subitem.position && subitem.position.path === currentPath)
 						.map(subitem => DocumentSymbol.create(
 							subitem.name,
-							subitem.keywords.join(` `).trim(),
+							prettyKeywords(subitem.keyword),
 							SymbolKind.Property,
 							Range.create(subitem.position.line, 0, subitem.position.line, 0),
 							Range.create(subitem.position.line, 0, subitem.position.line, 0)
@@ -50,7 +50,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 					.filter(def => def.range.start)
 					.map(def => DocumentSymbol.create(
 						def.name,
-						def.keywords.join(` `).trim(),
+						prettyKeywords(def.keyword),
 						SymbolKind.Function,
 						Range.create(def.range.start, 0, def.range.end, 0),
 						Range.create(def.range.start, 0, def.range.start, 0),
@@ -60,7 +60,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 					.filter(variable => variable.position && variable.position.path === currentPath)
 					.map(def => DocumentSymbol.create(
 						def.name,
-						def.keywords.join(` `).trim(),
+						prettyKeywords(def.keyword),
 						SymbolKind.Variable,
 						Range.create(def.position.line, 0, def.position.line, 0),
 						Range.create(def.position.line, 0, def.position.line, 0)
@@ -72,7 +72,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				.forEach(def => {
 					const constantDef = DocumentSymbol.create(
 						def.name,
-						def.keywords.join(` `).trim(),
+						prettyKeywords(def.keyword),
 						SymbolKind.Constant,
 						Range.create(def.position.line, 0, def.position.line, 0),
 						Range.create(def.position.line, 0, def.position.line, 0)
@@ -83,7 +83,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 							.filter(subitem => subitem.position && subitem.position.path === currentPath)
 							.map(subitem => DocumentSymbol.create(
 								subitem.name,
-								subitem.keywords.join(` `).trim(),
+								prettyKeywords(subitem.keyword),
 								SymbolKind.Property,
 								Range.create(subitem.position.line, 0, subitem.position.line, 0),
 								Range.create(subitem.position.line, 0, subitem.position.line, 0)
@@ -98,7 +98,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				.forEach(file => {
 					const fileDef = DocumentSymbol.create(
 						file.name,
-						file.keywords.join(` `).trim(),
+						prettyKeywords(file.keyword),
 						SymbolKind.File,
 						Range.create(file.position.line, 0, file.position.line, 0),
 						Range.create(file.position.line, 0, file.position.line, 0)
@@ -111,7 +111,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						.forEach(recordFormat => {
 							const recordFormatDef = DocumentSymbol.create(
 								recordFormat.name,
-								recordFormat.keywords.join(` `).trim(),
+								prettyKeywords(recordFormat.keyword),
 								SymbolKind.Struct,
 								Range.create(recordFormat.position.line, 0, recordFormat.position.line, 0),
 								Range.create(recordFormat.position.line, 0, recordFormat.position.line, 0)
@@ -121,7 +121,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 								.filter(subitem => subitem.position && subitem.position.path === currentPath)
 								.map(subitem => DocumentSymbol.create(
 									subitem.name,
-									subitem.keywords.join(` `).trim(),
+									prettyKeywords(subitem.keyword),
 									SymbolKind.Property,
 									Range.create(subitem.position.line, 0, subitem.position.line, 0),
 									Range.create(subitem.position.line, 0, subitem.position.line, 0)
@@ -140,7 +140,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				.forEach(struct => {
 					const structDef = DocumentSymbol.create(
 						struct.name,
-						struct.keywords.join(` `).trim(),
+						prettyKeywords(struct.keyword),
 						SymbolKind.Struct,
 						Range.create(struct.range.start, 0, struct.range.end, 0),
 						Range.create(struct.range.start, 0, struct.range.start, 0),
@@ -150,7 +150,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						.filter(subitem => subitem.position && subitem.position.path === currentPath)
 						.map(subitem => DocumentSymbol.create(
 							subitem.name,
-							subitem.keywords.join(` `).trim(),
+							prettyKeywords(subitem.keyword),
 							SymbolKind.Property,
 							Range.create(subitem.position.line, 0, subitem.position.line, 0),
 							Range.create(subitem.position.line, 0, subitem.position.line, 0)
