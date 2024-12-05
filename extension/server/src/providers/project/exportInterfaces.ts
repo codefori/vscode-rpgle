@@ -1,7 +1,7 @@
 import path = require('path');
 import { APIInterface } from '../apis';
 import { isEnabled } from '.';
-import { parser } from '..';
+import { parser, prettyKeywords } from '..';
 
 export function getInterfaces(): APIInterface[] {
 	let interfaces: APIInterface[] = [];
@@ -30,16 +30,13 @@ export function getInterfaces(): APIInterface[] {
 
 							if (entryFunction) {
 
-								let keywords = entryFunction.keywords
-									.map(keyword => keyword.toLowerCase());
-
 								// We assume the file name is the name of the object
-								keywords.push(`extpgm('${objectName}')`);
+								entryFunction.keyword[`EXTPGM`] = `'${objectName}'`;
 
 								const prototype = [
-									`dcl-pr ${entryFunction.name} ${keywords.join(` `)};`,
+									`dcl-pr ${entryFunction.name} ${prettyKeywords(entryFunction.keyword)};`,
 									...entryFunction.subItems.map(subItem =>
-										`  ${subItem.name} ${subItem.keywords.map(keyword => keyword.toLowerCase()).join(` `)};`
+										`  ${subItem.name} ${prettyKeywords(subItem.keyword)};`
 									),
 									`end-pr;`
 								];
@@ -60,16 +57,13 @@ export function getInterfaces(): APIInterface[] {
 						// This might mean it is a module. Look for EXPORTs
 						cache.procedures.forEach(proc => {
 							if (proc.keyword[`EXPORT`]) {
-								let keywords = proc.keywords
-									.map(keyword => keyword.toLowerCase())
-									.filter(keyword => keyword !== `export`);
 
-								keywords.push(`extproc('${proc.name.toUpperCase()}')`);
+								proc.keyword[`EXTPROC`] = `'${proc.name.toUpperCase()}'`;
 
 								const prototype = [
-									`dcl-pr ${proc.name} ${keywords.join(` `)};`,
+									`dcl-pr ${proc.name} ${prettyKeywords(proc.keyword)};`,
 									...proc.subItems.map(subItem =>
-										`  ${subItem.name} ${subItem.keywords.map(keyword => keyword.toLowerCase()).join(` `)};`
+										`  ${subItem.name} ${prettyKeywords(subItem.keyword)};`
 									),
 									`end-pr;`
 								];

@@ -11,6 +11,8 @@ import {
 } from 'vscode-languageserver-textdocument';
 import Parser from '../../../../language/parser';
 
+type Keywords = {[key: string]: string | boolean};
+
 // Create a simple text document manager.
 export const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
@@ -40,4 +42,18 @@ export function getWordRangeAtPosition(document: TextDocument, position: Positio
 		return undefined;
 	else
 		return document.getText(Range.create(line, Math.max(0, startChar), line, endChar+1)).replace(/(\r\n|\n|\r)/gm, "");
+}
+
+export function prettyKeywords(keywords: Keywords): string {
+	return Object.keys(keywords).map(key => {
+		if (keywords[key] ) {
+			if (typeof keywords[key] === `boolean`) {
+				return key.toLowerCase();
+			}
+
+			return `${key.toLowerCase()}(${keywords[key]})`;
+		} else {
+			return undefined;
+		}
+	}).filter(k => k).join(` `);
 }

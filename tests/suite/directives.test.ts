@@ -603,7 +603,6 @@ test('macro defined test 1', async () => {
 
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
 
-  console.log(cache.procedures);
   expect(cache.includes.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
 })
@@ -622,7 +621,6 @@ test('macro defined test 2', async () => {
 
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
 
-  console.log(cache.procedures);
   expect(cache.includes.length).toBe(1);
   expect(cache.procedures.length).toBe(0);
 });
@@ -641,7 +639,6 @@ test('depth test', async () => {
 
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
 
-  console.log(cache.procedures);
   expect(cache.includes.length).toBe(2);
   expect(cache.variables.length).toBe(3);
 })

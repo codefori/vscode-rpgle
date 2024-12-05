@@ -1,7 +1,8 @@
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser } from '.';
+import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Parser from "../../../../language/parser";
 import { URI } from 'vscode-uri';
+import { Keywords } from '../../../../language/parserTypes';
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover|undefined> {
 	const currentPath = params.textDocument.uri;
@@ -18,8 +19,14 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 
 			if (procedure) {
 				let markdown = ``;
-				let retrunValue = procedure.keywords.filter(keyword => keyword !== `EXTPROC`);
-				if (retrunValue.length === 0) retrunValue = [`void`];
+				let returnValue = `void`
+
+				let returnKeywords: Keywords = {
+					...procedure.keyword,
+				};
+				delete returnKeywords[`EXTPROC`];
+
+				if (Object.keys(returnKeywords).length > 0) returnValue = prettyKeywords(returnKeywords);
 
 				const returnTag = procedure.tags.find(tag => tag.tag === `return`);
 				const deprecatedTag = procedure.tags.find(tag => tag.tag === `deprecated`);
@@ -33,10 +40,10 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 				markdown += `\`\`\`vb\n${procedure.name}(`;
 
 				if (procedure.subItems.length > 0) {
-					markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${parm.keywords.join(` `).trim()}`).join(`,\n  `)}\n`;
+					markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${prettyKeywords(parm.keyword)}`).join(`,\n  `)}\n`;
 				}
 
-				markdown += `): ${retrunValue.join(` `)}\n\`\`\` \n`;
+				markdown += `): ${returnValue}\n\`\`\` \n`;
 
 				// Description
 				if (procedure.description)
@@ -76,7 +83,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 
 				if (theVariable) {
 					// Variable definition found
-					let markdown = `\`${theVariable.name}\`: \`${theVariable.keywords.join(` `).trim()}\``;
+					let markdown = `\`${theVariable.name}\`: \`${prettyKeywords(theVariable.keyword)}\``;
 
 					if (theVariable.position && currentPath !== theVariable.position.path) {
 						markdown += `\n\n*@file* \`${theVariable.position.path}:${theVariable.position.line+1}\``;

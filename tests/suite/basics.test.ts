@@ -619,7 +619,7 @@ test('inline_end_pi', async () => {
 
   const getHandle = cache.find(`getHandle`);
 
-  expect(getHandle.keyword[`LIKE`]).toBe(`HANDLE_T`);
+  expect(getHandle.keyword[`LIKE`]).toBe(`handle_t`);
   expect(getHandle.keyword[`END-PI`]).toBeUndefined();
 });
 
@@ -1293,8 +1293,8 @@ test('keywords over multiple lines', async () => {
 
   const detailParm = invoice_get_invoice.subItems[2];
   expect(detailParm.name).toBe(`details`);
-  expect(detailParm.keyword[`LIKEDS`]).toBe(`INVOICE_GET_INVOICE_SALES_DETAIL_DS`);
-  expect(detailParm.keyword[`DIM`]).toBe(`INVOICE_MAX_DETAILS`);
+  expect(detailParm.keyword[`LIKEDS`]).toBe(`invoice_get_invoice_sales_detail_ds`);
+  expect(detailParm.keyword[`DIM`]).toBe(`invoice_max_details`);
 
   const count_details = invoice_get_invoice.subItems[3];
   expect(count_details.name).toBe(`count_details`);
@@ -1302,5 +1302,5 @@ test('keywords over multiple lines', async () => {
 
   const error = invoice_get_invoice.subItems[4];
   expect(error.name).toBe(`error`);
-  expect(error.keyword[`LIKE`]).toBe(`TERROR`);
+  expect(error.keyword[`LIKE`]).toBe(`TError`);
 })

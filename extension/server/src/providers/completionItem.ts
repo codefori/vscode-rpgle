@@ -1,6 +1,6 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser } from '.';
+import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import * as ileExports from './apis';
@@ -78,7 +78,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const item = CompletionItem.create(subItem.name);
 							item.kind = CompletionItemKind.Property;
 							item.insertText = subItem.name;
-							item.detail = subItem.keywords.join(` `);
+							item.detail = prettyKeywords(subItem.keyword);
 							item.documentation = subItem.description + `${possibleStruct ? ` (${possibleStruct.name})` : ``}`;
 							return item;
 						}));
@@ -109,7 +109,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const item = CompletionItem.create(`${subItem.name}`);
 							item.kind = CompletionItemKind.TypeParameter;
 							item.insertText = subItem.name;
-							item.detail = [`parameter`, ...subItem.keywords].join(` `);
+							item.detail = [`parameter`, prettyKeywords(subItem.keyword)].join(` `);
 							item.documentation = subItem.description;
 							items.push(item);
 						}
@@ -119,7 +119,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							item.kind = CompletionItemKind.Function;
 							item.insertTextFormat = InsertTextFormat.Snippet;
 							item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`;
-							item.detail = procedure.keywords.join(` `);
+							item.detail = prettyKeywords(procedure.keyword);
 							item.documentation = procedure.description;
 							items.push(item);
 						}
@@ -136,7 +136,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const item = CompletionItem.create(`${variable.name}`);
 							item.kind = CompletionItemKind.Variable;
 							item.insertText = `${variable.name}`;
-							item.detail = variable.keywords.join(` `);
+							item.detail = prettyKeywords(variable.keyword);
 							item.documentation = variable.description;
 							items.push(item);
 						}
@@ -145,7 +145,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const item = CompletionItem.create(`${file.name}`);
 							item.kind = CompletionItemKind.File;
 							item.insertText = `${file.name}`;
-							item.detail = file.keywords.join(` `);
+							item.detail = prettyKeywords(file.keyword);
 							item.documentation = file.description;
 							items.push(item);
 
@@ -153,7 +153,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 								const item = CompletionItem.create(`${struct.name}`);
 								item.kind = CompletionItemKind.Struct;
 								item.insertText = `${struct.name}`;
-								item.detail = struct.keywords.join(` `);
+								item.detail = prettyKeywords(struct.keyword);
 								item.documentation = struct.description;
 								items.push(item);
 
@@ -162,7 +162,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 										const item = CompletionItem.create(`${subItem.name}`);
 										item.kind = CompletionItemKind.Property;
 										item.insertText = `${subItem.name}`;
-										item.detail = subItem.keywords.join(` `);
+										item.detail = prettyKeywords(subItem.keyword);
 										item.documentation = subItem.description + ` (${struct.name})`;
 										items.push(item);
 									});
@@ -174,7 +174,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const item = CompletionItem.create(`${struct.name}`);
 							item.kind = CompletionItemKind.Struct;
 							item.insertText = `${struct.name}`;
-							item.detail = struct.keywords.join(` `);
+							item.detail = prettyKeywords(struct.keyword);
 							item.documentation = struct.description;
 							items.push(item);
 
@@ -183,7 +183,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 									const item = CompletionItem.create(`${subItem.name}`);
 									item.kind = CompletionItemKind.Property;
 									item.insertText = `${subItem.name}`;
-									item.detail = subItem.keywords.join(` `);
+									item.detail = prettyKeywords(subItem.keyword);
 									item.documentation = subItem.description + ` (${struct.name})`;
 									items.push(item);
 								});
@@ -194,7 +194,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const item = CompletionItem.create(`${constant.name}`);
 							item.kind = CompletionItemKind.Constant;
 							item.insertText = `${constant.name}`;
-							item.detail = constant.keywords.join(` `);
+							item.detail = prettyKeywords(constant.keyword);
 							item.documentation = constant.description;
 							items.push(item);
 
@@ -203,7 +203,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 									const item = CompletionItem.create(`${subItem.name}`);
 									item.kind = CompletionItemKind.Property;
 									item.insertText = `${subItem.name}`;
-									item.detail = subItem.keywords.join(` `);
+									item.detail = prettyKeywords(subItem.keyword);
 									item.documentation = subItem.description + ` (${constant.name})`;
 									items.push(item);
 								});
@@ -226,7 +226,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 								const item = CompletionItem.create(`${subItem.name}`);
 								item.kind = CompletionItemKind.TypeParameter;
 								item.insertText = subItem.name;
-								item.detail = [`parameter`, ...subItem.keywords].join(` `);
+								item.detail = [`parameter`, prettyKeywords(subItem.keyword)].join(` `);
 								item.documentation = subItem.description;
 								items.push(item);
 							}

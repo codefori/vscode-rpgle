@@ -1,3 +1,4 @@
+import Parser from "../parser";
 
 /**
  * @param {string} line 
@@ -8,11 +9,10 @@ export function parseFLine(line) {
   // const field = line.substr(33, 1).toUpperCase(); //KEYED
   // const device = line.substr(35, 7).toUpperCase().trim(); //device: DISK, WORKSTN
   const keywords = line.substr(43).trim();
-  const splitKeywords = keywords.split(` `).filter(word => word !== ``);
 
   return {
     name, 
-    keywords: splitKeywords
+    keywords: Parser.expandKeywords(keywords)
   };
 }
 
@@ -56,7 +56,6 @@ export function parseDLine(line) {
   const decimals = line.substr(40, 3).trim();
   const field = line.substr(23, 2).trim().toUpperCase();
   const keywords = line.substr(43).trim().toUpperCase();
-  const splitKeywords = keywords.split(` `).filter(word => word !== ``);
 
   return {
     potentialName,
@@ -66,7 +65,7 @@ export function parseDLine(line) {
     type,
     decimals,
     field,
-    keywords: splitKeywords
+    keywords: Parser.expandKeywords(keywords)
   };
 }
 
@@ -79,20 +78,19 @@ export function parsePLine(line) {
   const potentialName = line.substring(6).trim();
   const start = line[23].toUpperCase() === `B`;
   const keywords = line.substr(43).trim().toUpperCase();
-  const splitKeywords = keywords.split(` `).filter(word => word !== ``);
 
   return {
     name,
     potentialName,
-    keywords: splitKeywords,
+    keywords: Parser.expandKeywords(keywords),
     start
   };
 }
 
 /**
  * 
- * @param {{type: string, keywords: string[], len: string, pos?: string, decimals?: string, field?: string}} lineData 
- * @returns {string}
+ * @param {{type: string, keywords: import("../parserTypes").Keywords, len: string, pos?: string, decimals?: string, field?: string}} lineData 
+ * @returns {import("../parserTypes").Keywords}
  */
 export function getPrettyType(lineData) {
   let outType = ``;
@@ -104,7 +102,7 @@ export function getPrettyType(lineData) {
 
   switch (lineData.type.toUpperCase()) {
   case `A`:
-    if (lineData.keywords.indexOf(`VARYING`) >= 0) {
+    if (Number(lineData.keywords[`VARYING`]) >= 0) {
       outType = `Varchar`;
 	  // For VARCHAR, the field defined will have a 2-byte integer field appended to the beginning of it that will contain the length of the data that is valid in the data portion of the field
       length -= 2;			  
@@ -140,7 +138,7 @@ export function getPrettyType(lineData) {
     outType = `Float` + `(` + lineData.len + `)`;
     break;
   case `G`:
-    if (lineData.keywords.indexOf(`VARYING`) >= 0) {
+    if (Number(lineData.keywords[`VARYING`]) >= 0) {
       outType = `Vargraph`;
     } else {
       outType = `Graph`;
@@ -207,7 +205,7 @@ export function getPrettyType(lineData) {
       outType = `lineData.Len(` + lineData.len + `)`;
     } else if (lineData.len != ``) {
       if (lineData.decimals == ``) {
-        if (lineData.keywords.indexOf(`VARYING`) >= 0) {
+        if (Number(lineData.keywords[`VARYING`]) >= 0) {
           outType = `Varchar`;
         } else {
           outType = `Char`;
@@ -226,5 +224,5 @@ export function getPrettyType(lineData) {
     break;
   }
 
-  return outType.toUpperCase();
+  return Parser.expandKeywords(outType);
 }
