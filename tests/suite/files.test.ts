@@ -25,7 +25,7 @@ test("simple_file", async () => {
   const fileDef = cache.find(`employee`);
   expect(fileDef.name).toBe(`employee`);
   expect(fileDef.keyword[`DISK`]).toBe(true);
-  expect(fileDef.keyword[`USAGE`]).toBe(`*INPUT`);
+  expect(fileDef.keyword[`USAGE`]).toBe(`*input`);
 
   // file record formats should be expanded into the subitems
   expect(fileDef.subItems.length).toBe(1);
@@ -34,7 +34,7 @@ test("simple_file", async () => {
 
   expect(empRdcFmt.name).toBe(`EMPLOYEE`);
 
-  expect(empRdcFmt.subItems[1].keywords[0]).toBe(`VARCHAR(12)`);																	   
+  expect(empRdcFmt.subItems[1].keyword[`VARCHAR`]).toBe(`12`);																	   
   // 14 fields inside of this record format
   expect(empRdcFmt.subItems.length).toBe(14);
 });
@@ -186,5 +186,5 @@ test('file DS in a copy book', async () => {
   expect(someStruct).toBeDefined();
   expect(someStruct.subItems.length).toBeGreaterThan(0);
 
-  expect(someStruct.subItems.map(s => ({name: s.name, keywords: s.keywords}))).toMatchObject(globalStruct.subItems.map(s => ({name: s.name, keywords: s.keywords})));
+  expect(someStruct.subItems.map(s => ({name: s.name, keyword: s.keyword}))).toMatchObject(globalStruct.subItems.map(s => ({name: s.name, keyword: s.keyword})));
 })

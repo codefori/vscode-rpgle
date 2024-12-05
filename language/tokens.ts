@@ -258,8 +258,7 @@ const endCommentString = `\n`;
  * @param {string} statement 
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */
-export function tokenise(statement) {
-  let lineNumber = 0;
+export function tokenise(statement, lineNumber = 0) {
   let commentStart = -1;
   let state: ReadState = ReadState.NORMAL;
 

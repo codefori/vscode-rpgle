@@ -2792,6 +2792,8 @@ test("issue_175", async () => {
     NoUnreferenced: true
   }, cache);
 
+  console.log(errors);
+  console.log(lines.substring(errors[0].offset.position, errors[0].offset.end));
   expect(errors.length).toBe(0);
 });
 

@@ -188,7 +188,7 @@ export default class Parser {
     let dsScopes = [];
 
     /** @type {string[]} */
-    let keywords = [];
+    let globalKeyword = [];
 
     // Global scope bits
     scopes.push(new Cache());
@@ -196,7 +196,7 @@ export default class Parser {
     /**
      * Gets value of EXTFILE if it exists.
      * @param {string} defaultName 
-     * @param {string[]} keywords 
+     * @param {import("./parserTypes").Keywords} keywords 
      * @returns {string}
      */
     const getObjectName = (defaultName, keywords) => {
@@ -206,8 +206,8 @@ export default class Parser {
             
       // Check for external object
       extObjKeywords.forEach(keyword => {
-        const keywordValue = keywords.find(part => part.startsWith(`${keyword}(`) && part.endsWith(`)`));
-        if (keywordValue) {
+        const keywordValue = keywords[keyword];
+        if (keywordValue && typeof keywordValue === `string`) {
           objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
 
           if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
@@ -219,8 +219,8 @@ export default class Parser {
       if(objectName === `*EXTDESC`){
         // Check for external object
         extObjKeywordsDesc.forEach(keyword => {
-          const keywordValue = keywords.find(part => part.startsWith(`${keyword}(`) && part.endsWith(`)`));
-          if (keywordValue) {
+          const keywordValue = keywords[keyword];
+          if (keywordValue && typeof keywordValue === `string`) {
             objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
 
             if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
@@ -262,7 +262,22 @@ export default class Parser {
 
       let resetDefinition = false; //Set to true when you're done defining a new item
       let docs = false; // If section is for ILEDocs
-      let lineNumber = -1, parts, partsLower, pieces;
+      let lineNumber = -1;
+
+      /**
+       * @type {string[]}
+       */
+      let parts;
+
+      /**
+       * @type {string[]}
+       */
+      let partsLower;
+
+      /**
+       * @type {string[]}
+       */
+      let pieces;
 
       let isFullyFree = lines[0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
@@ -286,11 +301,10 @@ export default class Parser {
        */
       const expandDs = async (file, ds) => {
         const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
+        const keywords = ds.keyword;
         for (const tag of tags) {
-          const keyword = ds.keywords.find(keyword => keyword.startsWith(`${tag}(`) && keyword.endsWith(`)`));
-          if (keyword) {
-            let keywordValue = keyword.substring(tag.length+1, keyword.length - 1).toUpperCase();
-
+          if (keywords[tag] && typeof keywords[tag] === `string`) {
+            let keywordValue = keywords[tag];
             if (keywordValue.includes(`:`)) {
               const parms = keywordValue.split(`:`).filter(part => part.trim().startsWith(`*`) === false);
 
@@ -307,7 +321,8 @@ export default class Parser {
 
             if ([`EXTNAME`].includes(tag)) {
               // Fetch from external definitions
-              const recordFormats = await this.fetchTable(keywordValue, ds.keywords.length.toString(), ds.keywords.includes(`ALIAS`));
+              const keywordLength = Object.keys(ds.keyword);
+              const recordFormats = await this.fetchTable(keywordValue, keywordLength.length.toString(), ds.keyword[`ALIAS`] !== undefined);
 
               if (recordFormats.length > 0) {
 
@@ -326,12 +341,12 @@ export default class Parser {
 
             } else {
               // We need to add qualified as it is qualified by default.
-              if (!ds.keywords.includes(`QUALIFIED`))
-                ds.keywords.push(`QUALIFIED`);
+              if (!ds.keyword[`QUALIFIED`])
+                ds.keyword[`QUALIFIED`];
 
               // Fetch from local definitions
               for (let i = scopes.length - 1; i >= 0; i--) {
-                const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue);
+                const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue.toUpperCase());
                 if (valuePointer) {
                   // Only use same subItems if local definition is from same path
                   if (ds.position.path === valuePointer.position.path) {
@@ -415,8 +430,9 @@ export default class Parser {
           if (line === ``) continue;
 
           pieces = line.split(`;`);
-          parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
-          partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
+          let tokens = tokenise(pieces[0], lineNumber);
+          partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
+          parts = partsLower.map(piece => piece.toUpperCase());
 
           const lineIsComment = line.startsWith(`//`);
 
@@ -453,8 +469,8 @@ export default class Parser {
                 // Not conditions can run
                 let condition = false;
                 let hasNot = (parts[1] === `NOT`);
-                let expr = parts.slice(hasNot ? 2 : 1).join(` `);
-                let keywords = Parser.expandKeywords(expr.split(` `));
+                let expr = tokens.slice(hasNot ? 2 : 1);
+                let keywords = Parser.expandKeywords(expr);
 
                 if (typeof keywords[`DEFINED`] === `string`) {
                   condition = definedMacros.includes(keywords[`DEFINED`]);
@@ -512,8 +528,9 @@ export default class Parser {
                 currentStatement = undefined;
 
                 pieces = line.split(`;`);
-                parts = pieces[0].toUpperCase().split(` `).filter(piece => piece !== ``);
-                partsLower = pieces[0].split(` `).filter(piece => piece !== ``);
+                tokens = tokenise(pieces[0], lineNumber);
+                partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
+                parts = partsLower.map(piece => piece.toUpperCase());
               }
 
             } else if (!line.endsWith(`;`)) {
@@ -530,7 +547,7 @@ export default class Parser {
 
           switch (parts[0]) {
           case `CTL-OPT`:
-            keywords.push(...parts.slice(1));
+            globalKeyword.push(...parts.slice(1));
             break;
 
           case `DCL-F`:
@@ -538,7 +555,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`file`);
                 currentItem.name = partsLower[1];
-                currentItem.keywords = parts.slice(2);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
@@ -546,25 +563,23 @@ export default class Parser {
                   line: lineNumber
                 };
 
-                const objectName = getObjectName(parts[1], parts);
+                const objectName = getObjectName(parts[1], currentItem.keyword);
                 let prefix = ``;
 
-                parts.find(element => {
-                  if (element.toUpperCase().includes(`PREFIX`)) {
-                    prefix = element.trim().substring(7, element.indexOf(`)`))
-                    return true;
-                  }
-                });	
+                const prefixKeyword = currentItem.keyword[`PREFIX`];
+                if (prefixKeyword  && typeof prefixKeyword === `string`) {
+                  prefix = prefixKeyword.toUpperCase();
+                }
           
-                const recordFormats = await this.fetchTable(objectName, parts.length.toString(), parts.includes(`ALIAS`));
+                const recordFormats = await this.fetchTable(objectName, parts.length.toString(), currentItem.keyword[`ALIAS`] !== undefined);
 
                 if (recordFormats.length > 0) {
                   const qualified = parts.includes(`QUALIFIED`);
 
                   // Got to fix the positions for the defintions to be the declare.
                   recordFormats.forEach(recordFormat => {
-                    recordFormat.keywords = [parts[1]];
-                    if (qualified) recordFormat.keywords.push(`QUALIFIED`);
+                    recordFormat.keyword = {[parts[1]]: true};
+                    if (qualified) recordFormat.keyword[`QUALIFIED`] = true;
 
                     recordFormat.position = currentItem.position;
 
@@ -591,7 +606,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
-                currentItem.keywords = parts.slice(2);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
@@ -610,7 +625,7 @@ export default class Parser {
               if (currentItem === undefined) {
                 currentItem = new Declaration(`variable`);
                 currentItem.name = partsLower[1];
-                currentItem.keywords = parts.slice(2);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
@@ -630,7 +645,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
-                currentItem.keywords = parts.slice(2);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
@@ -667,7 +682,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`struct`);
                 currentItem.name = partsLower[1];
-                currentItem.keywords = parts.slice(2);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
@@ -687,7 +702,7 @@ export default class Parser {
                 await expandDs(file, currentItem);
 
                 // Does the keywords include a keyword that makes end-ds useless?
-                if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
+                if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
                   currentItem.range.end = statementStartingLine;
                   scope.structs.push(currentItem);
                 } else {
@@ -723,7 +738,7 @@ export default class Parser {
                   currentGroup = `procedures`;
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = partsLower[1];
-                  currentItem.keywords = parts.slice(2);
+                  currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                   currentItem.description = currentDescription.join(`\n`);
                   currentItem.tags = currentTags;
 
@@ -740,7 +755,7 @@ export default class Parser {
                   };
 
                   // Does the keywords include a keyword that makes end-ds useless?
-                  if (currentItem.keywords.some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
+                  if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
                     currentItem.range.end = statementStartingLine;
                     scope.procedures.push(currentItem);
                     resetDefinition = true;
@@ -780,7 +795,7 @@ export default class Parser {
 
               currentProcName = partsLower[1];
               currentItem.name = currentProcName;
-              currentItem.keywords = parts.slice(2);
+              currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
               currentItem.description = currentDescription.join(`\n`);
               currentItem.tags = currentTags;
 
@@ -812,18 +827,21 @@ export default class Parser {
                 currentGroup = `procedures`;
                 currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
-                const endInline = parts.findIndex(part => part === `END-PI`);
+                const endInline = tokens.findIndex(part => part.value.toUpperCase() === `END-PI`);
 
                 if (currentItem) {
 
                   // Indicates that the PI starts and ends on the same line
                   if (endInline >= 0) { 
-                    parts.splice(endInline, 1);
+                    tokens.splice(endInline, 1);
                     currentItem.readParms = false;
                     resetDefinition = true;
                   }
 
-                  currentItem.keywords.push(...parts.slice(2));
+                  currentItem.keyword = {
+                    ...currentItem.keyword,
+                    ...Parser.expandKeywords(tokens.slice(2))
+                  }
                   currentItem.readParms = true;
 
                   currentDescription = [];
@@ -861,7 +879,7 @@ export default class Parser {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = partsLower[1];
                 currentItem.description = currentDescription.join(`\n`);
-		            currentItem.keywords = [`Subroutine`];
+		            currentItem.keyword = {'Subroutine': true};
 
                 currentItem.position = {
                   path: file,
@@ -887,7 +905,15 @@ export default class Parser {
             break;
 
           case `EXEC`:
-            if (parts.length > 2 && !parts.includes(`FETCH`)) {
+            const pIncludes = (value) => {
+              return parts.some(p => p === value);
+            }
+
+            const pIs = (part, value) => {
+              return part && part === value;
+            }
+
+            if (tokens.length > 2 && !pIncludes(`FETCH`)) {
               // insert into XX.XX
               // delete from xx.xx
               // update xx.xx set
@@ -896,27 +922,20 @@ export default class Parser {
               const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
               const ignoredWords = [`FINAL`, `SET`];
 
-              const cleanupObjectRef = (content = ``) => {
+              const cleanupObjectRef = (index) => {
+                let nameIndex = index;
                 const result = {
                   schema: undefined,
-                  name: content
+                  name: partsLower[index],
+                  length: 1
                 }
 
-                const schemaSplit = Math.max(result.name.indexOf(`.`), result.name.indexOf(`/`));
-                if (schemaSplit >= 0) {
-                  result.schema = result.name.substring(0, schemaSplit);
-                  result.name = result.name.substring(schemaSplit+1);
-                }
-
-                // For procedures or functions?
-                const openBracket = result.name.indexOf(`(`);
-                if (openBracket >= 0) {
-                  result.name = result.name.substring(0, openBracket);
-                }
-
-                // End bracket for sub-statements
-                if (result.name.endsWith(`)`) || result.name.endsWith(`,`)) {
-                  result.name = result.name.substring(0, result.name.length - 1);
+                const schemaSplit = [`.`, `/`].includes(parts[nameIndex + 1]);
+                if (schemaSplit) {
+                  result.schema = partsLower[index]
+                  result.name = partsLower[index + 2]
+                  result.length = 3;
+                  nameIndex += 2;
                 }
 
                 return result;
@@ -927,9 +946,9 @@ export default class Parser {
               /** @type {string[]} */
               let ignoreCtes = [];
 
-              if (parts.includes(`WITH`)) {
-                for (let index = 4; index < parts.length; index++) {
-                  if (parts[index].startsWith(`AS`) && (parts[index].endsWith(`(`) || parts[index+1] === `(`)) {
+              if (pIncludes(`WITH`)) {
+                for (let index = 4; index < tokens.length; index++) {
+                  if (pIs(parts[index], `AS`) && pIs(parts[index+1], `(`)) {
                     ignoreCtes.push(parts[index-1].toUpperCase());
                   }
                 }
@@ -944,17 +963,19 @@ export default class Parser {
                   (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
                 ) {
                   if (index >= 0 && (index+1) < parts.length && !ignoredWords.includes(parts[index+1])) {
-                    const possibleFileName = partsLower[index+1];
-                    isContinued = (possibleFileName.endsWith(`,`) || (parts[index+2] === `,`));
 
-                    const qualifiedObjectPath = cleanupObjectRef(possibleFileName);
+                    const qualifiedObjectPath = cleanupObjectRef(index+1);
 
-                    if (qualifiedObjectPath.name && !qualifiedObjectPath.name.startsWith(`:`) && !ignoreCtes.includes(qualifiedObjectPath.name.toUpperCase())) {
+                    index += (qualifiedObjectPath.length);
+
+                    isContinued = (parts[index+1] === `,`);
+
+                    if (qualifiedObjectPath.name && !ignoreCtes.includes(qualifiedObjectPath.name.toUpperCase())) {
                       const currentSqlItem = new Declaration(`file`);
                       currentSqlItem.name = qualifiedObjectPath.name;
 
                       if (currentSqlItem.name)
-                        currentSqlItem.keywords = [];
+                        currentSqlItem.keyword = {};
                       
                       currentSqlItem.description = qualifiedObjectPath.schema || ``;
       
@@ -1028,7 +1049,7 @@ export default class Parser {
 
                   currentSub = new Declaration(`subitem`);
                   currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;
-                  currentSub.keywords = parts.slice(1);
+                  currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
 
                   currentSub.position = {
                     path: file,
@@ -1046,7 +1067,6 @@ export default class Parser {
 
                   // If the parameter has likeds, add the subitems to make it a struct.
                   await expandDs(file, currentSub);
-                  currentSub.keyword = Parser.expandKeywords(currentSub.keywords);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
@@ -1069,7 +1089,7 @@ export default class Parser {
 
           switch (spec) {
           case `H`:
-            keywords.push(line.substring(6));
+            globalKeyword.push(line.substring(6));
             break;
 
           case `F`:
@@ -1079,7 +1099,7 @@ export default class Parser {
             if (fSpec.name) {
               currentItem = new Declaration(`file`);
               currentItem.name = potentialName;
-              currentItem.keywords = fSpec.keywords;
+              currentItem.keyword = fSpec.keywords;
 
               currentItem.position = {
                 path: file,
@@ -1088,29 +1108,27 @@ export default class Parser {
 			  
 			        let prefix = ``;
 
-              fSpec.keywords.find(element => {
-                if (element.toUpperCase().includes(`PREFIX`)) {
-                  prefix = element.substring(7, element.indexOf(`)`))
-                  return true;
-                }
-              });
+              const prefixKeyword = fSpec.keywords[`PREFIX`];
+              if (prefixKeyword && typeof prefixKeyword === `string`) {
+                prefix = prefixKeyword.toUpperCase();
+              }
 
-              const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords.includes(`ALIAS`));
+              const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords[`ALIAS`] !== undefined);
 
               if (recordFormats.length > 0) {
-                const qualified = fSpec.keywords.includes(`QUALIFIED`);
+                const qualified = fSpec.keywords[`QUALIFIED`] === true;
 
                 // Got to fix the positions for the defintions to be the declare.
                 recordFormats.forEach(recordFormat => {
-                  recordFormat.keywords = [potentialName];
-                  if (qualified) recordFormat.keywords.push(`QUALIFIED`);
+                  recordFormat.keyword = {[potentialName]: true};
+                  if (qualified) recordFormat.keyword[`QUALIFIED`] = true;;
 
                   recordFormat.position = currentItem.position;
 
                   recordFormat.subItems.forEach(subItem => {
 					          // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
                     if(prefix) {
-                      subItem.name = prefix.toUpperCase() + subItem.name;
+                      subItem.name = prefix + subItem.name;
                     }					 
                     subItem.position = currentItem.position;
                   });
@@ -1124,10 +1142,10 @@ export default class Parser {
             } else {
               currentItem = scope.files[scope.files.length-1];
               if (currentItem) {
-                currentItem.keywords = [
-                  ...(currentItem.keywords ? currentItem.keywords : []),
-                  ...fSpec.keywords
-                ]
+                currentItem.keyword = {
+                  ...fSpec.keywords,
+                  ...currentItem.keyword,
+                }
               }
             }
             
@@ -1144,7 +1162,7 @@ export default class Parser {
               if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = potentialName;
-                currentItem.keywords = [`Subroutine`];
+                currentItem.keyword = {'Subroutine': true};
   
                 currentItem.position = {
                   path: file,
@@ -1171,7 +1189,7 @@ export default class Parser {
             case `CALL`:
               const callItem = new Declaration(`procedure`);
               callItem.name = (cSpec.factor2.startsWith(`'`) && cSpec.factor2.endsWith(`'`) ? cSpec.factor2.substring(1, cSpec.factor2.length-1) : cSpec.factor2);
-              callItem.keywords = [`EXTPGM`];
+              callItem.keyword = {'EXTPGM': true}
               callItem.description = currentDescription.join(`\n`);
               callItem.tags = currentTags;
 
@@ -1184,8 +1202,6 @@ export default class Parser {
                 start: lineNumber,
                 end: lineNumber
               };
-
-              callItem.keyword = Parser.expandKeywords(callItem.keywords);
 
               scope.procedures.push(callItem);
               break;
@@ -1215,7 +1231,7 @@ export default class Parser {
 
                   currentProcName = potentialName;
                   currentItem.name = currentProcName;
-                  currentItem.keywords = pSpec.keywords;
+                  currentItem.keyword = pSpec.keywords;
 
                   currentItem.position = {
                     path: file,
@@ -1265,7 +1281,7 @@ export default class Parser {
               case `C`:
                 currentItem = new Declaration(`constant`);
                 currentItem.name = potentialName || `*N`;
-                currentItem.keywords = [...dSpec.keywords];
+                currentItem.keyword = dSpec.keyword;
                   
                 // TODO: line number might be different with ...?
                 currentItem.position = {
@@ -1279,7 +1295,10 @@ export default class Parser {
               case `S`:
                 currentItem = new Declaration(`variable`);
                 currentItem.name = potentialName || `*N`;
-                currentItem.keywords = [getPrettyType(dSpec), ...dSpec.keywords];
+                currentItem.keyword = {
+                  ...dSpec.keywords,
+                  ...getPrettyType(dSpec),
+                }
 
                 // TODO: line number might be different with ...?
                 currentItem.position = {
@@ -1294,7 +1313,7 @@ export default class Parser {
               case `DS`:
                 currentItem = new Declaration(`struct`);
                 currentItem.name = potentialName || `*N`;
-                currentItem.keywords = dSpec.keywords;
+                currentItem.keyword = dSpec.keywords;
 
                 currentItem.position = {
                   path: file,
@@ -1318,7 +1337,10 @@ export default class Parser {
                 if (!scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === potentialName.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = potentialName || `*N`;
-                  currentItem.keywords = [getPrettyType(dSpec), ...dSpec.keywords];
+                  currentItem.keyword = {
+                    ...getPrettyType(dSpec),
+                    ...dSpec.keywords
+                  }
   
                   currentItem.position = {
                     path: file,
@@ -1343,7 +1365,11 @@ export default class Parser {
 
                   currentGroup = `procedures`;
                   if (currentItem) {
-                    currentItem.keywords.push(getPrettyType(dSpec), ...dSpec.keywords);
+                    currentItem.keyword = {
+                      ...currentItem.keyword,
+                      ...getPrettyType(dSpec),
+                      ...dSpec.keywords
+                    }
                   }
                 }
                 break;
@@ -1378,7 +1404,10 @@ export default class Parser {
                   if (potentialName) {
                     currentSub = new Declaration(`subitem`);
                     currentSub.name = potentialName;
-                    currentSub.keywords = [getPrettyType(dSpec), ...dSpec.keywords];
+                    currentSub.keyword = {
+                      ...getPrettyType(dSpec),
+                      ...dSpec.keywords
+                    }
 
                     currentSub.position = {
                       path: file,
@@ -1387,7 +1416,6 @@ export default class Parser {
 
                     // If the parameter has likeds, add the subitems to make it a struct.
                     await expandDs(file, currentSub);
-                    currentSub.keyword = Parser.expandKeywords(currentSub.keywords);
 
                     currentItem.subItems.push(currentSub);
                     currentSub = undefined;
@@ -1395,10 +1423,18 @@ export default class Parser {
                     resetDefinition = true;
                   } else {
                     if (currentItem) {
-                      if (currentItem.subItems.length > 0)
-                        currentItem.subItems[currentItem.subItems.length - 1].keywords.push(getPrettyType(dSpec), ...dSpec.keywords);
-                      else
-                        currentItem.keywords.push(...dSpec.keywords);
+                      if (currentItem.subItems.length > 0) {
+                        currentItem.subItems[currentItem.subItems.length - 1].keyword = {
+                          ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
+                          ...getPrettyType(dSpec),
+                          ...dSpec.keywords
+                        }
+                      } else {
+                        currentItem.keyword = {
+                          ...currentItem.keyword,
+                          ...dSpec.keywords
+                        }
+                      }
                     }
                   }
 
@@ -1414,11 +1450,6 @@ export default class Parser {
         }
 
         if (resetDefinition) {
-          // Parse keywords to make it easier to use later
-          if (currentItem) {
-            currentItem.keyword = Parser.expandKeywords(currentItem.keywords);
-          }
-
           potentialName = undefined;
           potentialNameUsed = false;
           
@@ -1434,7 +1465,7 @@ export default class Parser {
     await parseContent(workingUri, baseLines);
 
     if (scopes.length > 0) {
-      scopes[0].keyword = Parser.expandKeywords(keywords);
+      scopes[0].keyword = Parser.expandKeywords(globalKeyword);
     }
 
     scopes[0].fixProcedures();    
@@ -1447,14 +1478,28 @@ export default class Parser {
   }
 
   /**
-   * @param {string[]} parts 
+   * @param {import("./types").Token[]|string|string[]} tokens 
    */
-  static expandKeywords(parts) {
+  static expandKeywords(tokens) {
     /** @type {import("./parserTypes").Keywords} */
     const keyvalues = {};
 
-    if (parts.length > 0) {
-      const keywordParts = createBlocks(tokenise(parts.join(` `)));
+    /** @type {import("./types").Token[]} */
+    let validTokens;
+
+    if (Array.isArray(tokens) && typeof tokens[0] === `string`) {
+      validTokens = tokenise(tokens.join(` `), 0);
+    } else 
+      if (typeof tokens === `string`) {
+        validTokens = tokenise(tokens, 0);
+      } else {
+        // @ts-ignore
+        validTokens = tokens;
+      }
+  
+
+    if (tokens.length > 0) {
+      const keywordParts = createBlocks(validTokens);
 
       for (let i = 0; i < keywordParts.length; i++) {
         if (keywordParts[i].value) {

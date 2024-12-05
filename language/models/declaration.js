@@ -10,9 +10,6 @@ export default class Declaration {
     this.type = type;
     this.name = ``;
 
-    /** @type {string[]} */
-    this.keywords = [];
-
     /** @type {import("../parserTypes").Keywords} */
     this.keyword = {};
     
@@ -49,7 +46,7 @@ export default class Declaration {
   clone() {
     const clone = new Declaration(this.type);
     clone.name = this.name;
-    clone.keywords = [...this.keywords];
+    clone.keyword = this.keyword;
     clone.description = this.description;
     clone.tags = this.tags;
 
