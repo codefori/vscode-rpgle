@@ -16,6 +16,16 @@ export function parseFLine(line) {
   };
 }
 
+export const CSpecPositions = {
+  factor1: 11,
+  opcode: 25,
+  factor2: 35,
+  result: 49,
+  ind1: 70,
+  ind2: 72,
+  ind3: 74
+}
+
 /**
  * @param {string} line 
  */

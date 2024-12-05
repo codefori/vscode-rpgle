@@ -6,7 +6,7 @@ import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, CSpecPositions } from "./models/fixed";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
@@ -168,10 +168,10 @@ export default class Parser {
   /**
    * @param {string} workingUri
    * @param {string} [content] 
-   * @param {{withIncludes?: boolean, ignoreCache?: boolean}} options
+   * @param {{withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean}} options
    * @returns {Promise<Cache|undefined>}
    */
-  async getDocs(workingUri, content, options = {withIncludes: true}) {
+  async getDocs(workingUri, content, options = {withIncludes: true, collectReferences: true}) {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       return existingCache;
@@ -179,7 +179,8 @@ export default class Parser {
 
     if (!content) return null;
 
-    let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+    const eol = content.includes(`\r\n`) ? `\r\n` : `\n`;
+    let baseLines = content.split(eol);
 
     /** @type {Cache[]} */
     let scopes = [];
@@ -242,6 +243,97 @@ export default class Parser {
     /** @type {string[]} */
     let definedMacros = [];
 
+    /** @type {string[]} */
+    let inStruct = [];
+
+    /**
+     * 
+     * @param {import("./types").Token[]} statement
+     * @param {Declaration} [currentProcedure]
+     */
+    const collectReferences = (statement, currentProcedure) => {
+      for (let i = 0; i < statement.length; i++) {
+        const part = statement[i];
+        const upperName = part.value.toUpperCase();
+        if (statement[i - 1] && statement[i - 1].type === `dot`) break;
+
+        // We might be referencing a subfield in a structure, so we grab the name in scope
+        // then we actually do the lookup against that
+        const parentDeclareBlock = inStruct[inStruct.length - 1];
+        const inDeclareBlock = parentDeclareBlock && parentDeclareBlock.toUpperCase() !== upperName; 
+        const lookupName = upperName;
+
+        /**
+         * @type {Declaration|undefined}
+         */
+        let defRef;
+
+        if (currentProcedure && currentProcedure.scope) {
+          defRef = currentProcedure.scope.find(lookupName);
+
+          if (!defRef) {
+            defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === lookupName);
+          }
+        }
+
+        if (!defRef) {
+          defRef = scopes[0].find(lookupName);
+        }
+
+        if (defRef) {
+
+          if (inDeclareBlock) {
+            // If we did the lookup against a parent DS, look for the subfield and add the reference there
+            defRef = defRef.subItems.find(sub => sub.name.toUpperCase() === upperName);
+
+            if (defRef) {
+              defRef.references.push({
+                offset: { position: part.range.start, end: part.range.end },
+              });
+            }
+
+          } else {
+
+            defRef.references.push({
+              offset: { position: part.range.start, end: part.range.end },
+            });
+
+            if (defRef.keyword[`QUALIFIED`]) {
+              let nextPartIndex = i + 1;
+
+              if (statement[nextPartIndex]) {
+                // First, check if there is an array call here and skip over it
+                if (statement[nextPartIndex].type === `openbracket`) {
+                  nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+
+                  if (nextPartIndex >= 0) nextPartIndex++;
+                }
+
+                // Check if the next part is a dot
+                if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                  nextPartIndex++;
+
+                  // Check if the next part is a word
+                  if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                    const subItemPart = statement[nextPartIndex];
+                    const subItemName = subItemPart.value.toUpperCase();
+
+                    // Find the subitem
+                    const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                    if (subItemDef) {
+                      subItemDef.references.push({
+                        offset: { position: subItemPart.range.start, end: subItemPart.range.end },
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     //Now the real work
     /**
      * @param {string} file 
@@ -263,6 +355,7 @@ export default class Parser {
       let resetDefinition = false; //Set to true when you're done defining a new item
       let docs = false; // If section is for ILEDocs
       let lineNumber = -1;
+      let lineIndex = 0;
 
       /**
        * @type {string[]}
@@ -368,7 +461,12 @@ export default class Parser {
         }
       };
 
-      for (let line of lines) {
+      for (let li = 0; li < lines.length; li++) {
+        if (li >= 1) {
+          lineIndex += lines[li-1].length + (eol === `\r\n` ? 2 : 1);
+        }
+        
+        let line = lines[li];
         const scope = scopes[scopes.length - 1];
         let spec;
 
@@ -420,6 +518,10 @@ export default class Parser {
           }
         }
 
+        /**
+         * @type {import("./types").Token[]}
+         */
+        let tokens = [];
         pieces = [];
         parts = [];
         
@@ -430,7 +532,7 @@ export default class Parser {
           if (line === ``) continue;
 
           pieces = line.split(`;`);
-          let tokens = tokenise(pieces[0], lineNumber);
+          tokens = tokenise(pieces[0], lineNumber, lineIndex);
           partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
           parts = partsLower.map(piece => piece.toUpperCase());
 
@@ -663,6 +765,8 @@ export default class Parser {
                 currentGroup = `constants`;
 
                 currentDescription = [];
+
+                inStruct.push(currentItem.name);
               }
             }
             break;
@@ -674,6 +778,8 @@ export default class Parser {
               scope.constants.push(currentItem);
 
               resetDefinition = true;
+
+              inStruct.pop();
             }
             break;
 
@@ -708,6 +814,7 @@ export default class Parser {
                 } else {
                   currentItem.readParms = true;
                   dsScopes.push(currentItem);
+                  inStruct.push(currentItem.name);
                 }
 
                 resetDefinition = true;
@@ -729,6 +836,8 @@ export default class Parser {
               if (dsScopes.length > 1) {
                 dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
               }
+
+            inStruct.pop();
             break;
         
           case `DCL-PR`:
@@ -1205,6 +1314,22 @@ export default class Parser {
 
               scope.procedures.push(callItem);
               break;
+
+            default:
+              for (const key in cSpec) {
+                if (cSpec[key] && CSpecPositions[key]) {
+                  tokens.push({
+                    value: cSpec[key],
+                    type: `word`,
+                    range: {
+                      line: lineNumber,
+                      start: lineIndex + CSpecPositions[key],
+                      end: lineIndex + CSpecPositions[key] + cSpec[key].length
+                    }
+                  });
+                }
+              }
+              break;
             }
 
             break;
@@ -1449,6 +1574,10 @@ export default class Parser {
           }
         }
 
+        if (options.collectReferences && tokens.length > 0) {
+          collectReferences(tokens, scope.procedures[scope.procedures.length - 1]);
+        }
+
         if (resetDefinition) {
           potentialName = undefined;
           potentialNameUsed = false;
@@ -1488,10 +1617,10 @@ export default class Parser {
     let validTokens;
 
     if (Array.isArray(tokens) && typeof tokens[0] === `string`) {
-      validTokens = tokenise(tokens.join(` `), 0);
+      validTokens = tokenise(tokens.join(` `));
     } else 
       if (typeof tokens === `string`) {
-        validTokens = tokenise(tokens, 0);
+        validTokens = tokenise(tokens);
       } else {
         // @ts-ignore
         validTokens = tokens;
