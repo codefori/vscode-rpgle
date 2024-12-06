@@ -815,3 +815,64 @@ test('indicators1', async () => {
   }
   expect(in10.references.length).toBe(2);
 });
+
+test('references_15_fixed_4', async () => {
+  const lines = [
+    `      *****************************************************************?`,
+    `     FGltbsVar  UF   e           k disk`,
+    `     FGlRcvvar  IF a e           k disk`,
+    `     FGllogvar  o  a f  500        disk`,
+    `      *---------------------------------------------------------------*?`,
+    `      `,
+    `     D EntryParm       ds            19`,
+    `     D   Type_SLX                     3                                         :SLE, SLC...`,
+    `     D   AdrIP                        2                                         :last chars adr ip`,
+    `     D   Version                      2                                         :V4 ou V5`,
+    `     D   PortNumber                   6                                         :P + port nr`,
+    `     D   SubNode                      6                                         :S + sub-node`,
+    `      *- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*?`,
+    `     D RCV             s           5083                                         Received`,
+    `     D*  GLrcv1                    1694`,
+    `     D*  GLrcv2                    1694`,
+    `     D*  GLrcv3                    1694`,
+    `     D*  GLrcvLibre                   1`,
+    `      *- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*?`,
+    `     D ebcd            s              1    dim(223)                             ebcdic "length"`,
+    `     D Hms             s               t   timfmt(*HMS)`,
+    `     D HmsLast         s               t   timfmt(*HMS)`,
+    `      *- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*?`,
+    `     D r_saved_lg      s              5  0                                      longueur r_saved`,
+    `     D r_saved         s          19600                                         saved buffer`,
+    `     D r_transf        s          19600                                         transfer data`,
+    `     D r_lg5           s              5  0                                      longueur modulo 256`,
+    `      *---------------------------------------------------------------*?`,
+    `     C     *entry        plist`,
+    `     C                   parm                    EntryParm`,
+    ``,
+    `      *---------------------------------------------------------------*?`,
+    `     C     Decalage      begsr`,
+    `     C                   clear                   r_long_lue        1 0`,
+    `     C                   if        r_saved_lg = r_lg5`,
+    `     C                   clear                   r_saved_lg`,
+    `     C                   clear                   r_saved`,
+    `     C                   movel     x'0000'       r_saved`,
+    `     C                   else`,
+    `     C                   eval      r_transf = r_saved`,
+    `     C                   eval      r_saved = %subst(r_transf:(r_lg5+1))`,
+    `     C                   eval      r_saved_lg = r_saved_lg - r_lg5`,
+    `     C                   endif`,
+    `     C                   clear                   r_lg5`,
+    `     C                   endsr`,
+    `      *---------------------------------------------------------------*?`,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const EntryParm = cache.find(`EntryParm`)
+  expect(EntryParm.references.length).toBe(2);
+  expect(EntryParm.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `EntryParm`)).toBe(true);
+
+  const r_transf = cache.find(`r_transf`);
+  expect(r_transf.references.length).toBe(3);
+  expect(r_transf.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `r_transf`)).toBe(true);
+})
