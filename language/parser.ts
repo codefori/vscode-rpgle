@@ -7,59 +7,35 @@ import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
 import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
+import path from "path";
+import { Token } from "./types";
+import { Keywords } from "./parserTypes";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
-/**
- * @callback tablePromise
- * @param  {string} name Table name
- * @param  {boolean} [aliases] Table name
- * @returns {Promise<Declaration[]>}
- */
-
-/**
- * @callback includeFilePromise
- * @param {string} baseFile
- * @param {string} includeString
- * @returns {Promise<{found: boolean, uri?: string, content?: string}>}
- */
+export type tablePromise = (name: string, aliases?: boolean) => Promise<Declaration[]>;
+export type includeFilePromise = (baseFile: string, includeString: string) => Promise<{found: boolean, uri?: string, content?: string}>;
+export type TableDetail = {[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}};
+export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean};
 
 export default class Parser {
+  parsedCache: {[thePath: string]: Cache} = {};
+  tables: TableDetail = {};
+  tableFetch: tablePromise|undefined;
+  includeFileFetch: includeFilePromise|undefined;
+
   constructor() {
-    /** @type {{[path: string]: Cache}} */
-    this.parsedCache = {};
-
-    /** @type {{[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}}} */
-    this.tables = {};
-
-    /** @type {tablePromise} */
-    this.tableFetch = undefined;
-
-    /** @type {includeFilePromise} */
-    this.includeFileFetch = undefined;
   }
 
-  /**
-   * @param {tablePromise} promise 
-   */
-  setTableFetch(promise) {
+  setTableFetch(promise: tablePromise) {
     this.tableFetch = promise;
   }
 
-  /**
-	 * @param {includeFilePromise} promise 
-	 */
-  setIncludeFileFetch(promise) {
+  setIncludeFileFetch(promise: includeFilePromise) {
     this.includeFileFetch = promise;
   }
 
-  /**
-   * @param {string} name 
-   * @param {string} keyVersion
-   * @param {boolean} [aliases]
-   * @returns {Promise<Declaration[]>}
-   */
-  async fetchTable(name, keyVersion = ``, aliases) {
+  async fetchTable(name: string, keyVersion = ``, aliases?: boolean): Promise<Declaration[]> {
     if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
     const table = name.toUpperCase();
@@ -82,8 +58,7 @@ export default class Parser {
       recordFormats: []
     };
 
-    /** @type {Declaration[]} */
-    let newDefs;
+    let newDefs: Declaration[];
 
     try {
       newDefs = await this.tableFetch(table, aliases);
@@ -124,7 +99,7 @@ export default class Parser {
 	 * @param {string} line 
 	 * @returns {string|undefined}
 	 */
-  static getIncludeFromDirective(line) {
+  static getIncludeFromDirective(line: string): string|undefined {
     if (line.includes(`*`)) return; // Likely comment
     if (line.trim().startsWith(`//`)) return; // Likely comment
 
@@ -143,8 +118,7 @@ export default class Parser {
       directiveLength = 9
     };
 
-    /** @type {string|undefined} */
-    let directiveValue;
+    let directiveValue: string|undefined;
     
     if (directivePosition >= 0) {
       if (comment >= 0) {
@@ -162,16 +136,9 @@ export default class Parser {
 
       return directiveValue;
     }
-
   }
 
-  /**
-   * @param {string} workingUri
-   * @param {string} [baseContent] 
-   * @param {{withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean}} options
-   * @returns {Promise<Cache|undefined>}
-   */
-  async getDocs(workingUri, baseContent, options = {withIncludes: true, collectReferences: false}) {
+  async getDocs(workingUri: string, baseContent: string, options: ParseOptions = {withIncludes: true, collectReferences: false}): Promise<Cache|undefined> {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       return existingCache;
@@ -179,25 +146,17 @@ export default class Parser {
 
     if (!baseContent) return null;
 
-    /** @type {Cache[]} */
-    let scopes = [];
+    let scopes: Cache[] = [];
 
-    /** @type {Declaration[]} Free format struct scopes. Used for free-format only */
-    let dsScopes = [];
+    /** Free format struct scopes. Used for free-format only */
+    let dsScopes: Declaration[] = [];
 
-    /** @type {string[]} */
-    let globalKeyword = [];
+    let globalKeyword: string[] = [];
 
     // Global scope bits
     scopes.push(new Cache());
 
-    /**
-     * Gets value of EXTFILE if it exists.
-     * @param {string} defaultName 
-     * @param {import("./parserTypes").Keywords} keywords 
-     * @returns {string}
-     */
-    const getObjectName = (defaultName, keywords) => {
+    const getObjectName = (defaultName: string, keywords: Keywords): string => {
       let objectName = defaultName;
       const extObjKeywords = [`EXTFILE`];
       const extObjKeywordsDesc = [`EXTDESC`];
@@ -231,23 +190,14 @@ export default class Parser {
       return objectName;
     };
 
-    /** @type {string} */
-    let potentialName;
+    let potentialName: string|undefined;
     let potentialNameUsed = false;
 
-    /** @type {"structs"|"procedures"|"constants"} */
-    let currentGroup;
+    let currentGroup: "structs"|"procedures"|"constants";
 
-    /** @type {string[]} */
-    let definedMacros = [];
+    let definedMacros: string[] = [];
 
-    /**
-     * 
-     * @param {import("./types").Token[]} statement
-     * @param {Declaration} [currentProcedure]
-     * @param {Declaration} [currentDef]
-     */
-    const collectReferences = (statement, currentProcedure, currentDef) => {
+    const collectReferences = (statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration) => {
       for (let i = 0; i < statement.length; i++) {
         const part = statement[i];
         if (part === undefined) continue;
@@ -256,10 +206,7 @@ export default class Parser {
         if (statement[i - 1] && statement[i - 1].type === `dot`) break;
         const lookupName = (part.type === `special` ? part.value.substring(1) : part.value).toUpperCase();
 
-        /**
-         * @type {Declaration|undefined}
-         */
-        let defRef;
+        let defRef: Declaration|undefined;
 
         if (currentDef) {
           if (currentDef.name.toUpperCase() === lookupName) {
@@ -326,16 +273,11 @@ export default class Parser {
     }
 
     //Now the real work
-    /**
-     * @param {string} file 
-     * @param {string} allContent 
-     */
-    const parseContent = async (file, allContent) => {
+    const parseContent = async (file: string, allContent: string) => {
       let eol = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
       let lines = allContent.split(eol);
 
-      /** @type {{[procedure: string]: import("./types").Token[][]}} */
-      let postProcessingStatements = {'GLOBAL': []};
+      let postProcessingStatements: {[procedure: string]: Token[][]} = {'GLOBAL': []};
 
       const addPostProcessingStatements = (procedure, statement) => {
         if (!options.collectReferences) return;
@@ -360,58 +302,34 @@ export default class Parser {
       if (lines.length === 0) return;
 
       let currentTitle = undefined, currentDescription = [];
-      /** @type {{tag: string, content: string}[]} */
-      let currentTags = [];
+      let currentTags: {tag: string, content: string}[] = [];
 
-      /** @type {Declaration} */
-      let currentItem;
-      /** @type {Declaration} */
-      let currentSub;
-
-      /** @type {string|undefined} */
-      let currentProcName;
+      let currentItem: Declaration|undefined;
+      let currentSub: Declaration|undefined;
+      let currentProcName: string|undefined;
 
       let resetDefinition = false; //Set to true when you're done defining a new item
       let docs = false; // If section is for ILEDocs
       let lineNumber = -1;
       let lineIndex = 0;
 
-      /**
-       * @type {string[]}
-       */
-      let parts;
-
-      /**
-       * @type {string[]}
-       */
-      let partsLower;
-
-      /**
-       * @type {string[]}
-       */
-      let pieces;
+      let parts: string[];
+      let partsLower: string[];
+      let pieces: string[];
 
       let isFullyFree = lines[0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
 
-      /** @type {string|undefined} */
-      let currentStatement;
-      /** @type {number|undefined} */
-      let statementStartingLine;
+      let currentStatement: string|undefined;
+      let statementStartingLine: number|undefined;
 
-      /** @type {{condition: boolean}[]} */
-      let directIfScope = [];
+      let directIfScope: {condition: boolean}[] = [];
 
       let lineCanRun = () => {
         return directIfScope.length === 0 || directIfScope.every(scope => scope.condition);
       }
 
-      /**
-       * Expands LIKEDS, LIKEREC and EXTNAME.
-       * @param {string} file
-       * @param {Declaration} ds 
-       */
-      const expandDs = async (file, ds) => {
+      const expandDs = async (file: string, ds: Declaration): Promise<void> => {
         const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
         const keywords = ds.keyword;
         for (const tag of tags) {
@@ -530,10 +448,7 @@ export default class Parser {
           }
         }
 
-        /**
-         * @type {import("./types").Token[]}
-         */
-        let tokens = [];
+        let tokens: Token[] = [];
         pieces = [];
         parts = [];
         
@@ -584,7 +499,7 @@ export default class Parser {
                 let condition = false;
                 let hasNot = (parts[1] === `NOT`);
                 let expr = tokens.slice(hasNot ? 2 : 1);
-                let keywords = Parser.expandKeywords(Parser.getTokens(expr));
+                let keywords = Parser.expandKeywords(expr);
 
                 if (typeof keywords[`DEFINED`] === `string`) {
                   condition = definedMacros.includes(keywords[`DEFINED`]);
@@ -1057,8 +972,7 @@ export default class Parser {
 
               let isContinued = false;
 
-              /** @type {string[]} */
-              let ignoreCtes = [];
+              let ignoreCtes: string[] = [];
 
               if (pIncludes(`WITH`)) {
                 for (let index = 4; index < tokens.length; index++) {
@@ -1614,32 +1528,21 @@ export default class Parser {
     return parsedData;
   }
 
-  /**
-   * @param {import("./types").Token[]|string|string[]} content 
-   * @param {number} [lineNumber]
-   * @param {number} [baseIndex]
-   * @returns {import("./types").Token[]}
-   */
-  static getTokens(content, lineNumber, baseIndex) {
+  static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
     if (Array.isArray(content) && typeof content[0] === `string`) {
       return tokenise(content.join(` `), lineNumber, baseIndex);
     } else 
       if (typeof content === `string`) {
         return tokenise(content, lineNumber, baseIndex);
       } else {
-        // @ts-ignore
-        return content;
+        return content as Token[];
       }
   
 
   }
 
-  /**
-   * @param {import("./types").Token[]} tokens 
-   */
-  static expandKeywords(tokens) {
-    /** @type {import("./parserTypes").Keywords} */
-    const keyvalues = {};
+  static expandKeywords(tokens: Token[]): Keywords {
+    const keyvalues: Keywords = {};
 
     if (tokens.length > 0) {
       const keywordParts = createBlocks(tokens.slice(0));
