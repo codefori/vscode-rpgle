@@ -311,7 +311,8 @@ documents.onDidChangeContent(handler => {
 		handler.document.getText(),
 		{
 			withIncludes: true,
-			ignoreCache: true
+			ignoreCache: true,
+			collectReferences: true
 		}
 	).then(cache => {
 		if (cache) {

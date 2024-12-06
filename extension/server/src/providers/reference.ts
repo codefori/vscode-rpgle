@@ -18,24 +18,9 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 		const document = documents.get(uri);
 	
 		if (document) {
-			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-	
 			const doc = await parser.getDocs(uri, document.getText());
 	
 			if (doc) {
-				if (isFree) {
-					Linter.getErrors(
-						{
-							uri,
-							content: document.getText()
-						},
-						{
-							CollectReferences: true
-						},
-						doc
-					);
-				}
-	
 				const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
 
 				if (def) {

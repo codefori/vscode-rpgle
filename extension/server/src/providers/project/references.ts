@@ -57,10 +57,6 @@ export async function findAllLocalReferences(def: Declaration): Promise<Location
 							// Don't add duplicates
 							if (!locations.some(loc => loc.uri === keyPath)) {
 								locations.push(
-									// First, we push the copybook where it is brought in.
-									// We do this because we don't have references for non-**free
-									Location.create(proc.position.path, Range.create(proc.position.line, 0, proc.position.line, 0)),
-
 									// Then we push the references. Empty for non-**free
 									...proc.references.map(ref => Location.create(
 										keyPath,
@@ -91,14 +87,12 @@ export async function findAllLocalReferences(def: Declaration): Promise<Location
 						// Okay, we found something with a similar name in another file...
 						if (possibleDef) {
 							if (possibleDef.position.path === def.position.path) {
-								if (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() !== `**FREE` || possibleDef.references.length === 0) {
+								if (possibleDef.references.length === 0) {
 									locations.push(
-										// First, we push the copybook where it is brought in.
-										// We do this because we don't have references for non-**free
 										Location.create(uri, Range.create(foundInclude.line, 0, foundInclude.line, 0)),
 									);
+
 								} else {
-									// But since it's **free, and we probably have referneces...
 									locations.push(
 										// Then we push the references. Empty for non-**free
 										...possibleDef.references.map(ref => Location.create(

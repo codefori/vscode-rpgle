@@ -48,7 +48,8 @@ export function initialise(connection: _Connection) {
 						document.getText(),
 						{
 							withIncludes: true,
-							ignoreCache: true
+							ignoreCache: true,
+							collectReferences: true
 						}
 					).then(cache => {
 						if (cache) {
