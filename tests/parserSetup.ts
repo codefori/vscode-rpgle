@@ -56,3 +56,14 @@ export default function setupParser(): Parser {
 
 	return parser;
 }
+
+export function getSourcesList(): string[] {
+	return glob.sync(`**/*.*`, {
+		cwd: path.join(includeDir, `sources`),
+		nocase: true,
+	});
+}
+
+export function getSourcesContent(name: string) {
+	return readFile(path.join(includeDir, `sources`, name), { encoding: `utf-8` });
+}
