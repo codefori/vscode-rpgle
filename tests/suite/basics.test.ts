@@ -458,27 +458,6 @@ test('test13', async () => {
   expect(theLocalProc.scope.variables.length).toBe(1);
 });
 
-test('indicators1', async () => {
-  const lines = [
-    `**FREE`,
-    `Dcl-S MyVar char(10);`,
-    ``,
-    `*IN10 = *ON;`,
-    `MyVar = 'Hi';`,
-    ``,
-    `DSply Myvar;`,
-    `*INLR = *IN10;`,
-    `Return;`,
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
-
-  const in10 = cache.find(`IN10`);
-
-  expect(in10.references.length).toBe(2);
-});
-
-
 test('subds1', async () => {
   const lines = [
     `**FREE`,

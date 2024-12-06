@@ -124,13 +124,6 @@ export default class Cache {
   find(name) {
     name = name.toUpperCase();
 
-    if (name.length === 2) {
-      const ind = this.indicators.find(def => def.name === `IN${name}`);
-      if (ind) {
-        return ind;
-      }
-    }
-
     const fileStructs = this.files.map(file => file.subItems).flat();
     const allStructs = [...fileStructs, ...this.structs];
 

@@ -789,6 +789,29 @@ test('references_14_fixed_3', async () => {
   expect(filedt.references.length).toBe(3);
   expect(filedt.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `filedt`)).toBe(true);
 
-  const lr = cache.find(`LR`);
+  const lr = cache.find(`INLR`);
   expect(lr.references.length).toBe(1);
+});
+
+test('indicators1', async () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-S MyVar char(10);`,
+    ``,
+    `*IN10 = *ON;`,
+    `MyVar = 'Hi';`,
+    ``,
+    `DSply Myvar;`,
+    `*INLR = *IN10;`,
+    `Return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
+
+  const in10 = cache.find(`IN10`);
+
+  for (const ref of in10.references) {
+    console.log(lines.substring(ref.offset.position, ref.offset.end));
+  }
+  expect(in10.references.length).toBe(2);
 });
