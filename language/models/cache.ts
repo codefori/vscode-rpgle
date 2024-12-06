@@ -177,14 +177,14 @@ export default class Cache {
     const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
     if (currentProcedure && currentProcedure.scope) {
-      const localDef = currentProcedure.scope.constants.find(def => def.keyword[upperValue] === true);
+      const localDef = currentProcedure.scope.constants.find(def => def.keyword[`CONST`] === value);
 
       if (localDef) {
         return localDef;
       }
     }
 
-    const globalDef = this.constants.find(def => def.keyword[upperValue] === true);
+    const globalDef = this.constants.find(def => def.keyword[`CONST`] === value);
 
     if (globalDef) {
       return globalDef;

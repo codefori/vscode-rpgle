@@ -258,7 +258,7 @@ test('fixed7', async () => {
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.line).to.equal(3);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
-  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 });
 
@@ -350,7 +350,7 @@ test('fixed9', async () => {
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
-  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
@@ -390,7 +390,7 @@ test('fixed9_2', async () => {
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
-  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);

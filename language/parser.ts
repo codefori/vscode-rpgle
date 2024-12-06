@@ -635,7 +635,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2), true);
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
@@ -1324,7 +1324,7 @@ export default class Parser {
               case `C`:
                 currentItem = new Declaration(`constant`);
                 currentItem.name = potentialName || `*N`;
-                currentItem.keyword = dSpec.keyword || {};
+                currentItem.keyword = dSpec.keywords || {};
                   
                 // TODO: line number might be different with ...?
                 currentItem.position = {
@@ -1543,7 +1543,7 @@ export default class Parser {
 
   }
 
-  static expandKeywords(tokens: Token[]): Keywords {
+  static expandKeywords(tokens: Token[], isConst = false): Keywords {
     const keyvalues: Keywords = {};
 
     if (tokens.length > 0) {
@@ -1555,7 +1555,11 @@ export default class Parser {
             keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i+1].block.map(part => part.value).join(``);
             i++; // Skip one for the block.
           } else {
-            keyvalues[keywordParts[i].value.toUpperCase()] = true;
+            if (isConst) {
+              keyvalues[`CONST`] = keywordParts[i].value;
+            } else {
+              keyvalues[keywordParts[i].value.toUpperCase()] = true;
+            }
           }
         }
       }

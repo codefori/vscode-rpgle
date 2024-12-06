@@ -1276,4 +1276,25 @@ test('keywords over multiple lines', async () => {
   const error = invoice_get_invoice.subItems[4];
   expect(error.name).toBe(`error`);
   expect(error.keyword[`LIKE`]).toBe(`TError`);
-})
+});
+
+test(`const keyword check`, async () => {
+  const lines = [
+    ``,
+    `           dcl-c hello 556;`,
+    `     d act             c                   'act'`,
+    ``,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.constants.length).toBe(2);
+
+  const act = cache.find(`act`);
+  expect(act.name).toBe(`act`);
+  expect(act.keyword[`CONST`]).toBe(`'act'`);
+
+  const hello = cache.find(`hello`);
+  expect(hello.name).toBe(`hello`);
+  expect(hello.keyword[`CONST`]).toBe(`556`);
+});

@@ -88,7 +88,7 @@ export function parseDLine(lineNumber, lineIndex, content) {
   const type = content.substr(39, 1);
   const decimals = content.substr(40, 3);
   const field = content.substr(23, 2).toUpperCase();
-  const keywords = content.substr(43).toUpperCase();
+  const keywords = content.substr(43);
   const keywordTokens = Parser.getTokens(keywords, lineNumber, lineIndex+43);
 
   return {
@@ -100,7 +100,7 @@ export function parseDLine(lineNumber, lineIndex, content) {
     decimals: calculateToken(lineNumber, lineIndex+40, decimals),
     field: calculateToken(lineNumber, lineIndex+23, field),
     keywordsRaw: keywordTokens,
-    keywords: Parser.expandKeywords(keywordTokens)
+    keywords: Parser.expandKeywords(keywordTokens, field.trim() === `C`)
   };
 }
 
