@@ -1408,7 +1408,7 @@ export default class Parser {
               case `C`:
                 currentItem = new Declaration(`constant`);
                 currentItem.name = potentialName || `*N`;
-                currentItem.keyword = dSpec.keyword;
+                currentItem.keyword = dSpec.keyword || {};
                   
                 // TODO: line number might be different with ...?
                 currentItem.position = {
@@ -1616,14 +1616,16 @@ export default class Parser {
 
   /**
    * @param {import("./types").Token[]|string|string[]} content 
+   * @param {number} [lineNumber]
+   * @param {number} [baseIndex]
    * @returns {import("./types").Token[]}
    */
-  static getTokens(content) {
+  static getTokens(content, lineNumber, baseIndex) {
     if (Array.isArray(content) && typeof content[0] === `string`) {
-      return tokenise(content.join(` `));
+      return tokenise(content.join(` `), lineNumber, baseIndex);
     } else 
       if (typeof content === `string`) {
-        return tokenise(content);
+        return tokenise(content, lineNumber, baseIndex);
       } else {
         // @ts-ignore
         return content;

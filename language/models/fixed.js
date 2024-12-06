@@ -89,7 +89,7 @@ export function parseDLine(lineNumber, lineIndex, content) {
   const decimals = content.substr(40, 3);
   const field = content.substr(23, 2).toUpperCase();
   const keywords = content.substr(43).toUpperCase();
-  const keywordTokens = Parser.getTokens(keywords);
+  const keywordTokens = Parser.getTokens(keywords, lineNumber, lineIndex+43);
 
   return {
     potentialName: potentialName,
@@ -113,7 +113,7 @@ export function parsePLine(line) {
   const potentialName = line.substring(6).trim();
   const start = line[23].toUpperCase() === `B`;
   const keywords = line.substr(43).trim().toUpperCase();
-  const keywordTokens = Parser.getTokens(keywords);
+  const keywordTokens = Parser.getTokens(keywords, );
 
   return {
     name,
