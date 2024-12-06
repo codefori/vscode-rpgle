@@ -446,3 +446,24 @@ test("references_11_issue_175", async () => {
   expect(procedure).toBeDefined();
   expect(procedure.references.length).toBe(2);
 });
+
+test('references_12_fixed_1', async () => {
+  const lines = [
+    ``,
+    `     FINVMST    IF   E           K DISK`,
+    `   `,
+    `     D wkCorp          S             10    inz('100')`,
+    `     D wkInvoice       S             15`,
+    `   `,
+    `     C                   eval      wkInvoice = 'I035552120'`,
+    `   `,
+    `     C                   eval      *inlr = *on`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  expect(cache.variables.length).to.equal(2);
+
+  const wkInvoice = cache.find(`wkInvoice`);
+  expect(wkInvoice.references.length).to.equal(2);
+});

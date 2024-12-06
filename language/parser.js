@@ -6,7 +6,7 @@ import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, CSpecPositions } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
@@ -231,6 +231,7 @@ export default class Parser {
       return objectName;
     };
 
+    /** @type {string} */
     let potentialName;
     let potentialNameUsed = false;
 
@@ -249,6 +250,8 @@ export default class Parser {
     const collectReferences = (statement, currentProcedure, currentDef) => {
       for (let i = 0; i < statement.length; i++) {
         const part = statement[i];
+        if (part === undefined) continue;
+
         if (![`special`, `word`].includes(part.type)) continue;
         if (statement[i - 1] && statement[i - 1].type === `dot`) break;
         const lookupName = (part.type === `special` ? part.value.substring(1) : part.value).toUpperCase();
@@ -1273,11 +1276,21 @@ export default class Parser {
             break;
 
           case `C`:
-            const cSpec = parseCLine(line);
+            const cSpec = parseCLine(lineNumber, lineIndex, line);
 
-            potentialName = cSpec.factor1;
+            tokens = [cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
-            switch (cSpec.opcode) {
+            if (cSpec.opcode && [`EVAL`, `EVALR`].includes(cSpec.opcode.value) && cSpec.factor1 === undefined) {
+              if (cSpec.extended) {
+                tokens.push(...tokenise(cSpec.extended.value, lineNumber, lineIndex));
+              }
+            } else {
+              tokens.push(cSpec.factor1, cSpec.factor2, cSpec.result);
+            }
+
+            potentialName = cSpec.factor1 ? cSpec.factor1.value : ``;
+
+            switch (cSpec.opcode.value) {
             case `BEGSR`:
               if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
                 currentItem = new Declaration(`subroutine`);
@@ -1308,37 +1321,24 @@ export default class Parser {
           
             case `CALL`:
               const callItem = new Declaration(`procedure`);
-              callItem.name = (cSpec.factor2.startsWith(`'`) && cSpec.factor2.endsWith(`'`) ? cSpec.factor2.substring(1, cSpec.factor2.length-1) : cSpec.factor2);
-              callItem.keyword = {'EXTPGM': true}
-              callItem.description = currentDescription.join(`\n`);
-              callItem.tags = currentTags;
+              if (cSpec.factor2) {
+                const f2Value = cSpec.factor2.value;
+                callItem.name = (f2Value.startsWith(`'`) && f2Value.endsWith(`'`) ? f2Value.substring(1, f2Value.length-1) : f2Value);
+                callItem.keyword = {'EXTPGM': true}
+                callItem.description = currentDescription.join(`\n`);
+                callItem.tags = currentTags;
 
-              callItem.position = {
-                path: file,
-                line: lineNumber
-              };
+                callItem.position = {
+                  path: file,
+                  line: lineNumber
+                };
 
-              callItem.range = {
-                start: lineNumber,
-                end: lineNumber
-              };
+                callItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
 
-              scope.procedures.push(callItem);
-              break;
-
-            default:
-              for (const key in cSpec) {
-                if (cSpec[key] && CSpecPositions[key]) {
-                  tokens.push({
-                    value: cSpec[key],
-                    type: `word`,
-                    range: {
-                      line: lineNumber,
-                      start: lineIndex + CSpecPositions[key],
-                      end: lineIndex + CSpecPositions[key] + cSpec[key].length
-                    }
-                  });
-                }
+                scope.procedures.push(callItem);
               }
               break;
             }
@@ -1402,18 +1402,18 @@ export default class Parser {
             break;
 
           case `D`:
-            const dSpec = parseDLine(line);
+            const dSpec = parseDLine(lineNumber, lineIndex, line);
 
-            if (dSpec.potentialName === ``) continue;
-
-            if (dSpec.potentialName.endsWith(`...`)) {
-              potentialName = dSpec.potentialName.substring(0, dSpec.potentialName.length - 3);
+            if (dSpec.potentialName && dSpec.potentialName) {
+              potentialName = dSpec.potentialName.value;
               potentialNameUsed = true;
+              tokens = [dSpec.potentialName];
               continue;
             } else {
-              potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName ? potentialName : ``;
+              potentialName = dSpec.name && dSpec.name.value.length > 0 ? dSpec.name.value : (potentialName ? potentialName : ``);
+              tokens = [dSpec.field, ...dSpec.keywordsRaw, dSpec.name]
 
-              switch (dSpec.field) {
+              switch (dSpec.field && dSpec.field.value) {
               case `C`:
                 currentItem = new Declaration(`constant`);
                 currentItem.name = potentialName || `*N`;
@@ -1433,7 +1433,7 @@ export default class Parser {
                 currentItem.name = potentialName || `*N`;
                 currentItem.keyword = {
                   ...dSpec.keywords,
-                  ...getPrettyType(dSpec),
+                  ...prettyTypeFromToken(dSpec),
                 }
 
                 // TODO: line number might be different with ...?
@@ -1474,7 +1474,7 @@ export default class Parser {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = potentialName || `*N`;
                   currentItem.keyword = {
-                    ...getPrettyType(dSpec),
+                    ...prettyTypeFromToken(dSpec),
                     ...dSpec.keywords
                   }
   
@@ -1503,7 +1503,7 @@ export default class Parser {
                   if (currentItem) {
                     currentItem.keyword = {
                       ...currentItem.keyword,
-                      ...getPrettyType(dSpec),
+                      ...prettyTypeFromToken(dSpec),
                       ...dSpec.keywords
                     }
                   }
@@ -1541,7 +1541,7 @@ export default class Parser {
                     currentSub = new Declaration(`subitem`);
                     currentSub.name = potentialName;
                     currentSub.keyword = {
-                      ...getPrettyType(dSpec),
+                      ...prettyTypeFromToken(dSpec),
                       ...dSpec.keywords
                     }
 
@@ -1562,7 +1562,7 @@ export default class Parser {
                       if (currentItem.subItems.length > 0) {
                         currentItem.subItems[currentItem.subItems.length - 1].keyword = {
                           ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
-                          ...getPrettyType(dSpec),
+                          ...prettyTypeFromToken(dSpec),
                           ...dSpec.keywords
                         }
                       } else {
