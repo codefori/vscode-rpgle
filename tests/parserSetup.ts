@@ -33,10 +33,11 @@ export default function setupParser(): Parser {
 			const file = files[0];
 
 			const content = await readFile(file, { encoding: `utf-8` });
+			
 			return {
 				found: true,
 				uri: file,
-				lines: content.split(`\n`)
+				content
 			}
 		}
 

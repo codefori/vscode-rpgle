@@ -7,6 +7,7 @@ import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
 import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, CSpecPositions } from "./models/fixed";
+import assert from "assert";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
@@ -21,7 +22,7 @@ const HALF_HOUR = (30 * 60 * 1000);
  * @callback includeFilePromise
  * @param {string} baseFile
  * @param {string} includeString
- * @returns {Promise<{found: boolean, uri?: string, lines?: string[]}>}
+ * @returns {Promise<{found: boolean, uri?: string, content?: string}>}
  */
 
 export default class Parser {
@@ -167,20 +168,17 @@ export default class Parser {
 
   /**
    * @param {string} workingUri
-   * @param {string} [content] 
+   * @param {string} [baseContent] 
    * @param {{withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean}} options
    * @returns {Promise<Cache|undefined>}
    */
-  async getDocs(workingUri, content, options = {withIncludes: true, collectReferences: true}) {
+  async getDocs(workingUri, baseContent, options = {withIncludes: true, collectReferences: false}) {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       return existingCache;
     }
 
-    if (!content) return null;
-
-    const eol = content.includes(`\r\n`) ? `\r\n` : `\n`;
-    let baseLines = content.split(eol);
+    if (!baseContent) return null;
 
     /** @type {Cache[]} */
     let scopes = [];
@@ -243,32 +241,33 @@ export default class Parser {
     /** @type {string[]} */
     let definedMacros = [];
 
-    /** @type {string[]} */
-    let inStruct = [];
-
     /**
      * 
      * @param {import("./types").Token[]} statement
      * @param {Declaration} [currentProcedure]
+     * @param {Declaration} [currentDef]
      */
-    const collectReferences = (statement, currentProcedure) => {
+    const collectReferences = (statement, currentProcedure, currentDef) => {
       for (let i = 0; i < statement.length; i++) {
         const part = statement[i];
-        const upperName = part.value.toUpperCase();
+        if (![`special`, `word`].includes(part.type)) continue;
         if (statement[i - 1] && statement[i - 1].type === `dot`) break;
-
-        // We might be referencing a subfield in a structure, so we grab the name in scope
-        // then we actually do the lookup against that
-        const parentDeclareBlock = inStruct[inStruct.length - 1];
-        const inDeclareBlock = parentDeclareBlock && parentDeclareBlock.toUpperCase() !== upperName; 
-        const lookupName = upperName;
+        const lookupName =  part.value.toUpperCase();
 
         /**
          * @type {Declaration|undefined}
          */
         let defRef;
 
-        if (currentProcedure && currentProcedure.scope) {
+        if (currentDef) {
+          if (currentDef.name.toUpperCase() === lookupName) {
+            defRef = currentDef;
+          } else if (currentDef.subItems.length > 0) {
+            defRef = currentDef.subItems.find(sub => sub.name.toUpperCase() === lookupName);
+          }
+        }
+
+        if (!defRef && currentProcedure && currentProcedure.scope) {
           defRef = currentProcedure.scope.find(lookupName);
 
           if (!defRef) {
@@ -281,50 +280,36 @@ export default class Parser {
         }
 
         if (defRef) {
+          defRef.references.push({
+            offset: { position: part.range.start, end: part.range.end },
+          });
 
-          if (inDeclareBlock) {
-            // If we did the lookup against a parent DS, look for the subfield and add the reference there
-            defRef = defRef.subItems.find(sub => sub.name.toUpperCase() === upperName);
+          if (defRef.keyword[`QUALIFIED`]) {
+            let nextPartIndex = i + 1;
 
-            if (defRef) {
-              defRef.references.push({
-                offset: { position: part.range.start, end: part.range.end },
-              });
-            }
+            if (statement[nextPartIndex]) {
+              // First, check if there is an array call here and skip over it
+              if (statement[nextPartIndex].type === `openbracket`) {
+                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
 
-          } else {
+                if (nextPartIndex >= 0) nextPartIndex++;
+              }
 
-            defRef.references.push({
-              offset: { position: part.range.start, end: part.range.end },
-            });
+              // Check if the next part is a dot
+              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                nextPartIndex++;
 
-            if (defRef.keyword[`QUALIFIED`]) {
-              let nextPartIndex = i + 1;
+                // Check if the next part is a word
+                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                  const subItemPart = statement[nextPartIndex];
+                  const subItemName = subItemPart.value.toUpperCase();
 
-              if (statement[nextPartIndex]) {
-                // First, check if there is an array call here and skip over it
-                if (statement[nextPartIndex].type === `openbracket`) {
-                  nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
-
-                  if (nextPartIndex >= 0) nextPartIndex++;
-                }
-
-                // Check if the next part is a dot
-                if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
-                  nextPartIndex++;
-
-                  // Check if the next part is a word
-                  if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
-                    const subItemPart = statement[nextPartIndex];
-                    const subItemName = subItemPart.value.toUpperCase();
-
-                    // Find the subitem
-                    const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
-                    if (subItemDef) {
-                      subItemDef.references.push({
-                        offset: { position: subItemPart.range.start, end: subItemPart.range.end },
-                      });
-                    }
+                  // Find the subitem
+                  const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                  if (subItemDef) {
+                    subItemDef.references.push({
+                      offset: { position: subItemPart.range.start, end: subItemPart.range.end },
+                    });
                   }
                 }
               }
@@ -337,9 +322,12 @@ export default class Parser {
     //Now the real work
     /**
      * @param {string} file 
-     * @param {string[]} lines 
+     * @param {string} allContent 
      */
-    const parseContent = async (file, lines) => {
+    const parseContent = async (file, allContent) => {
+      let eol = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
+      let lines = allContent.split(eol);
+
       if (lines.length === 0) return;
 
       let currentTitle = undefined, currentDescription = [];
@@ -464,10 +452,12 @@ export default class Parser {
       for (let li = 0; li < lines.length; li++) {
         if (li >= 1) {
           lineIndex += lines[li-1].length + (eol === `\r\n` ? 2 : 1);
+          // assert.strictEqual(allContent.substring(lineIndex, lineIndex + lines[li].length), lines[li]);
         }
         
-        let line = lines[li];
         const scope = scopes[scopes.length - 1];
+
+        let line = lines[li];
         let spec;
 
         lineIsFree = false;
@@ -490,14 +480,14 @@ export default class Parser {
 
           if (comment === `/`) {
             // Directives can be parsed by the free format parser
-            line = line.substring(6);
+            line = ``.padEnd(6) + line.substring(6);
             lineIsFree = true;
           } else {
             if (spec === ` `) {
-            //Clear out stupid comments
-              line = line.substring(7);
-
+              //Clear out stupid comments
+              line = ``.padEnd(7) + line.substring(7);
               lineIsFree = true;
+
             } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
             } else {
@@ -527,14 +517,14 @@ export default class Parser {
         
         if (isFullyFree || lineIsFree) {
           // Free format!
-          line = line.trim();
-
-          if (line === ``) continue;
+          if (line.trim() === ``) continue;
 
           pieces = line.split(`;`);
           tokens = tokenise(pieces[0], lineNumber, lineIndex);
           partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
           parts = partsLower.map(piece => piece.toUpperCase());
+
+          line = line.trim();
 
           const lineIsComment = line.startsWith(`//`);
 
@@ -558,7 +548,7 @@ export default class Parser {
                       });
                       
                       try {
-                        await parseContent(include.uri, include.lines);
+                        await parseContent(include.uri, include.content);
                       } catch (e) {
                         console.log(`Error parsing include: ${include.uri}`);
                         console.log(e);
@@ -765,8 +755,6 @@ export default class Parser {
                 currentGroup = `constants`;
 
                 currentDescription = [];
-
-                inStruct.push(currentItem.name);
               }
             }
             break;
@@ -778,8 +766,6 @@ export default class Parser {
               scope.constants.push(currentItem);
 
               resetDefinition = true;
-
-              inStruct.pop();
             }
             break;
 
@@ -814,7 +800,6 @@ export default class Parser {
                 } else {
                   currentItem.readParms = true;
                   dsScopes.push(currentItem);
-                  inStruct.push(currentItem.name);
                 }
 
                 resetDefinition = true;
@@ -836,8 +821,6 @@ export default class Parser {
               if (dsScopes.length > 1) {
                 dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
               }
-
-            inStruct.pop();
             break;
         
           case `DCL-PR`:
@@ -1575,7 +1558,7 @@ export default class Parser {
         }
 
         if (options.collectReferences && tokens.length > 0) {
-          collectReferences(tokens, scope.procedures[scope.procedures.length - 1]);
+          collectReferences(tokens, scope.procedures[scope.procedures.length - 1], currentItem);
         }
 
         if (resetDefinition) {
@@ -1591,7 +1574,7 @@ export default class Parser {
       }
     }
 
-    await parseContent(workingUri, baseLines);
+    await parseContent(workingUri, baseContent);
 
     if (scopes.length > 0) {
       scopes[0].keyword = Parser.expandKeywords(globalKeyword);

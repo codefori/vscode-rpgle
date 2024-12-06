@@ -255,10 +255,9 @@ const startCommentString = `//`;
 const endCommentString = `\n`;
 
 /**
- * @param {string} statement 
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */
-export function tokenise(statement, lineNumber = 0, baseIndex?: number) {
+export function tokenise(statement: string, lineNumber = 0, baseIndex?: number) {
   let commentStart = -1;
   let state: ReadState = ReadState.NORMAL;
 
@@ -341,7 +340,9 @@ export function tokenise(statement, lineNumber = 0, baseIndex?: number) {
     result.push({ value: currentText, type: state === ReadState.NORMAL ? `word` : `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
     currentText = ``;
   } else {
-    result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+    if (currentText.trim().length > 0) {
+      result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+    }
   }
 
   result = fixStatement(result);
