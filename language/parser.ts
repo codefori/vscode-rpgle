@@ -423,7 +423,7 @@ export default class Parser {
           const comment = line[6];
           spec = line[5].toUpperCase();
 
-          if ([spec, comment].includes(`*`)) {
+          if ([spec, comment].includes(`*`) || [`*`, `+`].includes(comment)) {
             continue;
           }
 
@@ -1189,6 +1189,8 @@ export default class Parser {
               if (cSpec.extended) {
                 tokens.push(...tokenise(cSpec.extended.value, lineNumber, cSpec.extended.range.start));
               }
+            } else if (!cSpec.opcode && !cSpec.factor) {
+              tokens.push(cSpec.extended);
             } else {
               tokens.push(cSpec.factor1, cSpec.factor2, cSpec.result);
             }
