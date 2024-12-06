@@ -684,3 +684,111 @@ test('references_13_fixed_2', async () => {
   expect(TYPEMST_Dim.references.length).toBe(5);
   expect(TYPEMST_Dim.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `TYPEMST_Dim`)).toBe(true);
 });
+
+test('references_14_fixed_3', async () => {
+  const lines = [
+    `      *?--------------------------------------------------------------?`,
+    `     D  frdt           s              7  0`,
+    `     D  todt           s              7  0`,
+    `     D  per            s              6`,
+    `     D  year           s              2  0`,
+    `     D  month          s              2  0`,
+    `  `,
+    `      *?--------------------------------------------------------------?`,
+    `     D                 DS`,
+    `     D  filedt_c               1      1  0`,
+    `     D  filedt_yy              2      3  0`,
+    `     D  filedt_mm              4      5  0`,
+    `     D  filedt_dd              6      7  0`,
+    `     D  filedt                 1      7  0`,
+    `      *?--------------------------------------------------------------?`,
+    `     D                 DS`,
+    `     D  today                  1      7  0`,
+    `     D  udatc                  1      1  0`,
+    `     D  udatyy                 2      3  0`,
+    `     D  udatmm                 4      5  0`,
+    `     D  udatdd                 6      7  0`,
+    `      *?--------------------------------------------------------------?`,
+    `     D PARMDS          DS             6`,
+    `     D  pmcc                   1      2  0`,
+    `     D  pmyy                   3      4  0`,
+    `     D  pmmm                   5      6  0`,
+    `      *?---?`,
+    `      *?--------------------------------------------------------------?`,
+    `     C     *ENTRY        plist`,
+    `     C                   parm                    parmds`,
+    `      *??`,
+    `      *??`,
+    `      *?---?`,
+    `     C                   if        parmds = *blank`,
+    `     c                   eval      year  = Uyear`,
+    `     C                   eval      month  = umonth`,
+    `     C                   movel     *year         per                            --> cyymmdd`,
+    `     C                   move      umonth        per`,
+    `     C                   else`,
+    `     C                   eval      year    = pmyy`,
+    `     C                   eval      month   = pmmm`,
+    `     C                   eval      per = parmds                                 --> cyymmdd`,
+    `     C                   endif`,
+    `      *?---?`,
+    `     C                   eval      filedt_c  = 1`,
+    `     C                   eval      filedt_yy = year`,
+    `     C                   eval      filedt_mm = month`,
+    `     C                   eval      filedt_dd = 1`,
+    `     C                   eval      frdt = filedt                                --> cyymmdd`,
+    `      *??`,
+    `     C                   eval      filedt_dd = 31`,
+    `     C                   eval      todt = filedt                                --> cyymmdd`,
+    `      *??`,
+    `      *?SQL-Delete if there are already records for given period?`,
+    `     C/EXEC SQL`,
+    `     C+ delete from WOOPS/SCOOBYDO where period = :per`,
+    `     C/END-EXEC`,
+    `      *?==============================================================?`,
+    `      *?SQL-Insert in file SCOOBYDO for the  given period?`,
+    `     C/EXEC SQL`,
+    `     C+ insert into WOOPS/SCOOBYDO  (geco,nuco,period,lati,cicn,cdt3,nao2,`,
+    `     C* this is intentially broken, because we don't parse SQL`,
+    `     C+ substr(rtrim('0000000' concat cast(fhnuco as char(7))),`,
+    `     C+ length(rtrim('0000000' concat cast(fhnuco as char(7))))-6, 5 )`,
+    `     C+ concat '-'`,
+    `     C+ concat substr(rtrim('0000000' concat cast(fhnuco as char(7))),`,
+    `     C+ length(rtrim('0000000' concat cast(fhnuco as char(7))))-1, 2 ),`,
+    `     C+ ftlet1, ftlet2        from     pcsiti,   pchico,   pcsiko`,
+    `     C+ where fhgeco = fkgeco and fhnuco = fknuco`,
+    `     C+ and fkgeco = 2 and (fkcgko in ('B', 'C'))`,
+    `     C+ and fkrpko not in ('110', '130', '135', '140', '199', '235')`,
+    `     C+ and fhnao1 in ('C', 'H', 'O', 'S')`,
+    `     C+ and fhanop = ' ' and fhdaop between :frdt and :todt`,
+    `     C+ and fhcdt3 = ftcdt3`,
+    `     C+ and fhssor = 'T'`,
+    `     C+ and fhfcds <> 0`,
+    `     C+ group by fhgeco, fhnuco, fkleti, ftlati,`,
+    `     C+ fhcicn, fhnao2, fhlads, fhcdt3, ftlet1, ftlet2`,
+    `     C+ order by fhnuco`,
+    `     C/END-EXEC`,
+    `      *?==============================================================?`,
+    `     C                   call      'HICO_TAXE'`,
+    `     C                   parm                    per`,
+    `     C                   call      'HICO_BRK2'`,
+    `     C                   parm                    per`,
+    `     C                   seton                                        LR`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const per = cache.find(`per`);
+  expect(per.references.length).toBe(6);
+  expect(per.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `per`)).toBe(true);
+
+  const pmyy = cache.find(`pmyy`);
+  expect(pmyy.references.length).toBe(2);
+  expect(pmyy.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `pmyy`)).toBe(true);
+
+  const filedt = cache.find(`filedt`);
+  expect(filedt.references.length).toBe(3);
+  expect(filedt.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `filedt`)).toBe(true);
+
+  const lr = cache.find(`LR`);
+  expect(lr.references.length).toBe(1);
+});
