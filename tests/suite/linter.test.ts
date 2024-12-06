@@ -1840,7 +1840,7 @@ test("linter29", async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy './tests/rpgle/copy1.rpgle'`,
+    `/copy './rpgle/copy1.rpgle'`,
     ``,
     `Dcl-s MyVariable2 Char(20);`,
     ``,
@@ -1951,7 +1951,7 @@ test("linter31_b", async () => {
   const { errors } = Linter.getErrors({
     uri,
     content: lines,
-    availableIncludes: [`tests/rpgle/copy1.rpgle`]
+    availableIncludes: [`rpgle/copy1.rpgle`]
   }, {
     IncludeMustBeRelative: true,
   }, cache);
@@ -1964,7 +1964,7 @@ test("linter31_b", async () => {
   expect(errors[0]).toEqual({
     offset: { position: 39, end: 50 },
     type: `IncludeMustBeRelative`,
-    newValue: `'tests/rpgle/copy1.rpgle'`
+    newValue: `'rpgle/copy1.rpgle'`
   });
 });
 
@@ -1974,7 +1974,7 @@ test("linter32", async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy 'tests/rpgle/copy1.rpgle'`,
+    `/copy 'rpgle/copy1.rpgle'`,
     ``,
     `Dcl-s MyVariable2 Char(20);`,
     ``,
@@ -2017,7 +2017,7 @@ test("linter32_b", async () => {
   const { errors } = Linter.getErrors({
     uri,
     content: lines,
-    availableIncludes: [`tests/rpgle/copy1.rpgle`]
+    availableIncludes: [`rpgle/copy1.rpgle`]
   }, {
     IncludeMustBeRelative: true
   }, cache);
@@ -2030,7 +2030,7 @@ test("linter32_b", async () => {
   expect(errors[0]).toEqual({
     offset: { position: 39, end: 52 },
     type: `IncludeMustBeRelative`,
-    newValue: `'tests/rpgle/copy1.rpgle'`
+    newValue: `'rpgle/copy1.rpgle'`
   });
 });
 
@@ -2040,7 +2040,7 @@ test("linter33", async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy '/tests/rpgle/copy1.rpgle'`,
+    `/copy '/rpgle/copy1.rpgle'`,
     ``,
     `Dcl-s MyVariable2 Char(20);`,
     ``,
@@ -2062,7 +2062,7 @@ test("linter33", async () => {
   expect(errors.length).toBe(1);
 
   expect(errors[0]).toEqual({
-    offset: { position: 39, end: 65 }, type: `IncludeMustBeRelative`
+    offset: { position: 39, end: 59 }, type: `IncludeMustBeRelative`
   });
 });
 
@@ -2163,7 +2163,7 @@ test("linter37", async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy 'tests/rpgle/copy1.rpgle'`,
+    `/copy 'rpgle/copy1.rpgle'`,
     ``,
     `Dcl-s MyVariable2 Char(20);`,
     ``,
@@ -2186,7 +2186,7 @@ test("linter37", async () => {
   expect(errors.length).toBe(1);
 
   expect(errors[0]).toEqual({
-    offset: { position: 129, end: 135 },
+    offset: { position: 123, end: 129 },
     type: `UselessOperationCheck`
   });
 });
@@ -3054,7 +3054,7 @@ test('linter with non-free copybook', async () => {
     `Ctl-opt Bnddir('PCRPROCS');`,
     `Ctl-opt ExtBinInt(*Yes);`,
     ` `,
-    `/copy './tests/rpgle/fixed1.rpgleinc'`,
+    `/copy './rpgle/fixed1.rpgleinc'`,
     ` `,
     `Dcl-Proc Engage_Usage_Report;`,
     ` `,

@@ -235,7 +235,7 @@ test('eof4', async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy './tests/rpgle/eof4.rpgle'`,
+    `/copy './rpgle/eof4.rpgle'`,
     ``,
     `Dcl-s MyVariable2 Char(20);`,
     ``,
@@ -466,7 +466,7 @@ test('variable_case1', async () => {
   const lines = [
     `**FREE`,
     `Ctl-Opt DftActGrp(*No);`,
-    `/copy './tests/rpgle/copy3.rpgle'`,
+    `/copy './rpgle/copy3.rpgle'`,
     `Dcl-S MyCustomerName1 like(customername_t);`,
     `Dcl-S MyCustomerName2 like(CustomerName_t);`,
     `Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
@@ -484,19 +484,19 @@ test('variable_case1', async () => {
   expect(errors.length).toBe(3);
 
   expect(errors[0]).toEqual({
-    offset: { position: 92, end: 106 },
+    offset: { position: 86, end: 100 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
 
   expect(errors[1]).toEqual({
-    offset: { position: 180, end: 194 },
+    offset: { position: 174, end: 188 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
 
   expect(errors[2]).toEqual({
-    offset: { position: 224, end: 238 },
+    offset: { position: 218, end: 232 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
@@ -506,7 +506,7 @@ test('variable_case1 commented out', async () => {
   const lines = [
     `**FREE`,
     `Ctl-Opt DftActGrp(*No);`,
-    `// /copy './tests/rpgle/copy3.rpgle'`,
+    `// /copy './rpgle/copy3.rpgle'`,
     `Dcl-S MyCustomerName1 like(customername_t);`,
     `Dcl-S MyCustomerName2 like(CustomerName_t);`,
     `Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
@@ -528,9 +528,9 @@ test('uppercase1', async () => {
   const lines = [
     `**FREE`,
     `Ctl-Opt DftActGrp(*No);`,
-    `/copy './tests/rpgle/copy1.rpgle'`,
-    `/Copy './tests/rpgle/copy2.rpgle'`,
-    `/COPY './tests/rpgle/copy3.rpgle'`,
+    `/copy './rpgle/copy1.rpgle'`,
+    `/Copy './rpgle/copy2.rpgle'`,
+    `/COPY './rpgle/copy3.rpgle'`,
     `Dcl-S MyCustomerName1 like(CustomerName_t);`,
     `MyCustomerName1 = 'John Smith';`,
     `dsply MyCustomerName1;`,
@@ -551,7 +551,7 @@ test('uppercase1', async () => {
   });
 
   expect(errors[1]).toEqual({
-    offset: { position: 65, end: 70 },
+    offset: { position: 59, end: 64 },
     type: `DirectiveCase`,
     newValue: `/COPY`
   });
@@ -561,9 +561,9 @@ test('lowercase1', async () => {
   const lines = [
     `**FREE`,
     `Ctl-Opt DftActGrp(*No);`,
-    `/copy './tests/rpgle/copy1.rpgle'`,
-    `/Copy './tests/rpgle/copy2.rpgle'`,
-    `/COPY './tests/rpgle/copy3.rpgle'`,
+    `/copy './rpgle/copy1.rpgle'`,
+    `/Copy './rpgle/copy2.rpgle'`,
+    `/COPY './rpgle/copy3.rpgle'`,
     `Dcl-S MyCustomerName1 like(CustomerName_t);`,
     `MyCustomerName1 = 'John Smith';`,
     `dsply MyCustomerName1;`,
@@ -578,13 +578,13 @@ test('lowercase1', async () => {
   expect(errors.length).toBe(2);
 
   expect(errors[0]).toEqual({
-    offset: { position: 65, end: 70 },
+    offset: { position: 59, end: 64 },
     type: `DirectiveCase`,
     newValue: `/copy`
   });
 
   expect(errors[1]).toEqual({
-    offset: { position: 99, end: 104 },
+    offset: { position: 87, end: 92 },
     type: `DirectiveCase`,
     newValue: `/copy`
   });
@@ -594,7 +594,7 @@ test('macro defined test 1', async () => {
   const lines = [
     `**FREE`,
     `Ctl-Opt DftActGrp(*No);`,
-    `/copy './tests/rpgle/copy4.rpgleinc'`,
+    `/copy './rpgle/copy4.rpgleinc'`,
     `Dcl-S MyCustomerName1 char(5);`,
     `MyCustomerName1 = 'John Smith';`,
     `dsply MyCustomerName1;`,
@@ -612,7 +612,7 @@ test('macro defined test 2', async () => {
     `**FREE`,
     `Ctl-Opt DftActGrp(*No);`,
     `/DEFINE QRPGLEH_RPMAR001`,
-    `/copy './tests/rpgle/copy4.rpgleinc'`,
+    `/copy './rpgle/copy4.rpgleinc'`,
     `Dcl-S MyCustomerName1 char(5);`,
     `MyCustomerName1 = 'John Smith';`,
     `dsply MyCustomerName1;`,
@@ -630,7 +630,7 @@ test('depth test', async () => {
   const lines = [
     `**FREE`,
     `Ctl-Opt DftActGrp(*No);`,
-    `/copy './tests/rpgle/depth1.rpgleinc'`,
+    `/copy './rpgle/depth1.rpgleinc'`,
     `Dcl-S MyCustomerName1 char(5);`,
     `MyCustomerName1 = 'John Smith';`,
     `dsply MyCustomerName1;`,

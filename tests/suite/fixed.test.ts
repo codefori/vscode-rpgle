@@ -324,7 +324,7 @@ test('fixed9', async () => {
   const lines = [
     ``,
     `       // -----------------------`,
-    `      /copy './tests/rpgle/copy1.rpgle'`,
+    `      /copy './rpgle/copy1.rpgle'`,
     `       // -----------------------`,
     ``,
     `     P Obj_Next        B                   Export`,
@@ -364,8 +364,8 @@ test('fixed9_2', async () => {
   const lines = [
     ``,
     `       // -----------------------`,
-    `     d/copy './tests/rpgle/copy1.rpgle'`,
-    `     */copy './tests/rpgle/copy2.rpgle'`,
+    `     d/copy './rpgle/copy1.rpgle'`,
+    `     */copy './rpgle/copy2.rpgle'`,
     `       // -----------------------`,
     `     P Obj_Next        B                   Export`,
     `     D Obj_Next        PI                  LikeDS(ObjectDs)`,
@@ -404,7 +404,7 @@ test('fixed9_3', async () => {
   const lines = [
     ``,
     `         Ctl-Opt DftActGrp(*No);`,
-    `      /copy tests,eof4                            Call plist update program ESF`,
+    `      /copy eof4                                  Call plist update program ESF`,
     `      *COPY EQCPYLESRC,PLUPT_SB                   Call plist update program ESF`,
     ``,
     `         Dcl-s MyVariable2 Char(20);`,

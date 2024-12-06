@@ -8,7 +8,7 @@ import { readFile } from 'fs/promises';
 import tables from './tables';
 import { dspffdToRecordFormats } from '../extension/server/src/data';
 
-const includeDir = process.env.INCLUDE_DIR || path.join(__dirname, `..`);
+const includeDir = process.env.INCLUDE_DIR || path.join(__dirname, `..`, `tests`);
 
 export default function setupParser(): Parser {
 	const parser = new Parser();
@@ -18,7 +18,7 @@ export default function setupParser(): Parser {
 			includeFile = includeFile.substring(1, includeFile.length - 1);
 		}
 
-		if (includeFile.includes(`,`)) {
+		if (includeFile.includes(`,`) || !includeFile.includes(`.`)) {
 			includeFile = includeFile.split(`,`).join(`/`) + `.*`;
 		}
 

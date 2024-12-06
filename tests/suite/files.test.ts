@@ -161,7 +161,7 @@ test('file DS in a copy book', async () => {
   const lines = [
     `**free`,
     `ctl-opt main(Main);`,
-    `/copy './tests/rpgle/file1.rpgleinc'`,
+    `/copy './rpgle/file1.rpgleinc'`,
     ``,
     `dcl-proc Main;`,
     `dcl-pi *n;`,
