@@ -26,7 +26,7 @@ function calculateToken(lineNumber, startingPos, value, type) {
     value: resultValue,
     range: {
       start,
-      end: start + value.length,
+      end: start + resultValue.length,
       line: lineNumber
     }
   }

@@ -521,15 +521,6 @@ export default class Parser {
 
             } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
-            } else {
-              if (spec === `C`) {
-                // We don't want to waste precious time parsing all C specs, so we make sure it's got
-                // BEGSR or ENDSR in it first.
-                const upperLine = line.toUpperCase();
-                if ([`BEGSR`, `ENDSR`, `CALL`].some(v => upperLine.includes(v)) === false) {
-                  continue;
-                }
-              }
             }
           }
 
@@ -1282,7 +1273,7 @@ export default class Parser {
 
             if (cSpec.opcode && [`EVAL`, `EVALR`].includes(cSpec.opcode.value) && cSpec.factor1 === undefined) {
               if (cSpec.extended) {
-                tokens.push(...tokenise(cSpec.extended.value, lineNumber, lineIndex));
+                tokens.push(...tokenise(cSpec.extended.value, lineNumber, cSpec.extended.range.start));
               }
             } else {
               tokens.push(cSpec.factor1, cSpec.factor2, cSpec.result);

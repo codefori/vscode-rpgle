@@ -465,5 +465,15 @@ test('references_12_fixed_1', async () => {
   expect(cache.variables.length).to.equal(2);
 
   const wkInvoice = cache.find(`wkInvoice`);
+
+  for (const ref of wkInvoice.references) {
+    // console.log({
+    //   ref,
+    //   text: lines.substring(ref.offset.position, ref.offset.end),
+    //   about: lines.substring(ref.offset.position - 10, ref.offset.end + 10)
+    // });
+    expect(lines.substring(ref.offset.position, ref.offset.end)).to.equal(`wkInvoice`);
+  }
+
   expect(wkInvoice.references.length).to.equal(2);
 });
