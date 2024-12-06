@@ -251,7 +251,7 @@ export default class Parser {
         const part = statement[i];
         if (![`special`, `word`].includes(part.type)) continue;
         if (statement[i - 1] && statement[i - 1].type === `dot`) break;
-        const lookupName =  part.value.toUpperCase();
+        const lookupName = (part.type === `special` ? part.value.substring(1) : part.value).toUpperCase();
 
         /**
          * @type {Declaration|undefined}
@@ -279,9 +279,11 @@ export default class Parser {
         }
 
         if (defRef) {
-          defRef.references.push({
-            offset: { position: part.range.start, end: part.range.end },
-          });
+          if (!defRef.references.some(ref => ref.offset.position === part.range.start && ref.offset.end === part.range.end)) {
+            defRef.references.push({
+              offset: { position: part.range.start, end: part.range.end },
+            });
+          }
 
           if (defRef.keyword[`QUALIFIED`]) {
             let nextPartIndex = i + 1;
@@ -306,9 +308,11 @@ export default class Parser {
                   // Find the subitem
                   const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
                   if (subItemDef) {
-                    subItemDef.references.push({
-                      offset: { position: subItemPart.range.start, end: subItemPart.range.end },
-                    });
+                    if (!subItemDef.references.some(ref => ref.offset.position === subItemPart.range.start && ref.offset.end === subItemPart.range.end)) {
+                      subItemDef.references.push({
+                        offset: { position: subItemPart.range.start, end: subItemPart.range.end },
+                      });
+                    }
                   }
                 }
               }
@@ -327,6 +331,29 @@ export default class Parser {
       let eol = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
       let lines = allContent.split(eol);
 
+      /** @type {{[procedure: string]: import("./types").Token[][]}} */
+      let postProcessingStatements = {'GLOBAL': []};
+
+      const addPostProcessingStatements = (procedure, statement) => {
+        if (!options.collectReferences) return;
+
+        if (!postProcessingStatements[procedure]) {
+          postProcessingStatements[procedure] = [];
+        }
+
+        postProcessingStatements[procedure].push(statement);
+      }
+
+      const scanScopeForReferences = () => {
+        for (const procedure in postProcessingStatements) {
+          const currentProcedure = scopes[0].procedures.find(proc => proc.name === procedure) ;
+          const statements = postProcessingStatements[procedure];
+          for (const statement of statements) {
+            collectReferences(statement, currentProcedure);
+          }
+        }
+      }
+
       if (lines.length === 0) return;
 
       let currentTitle = undefined, currentDescription = [];
@@ -337,6 +364,8 @@ export default class Parser {
       let currentItem;
       /** @type {Declaration} */
       let currentSub;
+
+      /** @type {string|undefined} */
       let currentProcName;
 
       let resetDefinition = false; //Set to true when you're done defining a new item
@@ -561,7 +590,7 @@ export default class Parser {
                 let condition = false;
                 let hasNot = (parts[1] === `NOT`);
                 let expr = tokens.slice(hasNot ? 2 : 1);
-                let keywords = Parser.getKeywords(Parser.getTokens(expr));
+                let keywords = Parser.expandKeywords(Parser.getTokens(expr));
 
                 if (typeof keywords[`DEFINED`] === `string`) {
                   condition = definedMacros.includes(keywords[`DEFINED`]);
@@ -646,8 +675,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`file`);
                 currentItem.name = partsLower[1];
-                currentItem._keywordTokens = tokens.slice(2);
-                currentItem.keyword = Parser.getKeywords(currentItem._keywordTokens);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
@@ -698,8 +726,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
-                currentItem._keywordTokens = tokens.slice(2);
-                currentItem.keyword = Parser.getKeywords(currentItem._keywordTokens);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
@@ -718,8 +745,7 @@ export default class Parser {
               if (currentItem === undefined) {
                 currentItem = new Declaration(`variable`);
                 currentItem.name = partsLower[1];
-                currentItem._keywordTokens = tokens.slice(2);
-                currentItem.keyword = Parser.getKeywords(currentItem._keywordTokens);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
@@ -739,8 +765,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
-                currentItem._keywordTokens = tokens.slice(2)
-                currentItem.keyword = Parser.getKeywords(currentItem._keywordTokens);
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
@@ -777,8 +802,7 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`struct`);
                 currentItem.name = partsLower[1];
-                currentItem._keywordTokens = tokens.slice(2);
-                currentItem.keyword = Parser.getKeywords(tokens.slice(2));
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
@@ -834,8 +858,7 @@ export default class Parser {
                   currentGroup = `procedures`;
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = partsLower[1];
-                  currentItem._keywordTokens = tokens.slice(2);
-                  currentItem.keyword = Parser.getKeywords(currentItem._keywordTokens);
+                  currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                   currentItem.description = currentDescription.join(`\n`);
                   currentItem.tags = currentTags;
 
@@ -892,8 +915,7 @@ export default class Parser {
 
               currentProcName = partsLower[1];
               currentItem.name = currentProcName;
-              currentItem._keywordTokens = tokens.slice(2);
-              currentItem.keyword = Parser.getKeywords(currentItem._keywordTokens);
+              currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
               currentItem.description = currentDescription.join(`\n`);
               currentItem.tags = currentTags;
 
@@ -936,10 +958,9 @@ export default class Parser {
                     resetDefinition = true;
                   }
 
-                  currentItem._keywordTokens = [...currentItem._keywordTokens, ...tokens.slice(1)];
                   currentItem.keyword = {
                     ...currentItem.keyword,
-                    ...Parser.getKeywords(tokens.slice(2))
+                    ...Parser.expandKeywords(tokens.slice(2))
                   }
                   currentItem.readParms = true;
 
@@ -1148,8 +1169,7 @@ export default class Parser {
 
                   currentSub = new Declaration(`subitem`);
                   currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]);
-                  currentSub._keywordTokens = Parser.getTokens(tokens.slice(1));
-                  currentSub.keyword = Parser.getKeywords(currentSub._keywordTokens);
+                  currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
 
                   currentSub.position = {
                     path: file,
@@ -1568,6 +1588,7 @@ export default class Parser {
         if (options.collectReferences && tokens.length > 0) {
           const currentProc = scopes[0].procedures.find(proc => proc.name === currentProcName);
           collectReferences(tokens, currentProc, currentItem);
+          addPostProcessingStatements(currentProcName, tokens);
         }
 
         if (resetDefinition) {
@@ -1581,68 +1602,16 @@ export default class Parser {
           resetDefinition = false;
         }
       }
+
+      if (options.collectReferences) {
+        scanScopeForReferences();
+      }
     }
 
     await parseContent(workingUri, baseContent);
 
-
-    /**
-     * @param {Declaration} currentSub
-     * @param {Declaration} [currentProcedure]
-     */
-    const scanSubItems = (currentSub, currentProcedure) => {
-      if (currentSub) {
-        collectReferences(currentSub._keywordTokens, currentProcedure);
-      }
-
-      for (const subItem of currentSub.subItems) {
-        collectReferences(subItem._keywordTokens, currentProcedure);
-        scanSubItems(subItem);
-      }
-    }
-
-    /**
-     * @param {Declaration} [currentProcedure]
-     */
-    const scanScopeForReferences = (currentProcedure) => {
-      // If it's a procedure, it will have a scope
-      const currentScope = currentProcedure && currentProcedure.scope ? currentProcedure.scope : scopes[0];
-
-      for (const file of currentScope.files) {
-        collectReferences(file._keywordTokens, currentProcedure);
-      }
-
-      for (const struct of currentScope.structs) {
-        scanSubItems(struct, currentProcedure);
-      }
-
-      for (const struct of currentScope.files) {
-        scanSubItems(struct, currentProcedure);
-      }
-
-      for (const vars of currentScope.variables) {
-        collectReferences(vars._keywordTokens, currentProcedure);
-      }
-
-      if (currentProcedure) {
-        for (const parms of currentScope.parameters) {
-          collectReferences(parms._keywordTokens, currentProcedure);
-        }
-
-      } else {
-        for (const procedure of currentScope.procedures) {
-          collectReferences(procedure._keywordTokens, procedure);
-          scanScopeForReferences(procedure);
-        }
-      }
-    }
-
-    // A second pass to add references to definitions which were referenced
-    // before they were defined. (See test references_9)
-    scanScopeForReferences();
-
     if (scopes.length > 0) {
-      scopes[0].keyword = Parser.getKeywords(Parser.getTokens(globalKeyword));
+      scopes[0].keyword = Parser.expandKeywords(Parser.getTokens(globalKeyword));
     }
 
     scopes[0].fixProcedures();    
@@ -1675,7 +1644,7 @@ export default class Parser {
   /**
    * @param {import("./types").Token[]} tokens 
    */
-  static getKeywords(tokens) {
+  static expandKeywords(tokens) {
     /** @type {import("./parserTypes").Keywords} */
     const keyvalues = {};
 

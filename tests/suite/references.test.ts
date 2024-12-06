@@ -278,7 +278,6 @@ test("references_8", async () => {
   const subProc = procYes.scope;
 
   const localStructYes = subProc.find(`localStructYes`);
-  console.log(localStructYes.references);
   expect(localStructYes.references.length).toBe(2);
   expect(localStructYes.references[1]).toEqual({
     offset: { position: 1158, end: 1172 }

@@ -12,7 +12,7 @@ export function parseFLine(line) {
 
   return {
     name, 
-    keywords: Parser.getKeywords(Parser.getTokens(keywords))
+    keywords: Parser.expandKeywords(Parser.getTokens(keywords))
   };
 }
 
@@ -75,7 +75,7 @@ export function parseDLine(line) {
     type,
     decimals,
     field,
-    keywords: Parser.getKeywords(Parser.getTokens(keywords))
+    keywords: Parser.expandKeywords(Parser.getTokens(keywords))
   };
 }
 
@@ -92,7 +92,7 @@ export function parsePLine(line) {
   return {
     name,
     potentialName,
-    keywords: Parser.getKeywords(Parser.getTokens(keywords)),
+    keywords: Parser.expandKeywords(Parser.getTokens(keywords)),
     start
   };
 }
@@ -234,5 +234,5 @@ export function getPrettyType(lineData) {
     break;
   }
 
-  return Parser.getKeywords(Parser.getTokens(outType));
+  return Parser.expandKeywords(Parser.getTokens(outType));
 }

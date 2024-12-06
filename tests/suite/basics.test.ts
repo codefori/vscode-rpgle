@@ -471,11 +471,7 @@ test('indicators1', async () => {
     `Return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-
-  Linter.getErrors({ uri, content: lines }, {
-    CollectReferences: true,
-  }, cache);
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
 
   const in10 = cache.find(`IN10`);
 
@@ -790,9 +786,7 @@ test('issue_195a', async () => {
     `End-Proc ScomponiStringa;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-
-  cache.clearReferences();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
 });
 
 test('issue_195b', async () => {
