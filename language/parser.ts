@@ -138,7 +138,7 @@ export default class Parser {
     }
   }
 
-  async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: false}): Promise<Cache|undefined> {
+  async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       return existingCache;
