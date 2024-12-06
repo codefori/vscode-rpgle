@@ -10,6 +10,9 @@ export default class Declaration {
     this.type = type;
     this.name = ``;
 
+    /** @type {import("../types").Token[]} */
+    this._keywordTokens = [];
+
     /** @type {import("../parserTypes").Keywords} */
     this.keyword = {};
     
