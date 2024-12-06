@@ -1197,7 +1197,7 @@ export default class Parser {
 
             potentialName = cSpec.factor1 ? cSpec.factor1.value : ``;
 
-            switch (cSpec.opcode.value) {
+            switch (cSpec.opcode && cSpec.opcode.value) {
             case `BEGSR`:
               if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
                 currentItem = new Declaration(`subroutine`);
