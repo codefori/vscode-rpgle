@@ -1185,12 +1185,10 @@ export default class Parser {
 
             tokens = [cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
-            if (cSpec.opcode && [`EVAL`, `EVALR`].includes(cSpec.opcode.value) && cSpec.factor1 === undefined) {
-              if (cSpec.extended) {
-                tokens.push(...tokenise(cSpec.extended.value, lineNumber, cSpec.extended.range.start));
-              }
-            } else if (!cSpec.opcode && !cSpec.factor) {
-              tokens.push(cSpec.extended);
+            if (cSpec.opcode && !cSpec.factor1 && cSpec.extended) {
+              tokens.push(...tokenise(cSpec.extended.value, lineNumber, cSpec.extended.range.start));
+            } else if (!cSpec.factor1 && !cSpec.opcode && cSpec.extended) {
+              tokens.push(...tokenise(cSpec.extended.value, lineNumber, cSpec.extended.range.start));
             } else {
               tokens.push(cSpec.factor1, cSpec.factor2, cSpec.result);
             }
