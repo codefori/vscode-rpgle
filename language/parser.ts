@@ -1250,16 +1250,16 @@ export default class Parser {
 
             break;
           case `P`:
-            const pSpec = parsePLine(line);
+            const pSpec = parsePLine(line, lineNumber, lineIndex);
 
-            if (pSpec.potentialName === ``) continue;
-
-            if (pSpec.potentialName.endsWith(`...`)) {
-              potentialName = pSpec.potentialName.substring(0, pSpec.potentialName.length - 3);
+            if (pSpec.potentialName) {
+              potentialName = pSpec.potentialName.value.substring(0, pSpec.potentialName.value.length - 3);
               potentialNameUsed = true;
+              tokens = [pSpec.potentialName];
             } else {
               if (pSpec.start) {
-                potentialName = pSpec.name.length > 0 ? pSpec.name : potentialName;
+                tokens = [...pSpec.keywordsRaw, pSpec.name]
+                potentialName = pSpec.name && pSpec.name.value.length > 0 ? pSpec.name.value : potentialName;
 
                 if (potentialName) {
                   //We can overwrite it.. it might have been a PR before.

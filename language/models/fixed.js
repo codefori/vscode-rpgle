@@ -105,20 +105,21 @@ export function parseDLine(lineNumber, lineIndex, content) {
 }
 
 /**
- * @param {string} line
+ * @param {string} content
  */
-export function parsePLine(line) {
-  line = line.padEnd(80);
-  const name = line.substr(6, 16).trim();
-  const potentialName = line.substring(6).trim();
-  const start = line[23].toUpperCase() === `B`;
-  const keywords = line.substr(43).trim().toUpperCase();
-  const keywordTokens = Parser.getTokens(keywords, );
+export function parsePLine(content, lineNumber, lineIndex) {
+  content = content.padEnd(80);
+  const name = content.substr(6, 16)
+  const longForm = content.substring(6).trimEnd();
+  const potentialName = longForm.endsWith(`...`) ? calculateToken(lineNumber, lineIndex+6, longForm.substring(0, longForm.length - 3)) : undefined;
+  const start = content[23].toUpperCase() === `B`;
+  const keywords = content.substr(43)
+  const keywordTokens = Parser.getTokens(keywords, lineNumber, lineIndex+43);
 
   return {
-    name,
+    name: calculateToken(lineNumber, lineIndex+6, name),
     potentialName,
-    keywordTokens,
+    keywordsRaw: keywordTokens,
     keywords: Parser.expandKeywords(keywordTokens),
     start
   };
