@@ -1221,3 +1221,24 @@ test('references_17_fixed_6', async () => {
   expect(automat.references.length).toBe(4);
   expect(automat.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `automat`)).toBe(true);
 });
+
+test('references_18_fixed_7', async () => {
+  const lines = [
+    ``,
+    `      *- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*?`,
+    `     D Z160            DS           160`,
+    `     D  SRCDTA                 1    120`,
+    `     D  LAS                    1    132    dim(132)`,
+    `      *- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*?`,
+    `     C                   movea     'Solde titres'las(ll)`,
+    `     C                   add       12            ll`,
+    `     C                   movea     ' du Client: 'las(ll)`,
+    `     C                   add       12            ll`,
+    ``,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const z160 = cache.find(`Z160`);
+  expect(z160.references.length).toBe(0);
+});
