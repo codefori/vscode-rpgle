@@ -1354,14 +1354,6 @@ test(`references_20`, async () => {
   const Length_t = cache.find(`LENGTH_t`);
   expect(Length_t.references.length).toBe(3);
 
-  for (const ref of Length_t.references) {
-    console.log({
-      ref,
-      text: lines.substring(ref.offset.position, ref.offset.end),
-      about: lines.substring(ref.offset.position - 10, ref.offset.end + 10)
-    });
-  }
-
   expect(Length_t.position.path).not.toBe(uri);
 
   const uniqueUris = Length_t.references.map(ref => ref.uri).filter((value, index, self) => self.indexOf(value) === index);
