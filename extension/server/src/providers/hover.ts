@@ -83,7 +83,9 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 
 				if (theVariable) {
 					// Variable definition found
-					let markdown = `\`${theVariable.name}\`: \`${prettyKeywords(theVariable.keyword)}\``;
+					const refs = theVariable.references.length;
+										
+					let markdown = `\`${theVariable.name} ${prettyKeywords(theVariable.keyword)}\` (${refs} reference${refs === 1 ? `` : `s`})`;
 
 					if (theVariable.position && currentPath !== theVariable.position.path) {
 						markdown += `\n\n*@file* \`${theVariable.position.path}:${theVariable.position.line+1}\``;
