@@ -204,28 +204,36 @@ export default class Parser {
 
         if (![`special`, `word`].includes(part.type)) continue;
         if (statement[i - 1] && statement[i - 1].type === `dot`) break;
-        const lookupName = (part.type === `special` ? part.value.substring(1) : part.value).toUpperCase();
+
+        const isSpecial = part.type === `special`;
+        const lookupName = (isSpecial ? part.value.substring(1) : part.value).toUpperCase();
 
         let defRef: Declaration|undefined;
 
-        if (currentDef) {
-          if (currentDef.name.toUpperCase() === lookupName) {
-            defRef = currentDef;
-          } else if (currentDef.subItems.length > 0) {
-            defRef = currentDef.subItems.find(sub => sub.name.toUpperCase() === lookupName);
-          }
-        }
+        if (isSpecial) {
+          // The only specials that can be looked up at global indicators
+          defRef = scopes[0].indicators.find(ind => ind.name.toUpperCase() === lookupName);
 
-        if (!defRef && currentProcedure && currentProcedure.scope) {
-          defRef = currentProcedure.scope.find(lookupName);
+        } else {
+          if (currentDef) {
+            if (currentDef.name.toUpperCase() === lookupName) {
+              defRef = currentDef;
+            } else if (currentDef.subItems.length > 0) {
+              defRef = currentDef.subItems.find(sub => sub.name.toUpperCase() === lookupName);
+            }
+          }
+
+          if (!defRef && currentProcedure && currentProcedure.scope) {
+            defRef = currentProcedure.scope.find(lookupName);
+
+            if (!defRef) {
+              defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === lookupName);
+            }
+          }
 
           if (!defRef) {
-            defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === lookupName);
+            defRef = scopes[0].find(lookupName);
           }
-        }
-
-        if (!defRef) {
-          defRef = scopes[0].find(lookupName);
         }
 
         if (defRef) {
