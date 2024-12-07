@@ -1,32 +1,89 @@
 import setupParser, { getSourcesContent, getSourcesList } from "../parserSetup";
-import { test, expect, describe } from "vitest";
+import { test } from "vitest";
 import path from "path";
+import { fail } from "assert";
+import Declaration from "../../language/models/declaration";
+import Cache from "../../language/models/cache";
 
+const timeout = 1000 * 60 * 10; // 10 minutes
 const parser = setupParser();
 
 // The purpose of this file is to test the parser against all the sources in the sources directory to ensure it doesn't crash.
 
-test("Source Directory Tests", async () => {
+test("Generic reference tests", {timeout}, async () => {
   const list = await getSourcesList();
 
-  for (const source of list) {
-    const basename = path.basename(source);
-    const baseContent = await getSourcesContent(source);
+  for (let i = 0; i < list.length; i++) {
+    const relativePath = list[i];
+    const basename = path.basename(relativePath);
 
-    // These are typing tests. Can the parser accept half documents without crashing?
+    const baseContent = await getSourcesContent(relativePath);
 
-    let content = ``;
+    const ps = performance.now();
+    const doc = await parser.getDocs(basename, baseContent, {collectReferences: true, ignoreCache: true, withIncludes: true});
+    const pe = performance.now();
 
-    let baseContentSplitUpIntoPieces = [];
-    const pieceSize = Math.ceil(baseContent.length / 20);
-    for (let i = 0; i < baseContent.length; i += pieceSize) {
-      baseContentSplitUpIntoPieces.push(baseContent.slice(i, i + pieceSize));
+    let errorCount = 0;
+
+    for (const def of doc.variables) {
+      for (const ref of def.references) {
+        const offsetContent = baseContent.substring(ref.offset.position, ref.offset.end);
+
+        if (offsetContent.toUpperCase() !== def.name.toUpperCase()) {
+          errorCount++;
+        }
+      }
     }
 
-    for (let i = 0; i < baseContentSplitUpIntoPieces.length; i++) {
-      content += baseContentSplitUpIntoPieces[i];
+    const checkSubItems = (def: Declaration) => {
+      if (def.subItems && def.subItems.length > 0) {
+        for (const sub of def.subItems) {
+          for (const ref of sub.references) {
+            const offsetContent = baseContent.substring(ref.offset.position, ref.offset.end);
 
-      await parser.getDocs(basename, content, {collectReferences: true, ignoreCache: true, withIncludes: true});
+            if (offsetContent.toUpperCase() !== sub.name.toUpperCase()) {
+              console.log({
+                name: sub.name,
+                offset: ref.offset,
+                offsetContent,
+                about: baseContent.substring(ref.offset.position - 10, ref.offset.end + 10)
+              })
+              errorCount++;
+            }
+          }
+        }
+      }
     }
+
+    const checkScope = (scope: Cache) =>{
+      for (const def of [...scope.variables, ...scope.subroutines, ...scope.procedures, ...scope.constants, ...scope.structs, ...scope.files]) {
+        for (const ref of def.references) {
+          const offsetContent = baseContent.substring(ref.offset.position, ref.offset.end);
+
+          if (offsetContent.toUpperCase() !== def.name.toUpperCase()) {
+            console.log({
+              name: def.name,
+              offset: ref.offset,
+              offsetContent,
+              about: baseContent.substring(ref.offset.position - 30, ref.offset.end + 30)
+            })
+            errorCount++;
+          }
+        }
+
+        checkSubItems(def);
+        if (def.scope) {
+          checkScope(def.scope);
+        }
+      }
+    }
+
+    checkScope(doc);
+
+    if (errorCount > 0) {
+      fail(`Found ${errorCount} errors in ${basename}`);
+    }
+
+    console.log(`Parsed ${basename} in ${pe - ps}ms (${i+1}/${list.length})`);
   }
 });
