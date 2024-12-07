@@ -76,6 +76,12 @@ export interface Offset {
   end: number
 }
 
+
+export interface Reference {
+  uri: string;
+  offset: Offset;
+}
+
 export interface IssueRange {
   offset: Offset;
   type?: keyof Rules;

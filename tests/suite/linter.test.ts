@@ -2500,7 +2500,8 @@ test("linter40_keywordrefs", async () => {
 
   expect(RANDOMLEN.references.length).toBe(2);
   expect(RANDOMLEN.references[1]).toEqual({
-    offset: { position: 64, end: 73 }
+    offset: { position: 64, end: 73 },
+    uri: uri,
   });
 
   expect(errors.length).toBe(1);

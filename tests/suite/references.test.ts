@@ -1,7 +1,7 @@
 import setupParser from "../parserSetup";
 import Cache from "../../language/models/cache";
 import { test, expect } from "vitest";
-import { t } from "../../out/extension";
+import { readFile } from "fs/promises";
 
 
 const parser = setupParser();
@@ -244,13 +244,15 @@ test("references_8", async () => {
   const subfa = cache.find(`subfa`);
   expect(subfa.references.length).toBe(2);
   expect(subfa.references[1]).toEqual({
-    offset: { position: 469, end: 474 }
+    offset: { position: 469, end: 474 },
+    uri: uri
   });
 
   const structYesAlso = cache.find(`structYesAlso`);
   expect(structYesAlso.references.length).toBe(2);
   expect(structYesAlso.references[1]).toEqual({
-    offset: { position: 485, end: 498 }
+    offset: { position: 485, end: 498 },
+    uri: uri
   });
 
   const subfc = structYesAlso.subItems[0];
@@ -260,7 +262,8 @@ test("references_8", async () => {
   const qualStructYes = cache.find(`qualStructYes`);
   expect(qualStructYes.references.length).toBe(2);
   expect(qualStructYes.references[1]).toEqual({
-    offset: { position: 516, end: 529 }
+    offset: { position: 516, end: 529 },
+    uri: uri
   });
 
   const qualsubA = qualStructYes.subItems[0];
@@ -268,11 +271,13 @@ test("references_8", async () => {
   expect(qualsubA.references.length).toBe(2);
 
   expect(qualsubA.references[0]).toEqual({
-    offset: { position: 274, end: 282 }
+    offset: { position: 274, end: 282 },
+    uri: uri
   });
 
   expect(qualsubA.references[1]).toEqual({
-    offset: { position: 530, end: 538 }
+    offset: { position: 530, end: 538 },
+    uri: uri
   });
 
   const procYes = cache.find(`procYes`);
@@ -281,7 +286,8 @@ test("references_8", async () => {
   const localStructYes = subProc.find(`localStructYes`);
   expect(localStructYes.references.length).toBe(2);
   expect(localStructYes.references[1]).toEqual({
-    offset: { position: 1158, end: 1172 }
+    offset: { position: 1158, end: 1172 },
+    uri: uri
   });
 
   const localStructAlsoYes = subProc.find(`localStructAlsoYes`);
@@ -291,22 +297,26 @@ test("references_8", async () => {
   expect(subfe.name).toBe(`subfe`);
   expect(subfe.references.length).toBe(2);
   expect(subfe.references[1]).toEqual({
-    offset: { position: 1193, end: 1198 }
+    offset: { position: 1193, end: 1198 },
+    uri: uri
   });
 
   const qualDimStructYup = cache.find(`qualDimStructYup`);
   expect(qualDimStructYup.references.length).toBe(4)
 
   expect(qualDimStructYup.references[1]).toEqual({
-    offset: { position: 545, end: 561 }
+    offset: { position: 545, end: 561 },
+    uri: uri
   });
 
   expect(qualDimStructYup.references[2]).toEqual({
-    offset: { position: 578, end: 594 }
+    offset: { position: 578, end: 594 },
+    uri: uri
   });
 
   expect(qualDimStructYup.references[3]).toEqual({
-    offset: { position: 625, end: 641 }
+    offset: { position: 625, end: 641 },
+    uri: uri
   });
 
   const boopABC = qualDimStructYup.subItems[0];
@@ -314,19 +324,23 @@ test("references_8", async () => {
   expect(boopABC.references.length).toBe(4);
 
   expect(boopABC.references[0]).toEqual({
-    offset: { position: 411, end: 418 }
+    offset: { position: 411, end: 418 },
+    uri: uri
   });
 
   expect(boopABC.references[1]).toEqual({
-    offset: { position: 565, end: 572 }
+    offset: { position: 565, end: 572 },
+    uri: uri
   });
 
   expect(boopABC.references[2]).toEqual({
-    offset: { position: 612, end: 619 } 
+    offset: { position: 612, end: 619 },
+    uri: uri
   });
 
   expect(boopABC.references[3]).toEqual({
-    offset: { position: 663, end: 670 }
+    offset: { position: 663, end: 670 },
+    uri: uri
   });
 });
 
@@ -1322,4 +1336,46 @@ test('references_19_fixed_8', async () => {
   expect(sumy.references.length).toBe(1);
   const aroundSumy = lines.substring(sumy.references[0].offset.position - 10, sumy.references[0].offset.end + 10);
   expect(aroundSumy).toContain(`d   sumy`);
+});
+
+test(`references_20`, async () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No);`,
+    `/copy './rpgle/copy5.rpgleinc'`,
+    ``,
+    `dcl-s MyVar char(LENGTH_t);`,
+    ``,
+    `dsply MyVar;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const Length_t = cache.find(`LENGTH_t`);
+  expect(Length_t.references.length).toBe(3);
+
+  for (const ref of Length_t.references) {
+    console.log({
+      ref,
+      text: lines.substring(ref.offset.position, ref.offset.end),
+      about: lines.substring(ref.offset.position - 10, ref.offset.end + 10)
+    });
+  }
+
+  expect(Length_t.position.path).not.toBe(uri);
+
+  const uniqueUris = Length_t.references.map(ref => ref.uri).filter((value, index, self) => self.indexOf(value) === index);
+  expect(uniqueUris.length).toBe(2);
+
+  const include = uniqueUris.find(uri => uri.endsWith(`copy5.rpgleinc`));
+  expect(include).toBeDefined();
+
+  const rawCopyBook = await readFile(include, 'utf-8');
+  const copyRefs = Length_t.references.filter(ref => ref.uri === include);
+  expect(copyRefs.length).toBe(2);
+  expect(copyRefs.every(ref => rawCopyBook.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LENGTH_T`)).toBe(true);
+
+  const baseRefs = Length_t.references.filter(ref => ref.uri === uri);
+  expect(baseRefs.length).toBe(1);
+  expect(baseRefs.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LENGTH_T`)).toBe(true);
 });

@@ -197,7 +197,7 @@ export default class Parser {
 
     let definedMacros: string[] = [];
 
-    const collectReferences = (statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration, isExec = false) => {
+    const collectReferences = (currentUri: string, statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration, isExec = false) => {
       if (statement[0]?.value?.toUpperCase() === `EXEC`) {
         isExec = true;
       }
@@ -249,6 +249,7 @@ export default class Parser {
         if (defRef) {
           if (!defRef.references.some(ref => ref.offset.position === part.range.start && ref.offset.end === part.range.end)) {
             defRef.references.push({
+              uri: currentUri,
               offset: { position: part.range.start, end: part.range.end },
             });
           }
@@ -278,6 +279,7 @@ export default class Parser {
                   if (subItemDef) {
                     if (!subItemDef.references.some(ref => ref.offset.position === subItemPart.range.start && ref.offset.end === subItemPart.range.end)) {
                       subItemDef.references.push({
+                        uri: currentUri,
                         offset: { position: subItemPart.range.start, end: subItemPart.range.end },
                       });
                     }
@@ -291,7 +293,7 @@ export default class Parser {
     }
 
     //Now the real work
-    const parseContent = async (file: string, allContent: string) => {
+    const parseContent = async (fileUri: string, allContent: string) => {
       let eol = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
       let lines = allContent.split(eol);
 
@@ -312,7 +314,7 @@ export default class Parser {
           const currentProcedure = scopes[0].procedures.find(proc => proc.name === procedure) ;
           const statements = postProcessingStatements[procedure];
           for (const statement of statements) {
-            collectReferences(statement, currentProcedure);
+            collectReferences(fileUri, statement, currentProcedure);
           }
         }
       }
@@ -615,7 +617,7 @@ export default class Parser {
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber
                 };
 
@@ -666,7 +668,7 @@ export default class Parser {
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: currentStmtStart.line
                 };
 
@@ -686,7 +688,7 @@ export default class Parser {
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: currentStmtStart.line
                 };
 
@@ -705,7 +707,7 @@ export default class Parser {
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: currentStmtStart.line
                 };
 
@@ -743,7 +745,7 @@ export default class Parser {
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: currentStmtStart.line
                 };
 
@@ -755,7 +757,7 @@ export default class Parser {
                 currentGroup = `structs`;
 
                 // Expand the LIKEDS value if there is one.
-                await expandDs(file, currentItem);
+                await expandDs(fileUri, currentItem);
 
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
@@ -799,7 +801,7 @@ export default class Parser {
                   currentItem.tags = currentTags;
 
                   currentItem.position = {
-                    path: file,
+                    path: fileUri,
                     line: currentStmtStart.line
                   };
 
@@ -856,7 +858,7 @@ export default class Parser {
               currentItem.tags = currentTags;
 
               currentItem.position = {
-                path: file,
+                path: fileUri,
                 line: currentStmtStart.line
               };
 
@@ -938,7 +940,7 @@ export default class Parser {
 		            currentItem.keyword = {'Subroutine': true};
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: currentStmtStart.line
                 };
 
@@ -1035,7 +1037,7 @@ export default class Parser {
                       currentSqlItem.description = qualifiedObjectPath.schema || ``;
       
                       currentSqlItem.position = {
-                        path: file,
+                        path: fileUri,
                         line: currentStmtStart.line
                       };
       
@@ -1107,7 +1109,7 @@ export default class Parser {
                   currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
 
                   currentSub.position = {
-                    path: file,
+                    path: fileUri,
                     line: currentStmtStart.line
                   };
 
@@ -1121,7 +1123,7 @@ export default class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  await expandDs(file, currentSub);
+                  await expandDs(fileUri, currentSub);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
@@ -1157,7 +1159,7 @@ export default class Parser {
               currentItem.keyword = fSpec.keywords;
 
               currentItem.position = {
-                path: file,
+                path: fileUri,
                 line: lineNumber
               };
 			  
@@ -1238,7 +1240,7 @@ export default class Parser {
                 currentItem.keyword = {'Subroutine': true};
   
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber
                 };
   
@@ -1269,7 +1271,7 @@ export default class Parser {
                 callItem.tags = currentTags;
 
                 callItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber
                 };
 
@@ -1310,7 +1312,7 @@ export default class Parser {
                   currentItem.keyword = pSpec.keywords;
 
                   currentItem.position = {
-                    path: file,
+                    path: fileUri,
                     line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   };
 
@@ -1361,7 +1363,7 @@ export default class Parser {
                   
                 // TODO: line number might be different with ...?
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 };
     
@@ -1378,7 +1380,7 @@ export default class Parser {
 
                 // TODO: line number might be different with ...?
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 };
 
@@ -1392,7 +1394,7 @@ export default class Parser {
                 currentItem.keyword = dSpec.keywords;
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 };
 
@@ -1401,7 +1403,7 @@ export default class Parser {
                   end: currentItem.position.line
                 };
 
-                expandDs(file, currentItem);
+                expandDs(fileUri, currentItem);
 
                 currentGroup = `structs`;
                 scope.structs.push(currentItem);
@@ -1419,7 +1421,7 @@ export default class Parser {
                   }
   
                   currentItem.position = {
-                    path: file,
+                    path: fileUri,
                     line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   };
 
@@ -1486,12 +1488,12 @@ export default class Parser {
                     }
 
                     currentSub.position = {
-                      path: file,
+                      path: fileUri,
                       line: lineNumber
                     };
 
                     // If the parameter has likeds, add the subitems to make it a struct.
-                    await expandDs(file, currentSub);
+                    await expandDs(fileUri, currentSub);
 
                     currentItem.subItems.push(currentSub);
                     currentSub = undefined;
@@ -1527,7 +1529,7 @@ export default class Parser {
 
         if (options.collectReferences && tokens.length > 0) {
           const currentProc = scopes[0].procedures.find(proc => proc.name === currentProcName);
-          collectReferences(tokens, currentProc, currentItem);
+          collectReferences(fileUri, tokens, currentProc, currentItem);
           addPostProcessingStatements(currentProcName, tokens);
         }
 
