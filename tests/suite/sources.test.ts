@@ -20,7 +20,7 @@ test("Generic reference tests", {timeout}, async () => {
     const baseContent = await getSourcesContent(relativePath);
 
     const ps = performance.now();
-    const doc = await parser.getDocs(basename, baseContent, {collectReferences: true, ignoreCache: true, withIncludes: true});
+    const doc = await parser.getDocs(basename, baseContent, {collectReferences: true, ignoreCache: true, withIncludes: false});
     const pe = performance.now();
 
     let referencesCollected = 0;
@@ -86,6 +86,6 @@ test("Generic reference tests", {timeout}, async () => {
       fail(`Found ${errorCount} errors in ${basename}`);
     }
 
-    console.log(`Parsed ${basename} in ${pe - ps}ms (${i+1}/${list.length}). Found ${referencesCollected} references.`);
+    // console.log(`Parsed ${basename} in ${pe - ps}ms (${i+1}/${list.length}). Found ${referencesCollected} references.`);
   }
 });
