@@ -320,8 +320,8 @@ export default class Parser {
       let isFullyFree = lines[0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
 
-      let currentStatement: string|undefined;
-      let statementStartingLine: number|undefined;
+      /** Used for handling multiline statements */
+      let currentStmtStart: {content?: string, line: number, index: number}|undefined;
 
       let directIfScope: {condition: boolean}[] = [];
 
@@ -406,22 +406,23 @@ export default class Parser {
         
         const scope = scopes[scopes.length - 1];
 
-        let line = lines[li];
+        let baseLine = lines[li];
+        // let line = baseLine.;
         let spec;
 
         lineIsFree = false;
         lineNumber += 1;
 
-        if (line.startsWith(`**`)) {
+        if (baseLine.startsWith(`**`)) {
           // Usually is **FREE
           if (lineNumber === 0) continue;
           // After compile time data, we're done
           else break;
         }
 
-        if (isFullyFree === false && line.length > 6) {
-          const comment = line[6];
-          spec = line[5].toUpperCase();
+        if (isFullyFree === false && baseLine.length > 6) {
+          const comment = baseLine[6];
+          spec = baseLine[5].toUpperCase();
 
           if ([spec, comment].includes(`*`) || [`*`, `+`].includes(comment)) {
             continue;
@@ -429,23 +430,24 @@ export default class Parser {
 
           if (comment === `/`) {
             // Directives can be parsed by the free format parser
-            line = ``.padEnd(6) + line.substring(6);
+            baseLine = ``.padEnd(6) + baseLine.substring(6);
             lineIsFree = true;
           } else {
             if (spec === ` `) {
               //Clear out stupid comments
-              line = ``.padEnd(7) + line.substring(7);
+              baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
             } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
             }
           }
+        }
 
-          if (line.length > 80) {
-            // Remove ending comments
-            line = line.substring(0, 80);
-          }
+        let line = baseLine;
+        if (line.length > 80) {
+          // Remove ending comments
+          line = line.substring(0, 80);
         }
 
         let tokens: Token[] = [];
@@ -457,13 +459,13 @@ export default class Parser {
           if (line.trim() === ``) continue;
 
           pieces = line.split(`;`);
+
+          const lineIsComment = line.trim().startsWith(`//`);
           tokens = tokenise(pieces[0], lineNumber, lineIndex);
           partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
           parts = partsLower.map(piece => piece.toUpperCase());
 
           line = line.trim();
-
-          const lineIsComment = line.startsWith(`//`);
 
           if (!lineIsComment) {
             if (parts[0] === `/EOF` && lineCanRun()) {
@@ -547,28 +549,30 @@ export default class Parser {
 
           if (pieces.length > 1 && pieces[1].includes(`//`)) line = pieces[0] + `;`;
 
-          if (!currentStatement) statementStartingLine = lineNumber;
+          if (!currentStmtStart || !currentStmtStart.content) {
+            currentStmtStart = {line: lineNumber, index: lineIndex};
+          }
 
           if (!lineIsComment) {
             if (line.endsWith(`;`)) {
-              if (currentStatement) {
+              if (currentStmtStart.content) {
                 // This means the line is just part of the end of the last statement as well.
-                line = currentStatement + line;
-                currentStatement = undefined;
+                line = currentStmtStart.content + baseLine;
 
                 pieces = line.split(`;`);
-                tokens = tokenise(pieces[0], lineNumber);
+                tokens = tokenise(pieces[0], currentStmtStart.line, currentStmtStart.index);
                 partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
                 parts = partsLower.map(piece => piece.toUpperCase());
+
+                currentStmtStart.content = undefined;
               }
 
             } else if (!line.endsWith(`;`)) {
-
-              currentStatement = (currentStatement || ``) + line.trim();
-              if (currentStatement.endsWith(`-`)) 
-                currentStatement = currentStatement.substring(0, currentStatement.length - 1);
+              currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
+              if (currentStmtStart.content.endsWith(`-`)) 
+                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
               else
-                currentStatement += ` `;
+                currentStmtStart.content += ``.padEnd(eol.length);
 
               continue;
             }
@@ -640,7 +644,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: statementStartingLine
+                  line: currentStmtStart.line
                 };
 
                 scope.constants.push(currentItem);
@@ -660,7 +664,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: statementStartingLine
+                  line: currentStmtStart.line
                 };
 
                 scope.variables.push(currentItem);
@@ -679,12 +683,12 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: statementStartingLine
+                  line: currentStmtStart.line
                 };
 
                 currentItem.range = {
-                  start: statementStartingLine,
-                  end: statementStartingLine
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
                 };
 
                 currentItem.readParms = true;
@@ -698,7 +702,7 @@ export default class Parser {
 
           case `END-ENUM`:
             if (currentItem && currentItem.type === `constant`) {
-              currentItem.range.end = statementStartingLine;
+              currentItem.range.end = currentStmtStart.line;
               
               scope.constants.push(currentItem);
 
@@ -717,12 +721,12 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: statementStartingLine
+                  line: currentStmtStart.line
                 };
 
                 currentItem.range = {
-                  start: statementStartingLine,
-                  end: statementStartingLine
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
                 };
 
                 currentGroup = `structs`;
@@ -732,7 +736,7 @@ export default class Parser {
 
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                  currentItem.range.end = statementStartingLine;
+                  currentItem.range.end = currentStmtStart.line;
                   scope.structs.push(currentItem);
                 } else {
                   currentItem.readParms = true;
@@ -749,7 +753,7 @@ export default class Parser {
           case `END-DS`:
             if (dsScopes.length > 0) {
               const currentDs = dsScopes[dsScopes.length - 1];
-              currentDs.range.end = statementStartingLine;
+              currentDs.range.end = currentStmtStart.line;
             }
 
             if (dsScopes.length === 1) {
@@ -773,19 +777,19 @@ export default class Parser {
 
                   currentItem.position = {
                     path: file,
-                    line: statementStartingLine
+                    line: currentStmtStart.line
                   };
 
                   currentItem.readParms = true;
 
                   currentItem.range = {
-                    start: statementStartingLine,
-                    end: statementStartingLine
+                    start: currentStmtStart.line,
+                    end: currentStmtStart.line
                   };
 
                   // Does the keywords include a keyword that makes end-ds useless?
                   if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
-                    currentItem.range.end = statementStartingLine;
+                    currentItem.range.end = currentStmtStart.line;
                     scope.procedures.push(currentItem);
                     resetDefinition = true;
                   }
@@ -798,7 +802,7 @@ export default class Parser {
 
           case `END-PR`:
             if (currentItem && currentItem.type === `procedure`) {
-              currentItem.range.end = statementStartingLine;
+              currentItem.range.end = currentStmtStart.line;
 
               const isDefinedGlobally = scopes[0].procedures.some(proc => proc.name.toUpperCase() === currentItem.name.toUpperCase());
 
@@ -830,14 +834,14 @@ export default class Parser {
 
               currentItem.position = {
                 path: file,
-                line: statementStartingLine
+                line: currentStmtStart.line
               };
 
               currentItem.readParms = false;
 
               currentItem.range = {
-                start: statementStartingLine,
-                end: statementStartingLine
+                start: currentStmtStart.line,
+                end: currentStmtStart.line
               };
 
               currentItem.scope = new Cache();
@@ -896,7 +900,7 @@ export default class Parser {
 
               if (currentItem && currentItem.type === `procedure`) {
                 scopes.pop();
-                currentItem.range.end = statementStartingLine;
+                currentItem.range.end = currentStmtStart.line;
                 resetDefinition = true;
               }
             }
@@ -912,12 +916,12 @@ export default class Parser {
 
                 currentItem.position = {
                   path: file,
-                  line: statementStartingLine
+                  line: currentStmtStart.line
                 };
 
                 currentItem.range = {
-                  start: statementStartingLine,
-                  end: statementStartingLine
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
                 };
 
                 currentDescription = [];
@@ -927,7 +931,7 @@ export default class Parser {
     
           case `ENDSR`:
             if (currentItem && currentItem.type === `subroutine`) {
-              currentItem.range.end = statementStartingLine;
+              currentItem.range.end = currentStmtStart.line;
               scope.subroutines.push(currentItem);
               resetDefinition = true;
             }
@@ -1009,7 +1013,7 @@ export default class Parser {
       
                       currentSqlItem.position = {
                         path: file,
-                        line: statementStartingLine
+                        line: currentStmtStart.line
                       };
       
                       scope.sqlReferences.push(currentSqlItem);
@@ -1081,7 +1085,7 @@ export default class Parser {
 
                   currentSub.position = {
                     path: file,
-                    line: statementStartingLine
+                    line: currentStmtStart.line
                   };
 
                   // Add comments from the tags
