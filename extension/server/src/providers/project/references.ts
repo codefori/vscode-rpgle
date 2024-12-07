@@ -93,13 +93,14 @@ export async function findAllLocalReferences(def: Declaration): Promise<Location
 									);
 
 								} else {
-									locations.push(
-										// Then we push the references. Empty for non-**free
-										...possibleDef.references.map(ref => Location.create(
-											uri,
-											calculateOffset(document, ref)
-										))
-									);
+									for (const ref of possibleDef.references) {
+										const possibleDoc = await getTextDoc(ref.uri);
+										if (possibleDoc) {
+											locations.push(
+												Location.create(ref.uri, calculateOffset(possibleDoc, ref)),
+											);
+										}
+									}
 								}
 
 							}

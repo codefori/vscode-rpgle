@@ -272,7 +272,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				return {
 					found: true,
 					uri: validUri,
-					lines: validSource.split(`\n`)
+					content: validSource
 				};
 			}
 		}

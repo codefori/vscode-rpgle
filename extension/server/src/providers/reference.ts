@@ -27,10 +27,19 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 					if (Project.isEnabled) {
 						return await findAllLocalReferences(def);
 					} else {
-						return def.references.map(ref => Location.create(
-							def.position.path,
-							calculateOffset(document, ref)
-						));	
+						let locations: Location[] = [];
+
+						for (const ref of def.references) {
+							let refDoc = documents.get(ref.uri);
+							if (refDoc) {
+								locations.push(Location.create(
+									ref.uri,
+									calculateOffset(refDoc, ref)
+								));
+							}
+						}
+
+						return locations;
 					}
 				}
 			}
