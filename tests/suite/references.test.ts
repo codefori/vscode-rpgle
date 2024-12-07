@@ -1,6 +1,7 @@
 import setupParser from "../parserSetup";
 import Cache from "../../language/models/cache";
 import { test, expect } from "vitest";
+import { t } from "../../out/extension";
 
 
 const parser = setupParser();
@@ -1242,4 +1243,87 @@ test('references_18_fixed_7', async () => {
   const las = cache.find(`LAS`);
   expect(las.references.length).toBe(3);
   expect(las.references.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LAS`)).toBe(true);
+});
+
+test('references_19_fixed_8', async () => {
+  const lines = [
+    `     d data6g          ds                  dim(7) export qualified`,
+    `     d                                     inz`,
+    `     d rg                             9  4 dim(12)`,
+    ``,
+    `     d data6d          s              7  0 dim(12) export`,
+    ``,
+    `     d  dat2           s              7  0  import`,
+    ``,
+    `     d  xdate          s               d`,
+    `     d  sdat           s              7  0`,
+    `     d  i              s              5i 0`,
+    `     d  j              s              5i 0`,
+    `     d data            ds                  inz`,
+    `     d   sumx                        13  0`,
+    `     d   retx                        13  0`,
+    `     d   sumy                        13  0`,
+    `     d   rety                        13  0`,
+    `     d   sum1                        13  0`,
+    `     d   ret1                        13  0`,
+    `     d   sum2                        13  0`,
+    `     d   ret2                        13  0`,
+    `     d   sum3                        13  0`,
+    `     d   ret3                        13  0`,
+    `     d   sum5                        13  0`,
+    `     d   ret5                        13  0`,
+    `     d   sum0                        13  0`,
+    `     d   ret0                        13  0`,
+    `      /free`,
+    `        reset data6g;`,
+    `        // hello world`,
+    `        i = 1;`,
+    `        data6d(i) = dat2;`,
+    `        sdat = data6d(i);`,
+    `        exsr sql1;`,
+    `        xdate = %date(dat2:*cymd);`,
+    `        for i = 2 to 12;`,
+    `          xdate -= %days(%subdt(xdate:*d));`,
+    `          data6d(i) = %dec(xdate:*cymd);`,
+    `          sdat = data6d(i);`,
+    `          exsr sql1;`,
+    `        endfor;`,
+    `        *inlr = *on;`,
+    ``,
+    `        begsr sql1;`,
+    `          reset data;`,
+    `          exec sql SELECT`,
+    ``,
+    `          sum(whoops) as sumx,`,
+    `          sum(awesome) as retx,`,
+    `          sum(case when scooby <> ' ' then whoops else 0 end ) as sumy,`,
+    `          sum(case when scooby <> ' ' then awesome else 0 end ) as rety,`,
+    `          sum(case when scooby = '1' then whoops else 0 end ) as sum1,`,
+    `          sum(case when scooby = '1' then awesome else 0 end ) as ret1,`,
+    `          sum(case when scooby = '2' then whoops else 0 end ) as sum2,`,
+    `          sum(case when scooby = '2' then awesome else 0 end ) as ret2,`,
+    `          sum(case when scooby = '3' then whoops else 0 end ) as sum3,`,
+    `          sum(case when scooby = '3' then awesome else 0 end ) as ret3,`,
+    `          sum(case when scooby = '5' then whoops else 0 end ) as sum5,`,
+    `          sum(case when scooby = '5' then awesome else 0 end ) as ret5,`,
+    `          sum(case when scooby = ' ' then whoops else 0 end ) as sum0,`,
+    `          sum(case when scooby = ' ' then awesome else 0 end ) as ret0`,
+    `          into :data`,
+    `          FROM pcstatko`,
+    `          WHERE skprive = '1' and skdate = :sdat and`,
+    `            skgest in (select cluser from pcusrlst where clname = 'RRO')`,
+    `            and scooby in (' ', '1', '2', '3', '5')`,
+    `            and whoops > 0 ;`,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const data = cache.find(`data`);
+  expect(data.references.length).toBe(3);
+  expect(data.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `data`)).toBe(true);
+
+  const sumy = cache.find(`sumy`);
+  expect(sumy.references.length).toBe(1);
+  const aroundSumy = lines.substring(sumy.references[0].offset.position - 10, sumy.references[0].offset.end + 10);
+  expect(aroundSumy).toContain(`d   sumy`);
 });

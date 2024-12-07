@@ -197,13 +197,23 @@ export default class Parser {
 
     let definedMacros: string[] = [];
 
-    const collectReferences = (statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration) => {
+    const collectReferences = (statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration, isExec = false) => {
+      if (statement[0]?.value?.toUpperCase() === `EXEC`) {
+        isExec = true;
+      }
+
       for (let i = 0; i < statement.length; i++) {
         const part = statement[i];
         if (part === undefined) continue;
 
         if (![`special`, `word`].includes(part.type)) continue;
         if (statement[i - 1] && statement[i - 1].type === `dot`) break;
+
+        if (isExec && statement[i-1]) {
+          if (statement[i-1].type !== `seperator`) {
+            continue;
+          }
+        }
 
         const isSpecial = part.type === `special`;
         const lookupName = (isSpecial ? part.value.substring(1) : part.value).toUpperCase();
@@ -415,7 +425,6 @@ export default class Parser {
         const scope = scopes[scopes.length - 1];
 
         let baseLine = lines[li];
-        // let line = baseLine.;
         let spec;
 
         lineIsFree = false;
@@ -449,6 +458,12 @@ export default class Parser {
             } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
             }
+          }
+        } else {
+          // Even if the line is useless, we need to capture the characters to be
+          // parsed in case it's a statement spread over multiple lines
+          if (currentStmtStart && currentStmtStart.content) {
+            currentStmtStart.content += ``.padEnd(baseLine.length + eol.length);
           }
         }
 
@@ -578,7 +593,7 @@ export default class Parser {
             } else if (!line.endsWith(`;`)) {
               currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
               if (currentStmtStart.content.endsWith(`-`)) 
-                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
+                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ``.padEnd(eol.length);
               else
                 currentStmtStart.content += ``.padEnd(eol.length);
 
