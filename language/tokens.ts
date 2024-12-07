@@ -254,6 +254,30 @@ const stringChar: string = `'`;
 const startCommentString = `//`;
 const endCommentString = `\n`;
 
+export const ALLOWS_EXTENDED = [
+  `CALLP`,
+  `DATA-GEN`,
+  `DATA-INTO`,
+  `DOU`,
+  `DOW`,
+  `ELSEIF`,
+  `EVAL`,
+  `EVAL-CORR`,
+  `EVALR`,
+  `FOR`,
+  `FOR-EACH`,
+  `IF`,
+  `ON-ERROR`,
+  `ON-EXCP`,
+  `ON-EXIT`,
+  `RETURN`,
+  `SND-MSG`,
+  `SORTA`,
+  `WHEN`,
+  `XML-INTO`,
+  `XML-SAX`
+]
+
 /**
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */

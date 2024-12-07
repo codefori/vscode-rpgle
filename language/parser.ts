@@ -1,6 +1,6 @@
 /* eslint-disable no-case-declarations */
 
-import { createBlocks, tokenise } from "./tokens";
+import { ALLOWS_EXTENDED, createBlocks, tokenise } from "./tokens";
 
 import Cache from "./models/cache";
 import Declaration from "./models/declaration";
@@ -1197,12 +1197,20 @@ export default class Parser {
 
             tokens = [cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
-            if (cSpec.opcode && !cSpec.factor1 && cSpec.extended) {
-              tokens.push(...tokenise(cSpec.extended.value, lineNumber, cSpec.extended.range.start));
+            const fromToken = (token?: Token) => {
+              return token ? tokenise(token.value, lineNumber, token.range.start) : [];
+            };
+
+            if (cSpec.opcode && ALLOWS_EXTENDED.includes(cSpec.opcode.value) && !cSpec.factor1 && cSpec.extended) {
+              tokens.push(...fromToken(cSpec.extended));
             } else if (!cSpec.factor1 && !cSpec.opcode && cSpec.extended) {
-              tokens.push(...tokenise(cSpec.extended.value, lineNumber, cSpec.extended.range.start));
+              tokens.push(...fromToken(cSpec.extended));
             } else {
-              tokens.push(cSpec.factor1, cSpec.factor2, cSpec.result);
+              tokens.push(
+                ...fromToken(cSpec.factor1),
+                ...fromToken(cSpec.factor2),
+                ...fromToken(cSpec.result),
+              );
             }
 
             potentialName = cSpec.factor1 ? cSpec.factor1.value : ``;

@@ -1239,6 +1239,7 @@ test('references_18_fixed_7', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
-  const z160 = cache.find(`Z160`);
-  expect(z160.references.length).toBe(0);
+  const las = cache.find(`LAS`);
+  expect(las.references.length).toBe(3);
+  expect(las.references.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LAS`)).toBe(true);
 });
