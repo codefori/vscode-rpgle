@@ -23,34 +23,17 @@ test("Generic reference tests", {timeout}, async () => {
     const doc = await parser.getDocs(basename, baseContent, {collectReferences: true, ignoreCache: true, withIncludes: true});
     const pe = performance.now();
 
+    let referencesCollected = 0;
     let errorCount = 0;
 
     for (const def of doc.variables) {
       for (const ref of def.references) {
         const offsetContent = baseContent.substring(ref.offset.position, ref.offset.end);
 
-        if (offsetContent.toUpperCase() !== def.name.toUpperCase()) {
+        if (offsetContent.toUpperCase() === def.name.toUpperCase()) {
+          referencesCollected++;
+        } else {
           errorCount++;
-        }
-      }
-    }
-
-    const checkSubItems = (def: Declaration) => {
-      if (def.subItems && def.subItems.length > 0) {
-        for (const sub of def.subItems) {
-          for (const ref of sub.references) {
-            const offsetContent = baseContent.substring(ref.offset.position, ref.offset.end);
-
-            if (offsetContent.toUpperCase() !== sub.name.toUpperCase()) {
-              console.log({
-                name: sub.name,
-                offset: ref.offset,
-                offsetContent,
-                about: baseContent.substring(ref.offset.position - 10, ref.offset.end + 10)
-              })
-              errorCount++;
-            }
-          }
         }
       }
     }
@@ -61,17 +44,36 @@ test("Generic reference tests", {timeout}, async () => {
           const offsetContent = baseContent.substring(ref.offset.position, ref.offset.end);
 
           if (offsetContent.toUpperCase() !== def.name.toUpperCase()) {
-            console.log({
-              name: def.name,
-              offset: ref.offset,
-              offsetContent,
-              about: baseContent.substring(ref.offset.position - 30, ref.offset.end + 30)
-            })
+            // console.log({
+            //   name: def.name,
+            //   offset: ref.offset,
+            //   offsetContent,
+            //   about: baseContent.substring(ref.offset.position - 30, ref.offset.end + 30)
+            // })
             errorCount++;
           }
         }
 
-        checkSubItems(def);
+        if (def.subItems && def.subItems.length > 0) {
+          for (const sub of def.subItems) {
+            for (const ref of sub.references) {
+              const offsetContent = baseContent.substring(ref.offset.position, ref.offset.end);
+  
+              if (offsetContent.toUpperCase() === sub.name.toUpperCase()) {
+                referencesCollected++;
+              } else {
+                // console.log({
+                //   name: sub.name,
+                //   offset: ref.offset,
+                //   offsetContent,
+                //   about: baseContent.substring(ref.offset.position - 10, ref.offset.end + 10)
+                // })
+                errorCount++;
+              }
+            }
+          }
+        }
+
         if (def.scope) {
           checkScope(def.scope);
         }
@@ -84,6 +86,6 @@ test("Generic reference tests", {timeout}, async () => {
       fail(`Found ${errorCount} errors in ${basename}`);
     }
 
-    console.log(`Parsed ${basename} in ${pe - ps}ms (${i+1}/${list.length})`);
+    console.log(`Parsed ${basename} in ${pe - ps}ms (${i+1}/${list.length}). Found ${referencesCollected} references.`);
   }
 });

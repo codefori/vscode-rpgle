@@ -810,10 +810,6 @@ test('indicators1', async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
 
   const in10 = cache.find(`IN10`);
-
-  for (const ref of in10.references) {
-    console.log(lines.substring(ref.offset.position, ref.offset.end));
-  }
   expect(in10.references.length).toBe(2);
 });
 

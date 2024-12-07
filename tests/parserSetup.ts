@@ -58,7 +58,7 @@ export default function setupParser(): Parser {
 }
 
 export function getSourcesList(): string[] {
-	return glob.sync(`**/*.*`, {
+	return glob.sync(`**/*.{rpgle,sqlrpgle}`, {
 		cwd: path.join(includeDir, `sources`),
 		nocase: true,
 	});
