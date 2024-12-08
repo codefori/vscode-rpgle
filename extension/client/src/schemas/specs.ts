@@ -63,9 +63,21 @@ export const specs: {[spec: string]: SpecFieldDef[]} = {
       end: 69
     },
     {
-      id: `resultingIndicators`,
-      name: `Resulting Indicators`,
+      id: `resultingIndicatorsA`,
+      name: `Resulting Indicator`,
       start: 70,
+      end: 71
+    },
+    {
+      id: `resultingIndicatorsB`,
+      name: `Resulting Indicator`,
+      start: 72,
+      end: 73
+    },
+    {
+      id: `resultingIndicatorsC`,
+      name: `Resulting Indicator`,
+      start: 74,
       end: 75
     }
   ],
