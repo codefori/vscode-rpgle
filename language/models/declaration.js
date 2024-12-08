@@ -21,7 +21,7 @@ export default class Declaration {
     /** @type {import("../parserTypes").DefinitionPosition} */
     this.position = undefined;
 
-    /** @type {import("../parserTypes").IssueRange[]} */
+    /** @type {import("../parserTypes").Reference[]} */
     this.references = [];
 
     // Not used in subitem:

@@ -55,6 +55,8 @@ export function dspffdToRecordFormats(data: any, aliases = false): Declaration[]
 			len: digits === 0 ? strLength : digits,
 			decimals: decimals,
 			keywords,
+			field: ``,
+			pos: ``
 		});
 		currentSubfield.description = text.trim();
 

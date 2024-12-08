@@ -254,11 +254,34 @@ const stringChar: string = `'`;
 const startCommentString = `//`;
 const endCommentString = `\n`;
 
+export const ALLOWS_EXTENDED = [
+  `CALLP`,
+  `DATA-GEN`,
+  `DATA-INTO`,
+  `DOU`,
+  `DOW`,
+  `ELSEIF`,
+  `EVAL`,
+  `EVAL-CORR`,
+  `EVALR`,
+  `FOR`,
+  `FOR-EACH`,
+  `IF`,
+  `ON-ERROR`,
+  `ON-EXCP`,
+  `ON-EXIT`,
+  `RETURN`,
+  `SND-MSG`,
+  `SORTA`,
+  `WHEN`,
+  `XML-INTO`,
+  `XML-SAX`
+]
+
 /**
- * @param {string} statement 
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */
-export function tokenise(statement, lineNumber = 0) {
+export function tokenise(statement: string, lineNumber = 0, baseIndex?: number) {
   let commentStart = -1;
   let state: ReadState = ReadState.NORMAL;
 
@@ -341,11 +364,20 @@ export function tokenise(statement, lineNumber = 0) {
     result.push({ value: currentText, type: state === ReadState.NORMAL ? `word` : `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
     currentText = ``;
   } else {
-    result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+    if (currentText.trim().length > 0) {
+      result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+    }
   }
 
   result = fixStatement(result);
   //result = createBlocks(result);
+
+  if (baseIndex) {
+    for (let i = 0; i < result.length; i++) {
+      result[i].range.start += baseIndex;
+      result[i].range.end += baseIndex;
+    }
+  }
 
   return result;
 }

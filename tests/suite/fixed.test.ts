@@ -258,7 +258,7 @@ test('fixed7', async () => {
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.line).to.equal(3);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
-  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 });
 
@@ -324,7 +324,7 @@ test('fixed9', async () => {
   const lines = [
     ``,
     `       // -----------------------`,
-    `      /copy './tests/rpgle/copy1.rpgle'`,
+    `      /copy './rpgle/copy1.rpgle'`,
     `       // -----------------------`,
     ``,
     `     P Obj_Next        B                   Export`,
@@ -350,7 +350,7 @@ test('fixed9', async () => {
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
-  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
@@ -364,8 +364,8 @@ test('fixed9_2', async () => {
   const lines = [
     ``,
     `       // -----------------------`,
-    `     d/copy './tests/rpgle/copy1.rpgle'`,
-    `     */copy './tests/rpgle/copy2.rpgle'`,
+    `     d/copy './rpgle/copy1.rpgle'`,
+    `     */copy './rpgle/copy2.rpgle'`,
     `       // -----------------------`,
     `     P Obj_Next        B                   Export`,
     `     D Obj_Next        PI                  LikeDS(ObjectDs)`,
@@ -390,7 +390,7 @@ test('fixed9_2', async () => {
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
-  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`OBJECTDS`);
+  expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
@@ -404,7 +404,7 @@ test('fixed9_3', async () => {
   const lines = [
     ``,
     `         Ctl-Opt DftActGrp(*No);`,
-    `      /copy tests,eof4                            Call plist update program ESF`,
+    `      /copy eof4                                  Call plist update program ESF`,
     `      *COPY EQCPYLESRC,PLUPT_SB                   Call plist update program ESF`,
     ``,
     `         Dcl-s MyVariable2 Char(20);`,
@@ -1146,3 +1146,69 @@ test('plist_test', async () => {
 
   expect(cache.variables.length).to.equal(0);
 });
+
+test(`range test 2`, async () => {
+  const lines = [
+    `     D TYPEMST_F       Ds                  LikeDs(TYPEMST_T)`,
+    `     D* -------------------------------------------------------------------`,
+    `     D* Service Program Procedures`,
+    `     D* -------------------------------------------------------------------`,
+    `     D $Validate_TYPEMST...`,
+    `     D                 Pr              n`,
+    `     D  $i_Action                     4    Const`,
+    `     D  $i_Pointer                     *   Const`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+
+  const TYPEMST_F = cache.find(`TYPEMST_F`);
+  expect(TYPEMST_F.range).to.deep.equal({
+    start: 0,
+    end: 0
+  });
+});
+
+test(`test document build up`, async () => {
+  const lines = [
+    `    H*****************************************************************`,
+    `    D*`,
+    `    DRESSTR           DS                  INZ`,
+    `    D VARNAM                  1     10    INZ('VAR018    ')`,
+    `    D PF                     11     11    INZ('F')`,
+    `    D ERRMSG                 12     90`,
+    `    D EXP                    12     16    INZ('EXP: ')`,
+    `    D EXPCOD                 17     21    INZ`,
+    `    D RCV                    22     27    INZ(' RCV:')`,
+    `    D RECODE                 28     32`,
+    `    D TNAME                  92    101    INZ('SQRPGNRUN ')`,
+    `    D LIB                   102    111    INZ('SQTEST  ')`,
+    `    D FILE                  112    121    INZ('RPGNRSLTS ')`,
+    `    D LIBLEN                122    125B 0 INZ(8)`,
+    `    D FILLEN                126    129B 0 INZ(10)`,
+    `    D*`,
+    `    D ACTSQL          S              4  0`,
+    `    D CMPCOD          S              4  0`,
+    `    D*`,
+    `    D DATHV           S             10D   DATFMT(*ISO-) INZ(D'2025-12-10')`,
+    `    D CHKDAT          S             10D   DATFMT(*ISO-) INZ(D'2025-12-02')`,
+    `    D*`,
+    `    C/EXEC SQL`,
+    `    C+ WHENEVER SQLERROR CONTINUE`,
+    `    C/END-EXEC`,
+    `    C*`,
+    `    C*****************************************************************`,
+    `    C*`,
+    `    C*****************************************************************`,
+    `    C*`,
+    `    C                   MOVEL     'VAR018'      VARNAM`,
+    `    C                   Z-ADD     -180          CMPCOD`,
+    `    C*`,
+  ].join(`\n`);
+
+  let document = ``;
+
+  for (let c of lines.split(``)) {
+    document += c;
+    await parser.getDocs(uri, document, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  }
+})

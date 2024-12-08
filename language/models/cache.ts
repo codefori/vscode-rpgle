@@ -5,7 +5,7 @@ const newInds = () => {
   return [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
     const indDef = new Declaration(`variable`);
     indDef.name = ind;
-    indDef.keywords = [`IND`];
+    indDef.keyword = {IND: true};
     return indDef;
   })
 };
@@ -123,6 +123,7 @@ export default class Cache {
    */
   find(name) {
     name = name.toUpperCase();
+
     const fileStructs = this.files.map(file => file.subItems).flat();
     const allStructs = [...fileStructs, ...this.structs];
 
@@ -148,21 +149,6 @@ export default class Cache {
     } else {
       return null;
     }
-  }
-
-  clearReferences() {
-    const fileStructs = this.files.map(file => file.subItems).flat();
-
-    [...fileStructs, ...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
-      def.references = [];
-      def.subItems.forEach(sub => sub.references = []);
-    });
-
-    this.procedures.forEach(proc => {
-      if (proc.scope) {
-        proc.scope.clearReferences();
-      }
-    });
   }
 
   findDefinition(lineNumber, word) {
@@ -191,14 +177,14 @@ export default class Cache {
     const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
     if (currentProcedure && currentProcedure.scope) {
-      const localDef = currentProcedure.scope.constants.find(def => def.keyword[upperValue] === true);
+      const localDef = currentProcedure.scope.constants.find(def => def.keyword[`CONST`] === value);
 
       if (localDef) {
         return localDef;
       }
     }
 
-    const globalDef = this.constants.find(def => def.keyword[upperValue] === true);
+    const globalDef = this.constants.find(def => def.keyword[`CONST`] === value);
 
     if (globalDef) {
       return globalDef;

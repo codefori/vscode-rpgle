@@ -48,7 +48,8 @@ export function initialise(connection: _Connection) {
 						document.getText(),
 						{
 							withIncludes: true,
-							ignoreCache: true
+							ignoreCache: true,
+							collectReferences: true
 						}
 					).then(cache => {
 						if (cache) {
@@ -198,7 +199,6 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 
 		let availableIncludes: string[] | undefined;
 		if (Project.isEnabled) {
-			options.CollectReferences = true;
 			const headers = await Project.getIncludes(document.uri);
 			availableIncludes = headers.map(header => header.relative);
 		}

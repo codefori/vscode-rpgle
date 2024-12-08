@@ -1,0 +1,6 @@
+[submodule "tests/sources/bob-recursive-example"]
+	path = tests/sources/bob-recursive-example
+	url = git@github.com:IBM/bob-recursive-example.git
+[submodule "tests/sources/BBS400"]
+	path = tests/sources/BBS400
+	url = git@github.com:worksofliam/BBS400.git

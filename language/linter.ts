@@ -104,16 +104,6 @@ export default class Linter {
 
     let opcode: string;
 
-    if (rules.NoUnreferenced) {
-      // We need to collect references for this to work correctly.
-      rules.CollectReferences = true;
-    }
-
-    // Clear out all the old references.
-    if (rules.CollectReferences) {
-      globalScope.clearReferences();
-    }
-
     // Make all external refs uppercase.
     if (rules.NoExternalTo && rules.NoExternalTo.length) {
       rules.NoExternalTo = rules.NoExternalTo.map(val => val.toUpperCase());
@@ -809,21 +799,6 @@ export default class Linter {
                     }
                     break;
 
-
-                  case `special`:
-                    if (rules.CollectReferences) {
-                      value = part.value.substring(1).toUpperCase();
-                      const defRef = globalScope.find(value);
-
-                      if (defRef) {
-                        defRef.references.push({
-                          offset: { position: part.range.start, end: part.range.end },
-                          type: null,
-                        });
-                      }
-                    }
-                    break;
-
                   case `word`:
                     const upperName = part.value.toUpperCase();
 
@@ -882,81 +857,6 @@ export default class Linter {
                               offset: { position: part.range.start, end: part.range.end },
                               type: `RequiresParameter`,
                             });
-                          }
-                        }
-                      }
-                    }
-
-                    if (rules.CollectReferences) {
-                      if (statement[i - 1] && statement[i - 1].type === `dot`) break;
-
-                      // We might be referencing a subfield in a structure, so we grab the name in scope
-                      // then we actually do the lookup against that
-                      const parentDeclareBlock: string | undefined = inStruct[inStruct.length - 1];
-                      const inDeclareBlock = parentDeclareBlock && parentDeclareBlock.toUpperCase() !== upperName; 
-                      const lookupName = inDeclareBlock ? parentDeclareBlock : upperName;
-
-                      let defRef: Declaration;
-                      if (currentProcedure && currentProcedure.scope) {
-                        defRef = currentProcedure.scope.find(lookupName);
-
-                        if (!defRef) {
-                          defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === lookupName);
-                        }
-                      }
-
-                      if (!defRef) {
-                        defRef = globalScope.find(lookupName);
-                      }
-
-                      if (defRef) {
-
-                        if (inDeclareBlock) {
-                          // If we did the lookup against a parent DS, look for the subfield and add the reference there
-                          defRef = defRef.subItems.find(sub => sub.name.toUpperCase() === upperName);
-
-                          if (defRef) {
-                            defRef.references.push({
-                              offset: { position: part.range.start, end: part.range.end },
-                            });
-                          }
-
-                        } else {
-
-                          defRef.references.push({
-                            offset: { position: part.range.start, end: part.range.end },
-                          });
-
-                          if (defRef.keyword[`QUALIFIED`]) {
-                            let nextPartIndex = i + 1;
-
-                            if (statement[nextPartIndex]) {
-                              // First, check if there is an array call here and skip over it
-                              if (statement[nextPartIndex].type === `openbracket`) {
-                                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
-
-                                if (nextPartIndex >= 0) nextPartIndex++;
-                              }
-
-                              // Check if the next part is a dot
-                              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
-                                nextPartIndex++;
-
-                                // Check if the next part is a word
-                                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
-                                  const subItemPart = statement[nextPartIndex];
-                                  const subItemName = subItemPart.value.toUpperCase();
-
-                                  // Find the subitem
-                                  const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
-                                  if (subItemDef) {
-                                    subItemDef.references.push({
-                                      offset: { position: subItemPart.range.start, end: subItemPart.range.end },
-                                    });
-                                  }
-                                }
-                              }
-                            }
                           }
                         }
                       }
