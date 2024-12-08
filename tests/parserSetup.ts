@@ -2,15 +2,16 @@ import Parser from '../language/parser';
 
 import glob from "glob";
 import path from 'path';
+import fs from 'fs';
 
 import { readFile } from 'fs/promises';
 
 import tables from './tables';
 import { dspffdToRecordFormats } from '../extension/server/src/data';
 
-const includeDir = process.env.INCLUDE_DIR || path.join(__dirname, `..`, `tests`);
+const TEST_INCLUDE_DIR = process.env.INCLUDE_DIR || path.join(__dirname, `..`, `tests`);
 
-export default function setupParser(): Parser {
+export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 	const parser = new Parser();
 
 	parser.setIncludeFileFetch(async (baseFile: string, includeFile: string) => {
@@ -19,12 +20,12 @@ export default function setupParser(): Parser {
 		}
 
 		if (includeFile.includes(`,`) || !includeFile.includes(`.`)) {
-			includeFile = includeFile.split(`,`).join(`/`) + `.*`;
+			includeFile = includeFile.split(`,`).join(`/`) + `.*rpg*`;
 		}
 
 		const globPath = path.join(`**`, includeFile);
 		const files = glob.sync(globPath, {
-			cwd: includeDir,
+			cwd: projectRoot,
 			absolute: true,
 			nocase: true,
 		});
@@ -57,13 +58,22 @@ export default function setupParser(): Parser {
 	return parser;
 }
 
-export function getSourcesList(): string[] {
+export function getTestProjectsDir(): string[] {
+	// get a list of directories in the test directory using fs
+	const sourcesDir = path.join(TEST_INCLUDE_DIR, `sources`);
+	return fs.readdirSync(sourcesDir)
+		.filter((f) => fs.statSync(path.join(TEST_INCLUDE_DIR, `sources`, f)).isDirectory())
+		.map((f) => path.join(sourcesDir, f));
+}
+
+export function getSourcesList(fullDirPath: string): string[] {
 	return glob.sync(`**/*.{rpgle,sqlrpgle}`, {
-		cwd: path.join(includeDir, `sources`),
+		cwd: fullDirPath,
+		absolute: true,
 		nocase: true,
 	});
 }
 
-export function getSourcesContent(name: string) {
-	return readFile(path.join(includeDir, `sources`, name), { encoding: `utf-8` });
+export function getFileContent(fullPath: string) {
+	return readFile(fullPath, { encoding: `utf-8` });
 }

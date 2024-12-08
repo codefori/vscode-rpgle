@@ -1,4 +1,4 @@
-import setupParser, { getSourcesContent, getSourcesList } from "../parserSetup";
+import setupParser, { getFileContent, getSourcesList, getTestProjectsDir } from "../parserSetup";
 import { test, expect, describe } from "vitest";
 import path from "path";
 
@@ -7,44 +7,49 @@ const parser = setupParser();
 
 // The purpose of this file is to test the parser against all the sources in the sources directory to ensure it doesn't crash.
 
-test("Parser partial tests", {timeout}, async () => {
-  const list = await getSourcesList();
+test("Parser partial tests", { timeout }, async () => {
+  const projects = getTestProjectsDir();
 
-  for (let i = 0; i < list.length; i++) {
-    const relativePath = list[i];
-    const basename = path.basename(relativePath);
+  for (const projectPath of projects) {
+    const parser = setupParser(projectPath);
+    const list = await getSourcesList(projectPath);
 
-    const rs = performance.now();
-    const baseContent = await getSourcesContent(relativePath);
-    const re = performance.now();
+    for (let i = 0; i < list.length; i++) {
+      const relativePath = list[i];
+      const basename = path.basename(relativePath);
 
-    // These are typing tests. Can the parser accept half documents without crashing?
+      const rs = performance.now();
+      const baseContent = await getFileContent(relativePath);
+      const re = performance.now();
 
-    let content = ``;
+      // These are typing tests. Can the parser accept half documents without crashing?
 
-    let baseContentSplitUpIntoPieces = [];
+      let content = ``;
 
-    const pieceSize = Math.ceil(baseContent.length / 10);
-    for (let i = 0; i < baseContent.length; i += pieceSize) {
-      baseContentSplitUpIntoPieces.push(baseContent.substring(i, i + pieceSize));
+      let baseContentSplitUpIntoPieces = [];
+
+      const pieceSize = Math.ceil(baseContent.length / 10);
+      for (let i = 0; i < baseContent.length; i += pieceSize) {
+        baseContentSplitUpIntoPieces.push(baseContent.substring(i, i + pieceSize));
+      }
+
+      let lengths: number[] = [];
+      for (let i = 0; i < baseContentSplitUpIntoPieces.length; i++) {
+        content += baseContentSplitUpIntoPieces[i];
+
+        const ps = performance.now();
+        await parser.getDocs(basename, content, { collectReferences: true, ignoreCache: true, withIncludes: false });
+        const pe = performance.now();
+
+        lengths.push(pe - ps);
+      }
+
+      // const lengthsAverage = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+      // const total = lengths.reduce((a, b) => a + b, 0);
+      // const last = lengths[lengths.length - 1];
+      // console.log(`Parsed ${basename}, ${baseContent.length} chars (${i+1}/${list.length})`);
+      // console.log(`Average: ${lengthsAverage}ms, Full: ${last}ms, Total: ${total}`);
+      // console.log(``);
     }
-
-    let lengths: number[] = [];
-    for (let i = 0; i < baseContentSplitUpIntoPieces.length; i++) {
-      content += baseContentSplitUpIntoPieces[i];
-
-      const ps = performance.now();
-      await parser.getDocs(basename, content, {collectReferences: true, ignoreCache: true, withIncludes: false});
-      const pe = performance.now();
-
-      lengths.push(pe - ps);
-    }
-
-    const lengthsAverage = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-    const total = lengths.reduce((a, b) => a + b, 0);
-    const last = lengths[lengths.length - 1];
-    // console.log(`Parsed ${basename}, ${baseContent.length} chars (${i+1}/${list.length})`);
-    // console.log(`Average: ${lengthsAverage}ms, Full: ${last}ms, Total: ${total}`);
-    // console.log(``);
   }
 });
