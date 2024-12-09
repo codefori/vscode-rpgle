@@ -418,6 +418,8 @@ export default class Parser {
         }
       };
 
+      let fixedExec = false;
+
       for (let li = 0; li < lines.length; li++) {
         if (li >= 1) {
           lineIndex += lines[li-1].length + (eol === `\r\n` ? 2 : 1);
@@ -427,7 +429,7 @@ export default class Parser {
         const scope = scopes[scopes.length - 1];
 
         let baseLine = lines[li];
-        let spec;
+        let spec: string|undefined;
 
         lineIsFree = false;
         lineNumber += 1;
@@ -443,7 +445,7 @@ export default class Parser {
           const comment = baseLine[6];
           spec = baseLine[5].toUpperCase();
 
-          if ([spec, comment].includes(`*`) || [`*`, `+`].includes(comment)) {
+          if ([spec, comment].includes(`*`)) {
             continue;
           }
 
@@ -451,6 +453,11 @@ export default class Parser {
             // Directives can be parsed by the free format parser
             baseLine = ``.padEnd(6) + baseLine.substring(6);
             lineIsFree = true;
+          } else if (comment === `+` && fixedExec && currentStmtStart.content) {
+            // Fixed format EXEC SQL
+            baseLine = ``.padEnd(7) + baseLine.substring(7);
+            currentStmtStart.content += baseLine + ''.padEnd(eol.length);
+            continue;
           } else {
             if (spec === ` `) {
               //Clear out stupid comments
@@ -498,6 +505,20 @@ export default class Parser {
               return;
             } else {
               switch (parts[0]) {
+              case '/EXEC':
+                fixedExec = true;
+                baseLine = ``.padEnd(7) + baseLine.substring(7);
+                currentStmtStart = {
+                  line: lineNumber,
+                  index: lineIndex,
+                  content: baseLine + ''.padEnd(eol.length)
+                }
+                continue;
+              case '/END':
+                line = `;`;
+                baseLine = ``.padEnd(baseLine.length) + `;`;
+                fixedExec = false;
+                break;
               case `/COPY`:
               case `/INCLUDE`:
                 if (options.withIncludes && this.includeFileFetch && lineCanRun()) {

@@ -793,7 +793,16 @@ test('references_14_fixed_3', async () => {
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
   const per = cache.find(`per`);
-  expect(per.references.length).toBe(6);
+  expect(per.references.length).toBe(7);
+
+  // for (const ref of per.references) {
+  //   console.log({
+  //     ref,
+  //     text: lines.substring(ref.offset.position, ref.offset.end),
+  //     about: lines.substring(ref.offset.position - 10, ref.offset.end + 10)
+  //   })
+  // }
+
   expect(per.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `per`)).toBe(true);
 
   const pmyy = cache.find(`pmyy`);
