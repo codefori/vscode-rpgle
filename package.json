@@ -35,10 +35,10 @@
 		"configuration": {
 			"title": "RPGLE language tools",
 			"properties": {
-				"vscode-rpgle.showFixedFormatOutline": {
+				"vscode-rpgle.rulerEnabledByDefault": {
 					"type": "boolean",
 					"default": true,
-					"description": "Will provide column assist for writing fixed format RPGLE."
+					"description": "Whether to show the fixed-format ruler by default."
 				}
 			}
 		},
@@ -68,6 +68,12 @@
 				"title": "Launch Column Assistant",
 				"category": "RPGLE",
 				"enablement": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.assist.toggleFixedRuler",
+				"title": "Toggle Inline Editor Helper",
+				"category": "RPGLE",
+				"enablement": "editorLangId == rpgle"
 			}
 		],
 		"keybindings": [
@@ -75,6 +81,12 @@
 				"command": "vscode-rpgle.assist.launchUI",
 				"key": "ctrl+shift+f4",
 				"mac": "cmd+shift+f4",
+				"when": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.assist.toggleFixedRuler",
+				"key": "shift+f4",
+				"mac": "shift+f4",
 				"when": "editorLangId == rpgle"
 			}
 		],

@@ -19,6 +19,9 @@ const outlineBar = window.createTextEditorDecorationType({
   opacity: `0`,
 });
 
+let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || false
+let currentEditorLine = -1;
+
 import { getOutlineForSpecs, SpecFieldDef, SpecFieldValue, specs } from './schemas/specs';
 
 const getAreasForLine = (line: string, index: number) => {
@@ -40,8 +43,6 @@ const getAreasForLine = (line: string, index: number) => {
 }
 
 export function registerColumnAssist(context: ExtensionContext) {
-  let currentEditorLine = -1;
-
   context.subscriptions.push(
     commands.registerCommand(`vscode-rpgle.assist.launchUI`, async () => {
       const editor = window.activeTextEditor;
@@ -70,67 +71,95 @@ export function registerColumnAssist(context: ExtensionContext) {
       }
     }),
 
+    commands.registerCommand(`vscode-rpgle.assist.toggleFixedRuler`, async () => {
+      rulerEnabled = !rulerEnabled;
+      
+      if (rulerEnabled) {
+        updateRuler();
+      } else {
+        clearRulers();
+      }
+    }),
+
     window.onDidChangeTextEditorSelection(e => {
-      if (Configuration.get(`showFixedFormatOutline`)) {
-        const editor = e.textEditor;
-        const document = editor.document;
-
-        if (document.languageId === `rpgle`) {
-          if (document.getText(new Range(0, 0, 0, 6)).toUpperCase() !== `**FREE`) {
-            const lineNumber = editor.selection.start.line;
-            const positionIndex = editor.selection.start.character;
-
-            const positionsData = getAreasForLine(
-              document.getText(new Range(lineNumber, 0, lineNumber, 100)), 
-              positionIndex
-            );
-
-            if (positionsData) {
-              let decorations: DecorationOptions[] = [];
-
-              positionsData.specification.forEach((box: any, index: number) => {
-                if (index === positionsData.active) {
-                  //There should only be one current.
-                  editor.setDecorations(currentArea, [{
-                    hoverMessage: box.name,
-                    range: new Range(lineNumber, box.start, lineNumber, box.end+1)
-                  }]);
-
-                } else {
-                  decorations.push({
-                    hoverMessage: box.name,
-                    range: new Range(lineNumber, box.start, lineNumber, box.end+1)
-                  })
-                }
-              });
-              editor.setDecorations(notCurrentArea, decorations);
-
-              if (currentEditorLine !== lineNumber && lineNumber > 1) {
-                editor.setDecorations(outlineBar, [
-                  {
-                    range: new Range(lineNumber-1, 0, lineNumber-1, 80),
-                    renderOptions: {
-                      before: {
-                        contentText: positionsData.outline,
-                        color: new ThemeColor(`editorLineNumber.foreground`),
-                      }
-                    }
-                  },
-                ]);
-              }
-
-            } else {
-              editor.setDecorations(currentArea, []);
-              editor.setDecorations(notCurrentArea, []);
-              editor.setDecorations(outlineBar, []);
-            }
-
-            currentEditorLine = lineNumber;
-          }
-        }
+      const editor = e.textEditor;
+      if (rulerEnabled) {
+        updateRuler(editor);
+      } else {
+        clearRulers(editor);
       }
     }),
   )
+}
+
+function updateRuler(editor = window.activeTextEditor) {
+  let clear = true;
+
+  if (editor) {
+    const document = editor.document;
+    if (document.languageId === `rpgle`) {
+      if (document.getText(new Range(0, 0, 0, 6)).toUpperCase() !== `**FREE`) {
+        const lineNumber = editor.selection.start.line;
+        const positionIndex = editor.selection.start.character;
+
+        const positionsData = getAreasForLine(
+          document.getText(new Range(lineNumber, 0, lineNumber, 100)), 
+          positionIndex
+        );
+
+        if (positionsData) {
+          let decorations: DecorationOptions[] = [];
+
+          positionsData.specification.forEach((box: any, index: number) => {
+            if (index === positionsData.active) {
+              //There should only be one current.
+              editor.setDecorations(currentArea, [{
+                hoverMessage: box.name,
+                range: new Range(lineNumber, box.start, lineNumber, box.end+1)
+              }]);
+
+            } else {
+              decorations.push({
+                hoverMessage: box.name,
+                range: new Range(lineNumber, box.start, lineNumber, box.end+1)
+              })
+            }
+          });
+          editor.setDecorations(notCurrentArea, decorations);
+
+          if (currentEditorLine !== lineNumber && lineNumber > 1) {
+            editor.setDecorations(outlineBar, [
+              {
+                range: new Range(lineNumber-1, 0, lineNumber-1, 80),
+                renderOptions: {
+                  before: {
+                    contentText: positionsData.outline,
+                    color: new ThemeColor(`editorLineNumber.foreground`),
+                  }
+                }
+              },
+            ]);
+          }
+
+          clear = false;
+        }
+
+        currentEditorLine = lineNumber;
+      }
+    }
+  }
+
+  if (clear) {
+    clearRulers(editor);
+  }
+}
+
+function clearRulers(editor = window.activeTextEditor) {
+  if (editor) {
+    editor.setDecorations(currentArea, []);
+    editor.setDecorations(notCurrentArea, []);
+    editor.setDecorations(outlineBar, []);
+  }
 }
 
 interface FieldBox {
