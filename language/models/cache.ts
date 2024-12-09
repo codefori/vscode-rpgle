@@ -124,31 +124,35 @@ export default class Cache {
   find(name) {
     name = name.toUpperCase();
 
-    const fileStructs = this.files.map(file => file.subItems).flat();
+    const fileStructs = this.files.flatMap(file => file.subItems);
     const allStructs = [...fileStructs, ...this.structs];
 
-    const possibles = [
-      ...this.parameters.filter(def => def.name.toUpperCase() === name),
-      ...this.constants.filter(def => def.name.toUpperCase() === name),
-      ...this.procedures.filter(def => def.name.toUpperCase() === name),
-      ...this.files.filter(def => def.name.toUpperCase() === name),
-      ...allStructs.filter(def => def.name.toUpperCase() === name),
-      ...this.subroutines.filter(def => def.name.toUpperCase() === name),
-      ...this.variables.filter(def => def.name.toUpperCase() === name),
-      ...this.indicators.filter(def => def.name.toUpperCase() === name),
+    const searchIn = [
+      this.parameters,
+      this.constants,
+      this.procedures,
+      this.files,
+      allStructs,
+      this.subroutines,
+      this.variables,
+      this.indicators
     ];
 
-    if (allStructs.length > 0 && possibles.length === 0) {
-      allStructs.filter(def => def.keyword[`QUALIFIED`] !== true).forEach(def => {
-        possibles.push(...def.subItems.filter(sub => sub.name.toUpperCase() === name));
-      });
+    for (const list of searchIn) {
+      const found = list.find(def => def.name.toUpperCase() === name);
+      if (found) return found;
     }
 
-    if (possibles.length > 0) {
-      return possibles[0];
-    } else {
-      return null;
+    if (allStructs.length > 0) {
+      for (const def of allStructs) {
+        if (def.keyword[`QUALIFIED`] !== true) {
+          const subItem = def.subItems.find(sub => sub.name.toUpperCase() === name);
+          if (subItem) return subItem;
+        }
+      }
     }
+
+    return null;
   }
 
   findDefinition(lineNumber, word) {
@@ -171,8 +175,6 @@ export default class Cache {
   }
 
   findConstByValue(lineNumber: number, value: string) {
-    const upperValue = value.toUpperCase(); // Keywords are stored in uppercase
-
     // If they're typing inside of a procedure, let's get the stuff from there too
     const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
