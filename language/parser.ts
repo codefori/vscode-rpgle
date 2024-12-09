@@ -334,10 +334,6 @@ export default class Parser {
       let lineNumber = -1;
       let lineIndex = 0;
 
-      let parts: string[];
-      let partsLower: string[];
-      let pieces: string[];
-
       let isFullyFree = lines[0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
 
@@ -348,6 +344,16 @@ export default class Parser {
 
       let lineCanRun = () => {
         return directIfScope.length === 0 || directIfScope.every(scope => scope.condition);
+      }
+
+      const stripComment = (inputLine: string) => {
+        const comment = inputLine.indexOf(`//`);
+        return (comment >= 0 ? inputLine.substring(0, comment).trimEnd() : inputLine);
+      }
+
+      const getValidStatement = (inputLine: string, withSep?: boolean) => {
+        const sep = inputLine.indexOf(`;`);
+        return (sep >= 0 ? inputLine.substring(0, sep + (withSep ? 1 : 0)) : inputLine);
       }
 
       const expandDs = async (file: string, ds: Declaration): Promise<void> => {
@@ -475,7 +481,7 @@ export default class Parser {
         } else {
           // Even if the line is useless, we need to capture the characters to be
           // parsed in case it's a statement spread over multiple lines
-          if (currentStmtStart && currentStmtStart.content) {
+          if (!isFullyFree && currentStmtStart && currentStmtStart.content) {
             currentStmtStart.content += ``.padEnd(baseLine.length + EOL.length);
           }
         }
@@ -487,17 +493,15 @@ export default class Parser {
         }
 
         let tokens: Token[] = [];
-        pieces = [];
-        parts = [];
+        let parts: string[];
+        let partsLower: string[];
         
         if (isFullyFree || lineIsFree) {
           // Free format!
           if (line.trim() === ``) continue;
 
-          pieces = line.split(`;`);
-
           const lineIsComment = line.trim().startsWith(`//`);
-          tokens = tokenise(pieces[0], lineNumber, lineIndex);
+          tokens = tokenise(getValidStatement(line), lineNumber, lineIndex);
           partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
           parts = partsLower.map(piece => piece.toUpperCase());
 
@@ -610,20 +614,19 @@ export default class Parser {
             }
           }
 
-          if (pieces.length > 1 && pieces[1].includes(`//`)) line = pieces[0] + `;`;
 
           if (!currentStmtStart || !currentStmtStart.content) {
             currentStmtStart = {line: lineNumber, index: lineIndex};
           }
 
           if (!lineIsComment) {
-            if (line.endsWith(`;`)) {
+            if (stripComment(line).endsWith(`;`)) {
+
               if (currentStmtStart.content) {
                 // This means the line is just part of the end of the last statement as well.
-                line = currentStmtStart.content + baseLine;
+                line = currentStmtStart.content + getValidStatement(baseLine);
 
-                pieces = line.split(`;`);
-                tokens = tokenise(pieces[0], currentStmtStart.line, currentStmtStart.index);
+                tokens = tokenise(line, currentStmtStart.line, currentStmtStart.index);
                 partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
                 parts = partsLower.map(piece => piece.toUpperCase());
 
@@ -632,10 +635,11 @@ export default class Parser {
 
             } else if (!line.endsWith(`;`)) {
               currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
+              
               if (currentStmtStart.content.endsWith(`-`)) 
-                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + LINEEND;
-              else
-                currentStmtStart.content += LINEEND;
+                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1);
+
+              currentStmtStart.content += LINEEND;
 
               continue;
             }

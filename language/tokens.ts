@@ -323,17 +323,23 @@ export function tokenise(statement: string, lineNumber = 0, baseIndex?: number) 
       switch (statement[i]) {
       // When it's the string character..
       case stringChar:
+        const possibleEscape = statement[i+1] === stringChar;
         if (state === ReadState.IN_STRING) {
-          currentText += statement[i];
-          result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
-          currentText = ``;
+          if (possibleEscape) {
+            currentText += `''`;
+            i += 2;
+          } else {
+            currentText += statement[i];
+            result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+            currentText = ``;
+          }
         } else {
           startsAt = i;
           currentText += statement[i];
         }
 
         // @ts-ignore
-        state = state === ReadState.IN_STRING ? ReadState.NORMAL : ReadState.IN_STRING;
+        state = state === ReadState.IN_STRING && !possibleEscape ? ReadState.NORMAL : ReadState.IN_STRING;
         break;
 
       // When it's any other character...
