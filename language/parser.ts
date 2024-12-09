@@ -158,33 +158,26 @@ export default class Parser {
 
     const getObjectName = (defaultName: string, keywords: Keywords): string => {
       let objectName = defaultName;
-      const extObjKeywords = [`EXTFILE`];
-      const extObjKeywordsDesc = [`EXTDESC`];
             
       // Check for external object
-      extObjKeywords.forEach(keyword => {
-        const keywordValue = keywords[keyword];
-        if (keywordValue && typeof keywordValue === `string`) {
-          objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
+      const extFile = keywords[`EXTFILE`];
+      if (extFile && typeof extFile === `string`) {
+        objectName = extFile.toUpperCase();
+        if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
+          objectName = objectName.substring(1, objectName.length - 1);
+        }
+      }
+
+      if(objectName === `*EXTDESC`){
+        // Check for external object
+        const extDesc = keywords['EXTDESC'];
+        if (extDesc && typeof extDesc === `string`) {
+          objectName = extDesc.toUpperCase();
 
           if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
             objectName = objectName.substring(1, objectName.length - 1);
           }
         }
-      });
-
-      if(objectName === `*EXTDESC`){
-        // Check for external object
-        extObjKeywordsDesc.forEach(keyword => {
-          const keywordValue = keywords[keyword];
-          if (keywordValue && typeof keywordValue === `string`) {
-            objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
-
-            if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
-              objectName = objectName.substring(1, objectName.length - 1);
-            }
-          }
-        });
       }
 
       return objectName;
@@ -307,7 +300,7 @@ export default class Parser {
 
       let postProcessingStatements: {[procedure: string]: Token[][]} = {'GLOBAL': []};
 
-      const addPostProcessingStatements = (procedure, statement) => {
+      const addPostProcessingStatements = (procedure: string, statement: Token[]) => {
         if (!options.collectReferences) return;
 
         if (!postProcessingStatements[procedure]) {
@@ -377,13 +370,12 @@ export default class Parser {
               keywordValue = keywordValue.substring(1, keywordValue.length - 1);
             }
 
-            if ([`EXTNAME`].includes(tag)) {
+            if (tag === `EXTNAME`) {
               // Fetch from external definitions
               const keywordLength = Object.keys(ds.keyword);
               const recordFormats = await this.fetchTable(keywordValue, keywordLength.length.toString(), ds.keyword[`ALIAS`] !== undefined);
 
               if (recordFormats.length > 0) {
-
                 // Got to fix the positions for the defintions to be the declare.
                 recordFormats.forEach(recordFormat => {
                   recordFormat.subItems.forEach(subItem => {
@@ -400,7 +392,7 @@ export default class Parser {
             } else {
               // We need to add qualified as it is qualified by default.
               if (!ds.keyword[`QUALIFIED`])
-                ds.keyword[`QUALIFIED`];
+                ds.keyword[`QUALIFIED`] = true;
 
               // Fetch from local definitions
               for (let i = scopes.length - 1; i >= 0; i--) {
