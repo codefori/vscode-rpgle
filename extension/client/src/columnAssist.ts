@@ -43,7 +43,7 @@ export function registerColumnAssist(context: ExtensionContext) {
   let currentEditorLine = -1;
 
   context.subscriptions.push(
-    commands.registerCommand(`vscode-rpgle.rpgleColumnAssistant`, async () => {
+    commands.registerCommand(`vscode-rpgle.assist.launchUI`, async () => {
       const editor = window.activeTextEditor;
       if (editor) {
         const document = editor.document;

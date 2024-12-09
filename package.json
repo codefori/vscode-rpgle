@@ -64,7 +64,7 @@
 				"category": "RPGLE"
 			},
 			{
-				"command": "vscode-rpgle.rpgleColumnAssistant",
+				"command": "vscode-rpgle.assist.launchUI",
 				"title": "Launch Column Assistant",
 				"category": "RPGLE",
 				"enablement": "editorLangId == rpgle"
@@ -72,9 +72,9 @@
 		],
 		"keybindings": [
 			{
-				"command": "vscode-rpgle.rpgleColumnAssistant",
-				"key": "shift+f4",
-				"mac": "shift+f4",
+				"command": "vscode-rpgle.assist.launchUI",
+				"key": "ctrl+shift+f4",
+				"mac": "cmd+shift+f4",
 				"when": "editorLangId == rpgle"
 			}
 		],
