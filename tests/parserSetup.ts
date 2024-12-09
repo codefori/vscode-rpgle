@@ -20,7 +20,7 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 		}
 
 		if (includeFile.includes(`,`) || !includeFile.includes(`.`)) {
-			includeFile = includeFile.split(`,`).join(`/`) + `.*rpg*`;
+			includeFile = includeFile.split(`,`).join(`/`) + `.*rpgl*`;
 		}
 
 		const globPath = path.join(`**`, includeFile);
