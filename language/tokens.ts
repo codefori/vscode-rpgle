@@ -232,7 +232,7 @@ const commonMatchers: Matcher[] = [
   },
 ];
 
-const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, `,`, `;`, `\n`, `\r`, ` `];
+const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, `,`, `;`, `\n`, `\r`, `\t`, ` `];
 const types = {
   '%': `percent`,
   '.': `dot`,
@@ -248,6 +248,7 @@ const types = {
   ',': `comma`,
   '\n': `newline`,
   '\r': `newliner`,
+  '\t': `tab`,
 };
 
 const stringChar: string = `'`;
@@ -278,10 +279,15 @@ export const ALLOWS_EXTENDED = [
   `XML-SAX`
 ]
 
+export type TokeniseOptions = {lineNumber?: number, baseIndex?: number, ignoreTypes?: string[]};
+
 /**
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */
-export function tokenise(statement: string, lineNumber = 0, baseIndex?: number) {
+export function tokenise(statement: string, options: TokeniseOptions = {}): Token[] {
+  let lineNumber = options.lineNumber || 0;
+  let baseIndex = options.baseIndex || 0;
+
   let commentStart = -1;
   let state: ReadState = ReadState.NORMAL;
 
@@ -351,7 +357,13 @@ export function tokenise(statement: string, lineNumber = 0, baseIndex?: number) 
           }
 
           if (statement[i] !== ` `) {
-            result.push({ value: statement[i], type: types[statement[i]], range: { start: i, end: i + statement[i].length, line: lineNumber } });
+            const type = types[statement[i]];
+
+            if (options.ignoreTypes && options.ignoreTypes.includes(type)) {
+              continue;
+            }
+
+            result.push({ value: statement[i], type, range: { start: i, end: i + statement[i].length, line: lineNumber } });
           }
 
           startsAt = i + 1;

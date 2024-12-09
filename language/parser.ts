@@ -18,6 +18,16 @@ export type includeFilePromise = (baseFile: string, includeString: string) => Pr
 export type TableDetail = {[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}};
 export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean};
 
+const lineTokens = (input: string, lineNumber: number, lineIndex: number): Token[] => {
+  let tokens = tokenise(input, {
+    baseIndex: lineIndex,
+    lineNumber,
+    ignoreTypes: [`tab`]
+  });
+  
+  return tokens;
+}
+
 export default class Parser {
   parsedCache: {[thePath: string]: Cache} = {};
   tables: TableDetail = {};
@@ -487,7 +497,7 @@ export default class Parser {
         }
 
         let line = baseLine;
-        if (line.length > 80) {
+        if (!isFullyFree && line.length > 80) {
           // Remove ending comments
           line = line.substring(0, 80);
         }
@@ -501,7 +511,7 @@ export default class Parser {
           if (line.trim() === ``) continue;
 
           const lineIsComment = line.trim().startsWith(`//`);
-          tokens = tokenise(getValidStatement(line), lineNumber, lineIndex);
+          tokens = lineTokens(getValidStatement(line), lineNumber, lineIndex);
           partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
           parts = partsLower.map(piece => piece.toUpperCase());
 
@@ -626,7 +636,7 @@ export default class Parser {
                 // This means the line is just part of the end of the last statement as well.
                 line = currentStmtStart.content + getValidStatement(baseLine);
 
-                tokens = tokenise(line, currentStmtStart.line, currentStmtStart.index);
+                tokens = lineTokens(line, currentStmtStart.line, currentStmtStart.index);
                 partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
                 parts = partsLower.map(piece => piece.toUpperCase());
 
@@ -1257,7 +1267,7 @@ export default class Parser {
             tokens = [cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
             const fromToken = (token?: Token) => {
-              return token ? tokenise(token.value, lineNumber, token.range.start) : [];
+              return token ? lineTokens(token.value, lineNumber, token.range.start) : [];
             };
 
             if (cSpec.opcode && ALLOWS_EXTENDED.includes(cSpec.opcode.value) && !cSpec.factor1 && cSpec.extended) {
@@ -1609,15 +1619,13 @@ export default class Parser {
 
   static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
     if (Array.isArray(content) && typeof content[0] === `string`) {
-      return tokenise(content.join(` `), lineNumber, baseIndex);
+      return lineTokens(content.join(` `), lineNumber, baseIndex);
     } else 
       if (typeof content === `string`) {
-        return tokenise(content, lineNumber, baseIndex);
+        return lineTokens(content, lineNumber, baseIndex);
       } else {
         return content as Token[];
       }
-  
-
   }
 
   static expandKeywords(tokens: Token[], isConst = false): Keywords {

@@ -4,3 +4,6 @@
 [submodule "tests/sources/BBS400"]
 	path = tests/sources/BBS400
 	url = git@github.com:worksofliam/BBS400.git
+[submodule "tests/sources/noxDB"]
+	path = tests/sources/noxDB
+	url = git@github.com:sitemule/noxDB.git

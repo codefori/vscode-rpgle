@@ -33,7 +33,7 @@ test("Parser partial tests", { timeout }, async () => {
         baseContentSplitUpIntoPieces.push(baseContent.substring(i, i + pieceSize));
       }
 
-      console.log(`Testing ${basename} (${i}/${list.length})...`);
+      // console.log(`Testing ${basename} (${i}/${list.length})...`);
 
       let lengths: number[] = [];
       for (let i = 0; i < baseContentSplitUpIntoPieces.length; i++) {
@@ -51,8 +51,8 @@ test("Parser partial tests", { timeout }, async () => {
       const lengthsAverage = lengths.reduce((a, b) => a + b, 0) / lengths.length;
       const total = lengths.reduce((a, b) => a + b, 0);
       const last = lengths[lengths.length - 1];
-      console.log(`\tAverage: ${lengthsAverage}ms, Full: ${last}ms, Total: ${total}`);
-      console.log(``);
+      // console.log(`\tAverage: ${lengthsAverage}ms, Full: ${last}ms, Total: ${total}`);
+      // console.log(``);
     }
   }
 });

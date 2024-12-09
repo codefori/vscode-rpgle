@@ -91,7 +91,7 @@ test("Generic reference tests", { timeout }, async () => {
         fail(`Found ${errorCount} errors in ${basename}`);
       }
 
-      console.log(`Parsed ${basename} in ${pe - ps}ms. Validated in ${se-ss} (${i+1}/${list.length}). Found ${referencesCollected} references.`);
+      // console.log(`Parsed ${basename} in ${pe - ps}ms. Validated in ${se-ss} (${i+1}/${list.length}). Found ${referencesCollected} references.`);
     }
   }
 });

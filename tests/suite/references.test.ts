@@ -1411,3 +1411,41 @@ test(`references_21_fixed_exec1`, async () => {
   expect(tlst.references.length).toBe(4);
   expect(tlst.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `tlst`)).toBe(true);
 });
+
+test(`references_22_long_lines`, async () => {
+  const lines = [
+    `**free`,
+  `// --------------------------------------------------------------`,
+  `// Next departure from Mols Linien`,
+  `// --------------------------------------------------------------`,
+  `dcl-proc jsonRequest;`,
+  ``,
+  `   dcl-s  pReq   	  	pointer;`,
+  `   dcl-s  pResponse 	pointer;`,
+  `   dcl-s  url  	  	varchar(1024);`,
+  ``,
+  `   // parameters on URL`,
+  `   url = 'https://www.molslinjen.dk/umbraco/api/departure/getnextdepartures?departureRegionId=JYL';`,
+  ``,
+  `   // Note: No payload in the request. use *null - here we pass a null pointer  `,
+  `   // Note: No options in the request. use *null - here we pass the *null literal value`,
+  `   `,
+  `   // Do the http request to get next depature`,
+  `   // Use YUM to install curl, which is the tool used by httpRequest`,
+  `   pResponse = json_httpRequest (url: pReq:*null:'JSON');`,
+  ``,
+  `   json_WriteJsonStmf(pResponse:'/prj/noxdb/testout/httpdump.json':1208:*OFF);`,
+  ``,
+  `   json_delete(pReq);`,
+  `   json_delete(pResponse);`,
+  ``,
+  `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const jsonRequest = cache.find(`jsonRequest`);
+  const pReq = jsonRequest.scope.find(`pReq`);
+  expect(pReq.references.length).toBe(3);
+  expect(pReq.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `pReq`)).toBe(true);
+});
