@@ -1,15 +1,11 @@
 export type SpecFieldValue = {value: string, text: string};
 export type SpecFieldDef = {id: string, name: string, start: number, end: number, values?: SpecFieldValue[], padStart?: boolean}
 
-export function getOutlineForSpecs(specs: SpecFieldDef[]) {
-  // let outline = new Array(8).fill(0).map((v, i) => String(i).padEnd(10, `-`)).join(``).substring(1);
-  let outline = ``.padEnd(80, `-`);
-
-  specs.forEach(box => {
-    outline = outline.substring(0, box.start) + box.name[0] + outline.substring(box.start+1);
-  });
-
-  return outline;
+export const SpecRulers: {[spec: string]: string} = {
+  C: `.....CL0N01Factor1+++++++Opcode&ExtFactor2+++++++Result++++++++Len++D+H`,
+  D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords++++++++++++++++++++`,
+  F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords++++++++++++++++++++`,
+  P: `.....PName+++++++++++..T...................Keywords++++++++++++++++++++`
 }
 
 export const specs: {[spec: string]: SpecFieldDef[]} = {

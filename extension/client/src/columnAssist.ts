@@ -1,5 +1,5 @@
 
-import { commands, DecorationOptions, DecorationRangeBehavior, ExtensionContext, Range, ThemeColor, window } from 'vscode';
+import { commands, DecorationOptions, ExtensionContext, Range, ThemeColor, window } from 'vscode';
 import * as Configuration from "./configuration";
 import { loadBase } from './base';
 
@@ -22,7 +22,7 @@ const outlineBar = window.createTextEditorDecorationType({
 let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || false
 let currentEditorLine = -1;
 
-import { getOutlineForSpecs, SpecFieldDef, SpecFieldValue, specs } from './schemas/specs';
+import { SpecFieldDef, SpecFieldValue, SpecRulers, specs } from './schemas/specs';
 
 const getAreasForLine = (line: string, index: number) => {
   if (line.length < 6) return undefined;
@@ -37,7 +37,7 @@ const getAreasForLine = (line: string, index: number) => {
     return {
       specification,
       active,
-      outline: getOutlineForSpecs(specification)
+      outline: SpecRulers[specLetter]
     };
   }
 }
