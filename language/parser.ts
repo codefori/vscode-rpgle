@@ -362,7 +362,14 @@ export default class Parser {
       }
 
       const getValidStatement = (inputLine: string, withSep?: boolean) => {
-        const sep = inputLine.indexOf(`;`);
+        const comment = inputLine.indexOf(`//`);
+        const quote = inputLine.lastIndexOf(`'`);
+        const sep = inputLine.indexOf(`;`, quote >= 0 ? quote : 0);
+        
+        if (comment >= 0 && comment < sep) {
+          return inputLine;
+        }
+
         return (sep >= 0 ? inputLine.substring(0, sep + (withSep ? 1 : 0)) : inputLine);
       }
 
@@ -633,7 +640,13 @@ export default class Parser {
             currentStmtStart = {line: lineNumber, index: lineIndex};
           }
 
-          if (!lineIsComment) {
+          if (lineIsComment) {
+            // This happens when we put a comment on a line which is part of one long statement.
+            // See references_24_comment_in_statement
+            if (currentStmtStart.content) {
+              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+            }
+          } else {
             if (stripComment(line).endsWith(`;`)) {
 
               if (currentStmtStart.content) {
