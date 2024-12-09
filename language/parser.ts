@@ -557,17 +557,21 @@ export default class Parser {
           
                   if (includePath) {
                     const include = await this.includeFileFetch(workingUri, includePath);
-                    if (include.found) {
-                      scopes[0].includes.push({
-                        toPath: include.uri,
-                        line: lineNumber
-                      });
-                      
-                      try {
-                        await parseContent(include.uri, include.content);
-                      } catch (e) {
-                        console.log(`Error parsing include: ${include.uri}`);
-                        console.log(e);
+                    if (include.found && include.uri) {
+                      if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
+                        scopes[0].includes.push({
+                          toPath: include.uri,
+                          line: lineNumber
+                        });
+                        
+                        try {
+                          await parseContent(include.uri, include.content);
+                        } catch (e) {
+                          console.log(`Error parsing include: ${include.uri}`);
+                          console.log(e);
+                        }
+                      } else {
+                        console.log(`Circular include detected: ${includePath}`);
                       }
                     }
                   }

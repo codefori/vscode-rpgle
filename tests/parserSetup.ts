@@ -24,14 +24,14 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 		}
 
 		const globPath = path.join(`**`, includeFile);
-		const files = glob.sync(globPath, {
+		const files: string[] = glob.sync(globPath, {
 			cwd: projectRoot,
 			absolute: true,
 			nocase: true,
 		});
 
 		if (files.length >= 1) {
-			const file = files[0];
+			const file = files.find(f => f.toLowerCase().endsWith(`rpgleinc`)) || files[0];
 
 			const content = await readFile(file, { encoding: `utf-8` });
 			
