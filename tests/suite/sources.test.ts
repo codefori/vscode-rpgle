@@ -31,6 +31,16 @@ test("Generic reference tests", { timeout }, async () => {
       let referencesCollected = 0;
       let errorCount = 0;
 
+      const printReference = (def: Declaration, content: string, ref: Reference) => {
+        console.log({
+          def: def.name,
+          uri: ref.uri,
+          offset: ref.offset,
+          content: content.substring(ref.offset.position, ref.offset.end),
+          about: content.substring(ref.offset.position - 10, ref.offset.end + 10)
+        })
+      }
+
       const checkReferences = async (def: Declaration) => {
         const refs = def.references;
         const uniqueUris = refs.map(r => r.uri).filter((value, index, self) => self.indexOf(value) === index);
@@ -52,6 +62,7 @@ test("Generic reference tests", { timeout }, async () => {
             referencesCollected++;
           } else {
             errorCount++;
+            printReference(def, cachedFiles[ref.uri], ref);
           }
         }
       }

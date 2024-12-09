@@ -1380,3 +1380,34 @@ test(`references_20`, async () => {
   expect(baseRefs.length).toBe(1);
   expect(baseRefs.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LENGTH_T`)).toBe(true);
 });
+
+test(`references_21_fixed_exec1`, async () => {
+  const lines = [
+    ``,
+    `     d  tlst           s             10    inz('RRO')`,
+    ``,
+    `     c     sropen        begsr`,
+    `     c                   if        byList  or  gest = '*'`,
+    `     c                   if        byList`,
+    `     c                   eval      tlst = liste`,
+    `     c                   else`,
+    `     c                   reset                   tlst`,
+    `     c                   endif`,
+    `     c/exec sql`,
+    `     C+ declare C1 cursor for`,
+    `      /copy copy,rro100k1`,
+    `     c+  and  skgest in (select cluser from pcusrlst where clname = :tlst)`,
+    `     C+ group by stcdpy`,
+    `     C+ order by xx  desc`,
+    `     c/end-exec`,
+    `     c/exec sql`,
+    `     C+ open C1`,
+    `     c/end-exec`,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  
+  const tlst = cache.find(`tlst`);
+  expect(tlst.references.length).toBe(4);
+  expect(tlst.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `tlst`)).toBe(true);
+});

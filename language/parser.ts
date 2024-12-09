@@ -453,6 +453,11 @@ export default class Parser {
           spec = baseLine[5].toUpperCase();
 
           if ([spec, comment].includes(`*`)) {
+            if (currentStmtStart && currentStmtStart.content) {
+              // Since we're in an extended statement (usually fixed exec), we still need to collect the lengths for the tokeniser
+              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+            }
+
             continue;
           }
 
@@ -507,11 +512,9 @@ export default class Parser {
           line = line.trim();
 
           if (!lineIsComment) {
-            if (parts[0] === `/EOF` && lineCanRun()) {
-              // End of parsing for this file
-              return;
-            } else {
-              switch (parts[0]) {
+
+            // First, we need a seperate switch for EXEC statements
+            switch (parts[0]) {
               case '/EXEC':
                 fixedExec = true;
                 baseLine = ``.padEnd(7) + baseLine.substring(7);
@@ -526,6 +529,21 @@ export default class Parser {
                 baseLine = ``.padEnd(baseLine.length) + `;`;
                 fixedExec = false;
                 break;
+              default:
+                // Maybe we're in a fixed exec statement, but a directive is being used.
+                // See test case references_21_fixed_exec1
+                if (fixedExec && currentStmtStart && currentStmtStart.content) {
+                  currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+                }
+                break;
+            }
+
+            // Then we do regular parsing
+            if (parts[0] === `/EOF` && lineCanRun()) {
+              // End of parsing for this file
+              return;
+            } else {
+              switch (parts[0]) {
               case `/COPY`:
               case `/INCLUDE`:
                 if (options.withIncludes && this.includeFileFetch && lineCanRun()) {
