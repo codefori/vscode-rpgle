@@ -84,17 +84,18 @@ export default class Cache {
    * @returns {String[]}
    */
   getNames() {
-    const fileStructNames = this.files.map(file => file.subItems.map(sub => sub.name)).flat();
-    return [
-      ...this.parameters.map(def => def.name),
-      ...this.constants.map(def => def.name),
-      ...this.procedures.map(def => def.name),
-      ...this.files.map(def => def.name),
-      ...fileStructNames,
-      ...this.subroutines.map(def => def.name),
-      ...this.variables.map(def => def.name),
-      ...this.structs.map(def => def.name),
-    ].filter(name => name);
+    const names = new Set<string>();
+
+    this.parameters.forEach(def => names.add(def.name));
+    this.constants.forEach(def => names.add(def.name));
+    this.procedures.forEach(def => names.add(def.name));
+    this.files.forEach(def => names.add(def.name));
+    this.files.forEach(file => file.subItems.forEach(sub => names.add(sub.name)));
+    this.subroutines.forEach(def => names.add(def.name));
+    this.variables.forEach(def => names.add(def.name));
+    this.structs.forEach(def => names.add(def.name));
+
+    return Array.from(names);
   }
 
   /**

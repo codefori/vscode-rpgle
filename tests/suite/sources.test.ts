@@ -67,18 +67,18 @@ test("Generic reference tests", { timeout }, async () => {
         }
       }
 
-      const checkScope = (scope: Cache) => {
+      const checkScope = async (scope: Cache) => {
         for (const def of [...scope.variables, ...scope.subroutines, ...scope.procedures, ...scope.constants, ...scope.structs, ...scope.files]) {
-          checkReferences(def);
+          await checkReferences(def);
 
           if (def.subItems && def.subItems.length > 0) {
             for (const sub of def.subItems) {
-              checkReferences(sub);
+              await checkReferences(sub);
             }
           }
 
           if (def.scope) {
-            checkScope(def.scope);
+            await checkScope(def.scope);
           }
         }
       }
