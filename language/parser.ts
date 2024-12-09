@@ -294,8 +294,9 @@ export default class Parser {
 
     //Now the real work
     const parseContent = async (fileUri: string, allContent: string) => {
-      let eol = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
-      let lines = allContent.split(eol);
+      const EOL = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
+      const LINEEND = ``.padEnd(EOL.length);
+      let lines = allContent.split(EOL);
 
       let postProcessingStatements: {[procedure: string]: Token[][]} = {'GLOBAL': []};
 
@@ -422,8 +423,7 @@ export default class Parser {
 
       for (let li = 0; li < lines.length; li++) {
         if (li >= 1) {
-          lineIndex += lines[li-1].length + (eol === `\r\n` ? 2 : 1);
-          // assert.strictEqual(allContent.substring(lineIndex, lineIndex + lines[li].length), lines[li]);
+          lineIndex += lines[li-1].length + EOL.length;
         }
         
         const scope = scopes[scopes.length - 1];
@@ -456,7 +456,7 @@ export default class Parser {
           } else if (comment === `+` && fixedExec && currentStmtStart.content) {
             // Fixed format EXEC SQL
             baseLine = ``.padEnd(7) + baseLine.substring(7);
-            currentStmtStart.content += baseLine + ''.padEnd(eol.length);
+            currentStmtStart.content += baseLine + LINEEND;
             continue;
           } else {
             if (spec === ` `) {
@@ -472,7 +472,7 @@ export default class Parser {
           // Even if the line is useless, we need to capture the characters to be
           // parsed in case it's a statement spread over multiple lines
           if (currentStmtStart && currentStmtStart.content) {
-            currentStmtStart.content += ``.padEnd(baseLine.length + eol.length);
+            currentStmtStart.content += ``.padEnd(baseLine.length + EOL.length);
           }
         }
 
@@ -511,7 +511,7 @@ export default class Parser {
                 currentStmtStart = {
                   line: lineNumber,
                   index: lineIndex,
-                  content: baseLine + ''.padEnd(eol.length)
+                  content: baseLine + LINEEND
                 }
                 continue;
               case '/END':
@@ -616,9 +616,9 @@ export default class Parser {
             } else if (!line.endsWith(`;`)) {
               currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
               if (currentStmtStart.content.endsWith(`-`)) 
-                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ``.padEnd(eol.length);
+                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + LINEEND;
               else
-                currentStmtStart.content += ``.padEnd(eol.length);
+                currentStmtStart.content += LINEEND;
 
               continue;
             }
