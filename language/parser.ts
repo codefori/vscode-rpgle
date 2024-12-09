@@ -197,9 +197,26 @@ export default class Parser {
 
     let definedMacros: string[] = [];
 
+    /**
+     * Parse the tokens and add references to the definitions
+     * The statement is modified in place and sets tokens undefined when are references
+     */
     const collectReferences = (currentUri: string, statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration, isExec = false) => {
       if (statement[0]?.value?.toUpperCase() === `EXEC`) {
         isExec = true;
+      }
+
+      const removeCollectedToken = (at: number) => {
+        statement[at] = undefined;
+      }
+
+      const addReference = (def: Declaration, part: Token, at: number) => {
+        def.references.push({
+          uri: currentUri,
+          offset: { position: part.range.start, end: part.range.end },
+        });
+
+        removeCollectedToken(at);
       }
 
       for (let i = 0; i < statement.length; i++) {
@@ -247,12 +264,7 @@ export default class Parser {
         }
 
         if (defRef) {
-          if (!defRef.references.some(ref => ref.offset.position === part.range.start && ref.offset.end === part.range.end)) {
-            defRef.references.push({
-              uri: currentUri,
-              offset: { position: part.range.start, end: part.range.end },
-            });
-          }
+          addReference(defRef, part, i);
 
           if (defRef.keyword[`QUALIFIED`]) {
             let nextPartIndex = i + 1;
@@ -277,12 +289,7 @@ export default class Parser {
                   // Find the subitem
                   const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
                   if (subItemDef) {
-                    if (!subItemDef.references.some(ref => ref.offset.position === subItemPart.range.start && ref.offset.end === subItemPart.range.end)) {
-                      subItemDef.references.push({
-                        uri: currentUri,
-                        offset: { position: subItemPart.range.start, end: subItemPart.range.end },
-                      });
-                    }
+                    addReference(subItemDef, subItemPart, i);
                   }
                 }
               }
