@@ -1569,3 +1569,25 @@ test('references_24_comment_in_statement', async () => {
   expect(code.references.length).toBe(25);
   expect(code.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `code`)).toBe(true);
 });
+
+// Test case is from httpapi
+test('references_25_fixed_string', async () => {
+  const lines = [
+    `     D http            s           5050a   varying`,
+    `     D rc              s             10i 0`,
+    ``,
+    `      /free`,
+    `         http_debug(*on: '/tmp/example9-debug.txt');`,
+    ``,
+    `         if %parms < 3;`,
+    `            http_comp('To call, type: +`,
+    `         EXAMPLE9 URL(''http://google.com'') STMF(''/tmp/google.pdf'')');`,
+    `            return;`,
+    `         endif;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const http = cache.find(`http`);
+  expect(http.references.length).toBe(1);
+  expect(http.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `http`)).toBe(true);
+});

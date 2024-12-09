@@ -358,6 +358,11 @@ export default class Parser {
 
       const stripComment = (inputLine: string) => {
         const comment = inputLine.indexOf(`//`);
+        const quote = inputLine.lastIndexOf(`'`);
+        if (comment >= 0 && comment < quote) {
+          return inputLine;
+        }
+
         return (comment >= 0 ? inputLine.substring(0, comment).trimEnd() : inputLine);
       }
 
@@ -577,9 +582,6 @@ export default class Parser {
                           console.log(`Error parsing include: ${include.uri}`);
                           console.log(e);
                         }
-                      } else {
-                        console.log(`Include detected that has already been imported in this scope. Ignoring.`);
-                        console.log({from: fileUri, to: include.uri, lineNumber});
                       }
                     }
                   }
