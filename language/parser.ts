@@ -578,7 +578,7 @@ export default class Parser {
                           console.log(e);
                         }
                       } else {
-                        console.log(`Circular include detected`);
+                        console.log(`Include detected that has already been imported in this scope. Ignoring.`);
                         console.log({from: fileUri, to: include.uri, lineNumber});
                       }
                     }
