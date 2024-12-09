@@ -33,23 +33,27 @@ test("Parser partial tests", { timeout }, async () => {
         baseContentSplitUpIntoPieces.push(baseContent.substring(i, i + pieceSize));
       }
 
+      console.log(`Testing ${basename}...`);
+
       let lengths: number[] = [];
       for (let i = 0; i < baseContentSplitUpIntoPieces.length; i++) {
         content += baseContentSplitUpIntoPieces[i];
 
         const ps = performance.now();
-        await parser.getDocs(basename, content, { collectReferences: true, ignoreCache: true, withIncludes: false });
+        const doc = await parser.getDocs(basename, content, { collectReferences: true, ignoreCache: true, withIncludes: false });
         const pe = performance.now();
+
+        console.log(`\tParsed ${i+1}/${baseContentSplitUpIntoPieces.length} (${content.length}) in ${pe - ps}ms. Got ${doc.getNames().length} names.`);
 
         lengths.push(pe - ps);
       }
 
-      // const lengthsAverage = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-      // const total = lengths.reduce((a, b) => a + b, 0);
-      // const last = lengths[lengths.length - 1];
-      // console.log(`Parsed ${basename}, ${baseContent.length} chars (${i+1}/${list.length})`);
-      // console.log(`Average: ${lengthsAverage}ms, Full: ${last}ms, Total: ${total}`);
-      // console.log(``);
+      const lengthsAverage = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+      const total = lengths.reduce((a, b) => a + b, 0);
+      const last = lengths[lengths.length - 1];
+      console.log(``);
+      console.log(`\tAverage: ${lengthsAverage}ms, Full: ${last}ms, Total: ${total}`);
+      console.log(``);
     }
   }
 });
