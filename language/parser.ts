@@ -647,7 +647,7 @@ export default class Parser {
               currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
               
               if (currentStmtStart.content.endsWith(`-`)) 
-                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1);
+                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
 
               currentStmtStart.content += LINEEND;
 

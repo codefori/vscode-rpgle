@@ -1412,6 +1412,8 @@ test(`references_21_fixed_exec1`, async () => {
   expect(tlst.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `tlst`)).toBe(true);
 });
 
+
+// Test case is from noxDb
 test(`references_22_long_lines`, async () => {
   const lines = [
     `**free`,
@@ -1448,4 +1450,31 @@ test(`references_22_long_lines`, async () => {
   const pReq = jsonRequest.scope.find(`pReq`);
   expect(pReq.references.length).toBe(3);
   expect(pReq.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `pReq`)).toBe(true);
+});
+
+// Test case is from noxDb
+test('references_23_before_spaces', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s  err                ind;`,
+    `dcl-s  row                varChar(32766);`,
+    `dcl-s  pRow               pointer;`,
+    `dcl-s  id                 int(10);`,
+    ``,
+    `   // now get that row: here we use the a stringed object to build the where statement via the`,
+    `   pRow = json_sqlResultRow ((`,
+    `      'Select *                -`,
+    `       from noxdbdemo.note2    -`,
+    `       where id = $id          -`,
+    `      ')`,
+    `      :'{id:' + %char(id) +'}'`,
+    `   );`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const id = cache.find(`id`);
+  expect(id.references.length).toBe(2);
+  expect(id.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `id`)).toBe(true);
 });
