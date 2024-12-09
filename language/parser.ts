@@ -578,7 +578,8 @@ export default class Parser {
                           console.log(e);
                         }
                       } else {
-                        console.log(`Circular include detected: ${includePath}`);
+                        console.log(`Circular include detected`);
+                        console.log({from: fileUri, to: include.uri, lineNumber});
                       }
                     }
                   }
