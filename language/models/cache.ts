@@ -5,7 +5,7 @@ const newInds = () => {
   return [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
     const indDef = new Declaration(`variable`);
     indDef.name = ind;
-    indDef.keywords = [`IND`];
+    indDef.keyword = {IND: true};
     return indDef;
   })
 };
@@ -84,17 +84,18 @@ export default class Cache {
    * @returns {String[]}
    */
   getNames() {
-    const fileStructNames = this.files.map(file => file.subItems.map(sub => sub.name)).flat();
-    return [
-      ...this.parameters.map(def => def.name),
-      ...this.constants.map(def => def.name),
-      ...this.procedures.map(def => def.name),
-      ...this.files.map(def => def.name),
-      ...fileStructNames,
-      ...this.subroutines.map(def => def.name),
-      ...this.variables.map(def => def.name),
-      ...this.structs.map(def => def.name),
-    ].filter(name => name);
+    const names = new Set<string>();
+
+    this.parameters.forEach(def => names.add(def.name));
+    this.constants.forEach(def => names.add(def.name));
+    this.procedures.forEach(def => names.add(def.name));
+    this.files.forEach(def => names.add(def.name));
+    this.files.forEach(file => file.subItems.forEach(sub => names.add(sub.name)));
+    this.subroutines.forEach(def => names.add(def.name));
+    this.variables.forEach(def => names.add(def.name));
+    this.structs.forEach(def => names.add(def.name));
+
+    return Array.from(names);
   }
 
   /**
@@ -123,46 +124,36 @@ export default class Cache {
    */
   find(name) {
     name = name.toUpperCase();
-    const fileStructs = this.files.map(file => file.subItems).flat();
+
+    const fileStructs = this.files.flatMap(file => file.subItems);
     const allStructs = [...fileStructs, ...this.structs];
 
-    const possibles = [
-      ...this.parameters.filter(def => def.name.toUpperCase() === name),
-      ...this.constants.filter(def => def.name.toUpperCase() === name),
-      ...this.procedures.filter(def => def.name.toUpperCase() === name),
-      ...this.files.filter(def => def.name.toUpperCase() === name),
-      ...allStructs.filter(def => def.name.toUpperCase() === name),
-      ...this.subroutines.filter(def => def.name.toUpperCase() === name),
-      ...this.variables.filter(def => def.name.toUpperCase() === name),
-      ...this.indicators.filter(def => def.name.toUpperCase() === name),
+    const searchIn = [
+      this.parameters,
+      this.constants,
+      this.procedures,
+      this.files,
+      allStructs,
+      this.subroutines,
+      this.variables,
+      this.indicators
     ];
 
-    if (allStructs.length > 0 && possibles.length === 0) {
-      allStructs.filter(def => def.keyword[`QUALIFIED`] !== true).forEach(def => {
-        possibles.push(...def.subItems.filter(sub => sub.name.toUpperCase() === name));
-      });
+    for (const list of searchIn) {
+      const found = list.find(def => def.name.toUpperCase() === name);
+      if (found) return found;
     }
 
-    if (possibles.length > 0) {
-      return possibles[0];
-    } else {
-      return null;
-    }
-  }
-
-  clearReferences() {
-    const fileStructs = this.files.map(file => file.subItems).flat();
-
-    [...fileStructs, ...this.parameters, ...this.constants, ...this.files, ...this.procedures, ...this.subroutines, ...this.variables, ...this.structs].forEach(def => {
-      def.references = [];
-      def.subItems.forEach(sub => sub.references = []);
-    });
-
-    this.procedures.forEach(proc => {
-      if (proc.scope) {
-        proc.scope.clearReferences();
+    if (allStructs.length > 0) {
+      for (const def of allStructs) {
+        if (def.keyword[`QUALIFIED`] !== true) {
+          const subItem = def.subItems.find(sub => sub.name.toUpperCase() === name);
+          if (subItem) return subItem;
+        }
       }
-    });
+    }
+
+    return null;
   }
 
   findDefinition(lineNumber, word) {
@@ -185,20 +176,18 @@ export default class Cache {
   }
 
   findConstByValue(lineNumber: number, value: string) {
-    const upperValue = value.toUpperCase(); // Keywords are stored in uppercase
-
     // If they're typing inside of a procedure, let's get the stuff from there too
     const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
 
     if (currentProcedure && currentProcedure.scope) {
-      const localDef = currentProcedure.scope.constants.find(def => def.keyword[upperValue] === true);
+      const localDef = currentProcedure.scope.constants.find(def => def.keyword[`CONST`] === value);
 
       if (localDef) {
         return localDef;
       }
     }
 
-    const globalDef = this.constants.find(def => def.keyword[upperValue] === true);
+    const globalDef = this.constants.find(def => def.keyword[`CONST`] === value);
 
     if (globalDef) {
       return globalDef;

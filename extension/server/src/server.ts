@@ -272,7 +272,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				return {
 					found: true,
 					uri: validUri,
-					lines: validSource.split(`\n`)
+					content: validSource
 				};
 			}
 		}
@@ -311,7 +311,8 @@ documents.onDidChangeContent(handler => {
 		handler.document.getText(),
 		{
 			withIncludes: true,
-			ignoreCache: true
+			ignoreCache: true,
+			collectReferences: true
 		}
 	).then(cache => {
 		if (cache) {

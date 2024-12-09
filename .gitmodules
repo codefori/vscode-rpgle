@@ -1,0 +1,24 @@
+[submodule "tests/sources/bob-recursive-example"]
+	path = tests/sources/bob-recursive-example
+	url = git@github.com:IBM/bob-recursive-example.git
+[submodule "tests/sources/BBS400"]
+	path = tests/sources/BBS400
+	url = git@github.com:worksofliam/BBS400.git
+[submodule "tests/sources/noxDB"]
+	path = tests/sources/noxDB
+	url = git@github.com:sitemule/noxDB.git
+[submodule "tests/sources/xmlservice"]
+	path = tests/sources/xmlservice
+	url = git@github.com:IBM/xmlservice.git
+[submodule "tests/sources/I_builder"]
+	path = tests/sources/I_builder
+	url = git@github.com:ibmiiste/I_builder.git
+[submodule "tests/sources/ibmi-company_system"]
+	path = tests/sources/ibmi-company_system
+	url = git@github.com:IBM/ibmi-company_system.git
+[submodule "tests/sources/httpapi"]
+	path = tests/sources/httpapi
+	url = git@github.com:ScottKlement/httpapi.git
+[submodule "tests/sources/rpgle-repl"]
+	path = tests/sources/rpgle-repl
+	url = git@github.com:tom-writes-code/rpgle-repl.git

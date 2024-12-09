@@ -63,15 +63,23 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 
 	if (resolvedMembers[baseUri] && resolvedMembers[baseUri][fileKey]) return resolvedMembers[baseUri][fileKey];
 
-	const resolvedMember = await queue.add(() => {return connection.sendRequest("memberResolve", [member, file])}) as IBMiMember|undefined;
-	// const resolvedMember = await connection.sendRequest("memberResolve", [member, file]) as IBMiMember|undefined;
+	try {
+		const resolvedMember = await queue.add(() => {return connection.sendRequest("memberResolve", [member, file])}) as IBMiMember|undefined;
+		// const resolvedMember = await connection.sendRequest("memberResolve", [member, file]) as IBMiMember|undefined;
 
-	if (resolvedMember) {
-		if (!resolvedMembers[baseUri]) resolvedMembers[baseUri] = {};
-		resolvedMembers[baseUri][fileKey] = resolvedMember;
+		if (resolvedMember) {
+			if (!resolvedMembers[baseUri]) resolvedMembers[baseUri] = {};
+			resolvedMembers[baseUri][fileKey] = resolvedMember;
+		}
+
+		return resolvedMember;
+	} catch (e) {
+		console.log(`Member resolve failed.`);
+		console.log(JSON.stringify({baseUri, member, file}));
+		console.log(e);
 	}
 
-	return resolvedMember;
+	return undefined;
 }
 
 export async function streamfileResolve(baseUri: string, base: string[]): Promise<string|undefined> {
@@ -82,15 +90,23 @@ export async function streamfileResolve(baseUri: string, base: string[]): Promis
 
 	const paths = (workspace ? includePath[workspace.uri] : []) || [];
 
-	const resolvedPath = await queue.add(() => {return connection.sendRequest("streamfileResolve", [base, paths])}) as string|undefined;
-	//  const resolvedPath = await connection.sendRequest("streamfileResolve", [base, paths]) as string|undefined;
+	try {
+		const resolvedPath = await queue.add(() => {return connection.sendRequest("streamfileResolve", [base, paths])}) as string|undefined;
+		//  const resolvedPath = await connection.sendRequest("streamfileResolve", [base, paths]) as string|undefined;
 
-	if (resolvedPath) {
-		if (!resolvedStreamfiles[baseUri]) resolvedStreamfiles[baseUri] = {};
-		resolvedStreamfiles[baseUri][baseString] = resolvedPath;
+		if (resolvedPath) {
+			if (!resolvedStreamfiles[baseUri]) resolvedStreamfiles[baseUri] = {};
+			resolvedStreamfiles[baseUri][baseString] = resolvedPath;
+		}
+
+		return resolvedPath;
+	} catch (e) {
+		console.log(`Streamfile resolve failed.`);
+		console.log(JSON.stringify({baseUri, base, paths}));
+		console.log(e);
 	}
 
-	return resolvedPath;
+	return undefined;
 }
 
 export function getWorkingDirectory(): Promise<string|undefined> {

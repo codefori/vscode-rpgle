@@ -141,17 +141,7 @@ async function loadLocalFile(uri: string) {
 
 	if (document) {
 		const content = document?.getText();
-		const cache = await parser.getDocs(uri, content);
-		if (cache) {
-			if (content.length >= 6 && content.substring(0, 6).toUpperCase() === `**FREE`) {
-				Linter.getErrors({
-					uri,
-					content,
-				}, {
-					CollectReferences: true
-				}, cache);
-			}
-		}
+		await parser.getDocs(uri, content);
 	}
 }
 
