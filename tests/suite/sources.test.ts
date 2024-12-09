@@ -83,13 +83,15 @@ test("Generic reference tests", { timeout }, async () => {
         }
       }
 
-      checkScope(doc);
+      const ss = performance.now();
+      await checkScope(doc);
+      const se = performance.now();
 
       if (errorCount > 0) {
         fail(`Found ${errorCount} errors in ${basename}`);
       }
 
-      // console.log(`Parsed ${basename} in ${pe - ps}ms (${i+1}/${list.length}). Found ${referencesCollected} references.`);
+      console.log(`Parsed ${basename} in ${pe - ps}ms. Validated in ${se-ss} (${i+1}/${list.length}). Found ${referencesCollected} references.`);
     }
   }
 });
