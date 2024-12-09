@@ -300,7 +300,7 @@ export default class Parser {
 
       let postProcessingStatements: {[procedure: string]: Token[][]} = {'GLOBAL': []};
 
-      const addPostProcessingStatements = (procedure: string, statement: Token[]) => {
+      const addPostProcessingStatements = (procedure = `GLOBAL`, statement: Token[]) => {
         if (!options.collectReferences) return;
 
         if (!postProcessingStatements[procedure]) {
