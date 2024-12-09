@@ -2,7 +2,7 @@ export type SpecFieldValue = {value: string, text: string};
 export type SpecFieldDef = {id: string, name: string, start: number, end: number, values?: SpecFieldValue[], padStart?: boolean}
 
 export const SpecRulers: {[spec: string]: string} = {
-  C: `.....CL0N01Factor1+++++++Opcode&ExtFactor2+++++++Result++++++++Len++D+H`,
+  C: `.....CL0N01Factor1+++++++Opcode&ExtFactor2+++++++Result++++++++Len++D+HiLoEq`,
   D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords++++++++++++++++++++`,
   F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords++++++++++++++++++++`,
   P: `.....PName+++++++++++..T...................Keywords++++++++++++++++++++`
