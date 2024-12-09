@@ -2,6 +2,7 @@ on:
   pull_request:
     paths:
       - 'language/**'
+      - 'tests/**'
     
 jobs:
   release:
