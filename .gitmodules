@@ -19,3 +19,6 @@
 [submodule "tests/sources/httpapi"]
 	path = tests/sources/httpapi
 	url = git@github.com:ScottKlement/httpapi.git
+[submodule "tests/sources/rpgle-repl"]
+	path = tests/sources/rpgle-repl
+	url = git@github.com:tom-writes-code/rpgle-repl.git
