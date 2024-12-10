@@ -2,7 +2,7 @@ import path = require('path');
 import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from 'vscode';
 import {getInstance} from './base';
 
-import * as defaultConfig from "./schemas/default";
+import {DEFAULT_SCHEMA} from "./schemas/linter"
 
 export function initialise(context: ExtensionContext) {
 	context.subscriptions.push(
@@ -34,7 +34,7 @@ export function initialise(context: ExtensionContext) {
 
 						await workspace.fs.writeFile(
 							uri,
-							Buffer.from(JSON.stringify(defaultConfig, null, 2), `utf8`)
+							Buffer.from(JSON.stringify(DEFAULT_SCHEMA, null, 2), `utf8`)
 						);
 					}
 
@@ -118,7 +118,7 @@ export function initialise(context: ExtensionContext) {
 						window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${configPath}?`, `Yes`, `No`).then
 							(async (value) => {
 								if (value === `Yes`) {
-									const jsonString = JSON.stringify(defaultConfig, null, 2);
+									const jsonString = JSON.stringify(DEFAULT_SCHEMA, null, 2);
 
 									switch (type) {
 										case `member`:

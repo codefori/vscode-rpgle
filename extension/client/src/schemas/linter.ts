@@ -1,4 +1,4 @@
-module.exports = {
+export const DEFAULT_SCHEMA = {
   indent: 2,
   PrototypeCheck: true,
   NoOCCURS: true,
