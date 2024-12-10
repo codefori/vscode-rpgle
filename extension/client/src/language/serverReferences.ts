@@ -1,8 +1,10 @@
-import { commands, DocumentSymbol, languages, Location, ProgressLocation, Range, SymbolInformation, SymbolKind, TextDocument, Uri, window, workspace } from "vscode";
+import { commands, Definition, DocumentSymbol, languages, Location, ProgressLocation, Range, SymbolInformation, SymbolKind, TextDocument, Uri, window, workspace } from "vscode";
 import { getInstance } from "../base";
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
+import { ConnectionConfiguration } from "@halcyontech/vscode-ibmi-types/api/Configuration";
+import { IBMiMember } from "@halcyontech/vscode-ibmi-types";
 
-export function getWorkspaceImplementation() {
+export function getServerSymbolProvider() {
   return languages.registerWorkspaceSymbolProvider({
     provideWorkspaceSymbols: async (query, token): Promise<SymbolInformation[]> => {
       const instance = getInstance();
@@ -20,16 +22,9 @@ export function getWorkspaceImplementation() {
         const uriPath = editor.document.uri.path;
         const member = connection.parserMemberPath(uriPath);
 
-        let libraryList = [config.currentLibrary, ...config.libraryList];
-        const editorLibrary = member.library;
+        const libraryList = getLibraryList(config, member);
 
-        if (editorLibrary) {
-          if (!libraryList.includes(editorLibrary)) {
-            libraryList.unshift(editorLibrary);
-          }
-        }
-
-        const exports = await binderLookup(connection, libraryList, query);
+        const exports = await binderLookup(connection, libraryList, {generic: query});
 
         return exports.map(e => {
           return new SymbolInformation(
@@ -45,15 +40,7 @@ export function getWorkspaceImplementation() {
     },
 
     resolveWorkspaceSymbol: async (symbol, token): Promise<SymbolInformation | undefined> => {
-      const matchingSymbol = await window.withProgress({location: ProgressLocation.Window, title: `Fetching symbol ${symbol.name}`}, async () => {
-        try {
-          const openedDocument = workspace.openTextDocument(symbol.location.uri);
-          const symbols = await getDocumentSymbols((await openedDocument).uri);
-          return symbols.find(s => s.name.toUpperCase() === symbol.name.toUpperCase());
-        } catch (e) {
-          console.log(e);
-        }
-      });
+      const matchingSymbol = await window.withProgress({location: ProgressLocation.Window, title: `Fetching symbol ${symbol.name}`}, () => getSymbolFromDocument(symbol.location.uri, symbol.name));
 
       if (matchingSymbol) {
         return new SymbolInformation(
@@ -68,6 +55,68 @@ export function getWorkspaceImplementation() {
     }
   })
 }
+
+export function getServerImplementationProvider() {
+  return languages.registerImplementationProvider({language: `rpgle`, scheme: `member`}, {
+    async provideImplementation(document, position, token): Promise<Definition|undefined> {
+      const instance = getInstance();
+
+      if (instance && instance.getConnection()) {
+        const word = document.getText(document.getWordRangeAtPosition(position));
+        const connection = instance.getConnection();
+        const config = connection.config! //TODO in vscode-ibmi 3.0.0 - change to getConfig()
+
+        const uriPath = document.uri.path;
+        const member = connection.parserMemberPath(uriPath);
+
+        const libraryList = getLibraryList(config, member);
+
+        const exports = await binderLookup(connection, libraryList, {specific: word});
+
+        if (exports.length) {
+          const exportsInLibraryListOrder = libraryList.map(lib => exports.find(e => e.sourceLibrary === lib)).filter(e => e) as ExportInfo[];
+
+          for (const exportInfo of exportsInLibraryListOrder) {
+            const uri = exportInfo.assumedUri;
+
+            const possibleSymbol = await getSymbolFromDocument(uri, word);
+            if (possibleSymbol) {
+              return new Location(uri, possibleSymbol.selectionRange);
+            } 
+          }
+        }
+
+        return;
+      }
+    },
+  });
+}
+
+async function getSymbolFromDocument(docUri: Uri, name: string): Promise<DocumentSymbol | undefined> {
+  try {
+    const openedDocument = await workspace.openTextDocument(docUri);
+    const symbols = await getDocumentSymbols(openedDocument.uri);
+    return symbols.find(s => s.name.toUpperCase() === name.toUpperCase());
+  } catch (e) {
+    console.log(e);
+  }
+
+  return;
+}
+
+function getLibraryList(config: ConnectionConfiguration.Parameters, member: IBMiMember): string[] {
+  let libraryList = [config.currentLibrary, ...config.libraryList];
+  const editorLibrary = member.library;
+
+  if (editorLibrary) {
+    if (!libraryList.includes(editorLibrary)) {
+      libraryList.unshift(editorLibrary);
+    }
+  }
+
+  return libraryList;
+}
+
 function getDocumentSymbols(uri: Uri) {
   return commands.executeCommand<DocumentSymbol[]>(`vscode.executeDocumentSymbolProvider`, uri) || [];
 }
@@ -85,8 +134,14 @@ interface ExportInfo {
   assumedUri: Uri;
 }
 
-async function binderLookup(connection: IBMi, libraryList: string[], exportFilter?: string) {
-  const symbolClause = exportFilter ? `UPPER(b.SYMBOL_NAME) like '%${exportFilter.toUpperCase()}%' and` : ``;
+async function binderLookup(connection: IBMi, libraryList: string[], filter: {specific?: string, generic?: string} = {}) {
+  let symbolClause = ``;
+
+  if (filter.generic) {
+    symbolClause = filter.generic ? `UPPER(b.SYMBOL_NAME) like '%${filter.generic.toUpperCase()}%' and` : ``;
+  } else if (filter.specific) {
+    symbolClause = filter.specific ? `UPPER(b.SYMBOL_NAME) = '${filter.specific.toUpperCase()}' and` : ``;
+  }
 
   const libraryInList = libraryList.map(lib => `'${lib.toUpperCase()}'`).join(`, `);
 
