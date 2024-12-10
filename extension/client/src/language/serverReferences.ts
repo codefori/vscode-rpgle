@@ -17,12 +17,16 @@ export function getServerSymbolProvider() {
         return doc.uri.scheme === `member` && doc.languageId === `rpgle`;
       }
 
-      if (editor && documentIsValid(editor.document) && instance && instance.getConnection()) {
+      if (instance && instance.getConnection()) {
         const connection = instance.getConnection();
         const config = connection.config! //TODO in vscode-ibmi 3.0.0 - change to getConfig()
 
-        const uriPath = editor.document.uri.path;
-        const member = connection.parserMemberPath(uriPath);
+        let member: IBMiMember|undefined;
+
+        if (editor) {
+          const uriPath = editor.document.uri.path;
+          member = connection.parserMemberPath(uriPath);
+        }
 
         const libraryList = getLibraryList(config, member);
 
@@ -113,13 +117,15 @@ async function getSymbolFromDocument(docUri: Uri, name: string): Promise<Documen
   return;
 }
 
-function getLibraryList(config: ConnectionConfiguration.Parameters, member: IBMiMember): string[] {
+function getLibraryList(config: ConnectionConfiguration.Parameters, member?: IBMiMember): string[] {
   let libraryList = [config.currentLibrary, ...config.libraryList];
-  const editorLibrary = member.library;
 
-  if (editorLibrary) {
-    if (!libraryList.includes(editorLibrary)) {
-      libraryList.unshift(editorLibrary);
+  if (member) {
+    const editorLibrary = member.library;
+    if (editorLibrary) {
+      if (!libraryList.includes(editorLibrary)) {
+        libraryList.unshift(editorLibrary);
+      }
     }
   }
 
