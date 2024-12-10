@@ -12,7 +12,7 @@
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
 	"license": "MIT",
-	"version": "0.27.0",
+	"version": "0.27.0-patrick2",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
@@ -35,10 +35,10 @@
 		"configuration": {
 			"title": "RPGLE language tools",
 			"properties": {
-				"vscode-rpgle.showFixedFormatOutline": {
+				"vscode-rpgle.rulerEnabledByDefault": {
 					"type": "boolean",
-					"default": false,
-					"description": "Will provide column assist for writing fixed format RPGLE."
+					"default": true,
+					"description": "Whether to show the fixed-format ruler by default."
 				}
 			}
 		},
@@ -64,15 +64,27 @@
 				"category": "RPGLE"
 			},
 			{
-				"command": "vscode-rpgle.rpgleColumnAssistant",
+				"command": "vscode-rpgle.assist.launchUI",
 				"title": "Launch Column Assistant",
+				"category": "RPGLE",
+				"enablement": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.assist.toggleFixedRuler",
+				"title": "Toggle Inline Editor Helper",
 				"category": "RPGLE",
 				"enablement": "editorLangId == rpgle"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "vscode-rpgle.rpgleColumnAssistant",
+				"command": "vscode-rpgle.assist.launchUI",
+				"key": "ctrl+shift+f4",
+				"mac": "cmd+shift+f4",
+				"when": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.assist.toggleFixedRuler",
 				"key": "shift+f4",
 				"mac": "shift+f4",
 				"when": "editorLangId == rpgle"
