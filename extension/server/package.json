@@ -16,7 +16,7 @@
 		"vscode-uri": "^3.0.6"
 	},
 	"devDependencies": {
-		"@halcyontech/vscode-ibmi-types": "^2.1.0",
+		"@halcyontech/vscode-ibmi-types": "^2.14.0",
 		"@types/glob": "^8.0.0",
 		"webpack": "^5.24.3"
 	}
