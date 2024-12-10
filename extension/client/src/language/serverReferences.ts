@@ -76,14 +76,19 @@ export function getServerImplementationProvider() {
         if (exports.length) {
           const exportsInLibraryListOrder = libraryList.map(lib => exports.find(e => e.sourceLibrary === lib)).filter(e => e) as ExportInfo[];
 
-          for (const exportInfo of exportsInLibraryListOrder) {
-            const uri = exportInfo.assumedUri;
+          const resultingLocation = await window.withProgress({location: ProgressLocation.Window, title: `Resolving ${word}`}, async (progress) => {
+            for (const exportInfo of exportsInLibraryListOrder) {
+              progress.report({message: `checking ${exportInfo.moduleLibrary}/${exportInfo.moduleName}`});
+              const uri = exportInfo.assumedUri;
 
-            const possibleSymbol = await getSymbolFromDocument(uri, word);
-            if (possibleSymbol) {
-              return new Location(uri, possibleSymbol.selectionRange);
-            } 
-          }
+              const possibleSymbol = await getSymbolFromDocument(uri, word);
+              if (possibleSymbol) {
+                return new Location(uri, possibleSymbol.selectionRange);
+              } 
+            }
+          });
+
+          return resultingLocation;
         }
 
         return;
