@@ -7,7 +7,7 @@ import * as path from 'path';
 import { workspace, ExtensionContext, Uri, commands, RelativePattern } from 'vscode';
 
 import * as Linter from "./linter";
-import * as columnAssist from "./columnAssist";
+import * as columnAssist from "./language/columnAssist";
 
 
 import {
