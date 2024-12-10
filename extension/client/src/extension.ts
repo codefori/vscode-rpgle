@@ -19,6 +19,7 @@ import {
 
 import { projectFilesGlob } from './configuration';
 import buildRequestHandlers from './requests';
+import { getWorkspaceImplementation } from './language/workspaceReferences';
 
 let client: LanguageClient;
 
@@ -74,6 +75,8 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
+	
+	context.subscriptions.push(getWorkspaceImplementation());
 
 	// context.subscriptions.push(...initBuilder(client));
 

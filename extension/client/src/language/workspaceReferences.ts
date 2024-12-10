@@ -1,0 +1,144 @@
+import { commands, DocumentSymbol, languages, Location, ProgressLocation, Range, SymbolInformation, SymbolKind, TextDocument, Uri, window, workspace } from "vscode";
+import { getInstance } from "../base";
+import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
+
+export function getWorkspaceImplementation() {
+  return languages.registerWorkspaceSymbolProvider({
+    provideWorkspaceSymbols: async (query, token): Promise<SymbolInformation[]> => {
+      const instance = getInstance();
+      const editor = window.activeTextEditor;
+
+      // Since this is a members only resolve.
+      const documentIsValid = (doc: TextDocument) => {
+        return doc.uri.scheme === `member` && doc.languageId === `rpgle`;
+      }
+
+      if (editor && documentIsValid(editor.document) && instance && instance.getConnection()) {
+        const connection = instance.getConnection();
+        const config = connection.config! //TODO in vscode-ibmi 3.0.0 - change to getConfig()
+
+        const uriPath = editor.document.uri.path;
+        const member = connection.parserMemberPath(uriPath);
+
+        let libraryList = [config.currentLibrary, ...config.libraryList];
+        const editorLibrary = member.library;
+
+        if (editorLibrary) {
+          if (!libraryList.includes(editorLibrary)) {
+            libraryList.unshift(editorLibrary);
+          }
+        }
+
+        const exports = await binderLookup(connection, libraryList, query);
+
+        return exports.map(e => {
+          return new SymbolInformation(
+            e.symbolName,
+            SymbolKind.Function,
+            e.moduleName,
+            new Location(e.assumedUri, new Range(0, 0, 0, 0))
+          )
+        })
+      }
+
+      return [];
+    },
+
+    resolveWorkspaceSymbol: async (symbol, token): Promise<SymbolInformation | undefined> => {
+      const matchingSymbol = await window.withProgress({location: ProgressLocation.Window, title: `Fetching symbol ${symbol.name}`}, async () => {
+        try {
+          const openedDocument = workspace.openTextDocument(symbol.location.uri);
+          const symbols = await getDocumentSymbols((await openedDocument).uri);
+          return symbols.find(s => s.name.toUpperCase() === symbol.name.toUpperCase());
+        } catch (e) {
+          console.log(e);
+        }
+      });
+
+      if (matchingSymbol) {
+        return new SymbolInformation(
+          matchingSymbol.name,
+          matchingSymbol.kind,
+          symbol.containerName,
+          new Location(symbol.location.uri, matchingSymbol.selectionRange)
+        )
+      }
+
+      return symbol;
+    }
+  })
+}
+function getDocumentSymbols(uri: Uri) {
+  return commands.executeCommand<DocumentSymbol[]>(`vscode.executeDocumentSymbolProvider`, uri) || [];
+}
+
+interface ExportInfo {
+  symbolName: string;
+  programLibrary: string;
+  programName: string;
+  moduleLibrary: string;
+  moduleName: string;
+  sourceLibrary: string;
+  sourceFile: string;
+  sourceMember: string;
+  attribute: string;
+  assumedUri: Uri;
+}
+
+async function binderLookup(connection: IBMi, libraryList: string[], exportFilter?: string) {
+  const symbolClause = exportFilter ? `UPPER(b.SYMBOL_NAME) like '%${exportFilter.toUpperCase()}%' and` : ``;
+
+  const libraryInList = libraryList.map(lib => `'${lib.toUpperCase()}'`).join(`, `);
+
+  const statement = [
+    `select`,
+    `	b.SYMBOL_NAME,`,
+    `	b.PROGRAM_LIBRARY as PGM_LIB,`,
+    `	c.ENTRY as PGM_NAME,`,
+    `	a.BOUND_MODULE_LIBRARY as MOD_LIB, `,
+    `	a.BOUND_MODULE as MOD_NAME, `,
+    // ...(streamFileSupported ? [`a.SOURCE_STREAM_FILE_PATH as PATH,`] : []),
+    `	a.SOURCE_FILE_LIBRARY as LIB, `,
+    `	a.SOURCE_FILE as SPF, `,
+    `	a.SOURCE_FILE_MEMBER as MBR,`,
+    ` a.MODULE_ATTRIBUTE as ATTR`,
+    `from QSYS2.BOUND_MODULE_INFO as a`,
+    `right join QSYS2.PROGRAM_EXPORT_IMPORT_INFO as b`,
+    `	on a.PROGRAM_LIBRARY = b.PROGRAM_LIBRARY and a.PROGRAM_NAME = b.PROGRAM_NAME`,
+    `right join qsys2.BINDING_DIRECTORY_INFO as c`,
+    `	on c.ENTRY = b.PROGRAM_NAME`,
+    `where ${symbolClause}`,
+    `  (c.BINDING_DIRECTORY_LIBRARY in (${libraryInList})) and`,
+    `  ((c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY) or (c.ENTRY_LIBRARY = '*LIBL' and b.PROGRAM_LIBRARY in (${libraryInList})))`,
+    // `  (${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH is not null or` : ``} a.SOURCE_FILE_MEMBER is not null)`
+  ].join(` `);
+
+  let exports: ExportInfo[] = [];
+
+  try {
+    const results = await connection.runSQL(statement);
+
+    exports = results.map((r): ExportInfo => {
+      return {
+        symbolName: r.SYMBOL_NAME as string,
+        programLibrary: r.PGM_LIB as string,
+        programName: r.PGM_NAME as string,
+        moduleLibrary: r.MOD_LIB as string,
+        moduleName: r.MOD_NAME as string,
+        sourceLibrary: r.LIB as string,
+        sourceFile: r.SPF as string,
+        sourceMember: r.MBR as string,
+        attribute: r.ATTR as string,
+        assumedUri: Uri.from({
+          scheme: `member`,
+          path: [``, r.LIB, r.SPF, `${r.MBR}.${r.ATTR}`].join(`/`)
+        })
+      }
+    })
+
+  } catch (e) {
+    console.log(e);
+  }
+
+  return exports;
+}
