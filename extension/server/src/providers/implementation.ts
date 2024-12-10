@@ -1,6 +1,5 @@
 import { Definition, ImplementationParams, Location, Range } from 'vscode-languageserver';
 import { documents, parser, getWordRangeAtPosition } from '.';
-import { BindingDirectory, symbolLookup, validateUri } from '../connection';
 
 import * as Project from './project';
 
@@ -42,10 +41,4 @@ export default async function implementationProvider(params: ImplementationParam
 	}
 
 	return;
-}
-
-function trimQuotes(input: string) {
-	if (input[0] === `'`) input = input.substring(1);
-	if (input[input.length - 1] === `'`) input = input.substring(0, input.length - 1);
-	return input;
 }
