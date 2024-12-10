@@ -5,6 +5,8 @@ import { ConnectionConfiguration } from "@halcyontech/vscode-ibmi-types/api/Conf
 import { IBMiMember } from "@halcyontech/vscode-ibmi-types";
 
 export function getServerSymbolProvider() {
+  let latestFetch: ExportInfo[]|undefined;
+
   return languages.registerWorkspaceSymbolProvider({
     provideWorkspaceSymbols: async (query, token): Promise<SymbolInformation[]> => {
       const instance = getInstance();
@@ -24,9 +26,11 @@ export function getServerSymbolProvider() {
 
         const libraryList = getLibraryList(config, member);
 
-        const exports = await binderLookup(connection, libraryList, {generic: query});
+        if (query.length === 0 || !latestFetch) {
+          latestFetch = await binderLookup(connection, libraryList, {generic: query});
+        }
 
-        return exports.map(e => {
+        return latestFetch.map(e => {
           return new SymbolInformation(
             e.symbolName,
             SymbolKind.Function,
