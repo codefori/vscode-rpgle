@@ -8,6 +8,7 @@ export default async function implementationProvider(params: ImplementationParam
 	const currentPath = params.textDocument.uri;
 	const document = documents.get(currentPath);
 
+	// We only handle local implementations here.
 	if (document) {
 		const word = getWordRangeAtPosition(document, params.position);
 		if (word) {
@@ -36,56 +37,6 @@ export default async function implementationProvider(params: ImplementationParam
 						}
 					}
 				};
-			}
-
-			// Then, we fall back to the server to see if we can find a reference or something?
-			const cache = parser.getParsedCache(currentPath);
-			if (cache) {
-				const bnddir: string | true | undefined = cache.keyword[`BNDDIR`];
-				if (typeof bnddir === "string") {
-					const objectStrings = bnddir.split(`:`).map(obj => trimQuotes(obj));
-					const binders: BindingDirectory[] = objectStrings.map(qualifiedPath => {
-						const parts = qualifiedPath.split(`/`);
-						return {
-							name: parts[parts.length - 1],
-							lib: parts[parts.length - 2]
-						}
-					});
-
-					const symbolFiles = await symbolLookup({
-						symbol: word,
-						binders
-					});
-
-					if (symbolFiles) {
-						const validSymbol = Object.keys(symbolFiles).find(symbol => symbol.toUpperCase() === word.toUpperCase());
-						if (validSymbol) {
-							const uris = symbolFiles[validSymbol];
-							const validUris = await Promise.allSettled(uris.map(uri => validateUri(uri)));
-							// By this time, if they were valid, they are part of the cache.
-
-							for (const possibleUri of validUris) {
-								if (possibleUri.status === `fulfilled` && possibleUri.value) {
-									const cache = parser.getParsedCache(possibleUri.value);
-									if (cache) {
-										const proc = cache.find(word);
-										if (proc) {
-											return Location.create(
-												proc.position.path,
-												Range.create(
-													proc.position.line,
-													0,
-													proc.position.line,
-													0
-												)
-											);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
 			}
 		}
 	}
