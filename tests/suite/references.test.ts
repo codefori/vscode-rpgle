@@ -1,4 +1,4 @@
-import setupParser from "../parserSetup";
+import setupParser, { getFileContent } from "../parserSetup";
 import Cache from "../../language/models/cache";
 import { test, expect } from "vitest";
 import { readFile } from "fs/promises";
@@ -1615,4 +1615,215 @@ test('references_26_fixed_tag', async () => {
   const updok = cache.find(`UPDKO`);
   expect(updok.references.length).toBe(2);
   expect(updok.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `UPDKO`)).toBe(true);
+});
+
+// This test case is from bbs400
+test('references_27_fixed_reference', async () => {
+  const lines = [
+    `     H/TITLE Administration - General Configuration`,
+    `     H COPYRIGHT('(C) 2020 David Asta under MIT License')`,
+    `      * SYSTEM      : V4R5`,
+    `      * PROGRAMMER  : David Asta`,
+    `      * DATE-WRITTEN: 12/NOV/2020`,
+    `      *`,
+    `      * This program allows an Administrator user to display/change the`,
+    `      *   general Configuration values of the BBS stored in PCONFIG`,
+    `      **********************************************************************`,
+    `      /copy 'CBKOPTIMIZ.rpgle'`,
+    `      **********************************************************************`,
+    `      * INDICATORS USED:`,
+    `      * 80 - *ON turns DSPATR(PR), which protects fields from being changed`,
+    `      * 81 - CBKPCFGREA CHAIN Not Found`,
+    `      **********************************************************************`,
+    `     FBBSADGCD  CF   E             WORKSTN`,
+    `     FPCONFIG   UF   E           K DISK`,
+    `      **********************************************************************`,
+    `      * Data structures`,
+    `      /copy 'CBKDTAARA.rpgle'`,
+    `      * Constants`,
+    `     D cKeysDft        C                   CONST('F10=Edit   F12=Go back')`,
+    `     D cKeysEdit       C                   CONST('F10=Confirm Changes   F12=Can-`,
+    `     D                                     cel')`,
+    `     D cSavedOK        C                   CONST('Configuration was changed suc-`,
+    `     D                                     cessfully.')`,
+    `     D cSavedKO        C                   CONST('There was an error while writ-`,
+    `     D                                     ting to PCONFIG.')`,
+    `      * Variables`,
+    `      /copy 'CBKPCFGDCL.rpgle'`,
+    `     D wCfgKey         S              6A`,
+    `     D wShowWelcome    S              1A`,
+    `     ***********************************************************************`,
+    `     C                   WRITE     HEADER`,
+    `     C   80              EVAL      KEYSLS = cKeysDft`,
+    `     C  N80              EVAL      KEYSLS = cKeysEdit`,
+    `     C                   WRITE     FOOTER`,
+    `     C                   EXFMT     BODY`,
+    `     C                   CLEAR                   MSGLIN`,
+    `     C                   EXSR      CheckFkeys`,
+    `      **********************************************************************`,
+    `      * Subroutine called automatically at startup`,
+    `      **********************************************************************`,
+    `     C     *INZSR        BEGSR`,
+    `     C                   EVAL      SCRSCR = 'BBSADGC'`,
+    `      * Protect fields from being modified`,
+    `     C                   EVAL      *IN80 = *ON`,
+    `      * Get values from PCONFIG and show them on screen`,
+    `     C                   EXSR      GetConfig`,
+    `     C                   EVAL      SCRNAM = wCfgBBSNAM`,
+    `     C                   EVAL      SCRLCR = WCfgLOCCRY`,
+    `     C                   EVAL      SCRLCT = wCfgLOCCTY`,
+    `     C                   EVAL      SCRTZC = wCfgTIMZON`,
+    `     C                   EVAL      SCRCLO = wCfgCLOSED`,
+    `     C                   EVAL      SCRSAL = wCfgSHWALD`,
+    `     C                   EVAL      SCRSWE = wCfgSHWWEL`,
+    `     C                   EVAL      SCRHID = wCfgHIDESO`,
+    `     C                   EVAL      SCRHLS = wCfgHLSOMS`,
+    `     C                   EVAL      SCRNFY = wCfgNUSRNF`,
+    `      * Get values from DATAARA and show them on screen`,
+    `      /copy 'CBKHEADER.rpgle'`,
+    `     C                   ENDSR`,
+    `      **********************************************************************`,
+    `      * Check Function keys pressed by the user`,
+    `      **********************************************************************`,
+    `     C     CheckFkeys    BEGSR`,
+    `      * F10=Edit`,
+    `     C                   IF        *IN10 = *ON`,
+    `     C* N80              EXSR      SavePCONFIG`,
+    `     C*  80              EVAL      *IN80 = *OFF`,
+    `     C                   IF        *IN80 = *ON`,
+    `     C                   EVAL      *IN80 = *OFF`,
+    `     C                   ELSE`,
+    `     C                   EXSR      SavePCONFIG`,
+    `     C                   ENDIF`,
+    `     C                   ENDIF`,
+    `      * F12=Go back or F12=Cancel`,
+    `     C                   IF        *IN12 = *ON`,
+    `     C   80              MOVE      *ON           *INLR`,
+    `     C   80              RETURN`,
+    `     C  N80              EVAL      *IN80 = *ON`,
+    `     C                   ENDIF`,
+    `     C                   ENDSR`,
+    `      **********************************************************************`,
+    `      * Save changed values to PCONFIG`,
+    `      **********************************************************************`,
+    `     C     SavePCONFIG   BEGSR`,
+    `      * BBS Name`,
+    `     C     SCRNAM        IFNE      wCfgBBSNAM`,
+    `     C                   EVAL      wCfgKey = 'BBSNAM'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRNAM`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * BBS Location Country`,
+    `     C     SCRLCR        IFNE      WCfgLOCCRY`,
+    `     C                   EVAL      wCfgKey = 'LOCCRY'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRLCR`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * BBS Location City`,
+    `     C     SCRLCT        IFNE      wCfgLOCCTY`,
+    `     C                   EVAL      wCfgKey = 'LOCCTY'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRLCT`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * BBS Time Zone`,
+    `     C     SCRTZC        IFNE      wCfgTIMZON`,
+    `     C                   EVAL      wCfgKey = 'TIMZON'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRTZC`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * Closed to New Users?`,
+    `     C     SCRCLO        IFNE      wCfgCLOSED`,
+    `     C                   EVAL      wCfgKey = 'CLOSED'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRCLO`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * Show Access Level Description?`,
+    `     C     SCRSAL        IFNE      wCfgSHWALD`,
+    `     C                   EVAL      wCfgKey = 'SHWALD'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRSAL`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * Show Welcome screen?`,
+    `     C     SCRSWE        IFNE      wCfgSHWWEL`,
+    `     C                   EVAL      wCfgKey = 'SHWWEL'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRSWE`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * Hide SysOp from User Lists?`,
+    `     C     SCRHID        IFNE      wCfgHIDESO`,
+    `     C                   EVAL      wCfgKey = 'HIDESO'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRHID`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * Hide SysOp from User Lists?`,
+    `     C     SCRHLS        IFNE      wCfgHLSOMS`,
+    `     C                   EVAL      wCfgKey = 'HLSOMS'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRHLS`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `      * Notify New User Registration`,
+    `     C     SCRNFY        IFNE      wCfgNUSRNF`,
+    `     C                   EVAL      wCfgKey = 'NUSRNF'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRNFY`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `     C     UPDOK         TAG`,
+    `     C                   EVAL      MSGLIN = cSavedOK`,
+    `     C                   GOTO      UPDEND`,
+    `     C     UPDKO         TAG`,
+    `     C                   EVAL      MSGLIN = cSavedKO`,
+    `     C     UPDEND        TAG`,
+    `     C                   EVAL      *IN80 = *ON`,
+    `     C                   ENDSR`,
+    `      **********************************************************************`,
+    `      /copy 'CBKPCFGREA.rpgle'`,
+    ``,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  expect(cache.includes.length).toBe (5);
+
+  const wCfgKey = cache.find(`wCfgKey`);
+  const baseRefs = wCfgKey.references.filter(r => r.uri === uri);
+  expect(baseRefs.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `WCFGKEY`)).toBe(true);
+  expect(baseRefs.length).toBe(21);
+
+  const uniqueUris = wCfgKey.references.map(r => r.uri).filter((value, index, self) => self.indexOf(value) === index);
+  let cachedFiles: {[uri: string]: string} = {};
+
+  for (const refUri of uniqueUris) {
+    if (refUri === uri) {
+      cachedFiles[refUri] = lines;
+    }
+    
+    if (!cachedFiles[refUri]) {
+      cachedFiles[refUri] = await getFileContent(refUri);
+    }
+  }
+
+  for (const ref of wCfgKey.references) {
+    const offsetContent = cachedFiles[ref.uri].substring(ref.offset.position, ref.offset.end);
+
+    expect(offsetContent.toUpperCase()).toBe(`WCFGKEY`);
+  }
 });
