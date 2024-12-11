@@ -30,6 +30,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 			// If they're typing inside of a procedure, let's get the stuff from there too
 			const currentProcedure = doc.procedures.find((proc, index) => 
+				proc.range.start && proc.range.end &&
 				lineNumber >= proc.range.start && 
 				(lineNumber <= proc.range.end+1 || index === doc.procedures.length-1) &&
 				currentPath === proc.position.path

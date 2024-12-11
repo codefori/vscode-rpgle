@@ -26,13 +26,13 @@ test('fixed1', async () => {
 
   const wkCorp = cache.variables[0];
   expect(wkCorp.name).to.equal('wkCorp');
-  expect(wkCorp.position.line).to.equal(3);
+  expect(wkCorp.position.range.line).to.equal(3);
   expect(wkCorp.keyword[`CHAR`]).to.equal('10');
   expect(wkCorp.keyword[`INZ`]).to.equal(`'100'`);
 
   const wkInvoice = cache.variables[1];
   expect(wkInvoice.name).to.equal('wkInvoice');
-  expect(wkInvoice.position.line).to.equal(4);
+  expect(wkInvoice.position.range.line).to.equal(4);
   expect(wkInvoice.keyword[`CHAR`]).to.equal('15');
 });
 
@@ -92,13 +92,13 @@ test('fixed3', async () => {
 
   const Worktype = cache.variables[0];
   expect(Worktype.name).to.equal('Worktype');
-  expect(Worktype.position.line).to.equal(0);
+  expect(Worktype.position.range.line).to.equal(0);
   expect(Worktype.keyword[`CHAR`]).to.equal('10');
   expect(Worktype.keyword[`INZ`]).to.equal(`'*OUTQ'`);
 
   const DS = cache.structs[0];
   expect(DS.name).to.equal('*N');
-  expect(DS.position.line).to.equal(3);
+  expect(DS.position.range.line).to.equal(3);
   expect(DS.subItems.length).to.equal(7);
 });
 
@@ -129,15 +129,15 @@ test('fixed4', async () => {
 
   const InType = cache.find(`InType`);
   expect(InType.name).to.equal(`InType`);
-  expect(InType.position.line).to.equal(1);
+  expect(InType.position.range.line).to.equal(1);
 
   const Worktype = cache.variables[1];
   expect(Worktype.name).to.equal(`Worktype`);
-  expect(Worktype.position.line).to.equal(14);
+  expect(Worktype.position.range.line).to.equal(14);
 
   const InputDs = cache.structs[0];
   expect(InputDs.name).to.equal(`InputDs`);
-  expect(InputDs.position.line).to.equal(6);
+  expect(InputDs.position.range.line).to.equal(6);
   expect(InputDs.subItems.length).to.equal(7);
 });
 
@@ -190,7 +190,7 @@ test('fixed5', async () => {
 
   const RtvObjD = cache.procedures[0];
   expect(RtvObjD.name).to.equal(`RtvObjD`);
-  expect(RtvObjD.position.line).to.equal(18);
+  expect(RtvObjD.position.range.line).to.equal(18);
   expect(RtvObjD.keyword[`EXTPGM`]).to.equal(`'QUSROBJD'`);
   expect(RtvObjD.subItems.length).to.equal(6);
 });
@@ -215,18 +215,18 @@ test('fixed6', async () => {
 
   const lenVar = cache.find(`len`);
   expect(lenVar.name).to.equal(`len`);
-  expect(lenVar.position.line).to.equal(6);
+  expect(lenVar.position.range.line).to.equal(6);
   expect(lenVar.keyword[`INT`]).to.equal(`5`);
 
   const date2Var = cache.find(`DATE2`);
   expect(date2Var.name).to.equal(`DATE2`);
-  expect(date2Var.position.line).to.equal(3);
+  expect(date2Var.position.range.line).to.equal(3);
   expect(date2Var.keyword[`DATE`]).to.equal(true);
   expect(date2Var.keyword[`DATFMT`]).to.equal(`*JIS`);
 
   const time0Var = cache.find(`TIME0`);
   expect(time0Var.name).to.equal(`TIME0`);
-  expect(time0Var.position.line).to.equal(7);
+  expect(time0Var.position.range.line).to.equal(7);
   expect(time0Var.keyword[`TIME`]).to.equal(true);
   expect(time0Var.keyword[`INZ`]).to.equal(`T'10.12.15'`);
 });
@@ -256,7 +256,7 @@ test('fixed7', async () => {
 
   const Obj_Next = cache.find(`Obj_Next`);
   expect(Obj_Next.name).to.equal(`Obj_Next`);
-  expect(Obj_Next.position.line).to.equal(3);
+  expect(Obj_Next.position.range.line).to.equal(3);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
   expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
@@ -348,14 +348,14 @@ test('fixed9', async () => {
 
   const Obj_Next = cache.find(`Obj_Next`);
   expect(Obj_Next.name).to.equal(`Obj_Next`);
-  expect(Obj_Next.position.line).to.equal(5);
+  expect(Obj_Next.position.range.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
   expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
   expect(theExtProcedure.name).to.equal(`theExtProcedure`);
-  expect(theExtProcedure.position.line).to.equal(2);
+  expect(theExtProcedure.position.range.line).to.equal(2);
   expect(theExtProcedure.keyword[`EXTPROC`]).to.equal(true);
   expect(theExtProcedure.subItems.length).to.equal(1);
 });
@@ -388,14 +388,14 @@ test('fixed9_2', async () => {
 
   const Obj_Next = cache.find(`Obj_Next`);
   expect(Obj_Next.name).to.equal(`Obj_Next`);
-  expect(Obj_Next.position.line).to.equal(5);
+  expect(Obj_Next.position.range.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
   expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
   const theExtProcedure = cache.find(`theExtProcedure`);
   expect(theExtProcedure.name).to.equal(`theExtProcedure`);
-  expect(theExtProcedure.position.line).to.equal(2);
+  expect(theExtProcedure.position.range.line).to.equal(2);
   expect(theExtProcedure.keyword[`EXTPROC`]).to.equal(true);
   expect(theExtProcedure.subItems.length).to.equal(1);
 });
@@ -529,7 +529,7 @@ test('fixedfree1', async () => {
   expect(Obj_List.name).to.equal(`Obj_List`);
   expect(Obj_List.range.start).to.equal(6);
   expect(Obj_List.range.end).to.equal(50);
-  expect(Obj_List.position.line).to.equal(6);
+  expect(Obj_List.position.range.line).to.equal(6);
   expect(Obj_List.keyword[`EXPORT`]).to.equal(true);
   expect(Obj_List.subItems.length).to.equal(3);
 

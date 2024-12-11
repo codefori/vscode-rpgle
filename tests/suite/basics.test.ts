@@ -16,7 +16,7 @@ test('vitestTest1', async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.variables.length).toBe(1);
-  expect(cache.variables[0].position.line).toBe(1);
+  expect(cache.variables[0].position.range.line).toBe(1);
 });
 
 /**
@@ -33,8 +33,8 @@ test('vitestTest2', async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.variables.length).toBe(2);
-  expect(cache.variables[0].position.line).toBe(1);
-  expect(cache.variables[1].position.line).toBe(3);
+  expect(cache.variables[0].position.range.line).toBe(1);
+  expect(cache.variables[1].position.range.line).toBe(3);
 });
 
 test('vitestTest3', async () => {
@@ -56,9 +56,9 @@ test('vitestTest3', async () => {
 
   expect(cache.structs[0].subItems.length).toBe(2);
 
-  expect(cache.variables[0].position.line).toBe(1);
-  expect(cache.variables[1].position.line).toBe(6);
-  expect(cache.structs[0].position.line).toBe(2);
+  expect(cache.variables[0].position.range.line).toBe(1);
+  expect(cache.variables[1].position.range.line).toBe(6);
+  expect(cache.structs[0].position.range.line).toBe(2);
 
   expect(cache.structs[0].range).toEqual({
     start: 2,
@@ -82,7 +82,7 @@ test('vitestTest4', async () => {
   expect(cache.variables.length).toBe(1);
   expect(cache.subroutines.length).toBe(1);
 
-  expect(cache.variables[0].position.line).toBe(1);
+  expect(cache.variables[0].position.range.line).toBe(1);
   expect(cache.subroutines[0].range.start).toBe(4);
   expect(cache.subroutines[0].range.end).toBe(6);
 });
@@ -113,9 +113,9 @@ test('vitestTest5', async () => {
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(2);
 
-  expect(cache.variables[0].position.line).toBe(2);
-  expect(cache.procedures[0].position.line).toBe(4);
-  expect(cache.procedures[1].position.line).toBe(8);
+  expect(cache.variables[0].position.range.line).toBe(2);
+  expect(cache.procedures[0].position.range.line).toBe(4);
+  expect(cache.procedures[1].position.range.line).toBe(8);
 
   expect(cache.procedures[0].subItems.length).toBe(0);
   expect(cache.procedures[1].subItems.length).toBe(1);
@@ -271,7 +271,7 @@ test('vitestTest10', async () => {
 
   const baseNameInclude = path.basename(cache.procedures[0].position.path);
   expect(baseNameInclude).toBe(`copy1.rpgle`);
-  expect(cache.procedures[0].position.line).toBe(2);
+  expect(cache.procedures[0].position.range.line).toBe(2);
 });
 
 test('test10_local_fixedcopy', async () => {
@@ -491,7 +491,7 @@ test('subds1', async () => {
 
   const DsChangingNodeRole = cache.find(`DsChangingNodeRole`);
   expect(DsChangingNodeRole.name).toBe(`DsChangingNodeRole`);
-  expect(DsChangingNodeRole.position.line).toBe(2);
+  expect(DsChangingNodeRole.position.range.line).toBe(2);
 
   expect(DsChangingNodeRole.subItems.length).toBe(13);
   expect(DsChangingNodeRole.subItems[12].name).toBe(`Role`);

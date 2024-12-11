@@ -1,10 +1,10 @@
 import { createBlocks } from "./tokens";
-import { IRange, Token } from "./types";
+import { IRange, IRangeWithLine, Token } from "./types";
 
 export default class Statement {
 	private beginBlock = false;
 
-  constructor(public tokens: Token[], public range: IRange, public indent: number = 0) {}
+  constructor(public tokens: Token[], public range: IRangeWithLine, public indent: number = 0) {}
 
 	getTokenByOffset(offset: number) {
 		const blockSearch = (tokens: Token[]): Token|undefined => {

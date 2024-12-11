@@ -244,14 +244,14 @@ test("references_8", async () => {
   const subfa = cache.find(`subfa`);
   expect(subfa.references.length).toBe(2);
   expect(subfa.references[1]).toEqual({
-    offset: { position: 469, end: 474 },
+    offset: { start: 469, end: 474, line: 33 },
     uri: uri
   });
 
   const structYesAlso = cache.find(`structYesAlso`);
   expect(structYesAlso.references.length).toBe(2);
   expect(structYesAlso.references[1]).toEqual({
-    offset: { position: 485, end: 498 },
+    offset: { start: 485, end: 498, line: 34 },
     uri: uri
   });
 
@@ -262,7 +262,7 @@ test("references_8", async () => {
   const qualStructYes = cache.find(`qualStructYes`);
   expect(qualStructYes.references.length).toBe(2);
   expect(qualStructYes.references[1]).toEqual({
-    offset: { position: 516, end: 529 },
+    offset: { start: 516, end: 529, line: 36 },
     uri: uri
   });
 
@@ -271,12 +271,12 @@ test("references_8", async () => {
   expect(qualsubA.references.length).toBe(2);
 
   expect(qualsubA.references[0]).toEqual({
-    offset: { position: 274, end: 282 },
+    offset: { start: 274, end: 282, line: 19 },
     uri: uri
   });
 
   expect(qualsubA.references[1]).toEqual({
-    offset: { position: 530, end: 538 },
+    offset: { start: 530, end: 538, line: 36 },
     uri: uri
   });
 
@@ -286,7 +286,7 @@ test("references_8", async () => {
   const localStructYes = subProc.find(`localStructYes`);
   expect(localStructYes.references.length).toBe(2);
   expect(localStructYes.references[1]).toEqual({
-    offset: { position: 1158, end: 1172 },
+    offset: { start: 1158, end: 1172, line: 69 },
     uri: uri
   });
 
@@ -297,7 +297,7 @@ test("references_8", async () => {
   expect(subfe.name).toBe(`subfe`);
   expect(subfe.references.length).toBe(2);
   expect(subfe.references[1]).toEqual({
-    offset: { position: 1193, end: 1198 },
+    offset: { start: 1193, end: 1198, line: 70 },
     uri: uri
   });
 
@@ -305,17 +305,17 @@ test("references_8", async () => {
   expect(qualDimStructYup.references.length).toBe(4)
 
   expect(qualDimStructYup.references[1]).toEqual({
-    offset: { position: 545, end: 561 },
+    offset: { start: 545, end: 561, line: 38 },
     uri: uri
   });
 
   expect(qualDimStructYup.references[2]).toEqual({
-    offset: { position: 578, end: 594 },
+    offset: { start: 578, end: 594, line: 39 },
     uri: uri
   });
 
   expect(qualDimStructYup.references[3]).toEqual({
-    offset: { position: 625, end: 641 },
+    offset: { start: 625, end: 641, line: 40 },
     uri: uri
   });
 
@@ -324,22 +324,22 @@ test("references_8", async () => {
   expect(boopABC.references.length).toBe(4);
 
   expect(boopABC.references[0]).toEqual({
-    offset: { position: 411, end: 418 },
+    offset: { start: 411, end: 418, line: 27 },
     uri: uri
   });
 
   expect(boopABC.references[1]).toEqual({
-    offset: { position: 565, end: 572 },
+    offset: { start: 565, end: 572, line: 38 },
     uri: uri
   });
 
   expect(boopABC.references[2]).toEqual({
-    offset: { position: 612, end: 619 },
+    offset: { start: 612, end: 619, line: 39 },
     uri: uri
   });
 
   expect(boopABC.references[3]).toEqual({
-    offset: { position: 663, end: 670 },
+    offset: { start: 663, end: 670, line: 40 },
     uri: uri
   });
 });
@@ -384,7 +384,7 @@ test("references_9", async () => {
   const validationResult = procedure.scope.find(`validationResult`);
 
   expect(validationResult.references.length).toEqual(7);
-  expect(validationResult.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `validationResult`)).toBe(true);
+  expect(validationResult.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `validationResult`)).toBe(true);
 });
 
 test('references_10', async () => {
@@ -405,19 +405,19 @@ test('references_10', async () => {
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true});
 
-  const rangeRefs = cache.referencesInRange(uri, {position: 220, end: 260});
+  const rangeRefs = cache.referencesInRange(uri, {start: 220, end: 260});
   expect(rangeRefs.length).toBe(2);
   expect(rangeRefs[0].dec.name).toBe(`x`);
   expect(rangeRefs[1].dec.name).toBe(`y`);
 
   expect(rangeRefs[0].refs).toEqual([
-    { position: 220, end: 221 },
-    { position: 256, end: 257 }
+    { start: 220, end: 221, line: 8 },
+    { start: 256, end: 257, line: 9 }
   ]);
 
   expect(rangeRefs[1].refs).toEqual([
-    { position: 235, end: 236 },
-    { position: 241, end: 242 }
+    { start: 235, end: 236, line: 8 },
+    { start: 241, end: 242, line: 9 }
   ]);
 });
 
@@ -484,10 +484,10 @@ test('references_12_fixed_1', async () => {
   for (const ref of wkInvoice.references) {
     // console.log({
     //   ref,
-    //   text: lines.substring(ref.offset.position, ref.offset.end),
-    //   about: lines.substring(ref.offset.position - 10, ref.offset.end + 10)
+    //   text: lines.substring(ref.offset.start, ref.offset.end),
+    //   about: lines.substring(ref.offset.start - 10, ref.offset.end + 10)
     // });
-    expect(lines.substring(ref.offset.position, ref.offset.end)).to.equal(`wkInvoice`);
+    expect(lines.substring(ref.offset.start, ref.offset.end)).to.equal(`wkInvoice`);
   }
 
   expect(wkInvoice.references.length).to.equal(2);
@@ -689,15 +689,15 @@ test('references_13_fixed_2', async () => {
 
   const TYPEMST_T = cache.find(`TYPEMST_T`);
   expect(TYPEMST_T.references.length).toBe(2);
-  expect(TYPEMST_T.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `TYPEMST_T`)).toBe(true);
+  expect(TYPEMST_T.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `TYPEMST_T`)).toBe(true);
 
   const TYPEMST_Ds = cache.find(`TYPEMST_Ds`);
   expect(TYPEMST_Ds.references.length).toBe(1);
-  expect(TYPEMST_Ds.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `TYPEMST_Ds`)).toBe(true);
+  expect(TYPEMST_Ds.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `TYPEMST_Ds`)).toBe(true);
 
   const TYPEMST_Dim = cache.find(`TYPEMST_Dim`);
   expect(TYPEMST_Dim.references.length).toBe(5);
-  expect(TYPEMST_Dim.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `TYPEMST_Dim`)).toBe(true);
+  expect(TYPEMST_Dim.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `TYPEMST_Dim`)).toBe(true);
 });
 
 test('references_14_fixed_3', async () => {
@@ -798,20 +798,20 @@ test('references_14_fixed_3', async () => {
   // for (const ref of per.references) {
   //   console.log({
   //     ref,
-  //     text: lines.substring(ref.offset.position, ref.offset.end),
-  //     about: lines.substring(ref.offset.position - 10, ref.offset.end + 10)
+  //     text: lines.substring(ref.offset.start, ref.offset.end),
+  //     about: lines.substring(ref.offset.start - 10, ref.offset.end + 10)
   //   })
   // }
 
-  expect(per.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `per`)).toBe(true);
+  expect(per.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `per`)).toBe(true);
 
   const pmyy = cache.find(`pmyy`);
   expect(pmyy.references.length).toBe(2);
-  expect(pmyy.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `pmyy`)).toBe(true);
+  expect(pmyy.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `pmyy`)).toBe(true);
 
   const filedt = cache.find(`filedt`);
   expect(filedt.references.length).toBe(3);
-  expect(filedt.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `filedt`)).toBe(true);
+  expect(filedt.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `filedt`)).toBe(true);
 
   const lr = cache.find(`INLR`);
   expect(lr.references.length).toBe(1);
@@ -890,11 +890,11 @@ test('references_15_fixed_4', async () => {
 
   const EntryParm = cache.find(`EntryParm`)
   expect(EntryParm.references.length).toBe(2);
-  expect(EntryParm.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `EntryParm`)).toBe(true);
+  expect(EntryParm.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `EntryParm`)).toBe(true);
 
   const r_transf = cache.find(`r_transf`);
   expect(r_transf.references.length).toBe(3);
-  expect(r_transf.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `r_transf`)).toBe(true);
+  expect(r_transf.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `r_transf`)).toBe(true);
 
   const r_long_lue = cache.find(`r_long_lue`);
   expect(r_long_lue.references.length).toBe(1);
@@ -995,7 +995,7 @@ test('references_16_fixed_5', async () => {
     `     C                   endif`,
     `      /copy i,##edti#ini`,
     `      *- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*?`,
-    `      *?Compte de position:?lecture de tous les soldes (1 par devise)`,
+    `      *?Compte de start:?lecture de tous les soldes (1 par devise)`,
     `     C                   eval      FSDADP = date7sub1`,
     `     C                   eval      secode = 'S'`,
     `     C                   eval      FSGECO = 1`,
@@ -1103,27 +1103,27 @@ test('references_16_fixed_5', async () => {
 
   const MinEur2 = cache.find(`MinEur2`);
   expect(MinEur2.references.length).toBe(2);
-  expect(MinEur2.references.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `MINEUR2`)).toBe(true);
+  expect(MinEur2.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `MINEUR2`)).toBe(true);
 
   const MinEur = cache.find(`MinEur`);
   expect(MinEur.references.length).toBe(12);
-  expect(MinEur.references.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `MINEUR`)).toBe(true);
+  expect(MinEur.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `MINEUR`)).toBe(true);
 
   const line = cache.find(`line`);
   expect(line.references.length).toBe(4);
-  expect(line.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `line`)).toBe(true);
+  expect(line.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `line`)).toBe(true);
 
   const DadpIn = cache.find(`DadpIn`);
   expect(DadpIn.references.length).toBe(4);
-  expect(DadpIn.references.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `DADPIN`)).toBe(true);
+  expect(DadpIn.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `DADPIN`)).toBe(true);
 
   const mntJtot = cache.find(`mntJtot`);
   expect(mntJtot.references.length).toBe(2);
-  expect(mntJtot.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `mntJtot`)).toBe(true);
+  expect(mntJtot.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `mntJtot`)).toBe(true);
 
   const syde = cache.find(`syde`);
   expect(syde.references.length).toBe(2);
-  expect(syde.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `syde`)).toBe(true);
+  expect(syde.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `syde`)).toBe(true);
 });
 
 test('references_17_fixed_6', async () => {
@@ -1246,7 +1246,7 @@ test('references_17_fixed_6', async () => {
 
   const automat = cache.find(`automat`);
   expect(automat.references.length).toBe(4);
-  expect(automat.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `automat`)).toBe(true);
+  expect(automat.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `automat`)).toBe(true);
 });
 
 test('references_18_fixed_7', async () => {
@@ -1268,7 +1268,7 @@ test('references_18_fixed_7', async () => {
 
   const las = cache.find(`LAS`);
   expect(las.references.length).toBe(3);
-  expect(las.references.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LAS`)).toBe(true);
+  expect(las.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `LAS`)).toBe(true);
 });
 
 test('references_19_fixed_8', async () => {
@@ -1346,11 +1346,11 @@ test('references_19_fixed_8', async () => {
 
   const data = cache.find(`data`);
   expect(data.references.length).toBe(3);
-  expect(data.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `data`)).toBe(true);
+  expect(data.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `data`)).toBe(true);
 
   const sumy = cache.find(`sumy`);
   expect(sumy.references.length).toBe(1);
-  const aroundSumy = lines.substring(sumy.references[0].offset.position - 10, sumy.references[0].offset.end + 10);
+  const aroundSumy = lines.substring(sumy.references[0].offset.start - 10, sumy.references[0].offset.end + 10);
   expect(aroundSumy).toContain(`d   sumy`);
 });
 
@@ -1381,11 +1381,11 @@ test(`references_20`, async () => {
   const rawCopyBook = await readFile(include, 'utf-8');
   const copyRefs = Length_t.references.filter(ref => ref.uri === include);
   expect(copyRefs.length).toBe(2);
-  expect(copyRefs.every(ref => rawCopyBook.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LENGTH_T`)).toBe(true);
+  expect(copyRefs.every(ref => rawCopyBook.substring(ref.offset.start, ref.offset.end).toUpperCase() === `LENGTH_T`)).toBe(true);
 
   const baseRefs = Length_t.references.filter(ref => ref.uri === uri);
   expect(baseRefs.length).toBe(1);
-  expect(baseRefs.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `LENGTH_T`)).toBe(true);
+  expect(baseRefs.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `LENGTH_T`)).toBe(true);
 });
 
 test(`references_21_fixed_exec1`, async () => {
@@ -1416,7 +1416,7 @@ test(`references_21_fixed_exec1`, async () => {
   
   const tlst = cache.find(`tlst`);
   expect(tlst.references.length).toBe(4);
-  expect(tlst.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `tlst`)).toBe(true);
+  expect(tlst.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `tlst`)).toBe(true);
 });
 
 
@@ -1456,7 +1456,7 @@ test(`references_22_long_lines`, async () => {
   const jsonRequest = cache.find(`jsonRequest`);
   const pReq = jsonRequest.scope.find(`pReq`);
   expect(pReq.references.length).toBe(3);
-  expect(pReq.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `pReq`)).toBe(true);
+  expect(pReq.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `pReq`)).toBe(true);
 });
 
 // Test case is from noxDb
@@ -1483,7 +1483,7 @@ test('references_23_before_spaces', async () => {
 
   const id = cache.find(`id`);
   expect(id.references.length).toBe(2);
-  expect(id.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `id`)).toBe(true);
+  expect(id.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `id`)).toBe(true);
 });
 
 // Test case is from rpgle-repl
@@ -1574,7 +1574,7 @@ test('references_24_comment_in_statement', async () => {
   const freeFormatEvaluationFound = cache.find(`freeFormatEvaluationFound`);
   const code = freeFormatEvaluationFound.scope.find(`code`);
   expect(code.references.length).toBe(25);
-  expect(code.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `code`)).toBe(true);
+  expect(code.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `code`)).toBe(true);
 });
 
 // Test case is from httpapi
@@ -1596,7 +1596,7 @@ test('references_25_fixed_string', async () => {
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
   const http = cache.find(`http`);
   expect(http.references.length).toBe(1);
-  expect(http.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `http`)).toBe(true);
+  expect(http.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `http`)).toBe(true);
 });
 
 test('references_26_fixed_tag', async () => {
@@ -1621,7 +1621,7 @@ test('references_26_fixed_tag', async () => {
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
   const updok = cache.find(`UPDKO`);
   expect(updok.references.length).toBe(2);
-  expect(updok.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `UPDKO`)).toBe(true);
+  expect(updok.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `UPDKO`)).toBe(true);
 });
 
 // This test case is from bbs400
@@ -1812,7 +1812,7 @@ test('references_27_fixed_reference', async () => {
 
   const wCfgKey = cache.find(`wCfgKey`);
   const baseRefs = wCfgKey.references.filter(r => r.uri === uri);
-  expect(baseRefs.every(ref => lines.substring(ref.offset.position, ref.offset.end).toUpperCase() === `WCFGKEY`)).toBe(true);
+  expect(baseRefs.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `WCFGKEY`)).toBe(true);
   expect(baseRefs.length).toBe(21);
 
   const uniqueUris = wCfgKey.references.map(r => r.uri).filter((value, index, self) => self.indexOf(value) === index);
@@ -1829,7 +1829,7 @@ test('references_27_fixed_reference', async () => {
   }
 
   for (const ref of wCfgKey.references) {
-    const offsetContent = cachedFiles[ref.uri].substring(ref.offset.position, ref.offset.end);
+    const offsetContent = cachedFiles[ref.uri].substring(ref.offset.start, ref.offset.end);
 
     expect(offsetContent.toUpperCase()).toBe(`WCFGKEY`);
   }

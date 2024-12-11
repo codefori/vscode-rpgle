@@ -176,7 +176,7 @@ test("likeds1", async () => {
 
   const MyOtherStruct = cache.find(`MyOtherStruct`);
   expect(MyOtherStruct.name).toBe(`MyOtherStruct`);
-  expect(MyOtherStruct.position.line).toBe(7);
+  expect(MyOtherStruct.position.range.line).toBe(7);
   expect(MyOtherStruct.subItems.length).toBe(2);
 });
 
@@ -208,12 +208,12 @@ test("likeds2", async () => {
 
   const myProc = cache.find(`myprocedure`);
   expect(myProc.name).toBe(`myprocedure`);
-  expect(myProc.position.line).toBe(9);
+  expect(myProc.position.range.line).toBe(9);
   expect(myProc.subItems.length).toBe(1);
 
   const parmInputDs = myProc.subItems[0];
   expect(parmInputDs.name).toBe(`inputDS`);
-  expect(parmInputDs.position.line).toBe(11);
+  expect(parmInputDs.position.range.line).toBe(11);
   expect(parmInputDs.subItems.length).toBe(2);
 });
 

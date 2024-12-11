@@ -1,14 +1,16 @@
 
-
 export interface IRange {
-  line: number;
   start: number;
   end: number;
+}
+
+export interface IRangeWithLine extends IRange {
+  line: number;
 }
 
 export interface Token {
   value?: string;
   block?: Token[];
   type: string;
-  range: IRange;
+  range: IRangeWithLine;
 }

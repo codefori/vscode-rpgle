@@ -33,17 +33,19 @@ function calculateToken(lineNumber, startingPos, value, type) {
 }
 
 /**
- * @param {string} line 
+ * @param {number} lineNumber
+ * @param {number} lineIndex
+ * @param {string} content
  */
-export function parseFLine(line) {
-  const name = line.substr(6, 10).trim(); //File name
-  // const type = line.substr(16, 1).toUpperCase(); // I, U, O, C
-  // const field = line.substr(33, 1).toUpperCase(); //KEYED
-  // const device = line.substr(35, 7).toUpperCase().trim(); //device: DISK, WORKSTN
-  const keywords = line.substr(43).trim();
+export function parseFLine(lineNumber, lineIndex, content) {
+  const name = content.substr(6, 10); //File name
+  // const type = content.substr(16, 1).toUpperCase(); // I, U, O, C
+  // const field = content.substr(33, 1).toUpperCase(); //KEYED
+  // const device = content.substr(35, 7).toUpperCase().trim(); //device: DISK, WORKSTN
+  const keywords = content.substr(43);
 
   return {
-    name, 
+    name: calculateToken(lineNumber, lineIndex+6, name),
     keywords: Parser.expandKeywords(Parser.getTokens(keywords))
   };
 }

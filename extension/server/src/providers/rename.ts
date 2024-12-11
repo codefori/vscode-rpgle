@@ -23,11 +23,11 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
           return;
         }
 
-        const currentSelectedRef = def?.references.find(r => document.positionAt(r.offset.position).line === currentPos.line);
+        const currentSelectedRef = def?.references.find(r => document.positionAt(r.offset.start).line === currentPos.line);
 
         if (currentSelectedRef) {
           return Range.create(
-            document.positionAt(currentSelectedRef.offset.position),
+            document.positionAt(currentSelectedRef.offset.start),
             document.positionAt(currentSelectedRef.offset.end)
           )
         }
@@ -60,7 +60,7 @@ export async function renameRequestProvider(params: RenameParams): Promise<Works
           edits[uri] = def.references.filter(ref => ref.uri === uri).map(ref => ({
             newText: params.newName,
             range: Range.create(
-              document.positionAt(ref.offset.position),
+              document.positionAt(ref.offset.start),
               document.positionAt(ref.offset.end)
             )
           }));

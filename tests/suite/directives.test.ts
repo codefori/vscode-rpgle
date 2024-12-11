@@ -168,7 +168,7 @@ test('eof1', async () => {
 
   const uppercase = cache.find(`UPPERCASE`);
   expect(uppercase.name).toBe(`UPPERCASE`);
-  expect(uppercase.position.line).toBe(0);
+  expect(uppercase.position.range.line).toBe(0);
   expect(uppercase.subItems.length).toBe(2);
 })
 
@@ -190,7 +190,7 @@ test('eof2', async () => {
 
   const uppercase = cache.find(`UPPERCASE`);
   expect(uppercase.name).toBe(`UPPERCASE`);
-  expect(uppercase.position.line).toBe(0);
+  expect(uppercase.position.range.line).toBe(0);
   expect(uppercase.subItems.length).toBe(2);
 })
 
@@ -258,7 +258,7 @@ test('eof4', async () => {
 
   const baseNameInclude = path.basename(uppercase.position.path);
   expect(baseNameInclude).toBe(`eof4.rpgle`);
-  expect(uppercase.position.line).toBe(0);
+  expect(uppercase.position.range.line).toBe(0);
 })
 
 
@@ -310,11 +310,11 @@ test('incorrectEnd1', async () => {
     PrettyComments: true
   }, cache);
 
-  expect(errors[0]).toEqual({
-    offset: { position: 45, end: 53 }, type: `UnexpectedEnd`
+  expect(errors[0]).toMatchObject({
+    offset: { start: 45, end: 53 }, type: `UnexpectedEnd`
   });
 
-  expect(lines.substring(errors[0].offset.position, errors[0].offset.end)).toBe(`End-Proc`);
+  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`End-Proc`);
 })
 
 test('incorrectEnd2', async () => {
@@ -332,11 +332,11 @@ test('incorrectEnd2', async () => {
     PrettyComments: true
   }, cache);
 
-  expect(errors[0]).toEqual({
-    offset: { position: 48, end: 53 }, type: `UnexpectedEnd`
+  expect(errors[0]).toMatchObject({
+    offset: { start: 48, end: 53 }, type: `UnexpectedEnd`
   });
 
-  expect(lines.substring(errors[0].offset.position, errors[0].offset.end)).toBe(`endsr`);
+  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`endsr`);
 })
 
 test('incorrectEnd3', async () => {
@@ -354,11 +354,11 @@ test('incorrectEnd3', async () => {
     PrettyComments: true
   }, cache);
 
-  expect(errors[0]).toEqual({
-    offset: { position: 44, end: 52 }, type: `UnexpectedEnd`
+  expect(errors[0]).toMatchObject({
+    offset: { start: 44, end: 52 }, type: `UnexpectedEnd`
   });
 
-  expect(lines.substring(errors[0].offset.position, errors[0].offset.end)).toBe(`end-proc`);
+  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`end-proc`);
 })
 
 test('incorrectEnd4', async () => {
@@ -383,8 +383,8 @@ test('incorrectEnd4', async () => {
     PrettyComments: true
   }, cache);
 
-  expect(errors[0]).toEqual({
-    offset: { position: 187, end: 195 }, type: `UnexpectedEnd`
+  expect(errors[0]).toMatchObject({
+    offset: { start: 187, end: 195 }, type: `UnexpectedEnd`
   });
 })
 
@@ -483,20 +483,20 @@ test('variable_case1', async () => {
 
   expect(errors.length).toBe(3);
 
-  expect(errors[0]).toEqual({
-    offset: { position: 86, end: 100 },
+  expect(errors[0]).toMatchObject({
+    offset: { start: 86, end: 100 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
 
-  expect(errors[1]).toEqual({
-    offset: { position: 174, end: 188 },
+  expect(errors[1]).toMatchObject({
+    offset: { start: 174, end: 188 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
 
-  expect(errors[2]).toEqual({
-    offset: { position: 218, end: 232 },
+  expect(errors[2]).toMatchObject({
+    offset: { start: 218, end: 232 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
@@ -544,14 +544,14 @@ test('uppercase1', async () => {
 
   expect(errors.length).toBe(2);
 
-  expect(errors[0]).toEqual({
-    offset: { position: 31, end: 36 },
+  expect(errors[0]).toMatchObject({
+    offset: { start: 31, end: 36 },
     type: `DirectiveCase`,
     newValue: `/COPY`
   });
 
-  expect(errors[1]).toEqual({
-    offset: { position: 59, end: 64 },
+  expect(errors[1]).toMatchObject({
+    offset: { start: 59, end: 64 },
     type: `DirectiveCase`,
     newValue: `/COPY`
   });
@@ -577,14 +577,14 @@ test('lowercase1', async () => {
 
   expect(errors.length).toBe(2);
 
-  expect(errors[0]).toEqual({
-    offset: { position: 59, end: 64 },
+  expect(errors[0]).toMatchObject({
+    offset: { start: 59, end: 64 },
     type: `DirectiveCase`,
     newValue: `/copy`
   });
 
-  expect(errors[1]).toEqual({
-    offset: { position: 87, end: 92 },
+  expect(errors[1]).toMatchObject({
+    offset: { start: 87, end: 92 },
     type: `DirectiveCase`,
     newValue: `/copy`
   });
