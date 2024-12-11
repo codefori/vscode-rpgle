@@ -59,7 +59,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 				}
 
 				if (procedure.position && currentPath !== procedure.position.path) {
-					markdown += `\n\n*@file* \`${procedure.position.path}:${procedure.position.line+1}\``;
+					markdown += `\n\n*@file* \`${procedure.position.path}:${procedure.position.range.line+1}\``;
 				}
 				
 				return {
@@ -70,7 +70,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 				};
 			} else {
 				// If they're inside of a procedure, let's get the stuff from there too
-				const currentProcedure = doc.procedures.find(proc => currentLine >= proc.range.start && currentLine <= proc.range.end);
+				const currentProcedure = doc.procedures.find(proc => proc.range.start && proc.range.end && currentLine >= proc.range.start && currentLine <= proc.range.end);
 				let theVariable;
 
 				if (currentProcedure && currentProcedure.scope) {
@@ -88,7 +88,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 					let markdown = `\`${theVariable.name} ${prettyKeywords(theVariable.keyword)}\` (${refs} reference${refs === 1 ? `` : `s`})`;
 
 					if (theVariable.position && currentPath !== theVariable.position.path) {
-						markdown += `\n\n*@file* \`${theVariable.position.path}:${theVariable.position.line+1}\``;
+						markdown += `\n\n*@file* \`${theVariable.position.path}:${theVariable.position.range.line+1}\``;
 					}
 
 					return {

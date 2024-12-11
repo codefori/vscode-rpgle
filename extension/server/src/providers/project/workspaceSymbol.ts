@@ -55,9 +55,9 @@ export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): 
 										SymbolKind.Function,
 										uri,
 										Range.create(
-											proc.position.line,
+											proc.position.range.line,
 											0,
-											proc.position.line,
+											proc.position.range.line,
 											0
 										)
 									)

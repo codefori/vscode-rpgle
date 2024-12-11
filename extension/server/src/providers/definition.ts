@@ -31,9 +31,9 @@ export default async function definitionProvider(handler: DefinitionParams): Pro
 					return Location.create(
 						def.position.path,
 						Range.create(
-							def.position.line,
+							def.position.range.line,
 							0,
-							def.position.line,
+							def.position.range.line,
 							0
 						)
 					);
@@ -49,9 +49,9 @@ export default async function definitionProvider(handler: DefinitionParams): Pro
 						return Location.create(
 							def.position.path,
 							Range.create(
-								def.position.line,
+								def.position.range.line,
 								0,
-								def.position.line,
+								def.position.range.line,
 								0
 							)
 						);

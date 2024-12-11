@@ -26,9 +26,9 @@ export default async function implementationProvider(params: ImplementationParam
 								return Location.create(
 									proc.position.path,
 									Range.create(
-										proc.position.line,
+										proc.position.range.line,
 										0,
-										proc.position.line,
+										proc.position.range.line,
 										0
 									)
 								);
