@@ -13,6 +13,20 @@ const TEST_INCLUDE_DIR = process.env.INCLUDE_DIR || path.join(__dirname, `..`, `
 
 export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 	const parser = new Parser();
+	let ignore: string[] = [];
+
+	if (projectRoot === TEST_INCLUDE_DIR) {
+		ignore.push("sources/**")
+	}
+
+	let globSettings = {
+		cwd: projectRoot,
+		absolute: true,
+		ignore,
+		nocase: true,
+	}
+
+	const globCache = glob.sync(`**/*.*rpg*`, globSettings);
 
 	parser.setIncludeFileFetch(async (baseFile: string, includeFile: string) => {
 		if (includeFile.startsWith(`'`) && includeFile.endsWith(`'`)) {
@@ -23,12 +37,9 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 			includeFile = includeFile.split(`,`).join(`/`) + `.*rpgl*`;
 		}
 
+
 		const globPath = path.join(`**`, includeFile);
-		const files: string[] = glob.sync(globPath, {
-			cwd: projectRoot,
-			absolute: true,
-			nocase: true,
-		});
+		const files: string[] = glob.sync(globPath, {cache: globCache, ...globSettings});
 
 		if (files.length >= 1) {
 			const file = files.find(f => f.toLowerCase().endsWith(`rpgleinc`)) || files[0];
