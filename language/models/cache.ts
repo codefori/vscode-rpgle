@@ -211,8 +211,7 @@ export default class Cache {
   }
 
   static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
-    const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
-
+    const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`, `tags`];
     for (const prop of props) {
       const list = scope[prop] as unknown as Declaration[];
       for (const def of list) {
