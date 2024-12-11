@@ -179,7 +179,8 @@ async function binderLookup(connection: IBMi, libraryList: string[], filter: {sp
     `	on c.ENTRY = b.PROGRAM_NAME`,
     `where ${symbolClause}`,
     `  (c.BINDING_DIRECTORY_LIBRARY in (${libraryInList})) and`,
-    `  ((c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY) or (c.ENTRY_LIBRARY = '*LIBL' and b.PROGRAM_LIBRARY in (${libraryInList})))`,
+    `  ((c.ENTRY_LIBRARY = b.PROGRAM_LIBRARY) or (c.ENTRY_LIBRARY = '*LIBL' and b.PROGRAM_LIBRARY in (${libraryInList}))) and`,
+    `  (a.SOURCE_FILE_MEMBER is not null)`,
     // `  (${streamFileSupported ? `a.SOURCE_STREAM_FILE_PATH is not null or` : ``} a.SOURCE_FILE_MEMBER is not null)`
   ].join(` `);
 
