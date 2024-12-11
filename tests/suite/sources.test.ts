@@ -68,7 +68,7 @@ test("Generic reference tests", { timeout }, async () => {
       }
 
       const checkScope = async (scope: Cache) => {
-        for (const def of [...scope.variables, ...scope.subroutines, ...scope.procedures, ...scope.constants, ...scope.structs, ...scope.files, ...scope.tags]) {
+        for (const def of [...scope.variables, ...scope.subroutines, ...scope.procedures, ...scope.constants, ...scope.structs, ...scope.files, ...scope.tags, ...scope.sqlReferences]) {
           await checkReferences(def);
 
           if (def.subItems && def.subItems.length > 0) {
