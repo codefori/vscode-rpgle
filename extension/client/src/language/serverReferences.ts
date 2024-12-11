@@ -23,7 +23,7 @@ export function getServerSymbolProvider() {
 
         let member: IBMiMember|undefined;
 
-        if (editor) {
+        if (editor && documentIsValid(editor.document)) {
           const uriPath = editor.document.uri.path;
           member = connection.parserMemberPath(uriPath);
         }
