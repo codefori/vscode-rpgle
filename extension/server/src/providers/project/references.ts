@@ -5,22 +5,11 @@ import { calculateOffset } from '../linter';
 import { documents, parser } from '..';
 import { getTextDoc, isEnabled } from '.';
 
-export async function findAllLocalReferences(def: Declaration): Promise<Location[]> {
+export async function findAllProjectReferences(def: Declaration): Promise<Location[]> {
 	let locations: Location[] = [];
 
 	if (isEnabled) {
 		const parsedFiles = Object.keys(parser.parsedCache);
-	
-		const document = documents.get(def.position.path);
-	
-		if (document) {
-			locations.push(
-				...def.references.map(ref => Location.create(
-					def.position.path,
-					calculateOffset(document, ref)
-				))
-			);
-		}
 		
 		if (def.keyword[`EXPORT`]) {
 			// If we are looking for references to an export function

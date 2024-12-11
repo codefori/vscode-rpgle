@@ -4,7 +4,7 @@ import Linter from '../../../../language/linter';
 import { calculateOffset } from './linter';
 
 import * as Project from "./project";
-import { findAllLocalReferences as getAllProcedureReferences } from './project/references';
+import { findAllProjectReferences as getAllProcedureReferences } from './project/references';
 import Cache from '../../../../language/models/cache';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]|undefined> {
