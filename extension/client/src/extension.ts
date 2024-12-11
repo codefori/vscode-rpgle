@@ -19,6 +19,7 @@ import {
 
 import { projectFilesGlob } from './configuration';
 import buildRequestHandlers from './requests';
+import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
 
 let client: LanguageClient;
 
@@ -74,6 +75,9 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
+	
+	context.subscriptions.push(getServerSymbolProvider());
+	context.subscriptions.push(getServerImplementationProvider());
 
 	// context.subscriptions.push(...initBuilder(client));
 

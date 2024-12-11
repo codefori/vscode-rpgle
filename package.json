@@ -28,7 +28,8 @@
 		"Formatters"
 	],
 	"activationEvents": [
-		"onLanguage:rpgle"
+		"onLanguage:rpgle",
+		"onCommand:workbench.action.showAllSymbols"
 	],
 	"main": "./out/extension",
 	"contributes": {
