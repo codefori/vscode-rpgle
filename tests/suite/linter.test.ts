@@ -393,19 +393,19 @@ test('linter6_lf', async () => {
 
   expect(errors.length).to.equal(3);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 95, end: 107 },
     type: 'IncorrectVariableCase',
     newValue: 'Myotherthing'
   });
 
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 44, end: 59 },
     type: 'StringLiteralDupe',
     newValue: undefined
   });
 
-  expect(errors[2]).to.deep.equal({
+  expect(errors[2]).toMatchObject({
     offset: { start: 68, end: 83 },
     type: 'StringLiteralDupe',
     newValue: undefined
@@ -432,19 +432,19 @@ test('linter6_crlf', async () => {
 
   expect(errors.length).to.equal(3);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 101, end: 113 },
     type: 'IncorrectVariableCase',
     newValue: 'Myotherthing'
   });
 
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 48, end: 63 },
     type: 'StringLiteralDupe',
     newValue: undefined
   });
 
-  expect(errors[2]).to.deep.equal({
+  expect(errors[2]).toMatchObject({
     offset: { start: 73, end: 88 },
     type: 'StringLiteralDupe',
     newValue: undefined
@@ -484,7 +484,7 @@ test('linter7_casing1', async () => {
 
   expect(errors.length).to.equal(1);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 141, end: 147 },
     type: 'SpecificCasing',
     newValue: 'SELECT'
@@ -521,7 +521,7 @@ test("linter7_casing2", async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 8, end: 15 },
     type: `SpecificCasing`,
     newValue: `Ctl-OPT`
@@ -558,7 +558,7 @@ test("linter7_casing3", async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 33, end: 38 },
     type: `SpecificCasing`,
     newValue: `DCL-S`
@@ -590,7 +590,7 @@ test("linter7_casing4", async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 164, end: 169 },
     type: `SpecificCasing`,
     newValue: `%trim`
@@ -808,13 +808,13 @@ test('linter7_casing11', async () => {
 
   expect(errors.length).to.equal(2);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 121, end: 127 },
     type: 'IncorrectVariableCase',
     newValue: 'sEmpNo'
   });
 
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 179, end: 189 },
     type: 'IncorrectVariableCase',
     newValue: 'sFirstName'
@@ -881,7 +881,7 @@ test('linter8', async () => {
   }, cache);
 
   expect(errors.length).to.equal(1);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 236, end: 245 },
     type: 'RequiresParameter'
   });
@@ -955,19 +955,19 @@ test('linter9', async () => {
 
   expect(errors.length).to.equal(3);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 194, end: 202 },
     type: 'IncorrectVariableCase',
     newValue: 'localVar'
   });
 
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 217, end: 228 },
     type: 'IncorrectVariableCase',
     newValue: 'MyVariable2'
   });
 
-  expect(errors[2]).to.deep.equal({
+  expect(errors[2]).toMatchObject({
     offset: { start: 231, end: 239 },
     type: 'IncorrectVariableCase',
     newValue: 'localVar'
@@ -1003,12 +1003,12 @@ test('linter10', async () => {
 
   expect(errors.length).to.equal(2);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     type: 'NoCTDATA',
     offset: { start: 51, end: 89 }
   });
 
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 222, end: 230 },
     type: 'NoCTDATA'
   });
@@ -1034,13 +1034,13 @@ test('linter11', async () => {
 
   expect(errors.length).to.equal(2);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 73, end: 88 },
     type: 'StringLiteralDupe',
     newValue: 'HELLO'
   });
 
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 97, end: 112 },
     type: 'StringLiteralDupe',
     newValue: 'HELLO'
@@ -1137,19 +1137,19 @@ test('linter13_commentIndent', async () => {
 
   expect(indentErrors.length).to.equal(3);
 
-  expect(indentErrors[0]).to.deep.equal({
+  expect(indentErrors[0]).toMatchObject({
     currentIndent: 2,
     expectedIndent: 0,
     line: 9
   });
 
-  expect(indentErrors[1]).to.deep.equal({
+  expect(indentErrors[1]).toMatchObject({
     currentIndent: 0,
     expectedIndent: 2,
     line: 15
   });
 
-  expect(indentErrors[2]).to.deep.equal({
+  expect(indentErrors[2]).toMatchObject({
     currentIndent: 6,
     expectedIndent: 2,
     line: 20
@@ -1211,13 +1211,13 @@ test('linter15', async () => {
 
   expect(errors.length).to.equal(2);
 
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 36, end: 38 },
     type: 'PrettyComments',
     newValue: '// '
   });
 
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 207, end: 209 },
     type: 'PrettyComments',
     newValue: '// '
@@ -1246,15 +1246,15 @@ test('linter16', async () => {
   }, cache);
 
   expect(errors.length).to.equal(3);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     type: `NoGlobalSubroutines`,
     offset: { start: 36, end: 54 }
   });
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 76, end: 81 },
     type: `NoGlobalSubroutines`
   });
-  expect(errors[2]).to.deep.equal({
+  expect(errors[2]).toMatchObject({
     offset: { start: 128, end: 133 },
     type: `NoGlobalSubroutines`
   });
@@ -1284,19 +1284,19 @@ test('linter16_with_leavesr', async () => {
   }, cache);
 
   expect(errors.length).to.equal(4);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     type: `NoGlobalSubroutines`,
     offset: { start: 71, end: 89 }
   });
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 111, end: 116 },
     type: `NoGlobalSubroutines`
   });
-  expect(errors[2]).to.deep.equal({
+  expect(errors[2]).toMatchObject({
     type: `NoGlobalSubroutines`,
     offset: { start: 156, end: 163 }
   });
-  expect(errors[3]).to.deep.equal({
+  expect(errors[3]).toMatchObject({
     offset: { start: 205, end: 210 },
     type: `NoGlobalSubroutines`
   });
@@ -1327,7 +1327,7 @@ test('linter17', async () => {
   }, cache);
 
   expect(errors.length).to.equal(1);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     type: `NoLocalSubroutines`, offset: { start: 119, end: 138 }
   });
 });
@@ -1353,11 +1353,11 @@ test('linter18', async () => {
   }, cache);
 
   expect(errors.length).to.equal(2);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     offset: { start: 123, end: 134 },
     type: `NoGlobalsInProcedures`
   });
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     offset: { start: 164, end: 175 },
     type: `NoGlobalsInProcedures`
   });
@@ -1444,37 +1444,37 @@ test('linter19', async () => {
   }, cache);
 
   expect(errors.length).to.equal(11);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 66, end: 86 }
   });
-  expect(errors[1]).to.deep.equal({
+  expect(errors[1]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 1089, end: 1104 } 
   });
-  expect(errors[2]).to.deep.equal({
+  expect(errors[2]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 160, end: 176 } 
   });
-  expect(errors[3]).to.deep.equal({
+  expect(errors[3]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 139, end: 154 }
   });
-  expect(errors[4]).to.deep.equal({
+  expect(errors[4]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 337, end: 354 }
   });
-  expect(errors[5]).to.deep.equal({
+  expect(errors[5]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 302, end: 331 }
   });
-  expect(errors[6]).to.deep.equal({
+  expect(errors[6]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 539, end: 566 }
   });
-  expect(errors[7]).to.deep.equal({
+  expect(errors[7]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 735, end: 749 }
   });
-  expect(errors[8]).to.deep.equal({
+  expect(errors[8]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 705, end: 725 }
   });
-  expect(errors[9]).to.deep.equal({
+  expect(errors[9]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 893, end: 910 }
   });
-  expect(errors[10]).to.deep.equal({
+  expect(errors[10]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 849, end: 883 }
   });
 });
@@ -1537,7 +1537,7 @@ test('linter21', async () => {
   }, cache);
 
   expect(errors.length).to.equal(1);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     type: `NoUnreferenced`, offset: { start: 257, end: 270 }
   });
 });
@@ -1566,7 +1566,7 @@ test('linter22', async () => {
   }, cache);
 
   expect(errors.length).to.equal(1);
-  expect(errors[0]).to.deep.equal({
+  expect(errors[0]).toMatchObject({
     type: `PrototypeCheck`, offset: { start: 8, end: 27 }
   });
 });
@@ -1675,7 +1675,7 @@ test("linter24", async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: `NoExternalTo`, offset: { start: 95, end: 132 }
   });
 
@@ -1744,13 +1744,13 @@ test("linter25", async () => {
 
   expect(errors.length).toBe(2);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: `NoExternalTo`, offset: { start: 163, end: 200 }
   });
 
   expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`Dcl-PR GetProfile  ExtPgm('QSYGETPH')`);
 
-  expect(errors[1]).toEqual({
+  expect(errors[1]).toMatchObject({
     type: `NoExternalTo`, offset: { start: 506, end: 544 }
   });
 
@@ -1802,7 +1802,7 @@ test("linter27", async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: `NoExecuteImmediate`, offset: { start: 105, end: 148 }
   });
 });
@@ -1825,11 +1825,11 @@ test("linter28", async () => {
 
   expect(errors.length).toBe(2);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 26, end: 38 }, type: `NoExtProgramVariable`
   });
 
-  expect(errors[1]).toEqual({
+  expect(errors[1]).toMatchObject({
     offset: { start: 81, end: 93 }, type: `NoExtProgramVariable`
   });
 });
@@ -1895,7 +1895,7 @@ test("linter30", async () => {
 
   expect(errors.length).toBe(1);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 39, end: 49 },
     type: `IncludeMustBeRelative`,
     newValue: undefined
@@ -1961,7 +1961,7 @@ test("linter31_b", async () => {
 
   expect(errors.length).toBe(1);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 39, end: 50 },
     type: `IncludeMustBeRelative`,
     newValue: `'rpgle/copy1.rpgle'`
@@ -2027,7 +2027,7 @@ test("linter32_b", async () => {
 
   expect(errors.length).toBe(1);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 39, end: 52 },
     type: `IncludeMustBeRelative`,
     newValue: `'rpgle/copy1.rpgle'`
@@ -2061,7 +2061,7 @@ test("linter33", async () => {
 
   expect(errors.length).toBe(1);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 39, end: 59 }, type: `IncludeMustBeRelative`
   });
 });
@@ -2094,7 +2094,7 @@ test("linter34", async () => {
 
   expect(errors.length).toBe(1);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 183, end: 190 },
     type: `SQLHostVarCheck`,
     newValue: `:Deptnum`
@@ -2185,7 +2185,7 @@ test("linter37", async () => {
 
   expect(errors.length).toBe(1);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 123, end: 129 },
     type: `UselessOperationCheck`
   });
@@ -2214,7 +2214,7 @@ test("linter39", async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: `RequiresProcedureDescription`,
     offset: { start: 59, end: 84 }
   });
@@ -2272,19 +2272,19 @@ test("linter41", async () => {
 
   expect(errors.length).toEqual(3);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 52, end: 54 },
     type: `RequireBlankSpecial`,
     newValue: `*BLANK`
   });
 
-  expect(errors[1]).toEqual({
+  expect(errors[1]).toMatchObject({
     offset: { start: 39, end: 44 },
     type: `StringLiteralDupe`,
     newValue: undefined
   });
 
-  expect(errors[2]).toEqual({
+  expect(errors[2]).toMatchObject({
     offset: { start: 62, end: 67 },
     type: `StringLiteralDupe`,
     newValue: undefined
@@ -2322,7 +2322,7 @@ test("linter42", async () => {
   }, cache);
 
   expect(errors.length).toEqual(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: `RequireOtherBlock`, offset: { start: 339, end: 344 }
   });
 });
@@ -2402,10 +2402,10 @@ test("linter44", async () => {
   }, cache);
 
   expect(errors.length).toBe(2);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: `RequireOtherBlock`, offset: { start: 552, end: 557 }
   });
-  expect(errors[1]).toEqual({
+  expect(errors[1]).toMatchObject({
     type: `RequireOtherBlock`, offset: { start: 561, end: 566 }
   });
 });
@@ -2499,13 +2499,13 @@ test("linter40_keywordrefs", async () => {
   const RANDOMLEN = cache.find(`RANDOMLEN`);
 
   expect(RANDOMLEN.references.length).toBe(2);
-  expect(RANDOMLEN.references[1]).toEqual({
+  expect(RANDOMLEN.references[1]).toMatchObject({
     offset: { start: 64, end: 73, line: 2 },
     uri: uri,
   });
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     offset: { start: 64, end: 73 },
     type: `IncorrectVariableCase`,
     newValue: `RANDOMLEN`
@@ -2714,7 +2714,7 @@ test("issue_240", async () => {
 
   expect(errors.length).toBe(1);
 
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: `NoExternalTo`,
     offset: {
       start: 344,
@@ -2939,7 +2939,7 @@ test('on_excp_2', async () => {
   }, cache);
   
   expect(indentErrors.length).toBe(1);
-  expect(indentErrors[0]).toEqual({
+  expect(indentErrors[0]).toMatchObject({
     line: 3,
     expectedIndent: 2,
     currentIndent: 0
@@ -2970,7 +2970,7 @@ test('sqlRunner1_1', async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: 'SQLRunner',
     offset: { start: 7, end: 74 },
     newValue: 'EXEC SQL\n  DECLARE CUSCUR CURSOR FOR\n    SELECT CUSNO FROM CUSTOMER'
@@ -3000,7 +3000,7 @@ test('sqlRunner1_b', async () => {
   }, cache);
 
   expect(errors.length).toBe(1);
-  expect(errors[0]).toEqual({
+  expect(errors[0]).toMatchObject({
     type: 'SQLRunner',
     offset: { start: 7, end: 72 },
     newValue: 'EXEC SQL DECLARE CUSCUR CURSOR FOR\n    SELECT CUSNO FROM CUSTOMER'
