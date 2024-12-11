@@ -1009,7 +1009,7 @@ export default class Linter {
             callLoc = (callLoc.startsWith(`'`) && callLoc.endsWith(`'`) ? callLoc.substring(1, callLoc.length - 1) : callLoc);
 
             if (rules.NoExternalTo.includes(callLoc)) {
-              const possibleStatement = doc.getStatementByLine(localDef.position.line);
+              const possibleStatement = doc.getStatementByLine(localDef.position.range.line);
               if (possibleStatement) {
                 errors.push({
                   type: `NoExternalTo`,
@@ -1032,7 +1032,7 @@ export default class Linter {
           .forEach(def => {
             if (def.references.length <= 1) {
               // Add an error to def
-              const possibleStatement = doc.getStatementByLine(def.position.line);
+              const possibleStatement = doc.getStatementByLine(def.position.range.line);
               if (possibleStatement) {
                 errors.push({
                   type: `NoUnreferenced`,
@@ -1047,7 +1047,7 @@ export default class Linter {
           .forEach(def => {
             if (def.references.length <= 1) {
               // Add an error to def
-              const possibleStatement = doc.getStatementByLine(def.position.line);
+              const possibleStatement = doc.getStatementByLine(def.position.range.line);
               if (possibleStatement) {
                 errors.push({
                   type: `NoUnreferenced`,
@@ -1063,7 +1063,7 @@ export default class Linter {
             if (!proc.keyword[`EXPORT`]) {
               if (proc.references.length <= 1) {
                 // Add an error to proc
-                const possibleStatement = doc.getStatementByLine(proc.position.line);
+                const possibleStatement = doc.getStatementByLine(proc.position.range.line);
                 if (possibleStatement) {
                   errors.push({
                     type: `NoUnreferenced`,
@@ -1075,7 +1075,7 @@ export default class Linter {
               if (!proc.keyword[`EXTPGM`] && !proc.keyword[`EXTPROC`]) {
                 proc.subItems.forEach(parm => {
                   if (parm.references.length <= 1) {
-                    const possibleStatement = doc.getStatementByLine(parm.position.line);
+                    const possibleStatement = doc.getStatementByLine(parm.position.range.line);
                     if (possibleStatement) {
                       errors.push({
                         type: `NoUnreferenced`,
@@ -1099,7 +1099,7 @@ export default class Linter {
               struct.subItems.forEach(subf => {
                 if (subf.references.length <= 1) {
                   // Add an error to subf
-                  const possibleStatement = doc.getStatementByLine(subf.position.line);
+                  const possibleStatement = doc.getStatementByLine(subf.position.range.line);
                   if (possibleStatement) {
                     errors.push({
                       type: `NoUnreferenced`,
@@ -1110,7 +1110,7 @@ export default class Linter {
               });
 
               if (subFieldIsUsed === false) {
-                const possibleStatement = doc.getStatementByLine(struct.position.line);
+                const possibleStatement = doc.getStatementByLine(struct.position.range.line);
                 if (possibleStatement) {
                   errors.push({
                     type: `NoUnreferenced`,

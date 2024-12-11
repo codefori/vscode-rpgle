@@ -1866,7 +1866,7 @@ test("linter29", async () => {
 
   const baseNameInclude = path.basename(cache.procedures[0].position.path);
   expect(baseNameInclude).toBe("copy1.rpgle");
-  expect(cache.procedures[0].position.line).toBe(2);
+  expect(cache.procedures[0].position.range.line).toBe(2);
 
   expect(errors.length).toBe(0);
 });
@@ -2472,13 +2472,13 @@ test("issue_170a", async () => {
   const SBM_DS = cache.find(`SBM_DS`);
   expect(SBM_DS.name).toBe(`SBM_DS`);
   expect(SBM_DS.subItems.length).toBe(1);
-  expect(SBM_DS.position.line).toBe(2);
+  expect(SBM_DS.position.range.line).toBe(2);
   expect(SBM_DS.references.length).toBe(1);
 
   const Move1 = SBM_DS.subItems[0];
   expect(Move1.name).toBe(`Move1`);
   expect(Object.keys(Move1.keyword).length).toBe(2);
-  expect(Move1.position.line).toBe(3);
+  expect(Move1.position.range.line).toBe(3);
   expect(Move1.references.length).toBe(1);
   
   expect(errors.length).toBe(2);

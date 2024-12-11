@@ -95,7 +95,7 @@ export default class Cache {
       this.files.filter(d => d.position.path === fsPath).pop()
     ].filter(d => d !== undefined);
 
-    const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.line).sort((a, b) => b - a);
+    const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.range.line).sort((a, b) => b - a);
 
     return (lines.length >= 1 ? lines[0] : 0);
   }

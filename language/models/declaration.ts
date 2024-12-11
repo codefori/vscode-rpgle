@@ -1,5 +1,6 @@
 
 import { Keywords, Reference } from "../parserTypes";
+import { IRangeWithLine } from "../types";
 import Cache from "./cache";
 
 type DeclarationType = "procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag";
@@ -9,7 +10,7 @@ export default class Declaration {
   keyword: Keywords = {};
   description: string = ``;
   tags: {tag: string, content: string}[] = [];
-  position: {path: string, line: number};
+  position: {path: string, range: IRangeWithLine};
   references: Reference[] = [];
   subItems: Declaration[] = [];
   readParms: boolean = false;

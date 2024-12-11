@@ -168,7 +168,7 @@ test('eof1', async () => {
 
   const uppercase = cache.find(`UPPERCASE`);
   expect(uppercase.name).toBe(`UPPERCASE`);
-  expect(uppercase.position.line).toBe(0);
+  expect(uppercase.position.range.line).toBe(0);
   expect(uppercase.subItems.length).toBe(2);
 })
 
@@ -190,7 +190,7 @@ test('eof2', async () => {
 
   const uppercase = cache.find(`UPPERCASE`);
   expect(uppercase.name).toBe(`UPPERCASE`);
-  expect(uppercase.position.line).toBe(0);
+  expect(uppercase.position.range.line).toBe(0);
   expect(uppercase.subItems.length).toBe(2);
 })
 
@@ -258,7 +258,7 @@ test('eof4', async () => {
 
   const baseNameInclude = path.basename(uppercase.position.path);
   expect(baseNameInclude).toBe(`eof4.rpgle`);
-  expect(uppercase.position.line).toBe(0);
+  expect(uppercase.position.range.line).toBe(0);
 })
 
 

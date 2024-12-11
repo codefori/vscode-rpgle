@@ -166,8 +166,7 @@ export default class Parser {
     // Global scope bits
     scopes.push(new Cache());
 
-    const getObjectName = (defaultName: string, keywords: Keywords): string => {
-      let objectName = defaultName;
+    const getObjectName = (objectName: string, keywords: Keywords): string => {
             
       // Check for external object
       const extFile = keywords[`EXTFILE`];
@@ -193,7 +192,7 @@ export default class Parser {
       return objectName;
     };
 
-    let potentialName: string|undefined;
+    let potentialName: Token|undefined;
     let potentialNameUsed = false;
 
     let currentGroup: "structs"|"procedures"|"constants";
@@ -378,7 +377,7 @@ export default class Parser {
         return (sep >= 0 ? inputLine.substring(0, sep + (withSep ? 1 : 0)) : inputLine);
       }
 
-      const expandDs = async (file: string, ds: Declaration): Promise<void> => {
+      const expandDs = async (fileUri: string, fileToken: Token, ds: Declaration): Promise<void> => {
         const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
         const keywords = ds.keyword;
         for (const tag of tags) {
@@ -408,8 +407,8 @@ export default class Parser {
                 recordFormats.forEach(recordFormat => {
                   recordFormat.subItems.forEach(subItem => {
                     subItem.position = {
-                      path: file,
-                      line: lineNumber
+                      path: fileUri,
+                      range: fileToken.range
                     };
                   });
 
@@ -433,7 +432,7 @@ export default class Parser {
                     // Clone subitems for correct line assignment
                     valuePointer.subItems.forEach((item) => {
                       const newItem = item.clone();
-                      newItem.position.line = ds.position.line;
+                      newItem.position.range = ds.position.range;
                       ds.subItems.push(newItem);
                     });
                   }
@@ -690,10 +689,10 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  line: lineNumber
+                  range: tokens[1].range
                 };
 
-                const objectName = getObjectName(parts[1], currentItem.keyword);
+                const objectName = getObjectName(tokens[1].value, currentItem.keyword);
                 let prefix = ``;
 
                 const prefixKeyword = currentItem.keyword[`PREFIX`];
@@ -741,7 +740,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  line: currentStmtStart.line
+                  range: tokens[1].range
                 };
 
                 scope.constants.push(currentItem);
@@ -761,7 +760,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  line: currentStmtStart.line
+                  range: tokens[1].range
                 };
 
                 scope.variables.push(currentItem);
@@ -780,7 +779,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  line: currentStmtStart.line
+                  range: tokens[1].range
                 };
 
                 currentItem.range = {
@@ -818,7 +817,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  line: currentStmtStart.line
+                  range: tokens[1].range
                 };
 
                 currentItem.range = {
@@ -829,7 +828,7 @@ export default class Parser {
                 currentGroup = `structs`;
 
                 // Expand the LIKEDS value if there is one.
-                await expandDs(fileUri, currentItem);
+                await expandDs(fileUri, tokens[1], currentItem);
 
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
@@ -874,7 +873,7 @@ export default class Parser {
 
                   currentItem.position = {
                     path: fileUri,
-                    line: currentStmtStart.line
+                    range: tokens[1].range
                   };
 
                   currentItem.readParms = true;
@@ -931,7 +930,7 @@ export default class Parser {
 
               currentItem.position = {
                 path: fileUri,
-                line: currentStmtStart.line
+                range: tokens[1].range
               };
 
               currentItem.readParms = false;
@@ -1013,7 +1012,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  line: currentStmtStart.line
+                  range: tokens[1].range
                 };
 
                 currentItem.range = {
@@ -1057,7 +1056,8 @@ export default class Parser {
                 const result = {
                   schema: undefined,
                   name: partsLower[index],
-                  length: 1
+                  length: 1,
+                  nameToken: tokens[index]
                 }
 
                 const schemaSplit = [`.`, `/`].includes(parts[nameIndex + 1]);
@@ -1065,6 +1065,7 @@ export default class Parser {
                   result.schema = partsLower[index]
                   result.name = partsLower[index + 2]
                   result.length = 3;
+                  result.nameToken = tokens[index + 2];
                   nameIndex += 2;
                 }
 
@@ -1110,7 +1111,7 @@ export default class Parser {
       
                       currentSqlItem.position = {
                         path: fileUri,
-                        line: currentStmtStart.line
+                        range: qualifiedObjectPath.nameToken.range
                       };
       
                       scope.sqlReferences.push(currentSqlItem);
@@ -1174,6 +1175,7 @@ export default class Parser {
                   if (parts[0].startsWith(`DCL`)) {
                     parts.slice(1);
                     partsLower = partsLower.splice(1);
+                    tokens.splice(1);
                   }
 
                   currentSub = new Declaration(`subitem`);
@@ -1182,7 +1184,7 @@ export default class Parser {
 
                   currentSub.position = {
                     path: fileUri,
-                    line: currentStmtStart.line
+                    range: tokens[0].range
                   };
 
                   // Add comments from the tags
@@ -1195,7 +1197,7 @@ export default class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  await expandDs(fileUri, currentSub);
+                  await expandDs(fileUri, tokens[0], currentSub);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
@@ -1222,17 +1224,16 @@ export default class Parser {
             break;
 
           case `F`:
-            const fSpec = parseFLine(line);
-            potentialName = getObjectName(fSpec.name, fSpec.keywords);
+            const fSpec = parseFLine(lineNumber, lineIndex, line);
 
             if (fSpec.name) {
               currentItem = new Declaration(`file`);
-              currentItem.name = potentialName;
+              currentItem.name = fSpec.name.value;
               currentItem.keyword = fSpec.keywords;
 
               currentItem.position = {
                 path: fileUri,
-                line: lineNumber
+                range: fSpec.name.range
               };
 			  
 			        let prefix = ``;
@@ -1242,14 +1243,15 @@ export default class Parser {
                 prefix = prefixKeyword.toUpperCase();
               }
 
-              const recordFormats = await this.fetchTable(potentialName, line.length.toString(), fSpec.keywords[`ALIAS`] !== undefined);
+              const objectName = getObjectName(fSpec.name.value, fSpec.keywords);
+              const recordFormats = await this.fetchTable(objectName, line.length.toString(), fSpec.keywords[`ALIAS`] !== undefined);
 
               if (recordFormats.length > 0) {
                 const qualified = fSpec.keywords[`QUALIFIED`] === true;
 
                 // Got to fix the positions for the defintions to be the declare.
                 recordFormats.forEach(recordFormat => {
-                  recordFormat.keyword = {[potentialName]: true};
+                  recordFormat.keyword = {[objectName]: true};
                   if (qualified) recordFormat.keyword[`QUALIFIED`] = true;;
 
                   recordFormat.position = currentItem.position;
@@ -1315,7 +1317,7 @@ export default class Parser {
                   currentItem.keyword = {[type]: `${fieldLength}${decimals !== undefined ? `:${decimals}` : ``}`};
                   currentItem.position = {
                     path: fileUri,
-                    line: lineNumber
+                    range: cSpec.result.range
                   };
                   currentItem.range = {
                     start: lineNumber,
@@ -1327,18 +1329,18 @@ export default class Parser {
               }
             }
 
-            potentialName = cSpec.factor1 ? cSpec.factor1.value : ``;
+            potentialName = cSpec.factor1;
 
             switch (cSpec.opcode && cSpec.opcode.value) {
             case `BEGSR`:
-              if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
+              if (cSpec.factor1 && !scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === cSpec.factor1.value.toUpperCase())) {
                 currentItem = new Declaration(`subroutine`);
-                currentItem.name = potentialName;
+                currentItem.name = cSpec.factor1.value;
                 currentItem.keyword = {'Subroutine': true};
   
                 currentItem.position = {
                   path: fileUri,
-                  line: lineNumber
+                  range: cSpec.factor1.range
                 };
   
                 currentItem.range = {
@@ -1369,7 +1371,7 @@ export default class Parser {
 
                 callItem.position = {
                   path: fileUri,
-                  line: lineNumber
+                  range: cSpec.factor2.range
                 };
 
                 callItem.range = {
@@ -1387,7 +1389,7 @@ export default class Parser {
                 tagItem.name = cSpec.factor1.value;
                 tagItem.position = {
                   path: fileUri,
-                  line: lineNumber
+                  range: cSpec.factor1.range
                 };
 
                 tagItem.range = {
@@ -1405,35 +1407,35 @@ export default class Parser {
             const pSpec = parsePLine(line, lineNumber, lineIndex);
 
             if (pSpec.potentialName) {
-              potentialName = pSpec.potentialName.value.substring(0, pSpec.potentialName.value.length - 3);
+              potentialName = pSpec.potentialName;
               potentialNameUsed = true;
               tokens = [pSpec.potentialName];
             } else {
               if (pSpec.start) {
                 tokens = [...pSpec.keywordsRaw, pSpec.name]
-                potentialName = pSpec.name && pSpec.name.value.length > 0 ? pSpec.name.value : potentialName;
+                potentialName = pSpec.name && pSpec.name.value.length > 0 ? pSpec.name : potentialName;
 
                 if (potentialName) {
                   //We can overwrite it.. it might have been a PR before.
-                  const existingProc = scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === potentialName.toUpperCase());
+                  const existingProc = potentialName ? scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase()) : -1;
 
                   // We found the PR... so we can overwrite it
                   if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
 
                   currentItem = new Declaration(`procedure`);
 
-                  currentProcName = potentialName;
+                  currentProcName = potentialName.value;
                   currentItem.name = currentProcName;
                   currentItem.keyword = pSpec.keywords;
 
                   currentItem.position = {
                     path: fileUri,
-                    line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
+                    range: potentialName.range
                   };
 
                   currentItem.range = {
-                    start: currentItem.position.line,
-                    end: currentItem.position.line
+                    start: potentialName.range.line,
+                    end: potentialName.range.line
                   };
 
                   currentItem.scope = new Cache();
@@ -1462,24 +1464,26 @@ export default class Parser {
             const dSpec = parseDLine(lineNumber, lineIndex, line);
 
             if (dSpec.potentialName && dSpec.potentialName) {
-              potentialName = dSpec.potentialName.value;
+              potentialName = dSpec.potentialName;
               potentialNameUsed = true;
               tokens = [dSpec.potentialName];
               continue;
             } else {
-              potentialName = dSpec.name && dSpec.name.value.length > 0 ? dSpec.name.value : (potentialName ? potentialName : ``);
-              tokens = [dSpec.field, ...dSpec.keywordsRaw, dSpec.name]
+              potentialName = dSpec.name && dSpec.name.value.length > 0 ? dSpec.name : potentialName;
+              tokens = [dSpec.field, ...dSpec.keywordsRaw, dSpec.name];
+
+              const useNameToken = potentialName ? potentialName : dSpec.field;
 
               switch (dSpec.field && dSpec.field.value) {
               case `C`:
                 currentItem = new Declaration(`constant`);
-                currentItem.name = potentialName || `*N`;
+                currentItem.name = potentialName ? potentialName.value : `*N`;
                 currentItem.keyword = dSpec.keywords || {};
                   
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: fileUri,
-                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
+                  range: useNameToken.range
                 };
     
                 scope.constants.push(currentItem);
@@ -1487,7 +1491,7 @@ export default class Parser {
                 break;
               case `S`:
                 currentItem = new Declaration(`variable`);
-                currentItem.name = potentialName || `*N`;
+                currentItem.name = potentialName ? potentialName.value : `*N`;
                 currentItem.keyword = {
                   ...dSpec.keywords,
                   ...prettyTypeFromToken(dSpec),
@@ -1496,7 +1500,7 @@ export default class Parser {
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: fileUri,
-                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
+                  range: useNameToken.range
                 };
 
                 scope.variables.push(currentItem);
@@ -1505,20 +1509,20 @@ export default class Parser {
 
               case `DS`:
                 currentItem = new Declaration(`struct`);
-                currentItem.name = potentialName || `*N`;
+                currentItem.name = potentialName ? potentialName.value : `*N`;
                 currentItem.keyword = dSpec.keywords;
 
                 currentItem.position = {
                   path: fileUri,
-                  line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
+                  range: useNameToken.range
                 };
 
                 currentItem.range = {
-                  start: currentItem.position.line,
-                  end: currentItem.position.line
+                  start: currentItem.position.range.line,
+                  end: currentItem.position.range.line
                 };
 
-                expandDs(fileUri, currentItem);
+                expandDs(fileUri, useNameToken, currentItem);
 
                 currentGroup = `structs`;
                 scope.structs.push(currentItem);
@@ -1527,9 +1531,9 @@ export default class Parser {
 
               case `PR`:
                 // Only add a PR if it's not been defined
-                if (!scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === potentialName.toUpperCase())) {
+                if (potentialName && !scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
-                  currentItem.name = potentialName || `*N`;
+                  currentItem.name = potentialName ? potentialName.value : `*N`;
                   currentItem.keyword = {
                     ...prettyTypeFromToken(dSpec),
                     ...dSpec.keywords
@@ -1537,12 +1541,12 @@ export default class Parser {
   
                   currentItem.position = {
                     path: fileUri,
-                    line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
+                    range: useNameToken.range
                   };
-
+  
                   currentItem.range = {
-                    start: currentItem.position.line,
-                    end: currentItem.position.line
+                    start: currentItem.position.range.line,
+                    end: currentItem.position.range.line
                   };
   
                   currentGroup = `procedures`;
@@ -1591,12 +1595,17 @@ export default class Parser {
                 if (currentItem) {
 
                   // This happens when it's a blank parm.
-                  if (potentialName === `` && (dSpec.type || dSpec.len))
-                    potentialName = (potentialName === `` ? `parm${currentItem.subItems.length+1}` : potentialName);
+                    const baseToken = dSpec.type || dSpec.len;
+                  if (!potentialName && baseToken) {
+                    potentialName = {
+                      ...baseToken,
+                      value: `parm${currentItem.subItems.length+1}`
+                    }
+                  }
 
                   if (potentialName) {
                     currentSub = new Declaration(`subitem`);
-                    currentSub.name = potentialName;
+                    currentSub.name = potentialName.value;
                     currentSub.keyword = {
                       ...prettyTypeFromToken(dSpec),
                       ...dSpec.keywords
@@ -1604,11 +1613,11 @@ export default class Parser {
 
                     currentSub.position = {
                       path: fileUri,
-                      line: lineNumber
+                      range: potentialName.range
                     };
 
                     // If the parameter has likeds, add the subitems to make it a struct.
-                    await expandDs(fileUri, currentSub);
+                    await expandDs(fileUri, potentialName, currentSub);
 
                     currentItem.subItems.push(currentSub);
                     currentSub = undefined;
