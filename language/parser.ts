@@ -216,7 +216,7 @@ export default class Parser {
       const addReference = (def: Declaration, part: Token, at: number) => {
         def.references.push({
           uri: currentUri,
-          offset: { position: part.range.start, end: part.range.end },
+          offset: part.range,
         });
 
         removeCollectedToken(at);

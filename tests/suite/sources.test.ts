@@ -36,8 +36,8 @@ test("Generic reference tests", { timeout }, async () => {
           def: def.name,
           uri: ref.uri,
           offset: ref.offset,
-          content: content.substring(ref.offset.position, ref.offset.end),
-          about: content.substring(ref.offset.position - 10, ref.offset.end + 10)
+          content: content.substring(ref.offset.start, ref.offset.end),
+          about: content.substring(ref.offset.start - 10, ref.offset.end + 10)
         })
       }
 
@@ -56,7 +56,7 @@ test("Generic reference tests", { timeout }, async () => {
         }
 
         for (const ref of refs) {
-          const offsetContent = cachedFiles[ref.uri].substring(ref.offset.position, ref.offset.end);
+          const offsetContent = cachedFiles[ref.uri].substring(ref.offset.start, ref.offset.end);
 
           if (offsetContent.toUpperCase() === def.name.toUpperCase()) {
             referencesCollected++;

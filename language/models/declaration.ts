@@ -13,7 +13,7 @@ export default class Declaration {
   references: Reference[] = [];
   subItems: Declaration[] = [];
   readParms: boolean = false;
-  range: {start: number, end: number}|undefined;
+  range: {start: number|null, end: number|null} = {start: null, end: null};
   scope: Cache|undefined;
   constructor(public type: DeclarationType) {}
 

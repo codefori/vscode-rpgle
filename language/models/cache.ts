@@ -1,4 +1,5 @@
-import { CacheProps, IncludeStatement, Keywords, Offset } from "../parserTypes";
+import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
+import { IRange } from "../types";
 import Declaration from "./declaration";
 
 const newInds = () => {
@@ -194,10 +195,10 @@ export default class Cache {
     }
   }
 
-  referencesInRange(baseUri: string, range: Offset): { dec: Declaration, refs: Offset[] }[] {
-    let list: { dec: Declaration, refs: Offset[] }[] = [];
+  referencesInRange(baseUri: string, range: IRange): { dec: Declaration, refs: IRange[] }[] {
+    let list: { dec: Declaration, refs: IRange[] }[] = [];
 
-    for (let i = range.position; i <= range.end; i++) {
+    for (let i = range.start; i <= range.end; i++) {
       const ref = Cache.referenceByOffset(baseUri, this, i);
       if (ref) {
         // No duplicates allowed
@@ -205,7 +206,7 @@ export default class Cache {
 
         list.push({
           dec: ref,
-          refs: ref.references.filter(r => r.offset.position >= range.position && r.offset.end <= range.end).map(r => r.offset)
+          refs: ref.references.filter(r => r.offset.start >= range.start && r.offset.end <= range.end).map(r => r.offset)
         })
       };
     }
@@ -221,13 +222,13 @@ export default class Cache {
         let possibleRef: boolean;
 
         // Search top level
-        possibleRef = def.references.some(r => r.uri === baseUri && offset >= r.offset.position && offset <= r.offset.end);
+        possibleRef = def.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
         if (possibleRef) return def;
 
         // Search any subitems
         if (def.subItems.length > 0) {
           for (const subItem of def.subItems) {
-            possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.position && offset <= r.offset.end);
+            possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
             if (possibleRef) return subItem;
           }
         }
