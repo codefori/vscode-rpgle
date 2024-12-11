@@ -35,7 +35,7 @@ const commonMatchers: Matcher[] = [
       { type: `divide` },
       {
         type: `word`,
-        match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINE`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`, `CHARCOUNT`].includes(word.toUpperCase())
+        match: (word) => [`TITLE`, `EJECT`, `SPACE`, `COPY`, `INCLUDE`, `SET`, `RESTORE`, `OVERLOAD`, `DEFINE`, `UNDEFINE`, `IF`, `ELSE`, `ELSEIF`, `ENDIF`, `EOF`, `CHARCOUNT`, `EXEC`, `END`].includes(word.toUpperCase())
       },
     ],
     becomes: {
@@ -232,7 +232,7 @@ const commonMatchers: Matcher[] = [
   },
 ];
 
-const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, `,`, `;`, `\n`, `\r`, ` `];
+const splitParts = [`%`, `.`, `(`, `)`, `+`, `-`, `*`, `/`, `=`, `:`, `,`, `;`, `\n`, `\r`, `\t`, ` `];
 const types = {
   '%': `percent`,
   '.': `dot`,
@@ -248,17 +248,46 @@ const types = {
   ',': `comma`,
   '\n': `newline`,
   '\r': `newliner`,
+  '\t': `tab`,
 };
 
 const stringChar: string = `'`;
 const startCommentString = `//`;
 const endCommentString = `\n`;
 
+export const ALLOWS_EXTENDED = [
+  `CALLP`,
+  `DATA-GEN`,
+  `DATA-INTO`,
+  `DOU`,
+  `DOW`,
+  `ELSEIF`,
+  `EVAL`,
+  `EVAL-CORR`,
+  `EVALR`,
+  `FOR`,
+  `FOR-EACH`,
+  `IF`,
+  `ON-ERROR`,
+  `ON-EXCP`,
+  `ON-EXIT`,
+  `RETURN`,
+  `SND-MSG`,
+  `SORTA`,
+  `WHEN`,
+  `XML-INTO`,
+  `XML-SAX`
+]
+
+export type TokeniseOptions = {lineNumber?: number, baseIndex?: number, ignoreTypes?: string[]};
+
 /**
- * @param {string} statement 
  * @returns {{value?: string, block?: object[], type: string, position: number}[]}
  */
-export function tokenise(statement, lineNumber = 0) {
+export function tokenise(statement: string, options: TokeniseOptions = {}): Token[] {
+  let lineNumber = options.lineNumber || 0;
+  let baseIndex = options.baseIndex || 0;
+
   let commentStart = -1;
   let state: ReadState = ReadState.NORMAL;
 
@@ -300,17 +329,23 @@ export function tokenise(statement, lineNumber = 0) {
       switch (statement[i]) {
       // When it's the string character..
       case stringChar:
+        const possibleEscape = statement[i+1] === stringChar;
         if (state === ReadState.IN_STRING) {
-          currentText += statement[i];
-          result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
-          currentText = ``;
+          if (possibleEscape) {
+            currentText += `''`;
+            i += 2;
+          } else {
+            currentText += statement[i];
+            result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+            currentText = ``;
+          }
         } else {
           startsAt = i;
           currentText += statement[i];
         }
 
         // @ts-ignore
-        state = state === ReadState.IN_STRING ? ReadState.NORMAL : ReadState.IN_STRING;
+        state = state === ReadState.IN_STRING && !possibleEscape ? ReadState.NORMAL : ReadState.IN_STRING;
         break;
 
       // When it's any other character...
@@ -322,7 +357,13 @@ export function tokenise(statement, lineNumber = 0) {
           }
 
           if (statement[i] !== ` `) {
-            result.push({ value: statement[i], type: types[statement[i]], range: { start: i, end: i + statement[i].length, line: lineNumber } });
+            const type = types[statement[i]];
+
+            if (options.ignoreTypes && options.ignoreTypes.includes(type)) {
+              continue;
+            }
+
+            result.push({ value: statement[i], type, range: { start: i, end: i + statement[i].length, line: lineNumber } });
           }
 
           startsAt = i + 1;
@@ -341,11 +382,20 @@ export function tokenise(statement, lineNumber = 0) {
     result.push({ value: currentText, type: state === ReadState.NORMAL ? `word` : `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
     currentText = ``;
   } else {
-    result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+    if (currentText.trim().length > 0) {
+      result.push({ value: currentText, type: `comment`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });
+    }
   }
 
   result = fixStatement(result);
   //result = createBlocks(result);
+
+  if (baseIndex) {
+    for (let i = 0; i < result.length; i++) {
+      result[i].range.start += baseIndex;
+      result[i].range.end += baseIndex;
+    }
+  }
 
   return result;
 }

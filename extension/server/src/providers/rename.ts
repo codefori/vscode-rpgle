@@ -11,27 +11,18 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
   const document = documents.get(uri);
 
   if (document) {
-    const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
-
     const doc = await parser.getDocs(uri, document.getText());
 
     if (doc) {
-      if (isFree) {
-        Linter.getErrors(
-          {
-            uri,
-            content: document.getText()
-          },
-          {
-            CollectReferences: true
-          },
-          doc
-        );
-      }
-
-      const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.referenceByOffset(uri, doc, document.offsetAt(currentPos));
 
       if (def) {
+        const uniqueUris = def.references.map(ref => ref.uri).filter((value, index, self) => self.indexOf(value) === index);
+
+        if (uniqueUris.length > 1) {
+          return;
+        }
+
         const currentSelectedRef = def?.references.find(r => document.positionAt(r.offset.position).line === currentPos.line);
 
         if (currentSelectedRef) {
@@ -58,34 +49,25 @@ export async function renameRequestProvider(params: RenameParams): Promise<Works
     const doc = await parser.getDocs(uri, document.getText());
 
     if (doc) {
-      if (isFree) {
-        Linter.getErrors(
-          {
-            uri,
-            content: document.getText()
-          },
-          {
-            CollectReferences: true
-          },
-          doc
-        );
-      }
-
-      const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.referenceByOffset(uri, doc, document.offsetAt(currentPos));
 
       if (def) {
-        const edits: TextEdit[] = def.references.map(ref => ({
-          newText: params.newName,
-          range: Range.create(
-            document.positionAt(ref.offset.position),
-            document.positionAt(ref.offset.end)
-          )
-        }));
+        let edits: {[uri: string]: TextEdit[]} = {};
+
+        const uniqueUris = def.references.map(ref => ref.uri).filter((value, index, self) => self.indexOf(value) === index);
+
+        for (const uri of uniqueUris) {
+          edits[uri] = def.references.filter(ref => ref.uri === uri).map(ref => ({
+            newText: params.newName,
+            range: Range.create(
+              document.positionAt(ref.offset.position),
+              document.positionAt(ref.offset.end)
+            )
+          }));
+        }
     
         const workspaceEdit: WorkspaceEdit = {
-          changes: {
-            [document.uri]: edits
-          }
+          changes: edits
         }
     
         return workspaceEdit;

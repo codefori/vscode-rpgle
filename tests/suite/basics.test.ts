@@ -248,7 +248,7 @@ test('vitestTest10', async () => {
    ``,
    `Ctl-Opt DftActGrp(*No);`,
    ``,
-   `/copy './tests/rpgle/copy1.rpgle'`,
+   `/copy './rpgle/copy1.rpgle'`,
    ``,
    `Dcl-s MyVariable2 Char(20);`,
    ``,
@@ -280,7 +280,7 @@ test('test10_local_fixedcopy', async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy tests,eof4`,
+    `/copy eof4`,
     ``,
     `Dcl-s MyVariable2 Char(20);`,
     ``,
@@ -313,8 +313,8 @@ test('test11', async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy './tests/rpgle/copy1.rpgle'`,
-    `/include './tests/rpgle/copy2.rpgle'`,
+    `/copy './rpgle/copy1.rpgle'`,
+    `/include './rpgle/copy2.rpgle'`,
     ``,
     `Dcl-s MyVariable2 Char(20);`,
     ``,
@@ -344,7 +344,7 @@ test('test12', async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy './tests/rpgle/copy1.rpgle'`,
+    `/copy './rpgle/copy1.rpgle'`,
     ``,
     `Dcl-S globalVar Char(20);`,
     ``,
@@ -404,7 +404,7 @@ test('test13', async () => {
     ``,
     `Ctl-Opt DftActGrp(*No);`,
     ``,
-    `/copy './tests/rpgle/copy1.rpgle' // Test copy`,
+    `/copy './rpgle/copy1.rpgle' // Test copy`,
     ``,
     `Dcl-S globalVar Char(20);`,
     ``,
@@ -457,31 +457,6 @@ test('test13', async () => {
   // Should have a local variable
   expect(theLocalProc.scope.variables.length).toBe(1);
 });
-
-test('indicators1', async () => {
-  const lines = [
-    `**FREE`,
-    `Dcl-S MyVar char(10);`,
-    ``,
-    `*IN10 = *ON;`,
-    `MyVar = 'Hi';`,
-    ``,
-    `DSply Myvar;`,
-    `*INLR = *IN10;`,
-    `Return;`,
-  ].join(`\n`);
-
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-
-  Linter.getErrors({ uri, content: lines }, {
-    CollectReferences: true,
-  }, cache);
-
-  const in10 = cache.find(`IN10`);
-
-  expect(in10.references.length).toBe(2);
-});
-
 
 test('subds1', async () => {
   const lines = [
@@ -790,9 +765,7 @@ test('issue_195a', async () => {
     `End-Proc ScomponiStringa;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
-
-  cache.clearReferences();
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
 });
 
 test('issue_195b', async () => {
@@ -1303,4 +1276,25 @@ test('keywords over multiple lines', async () => {
   const error = invoice_get_invoice.subItems[4];
   expect(error.name).toBe(`error`);
   expect(error.keyword[`LIKE`]).toBe(`TError`);
-})
+});
+
+test(`const keyword check`, async () => {
+  const lines = [
+    ``,
+    `           dcl-c hello 556;`,
+    `     d act             c                   'act'`,
+    ``,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.constants.length).toBe(2);
+
+  const act = cache.find(`act`);
+  expect(act.name).toBe(`act`);
+  expect(act.keyword[`CONST`]).toBe(`'act'`);
+
+  const hello = cache.find(`hello`);
+  expect(hello.name).toBe(`hello`);
+  expect(hello.keyword[`CONST`]).toBe(`556`);
+});

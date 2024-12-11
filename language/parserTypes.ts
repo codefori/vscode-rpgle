@@ -22,6 +22,7 @@ export interface CacheProps {
   sqlReferences?: Declaration[];
   indicators?: Declaration[];
   includes?: IncludeStatement[];
+  tags?: Declaration[];
 }
 
 export interface Rules {
@@ -74,6 +75,12 @@ export  interface DefinitionPosition {
 export interface Offset {
   position: number,
   end: number
+}
+
+
+export interface Reference {
+  uri: string;
+  offset: Offset;
 }
 
 export interface IssueRange {

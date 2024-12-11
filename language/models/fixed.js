@@ -1,6 +1,38 @@
 import Parser from "../parser";
 
 /**
+ * @param {number} lineNumber 
+ * @param {number} startingPos 
+ * @param {string} value 
+ * @param {string} [type]
+ * @returns {import("../types").Token|undefined}
+ */
+function calculateToken(lineNumber, startingPos, value, type) {
+  let resultValue = value.trim();
+
+  if (resultValue === ``) {
+    return;
+  }
+
+  if (type === `special-ind`) {
+    type = `special`;
+    resultValue = `*IN` + resultValue;
+  }
+
+  const frontSpaces = value.length - value.trimStart().length;
+  const start = startingPos + frontSpaces;
+  return {
+    type: type || `word`,
+    value: resultValue,
+    range: {
+      start,
+      end: start + resultValue.length,
+      line: lineNumber
+    }
+  }
+}
+
+/**
  * @param {string} line 
  */
 export function parseFLine(line) {
@@ -12,84 +44,101 @@ export function parseFLine(line) {
 
   return {
     name, 
-    keywords: Parser.expandKeywords(keywords)
+    keywords: Parser.expandKeywords(Parser.getTokens(keywords))
   };
 }
 
 /**
- * @param {string} line 
+ * @param {string} content 
  */
-export function parseCLine(line) {
-  line = line.padEnd(80);
-  const factor1 = line.substr(11, 14).trim();
-  const opcode = line.substr(25, 10).trim().toUpperCase();
-  const factor2 = line.substr(35, 14).trim();
-  const extended = line.substr(35).trim();
-  const result = line.substr(49, 14).trim();
+export function parseCLine(lineNumber, lineIndex, content) {
+  content = content.padEnd(80);
+  const factor1 = content.substr(11, 14);
+  const opcode = content.substr(25, 10).toUpperCase();
+  const factor2 = content.substr(35, 14);
+  const extended = content.substr(35);
+  const result = content.substr(49, 14);
 
-  const ind1 = line.substr(70, 2).trim();
-  const ind2 = line.substr(72, 2).trim();
-  const ind3 = line.substr(74, 2).trim();
+  const ind1 = content.substr(70, 2);
+  const ind2 = content.substr(72, 2);
+  const ind3 = content.substr(74, 2);
 
   return {
-    opcode,
-    factor1,
-    factor2,
-    result,
-    extended,
-    ind1,
-    ind2,
-    ind3
+    opcode: calculateToken(lineNumber, lineIndex+25, opcode, `opcode`),
+    factor1: calculateToken(lineNumber, lineIndex+11, factor1),
+    factor2: calculateToken(lineNumber, lineIndex+35, factor2),
+    result: calculateToken(lineNumber, lineIndex+49, result),
+    extended: calculateToken(lineNumber, lineIndex+35, extended),
+    ind1: calculateToken(lineNumber, lineIndex+70, ind1, `special-ind`),
+    ind2: calculateToken(lineNumber, lineIndex+72, ind2, `special-ind`),
+    ind3: calculateToken(lineNumber, lineIndex+74, ind3, `special-ind`)
   };
 }
 
 /**
- * @param {string} line
+ * @param {string} content
  */
-export function parseDLine(line) {
-  line = line.padEnd(80);
-  const potentialName = line.substring(6).trim();
-  const name = line.substr(6, 15).trim();
-  const pos = line.substr(25, 7).trim();
-  const len = line.substr(32, 7).trim();
-  const type = line.substr(39, 1).trim();
-  const decimals = line.substr(40, 3).trim();
-  const field = line.substr(23, 2).trim().toUpperCase();
-  const keywords = line.substr(43).trim().toUpperCase();
+export function parseDLine(lineNumber, lineIndex, content) {
+  content = content.padEnd(80);
+  const longForm = content.substring(6).trimEnd();
+  const potentialName = longForm.endsWith(`...`) ? calculateToken(lineNumber, lineIndex+6, longForm.substring(0, longForm.length - 3)) : undefined;
+  const name = content.substr(6, 15);
+  const pos = content.substr(25, 7);
+  const len = content.substr(32, 7);
+  const type = content.substr(39, 1);
+  const decimals = content.substr(40, 3);
+  const field = content.substr(23, 2).toUpperCase();
+  const keywords = content.substr(43);
+  const keywordTokens = Parser.getTokens(keywords, lineNumber, lineIndex+43);
 
   return {
+    potentialName: potentialName,
+    name: calculateToken(lineNumber, lineIndex+6, name),
+    pos: calculateToken(lineNumber, lineIndex+25, pos),
+    len: calculateToken(lineNumber, lineIndex+32, len),
+    type: calculateToken(lineNumber, lineIndex+39, type),
+    decimals: calculateToken(lineNumber, lineIndex+40, decimals),
+    field: calculateToken(lineNumber, lineIndex+23, field),
+    keywordsRaw: keywordTokens,
+    keywords: Parser.expandKeywords(keywordTokens, field.trim() === `C`)
+  };
+}
+
+/**
+ * @param {string} content
+ */
+export function parsePLine(content, lineNumber, lineIndex) {
+  content = content.padEnd(80);
+  const name = content.substr(6, 16)
+  const longForm = content.substring(6).trimEnd();
+  const potentialName = longForm.endsWith(`...`) ? calculateToken(lineNumber, lineIndex+6, longForm.substring(0, longForm.length - 3)) : undefined;
+  const start = content[23].toUpperCase() === `B`;
+  const keywords = content.substr(43)
+  const keywordTokens = Parser.getTokens(keywords, lineNumber, lineIndex+43);
+
+  return {
+    name: calculateToken(lineNumber, lineIndex+6, name),
     potentialName,
-    name,
-    pos,
-    len,
-    type,
-    decimals,
-    field,
-    keywords: Parser.expandKeywords(keywords)
-  };
-}
-
-/**
- * @param {string} line
- */
-export function parsePLine(line) {
-  line = line.padEnd(80);
-  const name = line.substr(6, 16).trim();
-  const potentialName = line.substring(6).trim();
-  const start = line[23].toUpperCase() === `B`;
-  const keywords = line.substr(43).trim().toUpperCase();
-
-  return {
-    name,
-    potentialName,
-    keywords: Parser.expandKeywords(keywords),
+    keywordsRaw: keywordTokens,
+    keywords: Parser.expandKeywords(keywordTokens),
     start
   };
 }
 
+export function prettyTypeFromToken(dSpec) {
+  return getPrettyType({
+    type: dSpec.type ? dSpec.type.value : ``,
+    keywords: dSpec.keywords,
+    len: dSpec.len ? dSpec.len.value : ``,
+    pos: dSpec.pos ? dSpec.pos.value : ``,
+    decimals: dSpec.decimals ? dSpec.decimals.value : ``,
+    field: dSpec.field ? dSpec.field.value : ``
+  })
+}
+
 /**
  * 
- * @param {{type: string, keywords: import("../parserTypes").Keywords, len: string, pos?: string, decimals?: string, field?: string}} lineData 
+ * @param {{type: string, keywords: import("../parserTypes").Keywords, len: string, pos: string, decimals: string, field: string}} lineData 
  * @returns {import("../parserTypes").Keywords}
  */
 export function getPrettyType(lineData) {
@@ -98,6 +147,10 @@ export function getPrettyType(lineData) {
 
   if (lineData.pos) {
     length = length - Number(lineData.pos) + 1;
+  }
+
+  if (!lineData.decimals) {
+    lineData.decimals = ``;
   }
 
   switch (lineData.type.toUpperCase()) {
@@ -224,5 +277,5 @@ export function getPrettyType(lineData) {
     break;
   }
 
-  return Parser.expandKeywords(outType);
+  return Parser.expandKeywords(Parser.getTokens(outType));
 }

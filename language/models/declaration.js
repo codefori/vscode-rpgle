@@ -4,7 +4,7 @@ import Cache from "./cache";
 export default class Declaration {
   /**
    * 
-   * @param {"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"} type 
+   * @param {"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag"} type 
    */
   constructor(type) {
     this.type = type;
@@ -21,7 +21,7 @@ export default class Declaration {
     /** @type {import("../parserTypes").DefinitionPosition} */
     this.position = undefined;
 
-    /** @type {import("../parserTypes").IssueRange[]} */
+    /** @type {import("../parserTypes").Reference[]} */
     this.references = [];
 
     // Not used in subitem:

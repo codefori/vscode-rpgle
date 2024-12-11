@@ -1,65 +1,51 @@
 /* eslint-disable no-case-declarations */
 
-import { createBlocks, tokenise } from "./tokens";
+import { ALLOWS_EXTENDED, createBlocks, tokenise } from "./tokens";
 
 import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
+import path from "path";
+import { Token } from "./types";
+import { Keywords } from "./parserTypes";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
-/**
- * @callback tablePromise
- * @param  {string} name Table name
- * @param  {boolean} [aliases] Table name
- * @returns {Promise<Declaration[]>}
- */
+export type tablePromise = (name: string, aliases?: boolean) => Promise<Declaration[]>;
+export type includeFilePromise = (baseFile: string, includeString: string) => Promise<{found: boolean, uri?: string, content?: string}>;
+export type TableDetail = {[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}};
+export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean};
 
-/**
- * @callback includeFilePromise
- * @param {string} baseFile
- * @param {string} includeString
- * @returns {Promise<{found: boolean, uri?: string, lines?: string[]}>}
- */
+const lineTokens = (input: string, lineNumber: number, lineIndex: number): Token[] => {
+  let tokens = tokenise(input, {
+    baseIndex: lineIndex,
+    lineNumber,
+    ignoreTypes: [`tab`]
+  });
+  
+  return tokens;
+}
 
 export default class Parser {
+  parsedCache: {[thePath: string]: Cache} = {};
+  tables: TableDetail = {};
+  tableFetch: tablePromise|undefined;
+  includeFileFetch: includeFilePromise|undefined;
+
   constructor() {
-    /** @type {{[path: string]: Cache}} */
-    this.parsedCache = {};
-
-    /** @type {{[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}}} */
-    this.tables = {};
-
-    /** @type {tablePromise} */
-    this.tableFetch = undefined;
-
-    /** @type {includeFilePromise} */
-    this.includeFileFetch = undefined;
   }
 
-  /**
-   * @param {tablePromise} promise 
-   */
-  setTableFetch(promise) {
+  setTableFetch(promise: tablePromise) {
     this.tableFetch = promise;
   }
 
-  /**
-	 * @param {includeFilePromise} promise 
-	 */
-  setIncludeFileFetch(promise) {
+  setIncludeFileFetch(promise: includeFilePromise) {
     this.includeFileFetch = promise;
   }
 
-  /**
-   * @param {string} name 
-   * @param {string} keyVersion
-   * @param {boolean} [aliases]
-   * @returns {Promise<Declaration[]>}
-   */
-  async fetchTable(name, keyVersion = ``, aliases) {
+  async fetchTable(name: string, keyVersion = ``, aliases?: boolean): Promise<Declaration[]> {
     if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
     const table = name.toUpperCase();
@@ -82,8 +68,7 @@ export default class Parser {
       recordFormats: []
     };
 
-    /** @type {Declaration[]} */
-    let newDefs;
+    let newDefs: Declaration[];
 
     try {
       newDefs = await this.tableFetch(table, aliases);
@@ -124,7 +109,7 @@ export default class Parser {
 	 * @param {string} line 
 	 * @returns {string|undefined}
 	 */
-  static getIncludeFromDirective(line) {
+  static getIncludeFromDirective(line: string): string|undefined {
     if (line.includes(`*`)) return; // Likely comment
     if (line.trim().startsWith(`//`)) return; // Likely comment
 
@@ -143,8 +128,7 @@ export default class Parser {
       directiveLength = 9
     };
 
-    /** @type {string|undefined} */
-    let directiveValue;
+    let directiveValue: string|undefined;
     
     if (directivePosition >= 0) {
       if (comment >= 0) {
@@ -162,144 +146,239 @@ export default class Parser {
 
       return directiveValue;
     }
-
   }
 
-  /**
-   * @param {string} workingUri
-   * @param {string} [content] 
-   * @param {{withIncludes?: boolean, ignoreCache?: boolean}} options
-   * @returns {Promise<Cache|undefined>}
-   */
-  async getDocs(workingUri, content, options = {withIncludes: true}) {
+  async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       return existingCache;
     }
 
-    if (!content) return null;
+    if (!baseContent) return null;
 
-    let baseLines = content.replace(new RegExp(`\\\r`, `g`), ``).split(`\n`);
+    let scopes: Cache[] = [];
 
-    /** @type {Cache[]} */
-    let scopes = [];
+    /** Free format struct scopes. Used for free-format only */
+    let dsScopes: Declaration[] = [];
 
-    /** @type {Declaration[]} Free format struct scopes. Used for free-format only */
-    let dsScopes = [];
-
-    /** @type {string[]} */
-    let globalKeyword = [];
+    let globalKeyword: string[] = [];
 
     // Global scope bits
     scopes.push(new Cache());
 
-    /**
-     * Gets value of EXTFILE if it exists.
-     * @param {string} defaultName 
-     * @param {import("./parserTypes").Keywords} keywords 
-     * @returns {string}
-     */
-    const getObjectName = (defaultName, keywords) => {
+    const getObjectName = (defaultName: string, keywords: Keywords): string => {
       let objectName = defaultName;
-      const extObjKeywords = [`EXTFILE`];
-      const extObjKeywordsDesc = [`EXTDESC`];
             
       // Check for external object
-      extObjKeywords.forEach(keyword => {
-        const keywordValue = keywords[keyword];
-        if (keywordValue && typeof keywordValue === `string`) {
-          objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
+      const extFile = keywords[`EXTFILE`];
+      if (extFile && typeof extFile === `string`) {
+        objectName = extFile.toUpperCase();
+        if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
+          objectName = objectName.substring(1, objectName.length - 1);
+        }
+      }
+
+      if(objectName === `*EXTDESC`){
+        // Check for external object
+        const extDesc = keywords['EXTDESC'];
+        if (extDesc && typeof extDesc === `string`) {
+          objectName = extDesc.toUpperCase();
 
           if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
             objectName = objectName.substring(1, objectName.length - 1);
           }
         }
-      });
-
-      if(objectName === `*EXTDESC`){
-        // Check for external object
-        extObjKeywordsDesc.forEach(keyword => {
-          const keywordValue = keywords[keyword];
-          if (keywordValue && typeof keywordValue === `string`) {
-            objectName = keywordValue.substring(keyword.length+1, keywordValue.length - 1).toUpperCase();
-
-            if (objectName.startsWith(`'`) && objectName.endsWith(`'`)) {
-              objectName = objectName.substring(1, objectName.length - 1);
-            }
-          }
-        });
       }
 
       return objectName;
     };
 
-    let potentialName;
+    let potentialName: string|undefined;
     let potentialNameUsed = false;
 
-    /** @type {"structs"|"procedures"|"constants"} */
-    let currentGroup;
+    let currentGroup: "structs"|"procedures"|"constants";
 
-    /** @type {string[]} */
-    let definedMacros = [];
+    let definedMacros: string[] = [];
+
+    /**
+     * Parse the tokens and add references to the definitions
+     * The statement is modified in place and sets tokens undefined when are references
+     */
+    const collectReferences = (currentUri: string, statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration, isExec = false) => {
+      if (statement[0]?.value?.toUpperCase() === `EXEC`) {
+        isExec = true;
+      }
+
+      const removeCollectedToken = (at: number) => {
+        statement[at] = undefined;
+      }
+
+      const addReference = (def: Declaration, part: Token, at: number) => {
+        def.references.push({
+          uri: currentUri,
+          offset: { position: part.range.start, end: part.range.end },
+        });
+
+        removeCollectedToken(at);
+      }
+
+      for (let i = 0; i < statement.length; i++) {
+        const part = statement[i];
+        if (part === undefined) continue;
+
+        if (![`special`, `word`].includes(part.type)) continue;
+        if (statement[i - 1] && statement[i - 1].type === `dot`) break;
+
+        if (isExec && statement[i-1]) {
+          if (statement[i-1].type !== `seperator`) {
+            continue;
+          }
+        }
+
+        const isSpecial = part.type === `special`;
+        const lookupName = (isSpecial ? part.value.substring(1) : part.value).toUpperCase();
+
+        let defRef: Declaration|undefined;
+
+        if (isSpecial) {
+          // The only specials that can be looked up at global indicators
+          defRef = scopes[0].indicators.find(ind => ind.name.toUpperCase() === lookupName);
+
+        } else {
+          if (currentDef) {
+            if (currentDef.name.toUpperCase() === lookupName) {
+              defRef = currentDef;
+            } else if (currentDef.subItems.length > 0) {
+              defRef = currentDef.subItems.find(sub => sub.name.toUpperCase() === lookupName);
+            }
+          }
+
+          if (!defRef && currentProcedure && currentProcedure.scope) {
+            defRef = currentProcedure.scope.find(lookupName);
+
+            if (!defRef) {
+              defRef = currentProcedure.subItems.find(def => def.name.toUpperCase() === lookupName);
+            }
+          }
+
+          if (!defRef) {
+            defRef = scopes[0].find(lookupName);
+          }
+        }
+
+        if (defRef) {
+          addReference(defRef, part, i);
+
+          if (defRef.keyword[`QUALIFIED`]) {
+            let nextPartIndex = i + 1;
+
+            if (statement[nextPartIndex]) {
+              // First, check if there is an array call here and skip over it
+              if (statement[nextPartIndex].type === `openbracket`) {
+                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+
+                if (nextPartIndex >= 0) nextPartIndex++;
+              }
+
+              // Check if the next part is a dot
+              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+                nextPartIndex++;
+
+                // Check if the next part is a word
+                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
+                  const subItemPart = statement[nextPartIndex];
+                  const subItemName = subItemPart.value.toUpperCase();
+
+                  // Find the subitem
+                  const subItemDef = defRef.subItems.find(subfield => subfield.name.toUpperCase() == subItemName);
+                  if (subItemDef) {
+                    addReference(subItemDef, subItemPart, i);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
     //Now the real work
-    /**
-     * @param {string} file 
-     * @param {string[]} lines 
-     */
-    const parseContent = async (file, lines) => {
+    const parseContent = async (fileUri: string, allContent: string) => {
+      const EOL = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
+      const LINEEND = ``.padEnd(EOL.length);
+      let lines = allContent.split(EOL);
+
+      let postProcessingStatements: {[procedure: string]: Token[][]} = {'GLOBAL': []};
+
+      const addPostProcessingStatements = (procedure = `GLOBAL`, statement: Token[]) => {
+        if (!options.collectReferences) return;
+
+        if (!postProcessingStatements[procedure]) {
+          postProcessingStatements[procedure] = [];
+        }
+
+        postProcessingStatements[procedure].push(statement);
+      }
+
+      const scanScopeForReferences = () => {
+        for (const procedure in postProcessingStatements) {
+          const currentProcedure = scopes[0].procedures.find(proc => proc.name === procedure) ;
+          const statements = postProcessingStatements[procedure];
+          for (const statement of statements) {
+            collectReferences(fileUri, statement, currentProcedure);
+          }
+        }
+      }
+
       if (lines.length === 0) return;
 
       let currentTitle = undefined, currentDescription = [];
-      /** @type {{tag: string, content: string}[]} */
-      let currentTags = [];
+      let currentTags: {tag: string, content: string}[] = [];
 
-      /** @type {Declaration} */
-      let currentItem;
-      /** @type {Declaration} */
-      let currentSub;
-      let currentProcName;
+      let currentItem: Declaration|undefined;
+      let currentSub: Declaration|undefined;
+      let currentProcName: string|undefined;
 
       let resetDefinition = false; //Set to true when you're done defining a new item
       let docs = false; // If section is for ILEDocs
       let lineNumber = -1;
-
-      /**
-       * @type {string[]}
-       */
-      let parts;
-
-      /**
-       * @type {string[]}
-       */
-      let partsLower;
-
-      /**
-       * @type {string[]}
-       */
-      let pieces;
+      let lineIndex = 0;
 
       let isFullyFree = lines[0].toUpperCase().startsWith(`**FREE`);
       let lineIsFree = false;
 
-      /** @type {string|undefined} */
-      let currentStatement;
-      /** @type {number|undefined} */
-      let statementStartingLine;
+      /** Used for handling multiline statements */
+      let currentStmtStart: {content?: string, line: number, index: number}|undefined;
 
-      /** @type {{condition: boolean}[]} */
-      let directIfScope = [];
+      let directIfScope: {condition: boolean}[] = [];
 
       let lineCanRun = () => {
         return directIfScope.length === 0 || directIfScope.every(scope => scope.condition);
       }
 
-      /**
-       * Expands LIKEDS, LIKEREC and EXTNAME.
-       * @param {string} file
-       * @param {Declaration} ds 
-       */
-      const expandDs = async (file, ds) => {
+      const stripComment = (inputLine: string) => {
+        const comment = inputLine.indexOf(`//`);
+        const quote = inputLine.lastIndexOf(`'`);
+        if (comment >= 0 && comment < quote) {
+          return inputLine;
+        }
+
+        return (comment >= 0 ? inputLine.substring(0, comment).trimEnd() : inputLine);
+      }
+
+      const getValidStatement = (inputLine: string, withSep?: boolean) => {
+        const comment = inputLine.indexOf(`//`);
+        const quote = inputLine.lastIndexOf(`'`);
+        const sep = inputLine.indexOf(`;`, quote >= 0 ? quote : 0);
+        
+        if (comment >= 0 && comment < sep) {
+          return inputLine;
+        }
+
+        return (sep >= 0 ? inputLine.substring(0, sep + (withSep ? 1 : 0)) : inputLine);
+      }
+
+      const expandDs = async (file: string, ds: Declaration): Promise<void> => {
         const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
         const keywords = ds.keyword;
         for (const tag of tags) {
@@ -319,13 +398,12 @@ export default class Parser {
               keywordValue = keywordValue.substring(1, keywordValue.length - 1);
             }
 
-            if ([`EXTNAME`].includes(tag)) {
+            if (tag === `EXTNAME`) {
               // Fetch from external definitions
               const keywordLength = Object.keys(ds.keyword);
               const recordFormats = await this.fetchTable(keywordValue, keywordLength.length.toString(), ds.keyword[`ALIAS`] !== undefined);
 
               if (recordFormats.length > 0) {
-
                 // Got to fix the positions for the defintions to be the declare.
                 recordFormats.forEach(recordFormat => {
                   recordFormat.subItems.forEach(subItem => {
@@ -342,7 +420,7 @@ export default class Parser {
             } else {
               // We need to add qualified as it is qualified by default.
               if (!ds.keyword[`QUALIFIED`])
-                ds.keyword[`QUALIFIED`];
+                ds.keyword[`QUALIFIED`] = true;
 
               // Fetch from local definitions
               for (let i = scopes.length - 1; i >= 0; i--) {
@@ -368,75 +446,117 @@ export default class Parser {
         }
       };
 
-      for (let line of lines) {
+      let fixedExec = false;
+
+      for (let li = 0; li < lines.length; li++) {
+        if (li >= 1) {
+          lineIndex += lines[li-1].length + EOL.length;
+        }
+        
         const scope = scopes[scopes.length - 1];
-        let spec;
+
+        let baseLine = lines[li];
+        let spec: string|undefined;
 
         lineIsFree = false;
         lineNumber += 1;
 
-        if (line.startsWith(`**`)) {
+        if (baseLine.startsWith(`**`)) {
           // Usually is **FREE
           if (lineNumber === 0) continue;
           // After compile time data, we're done
           else break;
         }
 
-        if (isFullyFree === false && line.length > 6) {
-          const comment = line[6];
-          spec = line[5].toUpperCase();
+        if (isFullyFree === false && baseLine.length > 6) {
+          const comment = baseLine[6];
+          spec = baseLine[5].toUpperCase();
 
           if ([spec, comment].includes(`*`)) {
+            if (currentStmtStart && currentStmtStart.content) {
+              // Since we're in an extended statement (usually fixed exec), we still need to collect the lengths for the tokeniser
+              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+            }
+
             continue;
           }
 
           if (comment === `/`) {
             // Directives can be parsed by the free format parser
-            line = line.substring(6);
+            baseLine = ``.padEnd(6) + baseLine.substring(6);
             lineIsFree = true;
+          } else if (comment === `+` && fixedExec && currentStmtStart.content) {
+            // Fixed format EXEC SQL
+            baseLine = ``.padEnd(7) + baseLine.substring(7);
+            currentStmtStart.content += baseLine + LINEEND;
+            continue;
           } else {
             if (spec === ` `) {
-            //Clear out stupid comments
-              line = line.substring(7);
-
+              //Clear out stupid comments
+              baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
+
             } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
-            } else {
-              if (spec === `C`) {
-                // We don't want to waste precious time parsing all C specs, so we make sure it's got
-                // BEGSR or ENDSR in it first.
-                const upperLine = line.toUpperCase();
-                if ([`BEGSR`, `ENDSR`, `CALL`].some(v => upperLine.includes(v)) === false) {
-                  continue;
-                }
-              }
             }
           }
-
-          if (line.length > 80) {
-            // Remove ending comments
-            line = line.substring(0, 80);
+        } else {
+          // Even if the line is useless, we need to capture the characters to be
+          // parsed in case it's a statement spread over multiple lines
+          if (!isFullyFree && currentStmtStart && currentStmtStart.content) {
+            currentStmtStart.content += ``.padEnd(baseLine.length + EOL.length);
           }
         }
 
-        pieces = [];
-        parts = [];
+        let line = baseLine;
+        if (!isFullyFree && line.length > 80) {
+          // Remove ending comments
+          line = line.substring(0, 80);
+        }
+
+        let tokens: Token[] = [];
+        let parts: string[];
+        let partsLower: string[];
         
         if (isFullyFree || lineIsFree) {
           // Free format!
-          line = line.trim();
+          if (line.trim() === ``) continue;
 
-          if (line === ``) continue;
-
-          pieces = line.split(`;`);
-          let tokens = tokenise(pieces[0], lineNumber);
+          const lineIsComment = line.trim().startsWith(`//`);
+          tokens = lineTokens(getValidStatement(line), lineNumber, lineIndex);
           partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
           parts = partsLower.map(piece => piece.toUpperCase());
 
-          const lineIsComment = line.startsWith(`//`);
+          line = line.trim();
 
           if (!lineIsComment) {
+
+            // First, we need a seperate switch for EXEC statements
+            switch (parts[0]) {
+              case '/EXEC':
+                fixedExec = true;
+                baseLine = ``.padEnd(7) + baseLine.substring(7);
+                currentStmtStart = {
+                  line: lineNumber,
+                  index: lineIndex,
+                  content: baseLine + LINEEND
+                }
+                continue;
+              case '/END':
+                line = `;`;
+                baseLine = ``.padEnd(baseLine.length) + `;`;
+                fixedExec = false;
+                break;
+              default:
+                // Maybe we're in a fixed exec statement, but a directive is being used.
+                // See test case references_21_fixed_exec1
+                if (fixedExec && currentStmtStart && currentStmtStart.content) {
+                  currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+                }
+                break;
+            }
+
+            // Then we do regular parsing
             if (parts[0] === `/EOF` && lineCanRun()) {
               // End of parsing for this file
               return;
@@ -449,17 +569,19 @@ export default class Parser {
           
                   if (includePath) {
                     const include = await this.includeFileFetch(workingUri, includePath);
-                    if (include.found) {
-                      scopes[0].includes.push({
-                        toPath: include.uri,
-                        line: lineNumber
-                      });
-                      
-                      try {
-                        await parseContent(include.uri, include.lines);
-                      } catch (e) {
-                        console.log(`Error parsing include: ${include.uri}`);
-                        console.log(e);
+                    if (include.found && include.uri) {
+                      if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
+                        scopes[0].includes.push({
+                          toPath: include.uri,
+                          line: lineNumber
+                        });
+                        
+                        try {
+                          await parseContent(include.uri, include.content);
+                        } catch (e) {
+                          console.log(`Error parsing include: ${include.uri}`);
+                          console.log(e);
+                        }
                       }
                     }
                   }
@@ -516,30 +638,38 @@ export default class Parser {
             }
           }
 
-          if (pieces.length > 1 && pieces[1].includes(`//`)) line = pieces[0] + `;`;
 
-          if (!currentStatement) statementStartingLine = lineNumber;
+          if (!currentStmtStart || !currentStmtStart.content) {
+            currentStmtStart = {line: lineNumber, index: lineIndex};
+          }
 
-          if (!lineIsComment) {
-            if (line.endsWith(`;`)) {
-              if (currentStatement) {
+          if (lineIsComment) {
+            // This happens when we put a comment on a line which is part of one long statement.
+            // See references_24_comment_in_statement
+            if (currentStmtStart.content) {
+              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+            }
+          } else {
+            if (stripComment(line).endsWith(`;`)) {
+
+              if (currentStmtStart.content) {
                 // This means the line is just part of the end of the last statement as well.
-                line = currentStatement + line;
-                currentStatement = undefined;
+                line = currentStmtStart.content + getValidStatement(baseLine);
 
-                pieces = line.split(`;`);
-                tokens = tokenise(pieces[0], lineNumber);
+                tokens = lineTokens(line, currentStmtStart.line, currentStmtStart.index);
                 partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
                 parts = partsLower.map(piece => piece.toUpperCase());
+
+                currentStmtStart.content = undefined;
               }
 
             } else if (!line.endsWith(`;`)) {
+              currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
+              
+              if (currentStmtStart.content.endsWith(`-`)) 
+                currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
 
-              currentStatement = (currentStatement || ``) + line.trim();
-              if (currentStatement.endsWith(`-`)) 
-                currentStatement = currentStatement.substring(0, currentStatement.length - 1);
-              else
-                currentStatement += ` `;
+              currentStmtStart.content += LINEEND;
 
               continue;
             }
@@ -559,7 +689,7 @@ export default class Parser {
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber
                 };
 
@@ -606,12 +736,12 @@ export default class Parser {
               if (parts.length > 1) {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2), true);
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
-                  path: file,
-                  line: statementStartingLine
+                  path: fileUri,
+                  line: currentStmtStart.line
                 };
 
                 scope.constants.push(currentItem);
@@ -630,8 +760,8 @@ export default class Parser {
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
-                  path: file,
-                  line: statementStartingLine
+                  path: fileUri,
+                  line: currentStmtStart.line
                 };
 
                 scope.variables.push(currentItem);
@@ -649,13 +779,13 @@ export default class Parser {
                 currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
-                  path: file,
-                  line: statementStartingLine
+                  path: fileUri,
+                  line: currentStmtStart.line
                 };
 
                 currentItem.range = {
-                  start: statementStartingLine,
-                  end: statementStartingLine
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
                 };
 
                 currentItem.readParms = true;
@@ -669,7 +799,7 @@ export default class Parser {
 
           case `END-ENUM`:
             if (currentItem && currentItem.type === `constant`) {
-              currentItem.range.end = statementStartingLine;
+              currentItem.range.end = currentStmtStart.line;
               
               scope.constants.push(currentItem);
 
@@ -687,23 +817,23 @@ export default class Parser {
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
-                  path: file,
-                  line: statementStartingLine
+                  path: fileUri,
+                  line: currentStmtStart.line
                 };
 
                 currentItem.range = {
-                  start: statementStartingLine,
-                  end: statementStartingLine
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
                 };
 
                 currentGroup = `structs`;
 
                 // Expand the LIKEDS value if there is one.
-                await expandDs(file, currentItem);
+                await expandDs(fileUri, currentItem);
 
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                  currentItem.range.end = statementStartingLine;
+                  currentItem.range.end = currentStmtStart.line;
                   scope.structs.push(currentItem);
                 } else {
                   currentItem.readParms = true;
@@ -720,7 +850,7 @@ export default class Parser {
           case `END-DS`:
             if (dsScopes.length > 0) {
               const currentDs = dsScopes[dsScopes.length - 1];
-              currentDs.range.end = statementStartingLine;
+              currentDs.range.end = currentStmtStart.line;
             }
 
             if (dsScopes.length === 1) {
@@ -743,20 +873,20 @@ export default class Parser {
                   currentItem.tags = currentTags;
 
                   currentItem.position = {
-                    path: file,
-                    line: statementStartingLine
+                    path: fileUri,
+                    line: currentStmtStart.line
                   };
 
                   currentItem.readParms = true;
 
                   currentItem.range = {
-                    start: statementStartingLine,
-                    end: statementStartingLine
+                    start: currentStmtStart.line,
+                    end: currentStmtStart.line
                   };
 
                   // Does the keywords include a keyword that makes end-ds useless?
                   if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
-                    currentItem.range.end = statementStartingLine;
+                    currentItem.range.end = currentStmtStart.line;
                     scope.procedures.push(currentItem);
                     resetDefinition = true;
                   }
@@ -769,7 +899,7 @@ export default class Parser {
 
           case `END-PR`:
             if (currentItem && currentItem.type === `procedure`) {
-              currentItem.range.end = statementStartingLine;
+              currentItem.range.end = currentStmtStart.line;
 
               const isDefinedGlobally = scopes[0].procedures.some(proc => proc.name.toUpperCase() === currentItem.name.toUpperCase());
 
@@ -800,15 +930,15 @@ export default class Parser {
               currentItem.tags = currentTags;
 
               currentItem.position = {
-                path: file,
-                line: statementStartingLine
+                path: fileUri,
+                line: currentStmtStart.line
               };
 
               currentItem.readParms = false;
 
               currentItem.range = {
-                start: statementStartingLine,
-                end: statementStartingLine
+                start: currentStmtStart.line,
+                end: currentStmtStart.line
               };
 
               currentItem.scope = new Cache();
@@ -867,7 +997,7 @@ export default class Parser {
 
               if (currentItem && currentItem.type === `procedure`) {
                 scopes.pop();
-                currentItem.range.end = statementStartingLine;
+                currentItem.range.end = currentStmtStart.line;
                 resetDefinition = true;
               }
             }
@@ -882,13 +1012,13 @@ export default class Parser {
 		            currentItem.keyword = {'Subroutine': true};
 
                 currentItem.position = {
-                  path: file,
-                  line: statementStartingLine
+                  path: fileUri,
+                  line: currentStmtStart.line
                 };
 
                 currentItem.range = {
-                  start: statementStartingLine,
-                  end: statementStartingLine
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
                 };
 
                 currentDescription = [];
@@ -898,7 +1028,7 @@ export default class Parser {
     
           case `ENDSR`:
             if (currentItem && currentItem.type === `subroutine`) {
-              currentItem.range.end = statementStartingLine;
+              currentItem.range.end = currentStmtStart.line;
               scope.subroutines.push(currentItem);
               resetDefinition = true;
             }
@@ -943,8 +1073,7 @@ export default class Parser {
 
               let isContinued = false;
 
-              /** @type {string[]} */
-              let ignoreCtes = [];
+              let ignoreCtes: string[] = [];
 
               if (pIncludes(`WITH`)) {
                 for (let index = 4; index < tokens.length; index++) {
@@ -980,8 +1109,8 @@ export default class Parser {
                       currentSqlItem.description = qualifiedObjectPath.schema || ``;
       
                       currentSqlItem.position = {
-                        path: file,
-                        line: statementStartingLine
+                        path: fileUri,
+                        line: currentStmtStart.line
                       };
       
                       scope.sqlReferences.push(currentSqlItem);
@@ -1029,7 +1158,7 @@ export default class Parser {
                 }
 
               } else {
-              //Do nothing because it's a regular comment
+                //Do nothing because it's a regular comment
               }
 
             } else {
@@ -1048,12 +1177,12 @@ export default class Parser {
                   }
 
                   currentSub = new Declaration(`subitem`);
-                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]) ;
+                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]);
                   currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
 
                   currentSub.position = {
-                    path: file,
-                    line: statementStartingLine
+                    path: fileUri,
+                    line: currentStmtStart.line
                   };
 
                   // Add comments from the tags
@@ -1066,7 +1195,7 @@ export default class Parser {
                   }
 
                   // If the parameter has likeds, add the subitems to make it a struct.
-                  await expandDs(file, currentSub);
+                  await expandDs(fileUri, currentSub);
 
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
@@ -1102,7 +1231,7 @@ export default class Parser {
               currentItem.keyword = fSpec.keywords;
 
               currentItem.position = {
-                path: file,
+                path: fileUri,
                 line: lineNumber
               };
 			  
@@ -1153,11 +1282,29 @@ export default class Parser {
             break;
 
           case `C`:
-            const cSpec = parseCLine(line);
+            const cSpec = parseCLine(lineNumber, lineIndex, line);
 
-            potentialName = cSpec.factor1;
+            tokens = [cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
-            switch (cSpec.opcode) {
+            const fromToken = (token?: Token) => {
+              return token ? lineTokens(token.value, lineNumber, token.range.start) : [];
+            };
+
+            if (cSpec.opcode && ALLOWS_EXTENDED.includes(cSpec.opcode.value) && !cSpec.factor1 && cSpec.extended) {
+              tokens.push(...fromToken(cSpec.extended));
+            } else if (!cSpec.factor1 && !cSpec.opcode && cSpec.extended) {
+              tokens.push(...fromToken(cSpec.extended));
+            } else {
+              tokens.push(
+                ...fromToken(cSpec.factor1),
+                ...fromToken(cSpec.factor2),
+                ...fromToken(cSpec.result),
+              );
+            }
+
+            potentialName = cSpec.factor1 ? cSpec.factor1.value : ``;
+
+            switch (cSpec.opcode && cSpec.opcode.value) {
             case `BEGSR`:
               if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === potentialName)) {
                 currentItem = new Declaration(`subroutine`);
@@ -1165,7 +1312,7 @@ export default class Parser {
                 currentItem.keyword = {'Subroutine': true};
   
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber
                 };
   
@@ -1188,37 +1335,58 @@ export default class Parser {
           
             case `CALL`:
               const callItem = new Declaration(`procedure`);
-              callItem.name = (cSpec.factor2.startsWith(`'`) && cSpec.factor2.endsWith(`'`) ? cSpec.factor2.substring(1, cSpec.factor2.length-1) : cSpec.factor2);
-              callItem.keyword = {'EXTPGM': true}
-              callItem.description = currentDescription.join(`\n`);
-              callItem.tags = currentTags;
+              if (cSpec.factor2) {
+                const f2Value = cSpec.factor2.value;
+                callItem.name = (f2Value.startsWith(`'`) && f2Value.endsWith(`'`) ? f2Value.substring(1, f2Value.length-1) : f2Value);
+                callItem.keyword = {'EXTPGM': true}
+                callItem.description = currentDescription.join(`\n`);
+                callItem.tags = currentTags;
 
-              callItem.position = {
-                path: file,
-                line: lineNumber
-              };
+                callItem.position = {
+                  path: fileUri,
+                  line: lineNumber
+                };
 
-              callItem.range = {
-                start: lineNumber,
-                end: lineNumber
-              };
+                callItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
 
-              scope.procedures.push(callItem);
+                scope.procedures.push(callItem);
+              }
+              break;
+
+            case `TAG`:
+              const tagItem = new Declaration(`tag`);
+              if (cSpec.factor1) {
+                tagItem.name = cSpec.factor1.value;
+                tagItem.position = {
+                  path: fileUri,
+                  line: lineNumber
+                };
+
+                tagItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+
+                scope.tags.push(tagItem);
+              }
               break;
             }
 
             break;
           case `P`:
-            const pSpec = parsePLine(line);
+            const pSpec = parsePLine(line, lineNumber, lineIndex);
 
-            if (pSpec.potentialName === ``) continue;
-
-            if (pSpec.potentialName.endsWith(`...`)) {
-              potentialName = pSpec.potentialName.substring(0, pSpec.potentialName.length - 3);
+            if (pSpec.potentialName) {
+              potentialName = pSpec.potentialName.value.substring(0, pSpec.potentialName.value.length - 3);
               potentialNameUsed = true;
+              tokens = [pSpec.potentialName];
             } else {
               if (pSpec.start) {
-                potentialName = pSpec.name.length > 0 ? pSpec.name : potentialName;
+                tokens = [...pSpec.keywordsRaw, pSpec.name]
+                potentialName = pSpec.name && pSpec.name.value.length > 0 ? pSpec.name.value : potentialName;
 
                 if (potentialName) {
                   //We can overwrite it.. it might have been a PR before.
@@ -1234,7 +1402,7 @@ export default class Parser {
                   currentItem.keyword = pSpec.keywords;
 
                   currentItem.position = {
-                    path: file,
+                    path: fileUri,
                     line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   };
 
@@ -1266,26 +1434,26 @@ export default class Parser {
             break;
 
           case `D`:
-            const dSpec = parseDLine(line);
+            const dSpec = parseDLine(lineNumber, lineIndex, line);
 
-            if (dSpec.potentialName === ``) continue;
-
-            if (dSpec.potentialName.endsWith(`...`)) {
-              potentialName = dSpec.potentialName.substring(0, dSpec.potentialName.length - 3);
+            if (dSpec.potentialName && dSpec.potentialName) {
+              potentialName = dSpec.potentialName.value;
               potentialNameUsed = true;
+              tokens = [dSpec.potentialName];
               continue;
             } else {
-              potentialName = dSpec.name.length > 0 ? dSpec.name : potentialName ? potentialName : ``;
+              potentialName = dSpec.name && dSpec.name.value.length > 0 ? dSpec.name.value : (potentialName ? potentialName : ``);
+              tokens = [dSpec.field, ...dSpec.keywordsRaw, dSpec.name]
 
-              switch (dSpec.field) {
+              switch (dSpec.field && dSpec.field.value) {
               case `C`:
                 currentItem = new Declaration(`constant`);
                 currentItem.name = potentialName || `*N`;
-                currentItem.keyword = dSpec.keyword;
+                currentItem.keyword = dSpec.keywords || {};
                   
                 // TODO: line number might be different with ...?
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 };
     
@@ -1297,12 +1465,12 @@ export default class Parser {
                 currentItem.name = potentialName || `*N`;
                 currentItem.keyword = {
                   ...dSpec.keywords,
-                  ...getPrettyType(dSpec),
+                  ...prettyTypeFromToken(dSpec),
                 }
 
                 // TODO: line number might be different with ...?
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 };
 
@@ -1316,7 +1484,7 @@ export default class Parser {
                 currentItem.keyword = dSpec.keywords;
 
                 currentItem.position = {
-                  path: file,
+                  path: fileUri,
                   line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                 };
 
@@ -1325,7 +1493,7 @@ export default class Parser {
                   end: currentItem.position.line
                 };
 
-                expandDs(file, currentItem);
+                expandDs(fileUri, currentItem);
 
                 currentGroup = `structs`;
                 scope.structs.push(currentItem);
@@ -1338,12 +1506,12 @@ export default class Parser {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = potentialName || `*N`;
                   currentItem.keyword = {
-                    ...getPrettyType(dSpec),
+                    ...prettyTypeFromToken(dSpec),
                     ...dSpec.keywords
                   }
   
                   currentItem.position = {
-                    path: file,
+                    path: fileUri,
                     line: lineNumber - (potentialNameUsed ? 1 : 0) // Account that name is on line before
                   };
 
@@ -1367,7 +1535,7 @@ export default class Parser {
                   if (currentItem) {
                     currentItem.keyword = {
                       ...currentItem.keyword,
-                      ...getPrettyType(dSpec),
+                      ...prettyTypeFromToken(dSpec),
                       ...dSpec.keywords
                     }
                   }
@@ -1405,17 +1573,17 @@ export default class Parser {
                     currentSub = new Declaration(`subitem`);
                     currentSub.name = potentialName;
                     currentSub.keyword = {
-                      ...getPrettyType(dSpec),
+                      ...prettyTypeFromToken(dSpec),
                       ...dSpec.keywords
                     }
 
                     currentSub.position = {
-                      path: file,
+                      path: fileUri,
                       line: lineNumber
                     };
 
                     // If the parameter has likeds, add the subitems to make it a struct.
-                    await expandDs(file, currentSub);
+                    await expandDs(fileUri, currentSub);
 
                     currentItem.subItems.push(currentSub);
                     currentSub = undefined;
@@ -1426,7 +1594,7 @@ export default class Parser {
                       if (currentItem.subItems.length > 0) {
                         currentItem.subItems[currentItem.subItems.length - 1].keyword = {
                           ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
-                          ...getPrettyType(dSpec),
+                          ...prettyTypeFromToken(dSpec),
                           ...dSpec.keywords
                         }
                       } else {
@@ -1449,6 +1617,12 @@ export default class Parser {
           }
         }
 
+        if (options.collectReferences && tokens.length > 0) {
+          const currentProc = scopes[0].procedures.find(proc => proc.name === currentProcName);
+          collectReferences(fileUri, tokens, currentProc, currentItem);
+          addPostProcessingStatements(currentProcName, tokens);
+        }
+
         if (resetDefinition) {
           potentialName = undefined;
           potentialNameUsed = false;
@@ -1460,12 +1634,16 @@ export default class Parser {
           resetDefinition = false;
         }
       }
+
+      if (options.collectReferences) {
+        scanScopeForReferences();
+      }
     }
 
-    await parseContent(workingUri, baseLines);
+    await parseContent(workingUri, baseContent);
 
     if (scopes.length > 0) {
-      scopes[0].keyword = Parser.expandKeywords(globalKeyword);
+      scopes[0].keyword = Parser.expandKeywords(Parser.getTokens(globalKeyword));
     }
 
     scopes[0].fixProcedures();    
@@ -1477,29 +1655,22 @@ export default class Parser {
     return parsedData;
   }
 
-  /**
-   * @param {import("./types").Token[]|string|string[]} tokens 
-   */
-  static expandKeywords(tokens) {
-    /** @type {import("./parserTypes").Keywords} */
-    const keyvalues = {};
-
-    /** @type {import("./types").Token[]} */
-    let validTokens;
-
-    if (Array.isArray(tokens) && typeof tokens[0] === `string`) {
-      validTokens = tokenise(tokens.join(` `), 0);
+  static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
+    if (Array.isArray(content) && typeof content[0] === `string`) {
+      return lineTokens(content.join(` `), lineNumber, baseIndex);
     } else 
-      if (typeof tokens === `string`) {
-        validTokens = tokenise(tokens, 0);
+      if (typeof content === `string`) {
+        return lineTokens(content, lineNumber, baseIndex);
       } else {
-        // @ts-ignore
-        validTokens = tokens;
+        return content as Token[];
       }
-  
+  }
+
+  static expandKeywords(tokens: Token[], isConst = false): Keywords {
+    const keyvalues: Keywords = {};
 
     if (tokens.length > 0) {
-      const keywordParts = createBlocks(validTokens);
+      const keywordParts = createBlocks(tokens.slice(0));
 
       for (let i = 0; i < keywordParts.length; i++) {
         if (keywordParts[i].value) {
@@ -1507,7 +1678,11 @@ export default class Parser {
             keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i+1].block.map(part => part.value).join(``);
             i++; // Skip one for the block.
           } else {
-            keyvalues[keywordParts[i].value.toUpperCase()] = true;
+            if (isConst) {
+              keyvalues[`CONST`] = keywordParts[i].value;
+            } else {
+              keyvalues[keywordParts[i].value.toUpperCase()] = true;
+            }
           }
         }
       }
