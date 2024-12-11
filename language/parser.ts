@@ -1284,7 +1284,7 @@ export default class Parser {
           case `C`:
             const cSpec = parseCLine(lineNumber, lineIndex, line);
 
-            tokens = [cSpec.ind1, cSpec.ind2, cSpec.ind3];
+            tokens = [cSpec.indicator, cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
             const fromToken = (token?: Token) => {
               return token ? lineTokens(token.value, lineNumber, token.range.start) : [];
