@@ -14,7 +14,7 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
     const doc = await parser.getDocs(uri, document.getText());
 
     if (doc) {
-      const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.referenceByOffset(uri, doc, document.offsetAt(currentPos));
 
       if (def) {
         const uniqueUris = def.references.map(ref => ref.uri).filter((value, index, self) => self.indexOf(value) === index);
@@ -49,7 +49,7 @@ export async function renameRequestProvider(params: RenameParams): Promise<Works
     const doc = await parser.getDocs(uri, document.getText());
 
     if (doc) {
-      const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
+      const def = Cache.referenceByOffset(uri, doc, document.offsetAt(currentPos));
 
       if (def) {
         let edits: {[uri: string]: TextEdit[]} = {};

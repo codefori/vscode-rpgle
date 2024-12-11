@@ -22,6 +22,7 @@ export interface CacheProps {
   sqlReferences?: Declaration[];
   indicators?: Declaration[];
   includes?: IncludeStatement[];
+  tags?: Declaration[];
 }
 
 export interface Rules {

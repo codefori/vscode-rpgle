@@ -4,7 +4,7 @@ import Linter from '../../../../language/linter';
 import { calculateOffset } from './linter';
 
 import * as Project from "./project";
-import { findAllLocalReferences } from './project/references';
+import { findAllLocalReferences as getAllProcedureReferences } from './project/references';
 import Cache from '../../../../language/models/cache';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]|undefined> {
@@ -21,26 +21,26 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 			const doc = await parser.getDocs(uri, document.getText());
 	
 			if (doc) {
-				const def = Cache.referenceByOffset(doc, document.offsetAt(currentPos));
+				const def = Cache.referenceByOffset(uri, doc, document.offsetAt(currentPos));
 
 				if (def) {
+					let locations: Location[] = [];
 					if (Project.isEnabled) {
-						return await findAllLocalReferences(def);
-					} else {
-						let locations: Location[] = [];
-
-						for (const ref of def.references) {
-							let refDoc = documents.get(ref.uri);
-							if (refDoc) {
-								locations.push(Location.create(
-									ref.uri,
-									calculateOffset(refDoc, ref)
-								));
-							}
-						}
-
-						return locations;
+						const procRefs = await getAllProcedureReferences(def);
+						locations.push(...procRefs);
 					}
+
+					for (const ref of def.references) {
+						let refDoc = documents.get(ref.uri);
+						if (refDoc) {
+							locations.push(Location.create(
+								ref.uri,
+								calculateOffset(refDoc, ref)
+							));
+						}
+					}
+
+					return locations;
 				}
 			}
 		}

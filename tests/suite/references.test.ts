@@ -61,7 +61,7 @@ test("references_1_const", async () => {
 
   const falseConstIndex = bigLines.indexOf(`dcl-c FALSE`) + 7;
 
-  const falseConst = Cache.referenceByOffset(cache, falseConstIndex);
+  const falseConst = Cache.referenceByOffset(uri, cache, falseConstIndex);
   expect(falseConst.name).toBe(`FALSE`);
   expect(falseConst.references.length).not.toBe(0);
 });
@@ -71,7 +71,7 @@ test("references_2_const", async () => {
 
   const trueConstIndex = bigLines.indexOf(`var1 = TRUE`) + 7;
 
-  const trueConst = Cache.referenceByOffset(cache, trueConstIndex);
+  const trueConst = Cache.referenceByOffset(uri, cache, trueConstIndex);
   expect(trueConst.name).toBe(`TRUE`);
   expect(trueConst.references.length).toBe(2);
 });
@@ -81,7 +81,7 @@ test("references_3_enum", async () => {
 
   const colorsConstIndex = bigLines.indexOf(`var1 = COLORS`) + 7;
 
-  const colorsConst = Cache.referenceByOffset(cache, colorsConstIndex);
+  const colorsConst = Cache.referenceByOffset(uri, cache, colorsConstIndex);
   expect(colorsConst.name).toBe(`COLORS`);
   expect(colorsConst.references.length).toBe(2);
 });
@@ -91,7 +91,7 @@ test("references_4_subfield_a", async () => {
 
   const greenSubfieldIndex = bigLines.indexOf(`var1 = COLORS.GREEN`) + 17;
 
-  const greenConst = Cache.referenceByOffset(cache, greenSubfieldIndex);
+  const greenConst = Cache.referenceByOffset(uri, cache, greenSubfieldIndex);
 
   expect(greenConst.references.length).toBe(2);
 });
@@ -101,7 +101,7 @@ test("references_4_subfield_b", async () => {
 
   const greenSubfieldIndex = bigLines.indexOf(` GREEN 1`) + 3;
 
-  const greenConst = Cache.referenceByOffset(cache, greenSubfieldIndex);
+  const greenConst = Cache.referenceByOffset(uri, cache, greenSubfieldIndex);
   expect(greenConst.name).toBe(`GREEN`);
   expect(greenConst.references.length).toBe(2);
 
@@ -113,7 +113,7 @@ test("references_4_subfield_b", async () => {
 
 
   const refSubfieldIndex = bigLines.indexOf(` RED 2`) + 3;
-  const redConst = Cache.referenceByOffset(cache, refSubfieldIndex);
+  const redConst = Cache.referenceByOffset(uri, cache, refSubfieldIndex);
 
   expect(redConst.name).toBe(`RED`);
   expect(redConst.references.length).toBe(1);
@@ -124,7 +124,7 @@ test("references_5", async () => {
 
   const var1Index = bigLines.indexOf(`var1 = TRUE`);
 
-  const var1Var = Cache.referenceByOffset(cache, var1Index);
+  const var1Var = Cache.referenceByOffset(uri, cache, var1Index);
   expect(var1Var.name).toBe(`var1`);
   expect(var1Var.references.length).toBe(5);
 });
@@ -136,12 +136,12 @@ test("references_6_subfield_dim", async () => {
   const varColorsIndex = baseIndex + 9;
   const redSubfieldIndex = baseIndex + 22;
 
-  const varColors = Cache.referenceByOffset(cache, varColorsIndex);
+  const varColors = Cache.referenceByOffset(uri, cache, varColorsIndex);
   expect(varColors.name).toBe(`varColors`);
   
   expect(varColors.references.length).toBe(2);
 
-  const redSubfield = Cache.referenceByOffset(cache, redSubfieldIndex);
+  const redSubfield = Cache.referenceByOffset(uri, cache, redSubfieldIndex);
   expect(redSubfield.name).toBe(`red`);
   expect(redSubfield.references.length).toBe(2);
 });
@@ -151,7 +151,7 @@ test("references_7", async () => {
 
   const declareAbcIndex = bigLines.indexOf(`dcl-proc abc`) + 10;
 
-  const varColors = Cache.referenceByOffset(cache, declareAbcIndex);
+  const varColors = Cache.referenceByOffset(uri, cache, declareAbcIndex);
   expect(varColors.name).toEqual(`abc`);
   expect(varColors.references.length).toEqual(1);
 });
@@ -405,7 +405,7 @@ test('references_10', async () => {
 
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true});
 
-  const rangeRefs = cache.referencesInRange({position: 220, end: 260});
+  const rangeRefs = cache.referencesInRange(uri, {position: 220, end: 260});
   expect(rangeRefs.length).toBe(2);
   expect(rangeRefs[0].dec.name).toBe(`x`);
   expect(rangeRefs[1].dec.name).toBe(`y`);
@@ -1590,4 +1590,29 @@ test('references_25_fixed_string', async () => {
   const http = cache.find(`http`);
   expect(http.references.length).toBe(1);
   expect(http.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `http`)).toBe(true);
+});
+
+test('references_26_fixed_tag', async () => {
+  const lines = [
+    `     C     SCRNFY        IFNE      wCfgNUSRNF`,
+    `     C                   EVAL      wCfgKey = 'NUSRNF'`,
+    `     C     wCfgKey       CHAIN     PCONFIG                            81`,
+    `     C  N81              EVAL      CNFVAL = SCRNFY`,
+    `     C  N81              UPDATE    CONFIG                               81`,
+    `     C   81              GOTO      UPDKO`,
+    `     C                   ENDIF`,
+    `     C     UPDOK         TAG`,
+    `     C                   EVAL      MSGLIN = cSavedOK`,
+    `     C                   GOTO      UPDEND`,
+    `     C     UPDKO         TAG`,
+    `     C                   EVAL      MSGLIN = cSavedKO`,
+    `     C     UPDEND        TAG`,
+    `     C                   EVAL      *IN80 = *ON`,
+    `     C                   ENDSR`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const updok = cache.find(`UPDKO`);
+  expect(updok.references.length).toBe(2);
+  expect(updok.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `UPDKO`)).toBe(true);
 });

@@ -1355,6 +1355,24 @@ export default class Parser {
                 scope.procedures.push(callItem);
               }
               break;
+
+            case `TAG`:
+              const tagItem = new Declaration(`tag`);
+              if (cSpec.factor1) {
+                tagItem.name = cSpec.factor1.value;
+                tagItem.position = {
+                  path: fileUri,
+                  line: lineNumber
+                };
+
+                tagItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+
+                scope.tags.push(tagItem);
+              }
+              break;
             }
 
             break;

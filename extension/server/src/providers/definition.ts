@@ -5,18 +5,18 @@ import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 
 export default async function definitionProvider(handler: DefinitionParams): Promise<Definition|null> {
-	const currentPath = handler.textDocument.uri;
+	const currentUri = handler.textDocument.uri;
 	const lineNumber = handler.position.line;
-	const document = documents.get(currentPath);
+	const document = documents.get(currentUri);
 
 	if (document) {
-		const doc = await parser.getDocs(currentPath, document.getText());
+		const doc = await parser.getDocs(currentUri, document.getText());
 		if (doc) {
 			const editingLine = document.getText(Range.create(lineNumber, 0, lineNumber, 200));
 			const possibleInclude = Parser.getIncludeFromDirective(editingLine);
 
 			if (possibleInclude && parser.includeFileFetch) {
-				const include = await parser.includeFileFetch(currentPath, possibleInclude);
+				const include = await parser.includeFileFetch(currentUri, possibleInclude);
 				if (include.found && include.uri) {
 					return Location.create(include.uri, Range.create(0, 0, 0, 0));
 				}
@@ -25,7 +25,7 @@ export default async function definitionProvider(handler: DefinitionParams): Pro
 				let def: Declaration|undefined;
 
 				// First, we try and get the reference by offset
-				def = Cache.referenceByOffset(doc, document.offsetAt(handler.position));
+				def = Cache.referenceByOffset(currentUri, doc, document.offsetAt(handler.position));
 
 				if (def) {
 					return Location.create(

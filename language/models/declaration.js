@@ -4,7 +4,7 @@ import Cache from "./cache";
 export default class Declaration {
   /**
    * 
-   * @param {"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"} type 
+   * @param {"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag"} type 
    */
   constructor(type) {
     this.type = type;

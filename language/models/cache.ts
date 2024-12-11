@@ -21,41 +21,22 @@ export default class Cache {
   constants: Declaration[];
   sqlReferences: Declaration[];
   indicators: Declaration[];
+  tags: Declaration[];
   includes: IncludeStatement[];
 
   constructor(cache: CacheProps = {}) {
-    /** @type {import("../parserTypes").Keywords} */
     this.keyword = {};
-
-    /** @type {Declaration[]} */
     this.parameters = cache.parameters || [];
-
-    /** @type {Declaration[]} */
     this.subroutines = cache.subroutines || [];
-
-    /** @type {Declaration[]} */
     this.procedures = cache.procedures || [];
-
-    /** @type {Declaration[]} */
     this.files = cache.files || [];
-
-    /** @type {Declaration[]} */
     this.variables = cache.variables || [];
-
-    /** @type {Declaration[]} */
     this.structs = cache.structs || [];
-
-    /** @type {Declaration[]} */
     this.constants = cache.constants || [];
-
-    /** @type {Declaration[]} */
     this.sqlReferences = cache.sqlReferences || [];
-
-    /** @type {Declaration[]} */
     this.indicators = cache.indicators || [...newInds()];
-
-    /** @type {import("../parserTypes").IncludeStatement[]} */
     this.includes = cache.includes || [];
+    this.tags = cache.tags || [];
   }
 
   /**
@@ -94,6 +75,7 @@ export default class Cache {
     this.subroutines.forEach(def => names.add(def.name));
     this.variables.forEach(def => names.add(def.name));
     this.structs.forEach(def => names.add(def.name));
+    this.tags.forEach(def => names.add(def.name));
 
     return Array.from(names);
   }
@@ -136,7 +118,8 @@ export default class Cache {
       allStructs,
       this.subroutines,
       this.variables,
-      this.indicators
+      this.indicators,
+      this.tags
     ];
 
     for (const list of searchIn) {
@@ -208,11 +191,11 @@ export default class Cache {
     }
   }
 
-  referencesInRange(range: Offset): { dec: Declaration, refs: Offset[] }[] {
+  referencesInRange(baseUri: string, range: Offset): { dec: Declaration, refs: Offset[] }[] {
     let list: { dec: Declaration, refs: Offset[] }[] = [];
 
     for (let i = range.position; i <= range.end; i++) {
-      const ref = Cache.referenceByOffset(this, i);
+      const ref = Cache.referenceByOffset(baseUri, this, i);
       if (ref) {
         // No duplicates allowed
         if (list.some(item => item.dec.name === ref.name)) continue;
@@ -227,7 +210,7 @@ export default class Cache {
     return list;
   }
 
-  static referenceByOffset(scope: Cache, offset: number): Declaration | undefined {
+  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
     const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`];
 
     for (const prop of props) {
@@ -236,20 +219,20 @@ export default class Cache {
         let possibleRef: boolean;
 
         // Search top level
-        possibleRef = def.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
+        possibleRef = def.references.some(r => r.uri === baseUri && offset >= r.offset.position && offset <= r.offset.end);
         if (possibleRef) return def;
 
         // Search any subitems
         if (def.subItems.length > 0) {
           for (const subItem of def.subItems) {
-            possibleRef = subItem.references.some(r => offset >= r.offset.position && offset <= r.offset.end);
+            possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.position && offset <= r.offset.end);
             if (possibleRef) return subItem;
           }
         }
 
         // Search scope if any
         if (def.scope) {
-          const inScope = Cache.referenceByOffset(def.scope, offset);
+          const inScope = Cache.referenceByOffset(baseUri, def.scope, offset);
           if (inScope) return inScope;
         }
       }

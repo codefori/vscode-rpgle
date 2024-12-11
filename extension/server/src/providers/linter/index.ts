@@ -538,7 +538,7 @@ function caseInsensitiveReplaceAll(text: string, search: string, replace: string
 
 function createExtract(document: TextDocument, userRange: Range, docs: Cache) {
 	const range = Range.create(userRange.start.line, 0, userRange.end.line, 1000);
-	const references = docs.referencesInRange({position: document.offsetAt(range.start), end: document.offsetAt(range.end)});
+	const references = docs.referencesInRange(document.uri, {position: document.offsetAt(range.start), end: document.offsetAt(range.end)});
 	const validRefs = references.filter(ref => [`struct`, `subitem`, `variable`].includes(ref.dec.type));
 
 	const nameDiffSize = 1; // Always once since we only add 'p' at the start

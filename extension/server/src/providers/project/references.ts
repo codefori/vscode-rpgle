@@ -70,44 +70,6 @@ export async function findAllLocalReferences(def: Declaration): Promise<Location
 				}
 			}
 
-		} else {
-			// Otherwise, we are looking for references to the current definition
-			const baseUri = def.position.path;
-
-			for (const uri of parsedFiles) {
-				const document = await getTextDoc(uri);
-				if (document) {
-					const cache = parser.getParsedCache(uri);
-
-					// It's only a valid reference if it is imported somewhere else
-					const foundInclude = cache.includes.find(include => include.toPath === baseUri)
-					if (foundInclude) {
-						const possibleDef = cache.find(def.name);
-
-						// Okay, we found something with a similar name in another file...
-						if (possibleDef) {
-							if (possibleDef.position.path === def.position.path) {
-								if (possibleDef.references.length === 0) {
-									locations.push(
-										Location.create(uri, Range.create(foundInclude.line, 0, foundInclude.line, 0)),
-									);
-
-								} else {
-									for (const ref of possibleDef.references) {
-										const possibleDoc = await getTextDoc(ref.uri);
-										if (possibleDoc) {
-											locations.push(
-												Location.create(ref.uri, calculateOffset(possibleDoc, ref)),
-											);
-										}
-									}
-								}
-
-							}
-						}
-					}
-				}
-			}
 		}
 	}
 
