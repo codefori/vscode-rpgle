@@ -60,6 +60,9 @@ export function parseCLine(lineNumber, lineIndex, content) {
   const extended = content.substr(35);
   const result = content.substr(49, 14);
 
+  const fieldLength = content.substr(63, 5);
+  const fieldDecimals = content.substr(68, 2);
+
   const ind1 = content.substr(70, 2);
   const ind2 = content.substr(72, 2);
   const ind3 = content.substr(74, 2);
@@ -71,6 +74,10 @@ export function parseCLine(lineNumber, lineIndex, content) {
     factor2: calculateToken(lineNumber, lineIndex+35, factor2),
     result: calculateToken(lineNumber, lineIndex+49, result),
     extended: calculateToken(lineNumber, lineIndex+35, extended),
+
+    fieldLength: calculateToken(lineNumber, lineIndex+63, fieldLength),
+    fieldDecimals: calculateToken(lineNumber, lineIndex+68, fieldDecimals),
+
     ind1: calculateToken(lineNumber, lineIndex+70, ind1, `special-ind`),
     ind2: calculateToken(lineNumber, lineIndex+72, ind2, `special-ind`),
     ind3: calculateToken(lineNumber, lineIndex+74, ind3, `special-ind`)

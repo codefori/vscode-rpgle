@@ -99,12 +99,7 @@ export default class Cache {
     return (lines.length >= 1 ? lines[0] : 0);
   }
 
-  /**
-   * 
-   * @param {string} name 
-   * @returns {Declaration}
-   */
-  find(name) {
+  find(name: string, includeProcedure?: string): Declaration|undefined {
     name = name.toUpperCase();
 
     const fileStructs = this.files.flatMap(file => file.subItems);
@@ -127,6 +122,14 @@ export default class Cache {
       if (found) return found;
     }
 
+    if (includeProcedure) {
+      const procedureScope = this.procedures.find(proc => proc.name.toUpperCase() === includeProcedure);
+      if (procedureScope) {
+        const found = procedureScope.scope.find(name);
+        if (found) return found;
+      }
+    }
+
     if (allStructs.length > 0) {
       for (const def of allStructs) {
         if (def.keyword[`QUALIFIED`] !== true) {
@@ -136,7 +139,7 @@ export default class Cache {
       }
     }
 
-    return null;
+    return;
   }
 
   findDefinition(lineNumber, word) {

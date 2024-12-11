@@ -1144,7 +1144,16 @@ test('plist_test', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
-  expect(cache.variables.length).to.equal(0);
+  expect(cache.variables.length).toBe(11);
+
+  const atPGMID = cache.find(`@PGMID`);
+  expect(atPGMID.keyword[`CHAR`]).toBe(`10`);
+
+  const atSON = cache.find(`@SQN`);
+  expect(atSON.keyword[`PACKED`]).toBe(`2:0`);
+
+  const atPVSELECTION = cache.find(`@PVSELECTION`);
+  expect(atPVSELECTION.keyword[`CHAR`]).toBe(`256`);
 });
 
 test(`range test 2`, async () => {

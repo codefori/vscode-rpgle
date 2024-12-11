@@ -895,6 +895,9 @@ test('references_15_fixed_4', async () => {
   const r_transf = cache.find(`r_transf`);
   expect(r_transf.references.length).toBe(3);
   expect(r_transf.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `r_transf`)).toBe(true);
+
+  const r_long_lue = cache.find(`r_long_lue`);
+  expect(r_long_lue.references.length).toBe(1);
 });
 
 test('references_16_fixed_5', async () => {
@@ -1117,6 +1120,10 @@ test('references_16_fixed_5', async () => {
   const mntJtot = cache.find(`mntJtot`);
   expect(mntJtot.references.length).toBe(2);
   expect(mntJtot.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `mntJtot`)).toBe(true);
+
+  const syde = cache.find(`syde`);
+  expect(syde.references.length).toBe(2);
+  expect(syde.references.every(ref => lines.substring(ref.offset.position, ref.offset.end) === `syde`)).toBe(true);
 });
 
 test('references_17_fixed_6', async () => {

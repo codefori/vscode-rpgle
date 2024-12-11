@@ -1300,6 +1300,31 @@ export default class Parser {
                 ...fromToken(cSpec.factor2),
                 ...fromToken(cSpec.result),
               );
+
+              if (cSpec.result && cSpec.fieldLength) {
+                // This means we need to dynamically define this field
+                const fieldName = cSpec.result.value;
+                // Don't redefine this field.
+                if (!scopes[0].find(fieldName, currentProcName)) {
+                  const fieldLength = parseInt(cSpec.fieldLength.value);
+                  const decimals = cSpec.fieldDecimals ? parseInt(cSpec.fieldDecimals.value) : undefined;
+                  const type = decimals !== undefined ? `PACKED`: `CHAR`;
+
+                  currentItem = new Declaration(`variable`);
+                  currentItem.name = fieldName;
+                  currentItem.keyword = {[type]: `${fieldLength}${decimals !== undefined ? `:${decimals}` : ``}`};
+                  currentItem.position = {
+                    path: fileUri,
+                    line: lineNumber
+                  };
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  scope.variables.push(currentItem);
+                }
+              }
             }
 
             potentialName = cSpec.factor1 ? cSpec.factor1.value : ``;
