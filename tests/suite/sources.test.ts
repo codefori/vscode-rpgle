@@ -13,9 +13,13 @@ const timeout = 1000 * 60 * 10; // 10 minutes
 test("Generic reference tests", { timeout }, async () => {
   const projects = getTestProjectsDir();
 
+  let totalFiles = 0;
+
   for (const projectPath of projects) {
     const parser = setupParser(projectPath);
     const list = await getSourcesList(projectPath);
+
+    totalFiles += list.length;
 
     for (let i = 0; i < list.length; i++) {
       const relativePath = list[i];
@@ -94,4 +98,6 @@ test("Generic reference tests", { timeout }, async () => {
       // console.log(`Parsed ${basename} in ${pe - ps}ms. Validated in ${se-ss} (${i+1}/${list.length}). Found ${referencesCollected} references.`);
     }
   }
+
+  console.log(`Parsed ${totalFiles} files.`);
 });

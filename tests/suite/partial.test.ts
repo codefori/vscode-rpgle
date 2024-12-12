@@ -10,6 +10,9 @@ const parser = setupParser();
 test("Parser partial tests", { timeout }, async () => {
   const projects = getTestProjectsDir();
 
+  const SPLIT_SIZE = 10;
+  let totalFiles = 0;
+
   for (const projectPath of projects) {
     const parser = setupParser(projectPath);
     const list = await getSourcesList(projectPath);
@@ -28,7 +31,7 @@ test("Parser partial tests", { timeout }, async () => {
 
       let baseContentSplitUpIntoPieces = [];
 
-      const pieceSize = Math.ceil(baseContent.length / 10);
+      const pieceSize = Math.ceil(baseContent.length / SPLIT_SIZE);
       for (let i = 0; i < baseContent.length; i += pieceSize) {
         baseContentSplitUpIntoPieces.push(baseContent.substring(i, i + pieceSize));
       }
@@ -55,4 +58,6 @@ test("Parser partial tests", { timeout }, async () => {
       // console.log(``);
     }
   }
+
+  console.log(`Parsed ${totalFiles} files, ${SPLIT_SIZE} each.`);
 });
