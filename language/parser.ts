@@ -28,6 +28,8 @@ const lineTokens = (input: string, lineNumber: number, lineIndex: number): Token
   return tokens;
 }
 
+const PROGRAMPARMS_NAME = `PROGRAMPARMS`;
+
 export default class Parser {
   parsedCache: {[thePath: string]: Cache} = {};
   tables: TableDetail = {};
@@ -951,40 +953,48 @@ export default class Parser {
 
           case `DCL-PI`:
             //Procedures can only exist in the global scope.
-            if (currentProcName) {
-              if (parts.length > 0) {
+            if (parts.length > 0) {
+              if (currentProcName) {
                 currentGroup = `procedures`;
                 currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+              } else {
+                currentItem = new Declaration(`struct`);
+                currentItem.name = PROGRAMPARMS_NAME;
+              }
 
+              if (currentItem) {
                 const endInline = tokens.findIndex(part => part.value.toUpperCase() === `END-PI`);
 
-                if (currentItem) {
-
-                  // Indicates that the PI starts and ends on the same line
-                  if (endInline >= 0) { 
-                    tokens.splice(endInline, 1);
-                    currentItem.readParms = false;
-                    resetDefinition = true;
-                  }
-
-                  currentItem.keyword = {
-                    ...currentItem.keyword,
-                    ...Parser.expandKeywords(tokens.slice(2))
-                  }
-                  currentItem.readParms = true;
-
-                  currentDescription = [];
+                // Indicates that the PI starts and ends on the same line
+                if (endInline >= 0) { 
+                  tokens.splice(endInline, 1);
+                  currentItem.readParms = false;
+                  resetDefinition = true;
                 }
+
+                currentItem.keyword = {
+                  ...currentItem.keyword,
+                  ...Parser.expandKeywords(tokens.slice(2))
+                }
+                currentItem.readParms = true;
+
+                currentDescription = [];
               }
             }
             break;
 
           case `END-PI`:
             //Procedures can only exist in the global scope.
-            currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+            if (currentProcName) {
+              currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
 
-            if (currentItem && currentItem.type === `procedure`) {
-              currentItem.readParms = false;
+              if (currentItem && currentItem.type === `procedure`) {
+                currentItem.readParms = false;
+                resetDefinition = true;
+              }
+            } else if (currentItem && currentItem.name === PROGRAMPARMS_NAME) {
+              // Assign this scopes parameters to the subitems of the program parameters struct
+              scopes[0].parameters = currentItem.subItems;
               resetDefinition = true;
             }
             break;
@@ -1202,7 +1212,7 @@ export default class Parser {
                   currentItem.subItems.push(currentSub);
                   currentSub = undefined;
 
-                  if (currentItem.type === `struct`) {
+                  if (currentItem.type === `struct` && currentItem.name !== PROGRAMPARMS_NAME) {
                     resetDefinition = true;
                   }
                 }
