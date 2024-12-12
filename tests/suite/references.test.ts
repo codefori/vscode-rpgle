@@ -381,10 +381,14 @@ test("references_9", async () => {
   const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true});
 
   const procedure = cache.find(`InputIsValid`);
-  const validationResult = procedure.scope.find(`validationResult`);
 
+  const validationResult = procedure.scope.find(`validationResult`);
   expect(validationResult.references.length).toEqual(7);
   expect(validationResult.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `validationResult`)).toBe(true);
+
+  const comp = procedure.scope.find(`comp`);
+  expect(comp.references.length).toEqual(2);
+  expect(comp.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `comp`)).toBe(true);
 });
 
 test('references_10', async () => {
@@ -1833,4 +1837,51 @@ test('references_27_fixed_reference', async () => {
 
     expect(offsetContent.toUpperCase()).toBe(`WCFGKEY`);
   }
+});
+
+test('reference_28_parameters', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `ctl-opt dftactgrp(*no);`,
+    ``,
+    `dcl-pi upddept;`,
+    `  deptno char(3);`,
+    `  deptname char(36);`,
+    `  mgrno char(6);`,
+    `  admrdept char(3);`,
+    `  location char(16);`,
+    `end-pi;`,
+    ``,
+    `dcl-ds result qualified dim(1);`,
+    `  success char(1);`,
+    `end-ds;`,
+    ``,
+    `exec sql`,
+    `  update dept`,
+    `    set deptname = :deptname,`,
+    `        mgrno = :mgrno,`,
+    `        admrdept = :admrdept,`,
+    `        location = :location`,
+    `    where deptno = :deptno;`,
+    ``,
+    `if (SQLCOD = 0);`,
+    `  result(1).success = 'Y';`,
+    `else;`,
+    `  result(1).success = 'N';`,
+    `endif;`,
+    ``,
+    `dcl-s return char(length) inz('Y');`,
+    ``,
+    `exec sql set result sets array :result for 1 rows;`,
+    `// Hello`,
+    `return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const deptno = cache.find(`deptno`);
+  expect(deptno).toBeDefined();
+  expect(deptno.references.length).toBe(2);
+  expect(deptno.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `deptno`)).toBe(true);
 });

@@ -17,6 +17,8 @@ test("Parser partial tests", { timeout }, async () => {
     const parser = setupParser(projectPath);
     const list = await getSourcesList(projectPath);
 
+    totalFiles += list.length;
+
     for (let i = 0; i < list.length; i++) {
       const relativePath = list[i];
       const basename = path.basename(relativePath);
@@ -51,13 +53,13 @@ test("Parser partial tests", { timeout }, async () => {
         lengths.push(pe - ps);
       }
 
-      const lengthsAverage = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-      const total = lengths.reduce((a, b) => a + b, 0);
-      const last = lengths[lengths.length - 1];
+      // const lengthsAverage = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+      // const total = lengths.reduce((a, b) => a + b, 0);
+      // const last = lengths[lengths.length - 1];
       // console.log(`\tAverage: ${lengthsAverage}ms, Full: ${last}ms, Total: ${total}`);
       // console.log(``);
     }
   }
 
-  console.log(`Parsed ${totalFiles} files, ${SPLIT_SIZE} each.`);
+  console.log(`Parsed ${totalFiles} files, ${SPLIT_SIZE} times each.`);
 });
