@@ -125,9 +125,10 @@ function updateRuler(editor = window.activeTextEditor) {
               })
             }
           });
+          
           editor.setDecorations(notCurrentArea, decorations);
 
-          if (currentEditorLine !== lineNumber && lineNumber > 1) {
+          if (currentEditorLine !== lineNumber && lineNumber >= 1) {
             editor.setDecorations(outlineBar, [
               {
                 range: new Range(lineNumber-1, 0, lineNumber-1, 80),
