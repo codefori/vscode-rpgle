@@ -333,7 +333,7 @@ export function tokenise(statement: string, options: TokeniseOptions = {}): Toke
         if (state === ReadState.IN_STRING) {
           if (possibleEscape) {
             currentText += `''`;
-            i += 2;
+            i++;
           } else {
             currentText += statement[i];
             result.push({ value: currentText, type: `string`, range: { start: startsAt, end: startsAt + currentText.length, line: lineNumber } });

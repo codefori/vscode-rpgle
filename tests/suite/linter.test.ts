@@ -3321,3 +3321,72 @@ test('issue_353_indent_4', async () => {
   console.log(indentErrors);
   expect(indentErrors.length).toBe(0);
 });
+
+test(`issue_353_indent_5`, async () => {
+  const lines = [
+    `**FREE`,
+    `*in01 = 'yy' in %list('zz': ' ''');`,
+    `*inLR = *ON;`,
+    `return;`,
+    `dcl-proc test;`,
+    `  // If the line ends with a known end-of line character, then`,
+    `  //  assume it is free format.  Make sure to strip any free-format`,
+    `  //  comment first.  The stripping is not precise and will cause`,
+    `  //  a free form line that has a '//' literal to not be detected.`,
+    `  eol = ';';`,
+    `end-proc;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  expect(errors.length).toBe(0);
+  expect(indentErrors.length).toBe(0);
+});
+
+test(`issue_353_indent_6`, async () => {
+  const lines = [
+    `**FREE`,
+    `*in01 = 'yy' in %list('zz': ' ''');`,
+    `*inLR = *ON;`,
+    `return;`,
+    ``,
+    `dcl-proc test;`,
+    `  if specType = 'C' and not likelyComment;`,
+    `    if not (%subst(srcDta: 7: 2) in`,
+    `        %list('  ': 'L0': 'L1': 'L2': 'L3': 'L4': 'L5'`,
+    `        : 'L6': 'L7': 'L8': 'L9': 'LR': 'SR': 'AN': 'OR'));`,
+    `      return *ON;`,
+    `    endif;`,
+    `  endif;`,
+    ``,
+    `  // If the line ends with a known end-of line character, then`,
+    `  //  assume it is free format.  Make sure to strip any free-format`,
+    `  //  comment first.  The stripping is not precise and will cause`,
+    `  //  a free form line that has a '//' literal to not be detected.`,
+    `  eol = ';';`,
+    `  posStr = %scan('//': srcDta);`,
+    `  if posStr > 1;`,
+    `    evalr eol = %trim(%subst(srcDta: 1: posStr - 1));`,
+    `  endif;`,
+    `  if (eol in %list(';': ':': '+': '-': '/': '*': '=': '_'));`,
+    `    return *ON;`,
+    `  endif;`,
+    ``,
+    `  // Despite our best guesses, we cannot confirm this to be a`,
+    `  //  free format line, so indicate that it is _not_ free format.`,
+    `  return *OFF;`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  expect(indentErrors.length).toBe(0);
+});
