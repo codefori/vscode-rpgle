@@ -3270,3 +3270,54 @@ test('issue_353_indent_3', async () => {
   expect(errors.length).toBe(0);
   expect(indentErrors.length).toBe(0);
 });
+
+test('issue_353_indent_4', async () => {
+  const lines = [
+    `**FREE`,
+    `dcl-c @QUOTE                   '''';`,
+    ``,
+    `dcl-c @SOMETHING_IN_BETWEEN 'whatever';`,
+    ``,
+    `dcl-c @SEUCOMMENT_FREE  '//&& ';`,
+    `// ********************************************************************`,
+    ``,
+    `dcl-ds copybookinfo_t           qualified template inz;`,
+    `  qualObj;`,
+    `  file                  Char(10)    overlay(qualObj: 1);`,
+    `  lib                   Char(10)    overlay(qualObj: *NEXT);`,
+    `  mbr                   Char(10);`,
+    `  found                 Ind         inz(*OFF);`,
+    `end-ds;`,
+    `// ********************************************************************`,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  const atQuote = cache.find(`@QUOTE`);
+  expect(atQuote).toBeDefined();
+  expect(atQuote).toBeDefined();
+  expect(atQuote.keyword[`CONST`]).toBe(`''`);
+
+  const atSomethingInBetween = cache.find(`@SOMETHING_IN_BETWEEN`);
+  expect(atSomethingInBetween).toBeDefined();
+  expect(atSomethingInBetween.keyword[`CONST`]).toBe(`'whatever'`);
+
+  const atSeuCommentFree = cache.find(`@SEUCOMMENT_FREE`);
+  expect(atSeuCommentFree).toBeDefined();
+  expect(atSeuCommentFree.keyword[`CONST`]).toBe(`'//&& '`);
+
+  const copybookinfo_t = cache.find(`copybookinfo_t`);
+  expect(copybookinfo_t).toBeDefined();
+  expect(copybookinfo_t.subItems.length).toBe(5);
+  expect(copybookinfo_t.keyword[`QUALIFIED`]).toBe(true);
+  expect(copybookinfo_t.keyword[`TEMPLATE`]).toBe(true);
+  expect(copybookinfo_t.keyword[`INZ`]).toBe(true);
+
+  const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  expect(errors.length).toBe(0);
+  console.log(indentErrors);
+  expect(indentErrors.length).toBe(0);
+});

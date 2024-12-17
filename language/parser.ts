@@ -395,34 +395,20 @@ export default class Parser {
         if (!inputLine.includes(`;`)) return inputLine;
         let comment = -1;
         let inString = false;
-        let sep = -1;
         for (let i = inputLine.length - 1; i >= 0; i--) {
           switch (inputLine[i]) {
-            case '/':
-              if (inputLine[i-1] === `/`) {
-                // It's a comment!
-                inString = false;
-                comment = i-1;
-                i--;
-              }
-              break;
             case `'`:
               inString = !inString;
               break;
             case ';':
               if (!inString) {
-                sep = i;
-                break;
+                return inputLine.substring(0, i + (withSep ? 1 : 0)).trimEnd();
               }
               break;
           }
         }
-        
-        if (comment >= 0 && comment < sep) {
-          return inputLine;
-        }
 
-        return (sep >= 0 ? inputLine.substring(0, sep + (withSep ? 1 : 0)) : inputLine);
+        return inputLine;
       }
 
       const expandDs = async (fileUri: string, fileToken: Token, ds: Declaration): Promise<void> => {

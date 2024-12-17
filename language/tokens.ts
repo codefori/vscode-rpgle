@@ -329,7 +329,7 @@ export function tokenise(statement: string, options: TokeniseOptions = {}): Toke
       switch (statement[i]) {
       // When it's the string character..
       case stringChar:
-        const possibleEscape = statement[i+1] === stringChar;
+        const possibleEscape = statement[i+1] === stringChar && statement[i-1] !== stringChar;
         if (state === ReadState.IN_STRING) {
           if (possibleEscape) {
             currentText += `''`;
