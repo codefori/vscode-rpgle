@@ -7,7 +7,6 @@ import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
 import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
-import path from "path";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 
@@ -357,20 +356,67 @@ export default class Parser {
         return directIfScope.length === 0 || directIfScope.every(scope => scope.condition);
       }
 
+      /**
+       * Removes the trailing line comment (//) but keeps the semi-colon if found.
+       */
       const stripComment = (inputLine: string) => {
-        const comment = inputLine.indexOf(`//`);
-        const quote = inputLine.lastIndexOf(`'`);
-        if (comment >= 0 && comment < quote) {
-          return inputLine;
-        }
+        let comment = -1;
+        let inString = false;
+        for (let i = inputLine.length - 1; i >= 0; i--) {
+          switch (inputLine[i]) {
+            case '/':
+              if (inputLine[i-1] === `/`) {
+                // It's a comment!
+                inString = false;
+                comment = i-1;
+                i--;
 
-        return (comment >= 0 ? inputLine.substring(0, comment).trimEnd() : inputLine);
+                return inputLine.substring(0, comment).trimEnd();
+              }
+              break;
+            case `'`:
+              inString = !inString;
+              break;
+            case ';':
+              if (!inString) {
+                return inputLine.substring(0, i+1).trimEnd();
+              }
+              break;
+          }
+        }
+        
+        return inputLine;
       }
 
+      /**
+       * Removes the trailing comment and optionally removes the semi-colon.
+       */
       const getValidStatement = (inputLine: string, withSep?: boolean) => {
-        const comment = inputLine.indexOf(`//`);
-        const quote = inputLine.lastIndexOf(`'`);
-        const sep = inputLine.indexOf(`;`, quote >= 0 ? quote : 0);
+        if (!inputLine.includes(`;`)) return inputLine;
+        let comment = -1;
+        let inString = false;
+        let sep = -1;
+        for (let i = inputLine.length - 1; i >= 0; i--) {
+          switch (inputLine[i]) {
+            case '/':
+              if (inputLine[i-1] === `/`) {
+                // It's a comment!
+                inString = false;
+                comment = i-1;
+                i--;
+              }
+              break;
+            case `'`:
+              inString = !inString;
+              break;
+            case ';':
+              if (!inString) {
+                sep = i;
+                break;
+              }
+              break;
+          }
+        }
         
         if (comment >= 0 && comment < sep) {
           return inputLine;

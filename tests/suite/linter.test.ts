@@ -3187,3 +3187,86 @@ test('Linter running on member rpgleinc', async () => {
     newValue: 'DCL-S'
   });
 });
+
+test('issue_353_indent_1', async () => {
+  const lines = [
+    `**free`,
+    `dcl-ds HEDINF                     based(p1@);`,
+    `  HRLEN                 Int(10:0);                            // Record length`,
+    `  HCRRN                 Int(10:0);                            // Cursor's RRN`,
+    `  HCPOS                 Int(10:0);                            // Cursor's column`,
+    `  HCCSID                Int(10:0);                            // CCSID of source`,
+    `  HRECI                 Int(10:0);                            // Nbr of input rcds`,
+    `end-ds;`,
+    `dcl-s p2@          Pointer;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  const hedinf = cache.find(`HEDINF`);
+  expect(hedinf).toBeDefined();
+  expect(hedinf.subItems.length).toBe(5);
+  const p2at = cache.find(`p2@`);
+  expect(p2at).toBeDefined();
+
+  const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  expect(errors.length).toBe(0);
+  expect(indentErrors.length).toBe(0);
+});
+
+test('issue_353_indent_2', async () => {
+  const lines = [
+    `**free`,
+    `dcl-ds HEDINF                     based(p1@);`,
+    `  HRLEN                 Int(10:0);                            // Record length`,
+    `   HCRRN                 Int(10:0);                            // Cursor's RRN`,
+    `  HCPOS                 Int(10:0);                            // Cursor's column`,
+    `  HCCSID                Int(10:0);                            // CCSID of source`,
+    `  HRECI                 Int(10:0);                            // Nbr of input rcds`,
+    `end-ds;`,
+    `dcl-s p2@          Pointer;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  const hedinf = cache.find(`HEDINF`);
+  expect(hedinf).toBeDefined();
+  expect(hedinf.subItems.length).toBe(5);
+  const p2at = cache.find(`p2@`);
+  expect(p2at).toBeDefined();
+
+  const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  expect(indentErrors.length).toBe(1);
+  expect(indentErrors[0]).toMatchObject({
+    line: 3,
+    expectedIndent: 2,
+    currentIndent: 3
+  });
+});
+
+test('issue_353_indent_3', async () => {
+  const lines = [
+    `**free`,
+    `begsr displayHelp;`,
+    `  // Do something with this program's`,
+    `  //  name and library ... assume the program is running`,
+    `  //  from the same library as contains the source.`,
+    `  fileName = 'QRPGLESRC';`,
+    `  library = pgSts.lib;`,
+    `endsr;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2
+  }, cache);
+
+  expect(errors.length).toBe(0);
+  expect(indentErrors.length).toBe(0);
+});
