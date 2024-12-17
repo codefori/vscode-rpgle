@@ -1298,3 +1298,26 @@ test(`const keyword check`, async () => {
   expect(hello.name).toBe(`hello`);
   expect(hello.keyword[`CONST`]).toBe(`556`);
 });
+
+test('issue_353_comments', async () => {
+  const lines = [
+    `**free`,
+    `dcl-ds HEDINF                     based(p1@);`,
+    `  HRLEN                 Int(10:0);                            // Record length`,
+    `  HCRRN                 Int(10:0);                            // Cursor's RRN`,
+    `  HCPOS                 Int(10:0);                            // Cursor's column`,
+    `  HCCSID                Int(10:0);                            // CCSID of source`,
+    `  HRECI                 Int(10:0);                            // Nbr of input rcds`,
+    `end-ds;`,
+    `dcl-s p2@          Pointer;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  const hedinf = cache.find(`HEDINF`);
+  expect(hedinf).toBeDefined();
+  console.log(hedinf.subItems.map(s => s.name));
+  expect(hedinf.subItems.length).toBe(5);
+  const p2at = cache.find(`p2@`);
+  expect(p2at).toBeDefined();
+});
