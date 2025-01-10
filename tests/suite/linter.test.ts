@@ -3390,3 +3390,155 @@ test(`issue_353_indent_6`, async () => {
 
   expect(indentErrors.length).toBe(0);
 });
+
+test('issue_358_no_reference', async () => {
+  const lines = [
+    `**Free`,
+    ``,
+    `Ctl-Opt Main(Lint_Test);`,
+    `Ctl-Opt ActGrp(*Caller);`,
+    ``,
+    `Dcl-s errorCPF Char(7) Import('_EXCP_MSGID');`,
+    ``,
+    `Dcl-Proc Lint_Test;`,
+    ``,
+    `  Dcl-Pi Lint_Test;`,
+    ``,
+    `  End-Pi;`,
+    ``,
+    `  Dcl-s error_msg like(t_error_msg);`,
+    ``,
+    `  exsr set_error_msg;`,
+    ``,
+    `  Monitor;`,
+    ``,
+    `  On-Error;`,
+    `    common_dblog(pgm_sts.thisPgm:'Initialize':%Trim(errorCPF) + ' - Error occurred.');`,
+    `  EndMon;`,
+    ``,
+    `  Return;`,
+    ``,
+    `  Begsr set_error_msg;`,
+    ``,
+    `    error_msg = 'Error message';`,
+    ``,
+    `  Endsr;`,
+    ``,
+    `  On-Exit;`,
+    ``,
+    `End-Proc Lint_Test;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true });
+
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  expect(errors.length).toBe(0);
+});
+
+test('issue_358_no_reference_2', async () => {
+  // This test case is built from rpgle-repl: REPL_VARS.SQLRPGLE
+
+  const lines = [
+    `**free`,
+    `dcl-proc copyDataStructureDefinitions export;`,
+    `  dcl-pi *n;`,
+    `    variable likeds(t_variable) const;`,
+    `  end-pi;`,
+    ``,
+    `  dcl-s copyDataStructure like(t_variable.name);`,
+    ``,
+    `  copyDataStructure = toUpperCase(variable.definition);`,
+    `  copyDataStructure = %scanrpl('LIKEDS':'':copyDataStructure);`,
+    `  copyDataStructure = %scanrpl('(':'':copyDataStructure);`,
+    `  copyDataStructure = %scanrpl(')':'':copyDataStructure);`,
+    `  copyDataStructure = %trim(toUpperCase(copyDataStructure));`,
+    ``,
+    `  // see if it exists in the current scope`,
+    `  exec sql`,
+    `    INSERT INTO replvars`,
+    `      (variable_name, variable_type, is_qualified, array_size,`,
+    `       definition, variable_scope, is_template,`,
+    `       defined)`,
+    `    SELECT :variable.name, 'datastruct',`,
+    `           /* DS's declared LIKEDS are qualified for free */`,
+    `           'Y', NULLIF(:variable.arraySize, 0),`,
+    `           NULLIF(:variable.definition, ''), :variable.scope,`,
+    `           :variable.template, COALESCE(defined, 'N')`,
+    `      FROM replvars`,
+    `     WHERE session_id = (QSYS2.JOB_NAME)`,
+    `           AND UPPER(variable_name) = UPPER(:copyDataStructure)`,
+    `           AND variable_scope = :variable.scope;`,
+    ``,
+    ``,
+    ``,
+    `end-proc;`,
+    ``,
+    `dcl-proc fetchStoredVariable export;`,
+    `  dcl-pi *n likeds(t_variable);`,
+    `    variableName like(t_variable.name) const;`,
+    `    scope like(t_variable.scope) const;`,
+    `  end-pi;`,
+    ``,
+    `  dcl-ds variable likeds(t_variable);`,
+    ``,
+    `  variable.id = 0;`,
+    `  variable.name = variableName;`,
+    `  variable.arraySize = 0;`,
+    `  variable.parentName = *blanks;`,
+    `  variable.parentArraySize = 0;`,
+    ``,
+    `  if %scan('*IN': toUpperCase(%trim(variableName))) = 1;`,
+    `    variable.type = '*indicator';`,
+    `    return variable;`,
+    `  endif;`,
+    ``,
+    `  // check the exact name first`,
+    `  exec sql`,
+    `    SELECT variable_name,`,
+    `            CAST(variable_type AS CHAR(10)),`,
+    `            COALESCE(array_size, 0),`,
+    `            COALESCE(parent_data_structure, ''),`,
+    ``,
+    `            0,`,
+    `            variable_scope,`,
+    `            COALESCE(definition, ''),`,
+    `            isTemplate,`,
+    `            defined,`,
+    `            variable_id,`,
+    `            is_used`,
+    `       INTO :variable`,
+    `       FROM replvars`,
+    `      WHERE session_id = (QSYS2.JOB_NAME)`,
+    `           AND UPPER(variable_name) = UPPER(:variableName)`,
+    `           AND variable_scope = :scope`,
+    `           AND parent_data_structure IS NULL`,
+    `      ORDER BY parent_data_structure`,
+    `      LIMIT 1;`,
+    ``,
+    `  if sqlstt = '00000';`,
+    `    return variable;`,
+    `  endif;`,
+    `end-process;`,
+  ].join(`\r\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true });
+
+  const procA = cache.find(`copyDataStructureDefinitions`);
+
+  for (const vari of procA.scope.variables) {
+    for (const ref of vari.references) {
+      expect(vari.name.toUpperCase()).toBe(lines.substring(ref.offset.start, ref.offset.end).toUpperCase());
+    }
+  }
+
+  const procB = cache.find(`fetchStoredVariable`);
+
+  for (const parm of procB.scope.parameters) {
+    for (const ref of parm.references) {
+      expect(parm.name.toUpperCase()).toBe(lines.substring(ref.offset.start, ref.offset.end).toUpperCase());
+    }
+  }
+});

@@ -227,7 +227,7 @@ export default class Parser {
         if (part === undefined) continue;
 
         if (![`special`, `word`].includes(part.type)) continue;
-        if (statement[i - 1] && statement[i - 1].type === `dot`) break;
+        if (statement[i - 1] && statement[i - 1].type === `dot`) continue;
 
         if (isExec && statement[i-1]) {
           if (statement[i-1].type !== `seperator`) {
@@ -553,7 +553,15 @@ export default class Parser {
         
         if (isFullyFree || lineIsFree) {
           // Free format!
-          if (line.trim() === ``) continue;
+          if (line.trim() === ``) {
+            // Even if the line is blank, we still need to lineend
+            // if part of a continued statement to ensure positions are correct.
+            // See issue_358_no_reference_2
+            if (currentStmtStart && currentStmtStart.content) {
+              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+            }
+            continue;
+          };
 
           const lineIsComment = line.trim().startsWith(`//`);
           tokens = lineTokens(getValidStatement(line), lineNumber, lineIndex);
@@ -580,11 +588,19 @@ export default class Parser {
                 baseLine = ``.padEnd(baseLine.length) + `;`;
                 fixedExec = false;
                 break;
+              case '/':
+                // Comments in SQL, usually free-format
+                if (parts[1] === `*`) {
+                  currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+                  continue;
+                }
+                break;
               default:
                 // Maybe we're in a fixed exec statement, but a directive is being used.
                 // See test case references_21_fixed_exec1
                 if (fixedExec && currentStmtStart && currentStmtStart.content) {
                   currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+                  continue;
                 }
                 break;
             }
