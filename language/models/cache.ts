@@ -100,6 +100,19 @@ export default class Cache {
     return (lines.length >= 1 ? lines[0] : 0);
   }
 
+  /**
+   * Filters the cache to include only indicators that have references.
+   *
+   * @returns {Cache} A new Cache instance with filtered indicators.
+   */
+  filterCache(): Cache {
+    const filteredIndicators = this.indicators.filter(indicator => indicator.references.length > 0);
+    return new Cache({
+      ...this,
+      indicators: filteredIndicators
+    });
+  }
+
   find(name: string, includeProcedure?: string): Declaration|undefined {
     name = name.toUpperCase();
 
