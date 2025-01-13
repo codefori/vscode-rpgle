@@ -1,0 +1,22 @@
+{
+  "name": "@code4i/rpgparse-cli",
+  "version": "1.0.0",
+  "description": "A CLI tool for parsing RPG files",
+  "bin": {
+    "rpgparse": "./dist/index.js"
+  },
+  "scripts": {
+    "webpack:dev": "webpack --mode none --config ./webpack.config.js",
+    "webpack": "webpack --mode production --config ./webpack.config.js",
+    "test": "webpack --mode none --config ./webpack.config.js && node ./dist/index.js",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  },
+  "author": "Code4i",
+  "license": "MIT"
+}
