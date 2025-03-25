@@ -590,7 +590,7 @@ export default class Parser {
                 break;
               case '/':
                 // Comments in SQL, usually free-format
-                if (parts[1] === `*`) {
+                if (parts[1] === `*` && currentStmtStart) {
                   currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
                   continue;
                 }

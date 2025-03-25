@@ -1321,3 +1321,39 @@ test('issue_353_comments', async () => {
   const p2at = cache.find(`p2@`);
   expect(p2at).toBeDefined();
 });
+
+test('header file parse', async () => {
+  const lines = [
+    `**free`,
+    `      //%METADATA                                                      *`,
+    `      // %TEXT API main validation procedure (IWS)                     *`,
+    `      //%EMETADATA                                                     *`,
+    `///`,
+    `// @Program APIVAL01S`,
+    `//`,
+    `// @Purpose IWS API validation procedures`,
+    `//`,
+    `// @author JHEI`,
+    `// @Date 22 May 2024`,
+    `//`,
+    `///`,
+    `ctl-opt option(*srcstmt:*nodebugio);`,
+    `ctl-opt debug(*retval:*constants);`,
+    `ctl-opt reqprexp(*require);`,
+    ``,
+    `// includes`,
+    `/copy './rpgle/apival01s.rpgleinc'`,
+    ``,
+    `dsply 'hello';`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+
+  expect(cache.includes.length).toBe(1);
+  expect(cache.constants.length).toBe(8);
+  expect(cache.procedures.length).toBe(1);
+
+  expect(cache.procedures[0].name).toBe(`APIVAL01S_iws_validate`);
+});

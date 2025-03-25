@@ -1885,3 +1885,40 @@ test('reference_28_parameters', async () => {
   expect(deptno.references.length).toBe(2);
   expect(deptno.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `deptno`)).toBe(true);
 });
+
+test('broken free format code', async () => {
+  const lines = [
+    `**Free`,
+    `/**************************************************************************`,
+    `*                     Load View Event Subfile subprocedure               *`,
+    `**************************************************************************`,
+    `Dcl-Proc Viwevload;`,
+    `  Exec Sql`,
+    `     Declare Viwcrsr Cursor For`,
+    `        Select  Evntid, Evntname, Evntdate, Artname, Evntstatus`,
+    `        From Eventpf`,
+    `        Order By Evntdate;`,
+    `  Exec Sql`,
+    `     Open Viwcrsr;`,
+    `  Exec Sql`,
+    `        Fetch From Viwcrsr Into :Sevntid, :Sevntname, :Sevntdate,`,
+    `                                :Sartname, :Sevnstatus;`,
+    `         Dow Sqlcod = 0;`,
+    `         Vrrn += 1;`,
+    `          If  Vrrn > 9999;`,
+    `            Leave ;`,
+    `          Endif ;`,
+    `            Write Viewevnt;`,
+    `     Exec Sql`,
+    `       Fetch Next From Viwcrsr Into :Sevntid, :Sevntname,`,
+    `                                  :Sevntdate, :Sartname,:Sevnstatus;`,
+    `         Enddo;`,
+    `     Exec Sql`,
+    `       Close Viwcrsr;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  expect(cache).toBeDefined();
+});
