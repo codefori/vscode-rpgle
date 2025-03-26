@@ -1,8 +1,20 @@
 import { CodeForIBMi } from "@halcyontech/vscode-ibmi-types";
-import Instance from "@halcyontech/vscode-ibmi-types/api/Instance";
+import Instance from "@halcyontech/vscode-ibmi-types/Instance";
 import { Extension, extensions } from "vscode";
 
 let baseExtension: Extension<CodeForIBMi>|undefined;
+
+export async function checkAndWait() {
+  baseExtension = extensions.getExtension(`halcyontechltd.code-for-ibmi`);
+
+  if (baseExtension) {
+    if (!baseExtension.isActive) {
+      await baseExtension.activate();
+    }
+  }
+
+  return getInstance();
+}
 
 /**
  * This should be used on your extension activation.

@@ -10,7 +10,7 @@ import {
 
 import PQueue from 'p-queue';
 
-import { documents, findFile } from './providers';
+import { documents, findFile, parser } from './providers';
 import { includePath } from './providers/project';
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -132,6 +132,13 @@ export async function getWorkspaceFolder(baseUri: string) {
 	}
 
 	return workspaceFolder
+}
+
+export function handleClientRequests() {
+	connection.onRequest(`clearTableCache`, () => {
+		console.log(`Server is clearing parser cache.`)
+		parser.clearTableCache();
+	});
 }
 
 export interface BindingDirectory {

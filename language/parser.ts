@@ -46,6 +46,11 @@ export default class Parser {
     this.includeFileFetch = promise;
   }
 
+  clearTableCache() {
+    console.log(`Clearing cache of these files: ${Object.keys(this.tables).join(`, `)}`)
+    this.tables = {};
+  }
+ 
   async fetchTable(name: string, keyVersion = ``, aliases?: boolean): Promise<Declaration[]> {
     if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
