@@ -18,8 +18,9 @@ import {
 } from 'vscode-languageclient/node';
 
 import { projectFilesGlob } from './configuration';
-import buildRequestHandlers from './requests';
+import { clearTableCache, buildRequestHandlers } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
+import { checkAndWait, getInstance, loadBase } from './base';
 
 let client: LanguageClient;
 
@@ -42,6 +43,8 @@ export function activate(context: ExtensionContext) {
 			options: debugOptions
 		}
 	};
+
+	loadBase();
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
@@ -66,8 +69,16 @@ export function activate(context: ExtensionContext) {
 		clientOptions
 	);
 
-	client.onReady().then(() => {
+	client.onReady().then(async () => {
 		buildRequestHandlers(client);
+
+		const instance = await checkAndWait();
+
+		if (instance) {
+			instance.subscribe(context, "connected", "vscode-rpgle", () => {
+				clearTableCache(client);
+			})
+		}
 	});
 
 	// Start the client. This will also launch the server
@@ -80,6 +91,7 @@ export function activate(context: ExtensionContext) {
 	context.subscriptions.push(getServerImplementationProvider());
 
 	// context.subscriptions.push(...initBuilder(client));
+
 
 	console.log(`started`);
 }
