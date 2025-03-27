@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, Uri, commands, RelativePattern } from 'vscode';
+import { workspace, ExtensionContext } from 'vscode';
 
 import * as Linter from "./linter";
 import * as columnAssist from "./language/columnAssist";
@@ -20,7 +20,8 @@ import {
 import { projectFilesGlob } from './configuration';
 import { clearTableCache, buildRequestHandlers } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
-import { checkAndWait, getInstance, loadBase } from './base';
+import { checkAndWait, loadBase, onCodeForIBMiConfigurationChange } from './base';
+import { registerCommands } from './commands';
 
 let client: LanguageClient;
 
@@ -74,10 +75,19 @@ export function activate(context: ExtensionContext) {
 
 		const instance = await checkAndWait();
 
+		// We need to clear table caches when the connection changes
 		if (instance) {
+			// When the connection is established
 			instance.subscribe(context, "connected", "vscode-rpgle", () => {
 				clearTableCache(client);
-			})
+			});
+
+			// When the library list changes
+			context.subscriptions.push(
+				onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+					clearTableCache(client);
+				}),
+			);
 		}
 	});
 
@@ -86,6 +96,8 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
+	
+	registerCommands(context, client);
 	
 	context.subscriptions.push(getServerSymbolProvider());
 	context.subscriptions.push(getServerImplementationProvider());

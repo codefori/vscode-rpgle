@@ -120,9 +120,11 @@ connection.onInitialized(() => {
 parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration[]> => {
 	if (!languageToolsEnabled) return [];
 
-	console.log(`Server is resolving ${table}`)
+	console.log(`Server is resolving ${table}`);
 
 	const data = await getObjectData(table);
+
+	console.log(`Resolved ${table} and got ${data.length} rows.`);
 
 	return dspffdToRecordFormats(data, aliases);
 });

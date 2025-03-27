@@ -136,7 +136,6 @@ export async function getWorkspaceFolder(baseUri: string) {
 
 export function handleClientRequests() {
 	connection.onRequest(`clearTableCache`, () => {
-		console.log(`Server is clearing parser cache.`)
 		parser.clearTableCache();
 	});
 }
