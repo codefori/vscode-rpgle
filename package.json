@@ -75,6 +75,13 @@
 				"title": "Toggle Inline Editor Helper",
 				"category": "RPGLE",
 				"enablement": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.server.reloadCache",
+				"title": "RPGLE: Reload Cache",
+				"category": "RPGLE",
+				"enablement": "code-for-ibmi:connected",
+				"icon": "$(refresh)"
 			}
 		],
 		"keybindings": [
@@ -97,6 +104,13 @@
 					"command": "vscode-rpgle.openLintConfig",
 					"when": "view == objectBrowser && viewItem =~ /^filter.*$/",
 					"group": "1_LibActions@2"
+				}
+			],
+			"view/title": [
+				{
+					"command": "vscode-rpgle.server.reloadCache",
+					"group": "navigation",
+					"when": "view == outline"
 				}
 			]
 		}

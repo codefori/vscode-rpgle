@@ -150,6 +150,8 @@ export function buildRequestHandlers(client: LanguageClient) {
 					parts.table = table;
 				}
 
+				// TODO: handle .env file here?
+
 				const outfileRes: any = await connection.runCommand({
 					environment: `ile`,
 					command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
@@ -159,9 +161,14 @@ export function buildRequestHandlers(client: LanguageClient) {
 				const resultCode = outfileRes.code || 0;
 
 				if (resultCode === 0) {
-					const data: object[] = await content.getTable(config.tempLibrary, randomFile, randomFile, true);
+					const data: any[] = await content.getTable(config.tempLibrary, randomFile, randomFile, true);
 
 					console.log(`Temp OUTFILE read. ${data.length} rows.`);
+
+					connection.runCommand({
+						environment: `ile`,
+						command: `DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
+					});
 
 					return data;
 				}

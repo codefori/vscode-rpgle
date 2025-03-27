@@ -1,8 +1,7 @@
 import { commands, Definition, DocumentSymbol, languages, Location, ProgressLocation, Range, SymbolInformation, SymbolKind, TextDocument, Uri, window, workspace } from "vscode";
 import { getInstance } from "../base";
 import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
-import { ConnectionConfiguration } from "@halcyontech/vscode-ibmi-types/api/Configuration";
-import { IBMiMember } from "@halcyontech/vscode-ibmi-types";
+import { ConnectionConfig, IBMiMember } from "@halcyontech/vscode-ibmi-types";
 
 export function getServerSymbolProvider() {
   let latestFetch: ExportInfo[]|undefined;
@@ -68,11 +67,11 @@ export function getServerImplementationProvider() {
   return languages.registerImplementationProvider({language: `rpgle`, scheme: `member`}, {
     async provideImplementation(document, position, token): Promise<Definition|undefined> {
       const instance = getInstance();
+      const connection = instance?.getConnection();
 
-      if (instance && instance.getConnection()) {
+      if (connection) {
         const word = document.getText(document.getWordRangeAtPosition(position));
-        const connection = instance.getConnection();
-        const config = connection.config! //TODO in vscode-ibmi 3.0.0 - change to getConfig()
+        const config = connection.getConfig() //TODO in vscode-ibmi 3.0.0 - change to getConfig()
 
         const uriPath = document.uri.path;
         const member = connection.parserMemberPath(uriPath);
@@ -117,7 +116,7 @@ async function getSymbolFromDocument(docUri: Uri, name: string): Promise<Documen
   return;
 }
 
-function getLibraryList(config: ConnectionConfiguration.Parameters, member?: IBMiMember): string[] {
+function getLibraryList(config: ConnectionConfig, member?: IBMiMember): string[] {
   let libraryList = [config.currentLibrary, ...config.libraryList];
 
   if (member) {
