@@ -1,5 +1,5 @@
 
-import { commands, DecorationOptions, ExtensionContext, Range, ThemeColor, window } from 'vscode';
+import { commands, DecorationOptions, ExtensionContext, Range, Selection, TextDocument, ThemeColor, window } from 'vscode';
 import * as Configuration from "../configuration";
 import { loadBase } from '../base';
 
@@ -42,6 +42,15 @@ const getAreasForLine = (line: string, index: number) => {
   }
 }
 
+function documentIsFree(document: TextDocument) {
+  if (document.languageId === `rpgle`) {
+    const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
+    return line === `**FREE`;
+  }
+  
+  return false;
+}
+
 export function registerColumnAssist(context: ExtensionContext) {
   context.subscriptions.push(
     commands.registerCommand(`vscode-rpgle.assist.launchUI`, async () => {
@@ -50,7 +59,7 @@ export function registerColumnAssist(context: ExtensionContext) {
         const document = editor.document;
 
         if (document.languageId === `rpgle`) {
-          if (document.getText(new Range(0, 0, 0, 6)).toUpperCase() !== `**FREE`) { 
+          if (!documentIsFree(document)) { 
             const lineNumber = editor.selection.start.line;
             const positionIndex = editor.selection.start.character;
 
@@ -81,6 +90,13 @@ export function registerColumnAssist(context: ExtensionContext) {
       }
     }),
 
+    commands.registerCommand(`vscode-rpgle.assist.moveLeft`, () => {
+      moveFromPosition(`left`);
+    }),
+    commands.registerCommand(`vscode-rpgle.assist.moveRight`, () => {
+      moveFromPosition(`right`);
+    }),
+
     window.onDidChangeTextEditorSelection(e => {
       const editor = e.textEditor;
       if (rulerEnabled) {
@@ -92,13 +108,43 @@ export function registerColumnAssist(context: ExtensionContext) {
   )
 }
 
+function moveFromPosition(direction: "left"|"right", editor = window.activeTextEditor) {
+  if (editor && editor.document.languageId === `rpgle` && !documentIsFree(editor.document)) {
+    const document = editor.document;
+    const lineNumber = editor.selection.start.line;
+    const positionIndex = editor.selection.start.character;
+
+    const positionsData = getAreasForLine(
+      document.getText(new Range(lineNumber, 0, lineNumber, 100)), 
+      positionIndex
+    );
+
+    if (positionsData) {
+      let newIndex: number|undefined;
+      if (direction === `left`) {
+        newIndex = positionsData.active - 1;
+      } else
+      if (direction === `right`) {
+        newIndex = positionsData.active + 1;
+      }
+
+      if (newIndex !== undefined && newIndex >= 0 && newIndex < positionsData.specification.length) {
+        const box = positionsData.specification[newIndex];
+        if (box) {
+          editor.selection = new Selection(lineNumber, box.start, lineNumber, box.start);
+        }
+      }
+    }
+  }
+}
+
 function updateRuler(editor = window.activeTextEditor) {
   let clear = true;
 
   if (editor) {
     const document = editor.document;
     if (document.languageId === `rpgle`) {
-      if (document.getText(new Range(0, 0, 0, 6)).toUpperCase() !== `**FREE`) {
+      if (!documentIsFree(document)) {
         const lineNumber = editor.selection.start.line;
         const positionIndex = editor.selection.start.character;
 
