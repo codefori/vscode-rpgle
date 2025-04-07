@@ -30,6 +30,7 @@ import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
+import genericCodeActionsProvider from './providers/apis/codeActions';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -302,13 +303,15 @@ if (languageToolsEnabled) {
 	connection.onReferences(referenceProvider);
 	connection.onPrepareRename(renamePrepareProvider);
 	connection.onRenameRequest(renameRequestProvider);
+	connection.onCodeAction(genericCodeActionsProvider);
 
 	// project specific
 	connection.onWorkspaceSymbol(workspaceSymbolProvider);
-	connection.onImplementation(implementationProvider)
+	connection.onImplementation(implementationProvider);
 }
 
-if (linterEnabled) Linter.initialise(connection);
+// TODO: enable both code action providers
+// if (linterEnabled) Linter.initialise(connection);
 
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
