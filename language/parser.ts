@@ -1375,19 +1375,19 @@ export default class Parser {
                   const decimals = cSpec.fieldDecimals ? parseInt(cSpec.fieldDecimals.value) : undefined;
                   const type = decimals !== undefined ? `PACKED`: `CHAR`;
 
-                  currentItem = new Declaration(`variable`);
-                  currentItem.name = fieldName;
-                  currentItem.keyword = {[type]: `${fieldLength}${decimals !== undefined ? `:${decimals}` : ``}`};
-                  currentItem.position = {
+                  currentSub = new Declaration(`variable`);
+                  currentSub.name = fieldName;
+                  currentSub.keyword = {[type]: `${fieldLength}${decimals !== undefined ? `:${decimals}` : ``}`};
+                  currentSub.position = {
                     path: fileUri,
                     range: cSpec.result.range
                   };
-                  currentItem.range = {
+                  currentSub.range = {
                     start: lineNumber,
                     end: lineNumber
                   };
 
-                  scope.variables.push(currentItem);
+                  scope.variables.push(currentSub);
                 }
               }
             }

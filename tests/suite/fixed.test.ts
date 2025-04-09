@@ -1220,4 +1220,85 @@ test(`test document build up`, async () => {
     document += c;
     await parser.getDocs(uri, document, { ignoreCache: true, withIncludes: true, collectReferences: true });
   }
-})
+});
+
+test('subroutine with C spec definitions', async () => {
+  const lines = [
+    `0005 D NY              S              3  0 DIM(12) CTDATA PERRCD(12) ASCEND     NORMAL YEARS`,
+    `0006 D LY              S              3  0 DIM(12) CTDATA PERRCD(12) ASCEND     LEAP YEARS`,
+    `     C* parameters to program`,
+    `     C     *ENTRY        PLIST`,
+    `     C                   PARM                    PDATE             6 0          input`,
+    `     C                   PARM                    PJDATE            6 0          output`,
+    ``,
+    `0033 C                   MOVE      PDATE         DATE              6 0`,
+    `0034 C                   EXSR      SRCJUL`,
+    `0035 C                   MOVE      JDATE6        PJDATE           `,
+    `0036 C                   MOVE      '1'           *INLR`,
+    `0041 C****************************************************************`,
+    `0042 C*                                                              *`,
+    `0043 C* Routine to calculate a Julian Date from a \`MMDDYY\` date      *`,
+    `0044 C*                                                              *`,
+    `     C*   JULIAN DATE FORMAT:                                        *`,
+    `     C*       POS 1 - century 1 = 1900s, 2 = 2000s                   *`,
+    `     C*       POS 2-3 - two digit year                               *`,
+    `0045 C*       POS 4-6 - number of days in the current year           *`,
+    `0044 C*                                                              *`,
+    `0046 C*   Uses compile time arrays 'LY' abd 'NY' for days of the     *`,
+    `0047 C*   year before the indexed month for leap years vs normal yrs *`,
+    `0048 C*                                                              *`,
+    `0049 C* DATE TO BE CALCULATED FROM MUST BE PASSED TO THIS            *`,
+    `0050 C*  ROUTINE VIA A 6 BYTE FIELD NAMED 'DATE' WITH FORMAT 'MMDDYR'*`,
+    `0051 C*     THIS ROUTINE WILL RETURN A 6 BYTE FIELD NAMED 'JDATE'    *`,
+    `0052 C*                                                              *`,
+    `0053 C* OTHER FIELDS USED BY THIS ROUTINE ARE.                       *`,
+    `0054 C*   - DAY1 - DAYS1 - MODAY - MO1 - YEAR1 - X -                 *`,
+    `0055 C*                                                              *`,
+    `0056 C* INDICATORS USED BY THIS ROUTINE ARE.                         *`,
+    `0057 C*    - 80 -                                                    *`,
+    `0058 C*                                                              *`,
+    `0059 C     SRCJUL        BEGSR                                                            *`,
+    `0060 C                   MOVEL     DATE          MODAY             4 0                    *`,
+    `0061 C                   MOVE      DATE          YEAR1             2 0                    *`,
+    `0062 C                   MOVEL     MODAY         MO1               2 0                    *`,
+    `0063 C                   MOVE      MODAY         DAY1              2 0                    *`,
+    `0064 C     YEAR1         DIV       4             X                 2 0                    *`,
+    `0065 C                   MVR                     X                        80     LEAP YEAR*`,
+    `0066 C   80LY(MO1)       ADD       DAY1          DAYS1             5 0                    *`,
+    `0067 C  N80NY(MO1)       ADD       DAY1          DAYS1                                    *`,
+    `0068 C                   MOVE      DAYS1         JDATE             5 0                    *`,
+    `0069 C                   MOVEL     YEAR1         JDATE                                    *`,
+    `     C                   EXSR      SRCEN`,
+    `0068 C                   MOVE      DAYS1         JDATE6            6 0                    *`,
+    `0069 C                   MOVEL     YEAR3         JDATE6                                   *`,
+    `0070 C                   ENDSR                                                            *`,
+    `0071 C*                                                              *`,
+    `0072 C****************************************************************`,
+    `     C*-------------------------------------------------------------------`,
+    `GDG  C*--    CALCULATE CENTURY FROM FIELD YEAR1                        ---`,
+    `0059 C     SRCen         BEGSR                                                            *`,
+    `GDG  C     YEAR1         COMP      40                                   8383              *`,
+    `GDG  C   83              MOVE      2             YRCEN             1 0                    *`,
+    `GDG  C   83              MOVE      20            YRSTR             2 0                    *`,
+    `GDG  C  N83              MOVE      1             YRCEN             1 0                    *`,
+    `GDG  C  N83              MOVE      19            YRSTR             2 0                    *`,
+    `GDG  C                   MOVE      YEAR1         YEAR3             3 0`,
+    `GDG  C                   MOVEL     YRCEN         YEAR3`,
+    `GDG  C                   SETOFF                                       83`,
+    `GDG  C                   ENDSR                                                            *`,
+    `     C****************************************************************`,
+    `**  COMPILE TIME ARRAY WITH NORMAL YEAR DATA`,
+    `000031059090120151181212243273304334`,
+    `**  COMPILE TIME DATA FOR LEAP YEARS`,
+    `000031060091121152182213244274305335 `,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true });
+
+  expect(cache.subroutines.length).toBe(2);
+  expect(cache.variables.length).toBe(16);
+
+  const SRCJUL = cache.find(`SRCJUL`);
+  expect(SRCJUL).toBeDefined();
+  expect(SRCJUL.references.length).toBe(2);
+});
