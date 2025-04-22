@@ -1,0 +1,15 @@
+**free
+Dcl-Pr  DB00030_getDescriptionByCode Like(ds_Incoterms.Description) ExtProc('DB00030_getDescriptionByCode');
+   pIncotermCode  Like(ds_Incoterms.IncotermCode)  Const;
+End-Pr;
+
+Dcl-Pr  DB00030_checkIncotermCode Ind ExtProc('DB00030_checkIncotermCode');
+   pIncotermCode  Like(ds_Incoterms.IncotermCode)  Const;
+End-Pr;
+
+Dcl-Pr DB00030_getError VarChar(256) ExtProc('DB00030_getError');
+   pErrId Int(10) Options(*NoPass:*Omit);
+End-Pr;
+
+Dcl-DS ds_Incoterms Ext ExtName('VW_INCTRMS') Alias Qualified;  // view over functions table 
+End-DS;
