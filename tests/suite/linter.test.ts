@@ -3600,3 +3600,28 @@ test('no names cannot be referenced', async () => {
     expect(lines.substring(errors[i].offset.start, errors[i].offset.end).includes(unusedNames[i])).toBeTruthy();
   }
 });
+
+test('NoSELECTAll across multiple lines', () => {
+  const lines = [
+    `**free`,
+    `dcl-s i int(10);`,
+    `dcl-s j int(10);`,
+    `dcl-s k int(10);`,
+    ``,
+    `exec sql`,
+    `  select`,
+    `  *`,
+    `  into`,
+    `  :aDS`,
+    `  from`,
+    `  myfile`,
+    `  fetch first row only;`,
+  ].join(`\n`);
+
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoSELECTAll: true
+  });
+
+  expect(errors.length).toBe(1);
+  expect(errors[0].type).toBe(`NoSELECTAll`);
+});

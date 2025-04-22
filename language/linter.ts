@@ -122,7 +122,7 @@ export default class Linter {
 
     for (let si = 0; si < doc.statements.length; si++) {
       const docStatement = doc.statements[si];
-      const statement = docStatement.tokens;
+      const statement = docStatement.tokens.some(t => t.type === `newline`) ? docStatement.tokens.filter(t => t.type !== `newline`) : docStatement.tokens;
       lineNumber = docStatement.range.line;
       currentIndent = docStatement.indent;
 
