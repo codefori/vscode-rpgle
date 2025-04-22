@@ -9,6 +9,7 @@ import oneLineTriggers from "./models/oneLineTriggers";
 import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
+import { NO_NAME } from "./statement";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
@@ -1242,7 +1243,7 @@ export default class Parser {
                   }
 
                   currentSub = new Declaration(`subitem`);
-                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]);
+                  currentSub.name = (parts[0] === NO_NAME ? NO_NAME : partsLower[0]);
                   currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
 
                   currentSub.position = {
@@ -1540,7 +1541,7 @@ export default class Parser {
               switch (dSpec.field && dSpec.field.value) {
               case `C`:
                 currentItem = new Declaration(`constant`);
-                currentItem.name = potentialName ? potentialName.value : `*N`;
+                currentItem.name = potentialName ? potentialName.value : NO_NAME;
                 currentItem.keyword = dSpec.keywords || {};
                   
                 // TODO: line number might be different with ...?
@@ -1554,7 +1555,7 @@ export default class Parser {
                 break;
               case `S`:
                 currentItem = new Declaration(`variable`);
-                currentItem.name = potentialName ? potentialName.value : `*N`;
+                currentItem.name = potentialName ? potentialName.value : NO_NAME;
                 currentItem.keyword = {
                   ...dSpec.keywords,
                   ...prettyTypeFromToken(dSpec),
@@ -1572,7 +1573,7 @@ export default class Parser {
 
               case `DS`:
                 currentItem = new Declaration(`struct`);
-                currentItem.name = potentialName ? potentialName.value : `*N`;
+                currentItem.name = potentialName ? potentialName.value : NO_NAME;
                 currentItem.keyword = dSpec.keywords;
 
                 currentItem.position = {
@@ -1596,7 +1597,7 @@ export default class Parser {
                 // Only add a PR if it's not been defined
                 if (potentialName && !scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
-                  currentItem.name = potentialName ? potentialName.value : `*N`;
+                  currentItem.name = potentialName ? potentialName.value : NO_NAME;
                   currentItem.keyword = {
                     ...prettyTypeFromToken(dSpec),
                     ...dSpec.keywords
@@ -1662,7 +1663,7 @@ export default class Parser {
                   if (!potentialName && baseToken) {
                     potentialName = {
                       ...baseToken,
-                      value: `parm${currentItem.subItems.length+1}`
+                      value: NO_NAME
                     }
                   }
 

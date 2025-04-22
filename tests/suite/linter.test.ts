@@ -3542,3 +3542,61 @@ test('issue_358_no_reference_2', async () => {
     }
   }
 });
+
+
+test('no names cannot be referenced', async () => {
+  const lines = [
+  `**FREE`,
+  `//...`,
+  `// Valid commands and the corresponding object type`,
+  `DCL-DS CommandsDS;`,
+  `  *n CHAR(10) INZ('CRTCMD');`,
+  `  *n CHAR(10) INZ('CRTBNDCL');`,
+  `  *n CHAR(10) INZ('CRTCLMOD');`,
+  `  *n CHAR(10) INZ('CRTDSPF');`,
+  `  *n CHAR(10) INZ('CRTPRTF');`,
+  `  *n CHAR(10) INZ('CRTLF');`,
+  `  *n CHAR(10) INZ('CRTPF');`,
+  `  *n CHAR(10) INZ('CRTMNU');`,
+  `  *n CHAR(10) INZ('CRTPNLGRP');`,
+  `  *n CHAR(10) INZ('CRTQMQRY');`,
+  `  *n CHAR(10) INZ('CRTSRVPGM');`,
+  `  *n CHAR(10) INZ('CRTWSCST');`,
+  `  *n CHAR(10) INZ('CRTRPGPGM');`,
+  `  *n CHAR(10) INZ('CRTSQLRPG');`,
+  `  Commands CHAR(10) DIM(14) POS(1);`,
+  `END-DS;`,
+  ``,
+  `DCL-DS ObjTypesDS;`,
+  `  *n CHAR(10) INZ('CMD');`,
+  `  *n CHAR(10) INZ('PGM');`,
+  `  *n CHAR(10) INZ('MODULE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('MENU');`,
+  `  *n CHAR(10) INZ('PNLGRP');`,
+  `  *n CHAR(10) INZ('QMQRY');`,
+  `  *n CHAR(10) INZ('SRVPGM');`,
+  `  *n CHAR(10) INZ('WSCST');`,
+  `  *n CHAR(10) INZ('PGM');`,
+  `  *n CHAR(10) INZ('PGM');`,
+  `  ObjTypes CHAR(10) DIM(14) POS(1);`,
+  `END-DS;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  expect(errors.length).toBe(4);
+
+  const unusedNames = [`Commands`, `CommandsDS`, `ObjTypes`, `ObjTypesDS`];
+  
+  for (let i = 0; i < errors.length; i++) {
+    expect(errors[i].type).toBe(`NoUnreferenced`);
+    expect(lines.substring(errors[i].offset.start, errors[i].offset.end).includes(unusedNames[i])).toBeTruthy();
+  }
+});

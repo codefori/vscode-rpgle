@@ -9,6 +9,7 @@ import Document from "./document";
 import { IssueRange, Rules, SelectBlock } from "./parserTypes";
 import Declaration from "./models/declaration";
 import { IRange, Token } from "./types";
+import { NO_NAME } from "./statement";
 
 const BANNED_FROM_INCLUDES = [`NoUnreferenced`];
 const INCLUDE_EXTENSIONS = [`rpgleinc`, `rpgleh`];
@@ -1097,7 +1098,7 @@ export default class Linter {
               // We only check the subfields if the parent is never references.
 
               struct.subItems.forEach(subf => {
-                if (subf.references.length <= 1) {
+                if (subf.name !== NO_NAME && subf.references.length <= 1) {
                   // Add an error to subf
                   const possibleStatement = doc.getStatementByLine(subf.position.range.line);
                   if (possibleStatement) {

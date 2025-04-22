@@ -1,6 +1,8 @@
 import { createBlocks } from "./tokens";
 import { IRange, IRangeWithLine, Token } from "./types";
 
+export const NO_NAME = `*N`;
+
 export default class Statement {
 	private beginBlock = false;
 
