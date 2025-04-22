@@ -3625,3 +3625,36 @@ test('NoSELECTAll across multiple lines', () => {
   expect(errors.length).toBe(1);
   expect(errors[0].type).toBe(`NoSELECTAll`);
 });
+
+test('allow special global subroutines', async () => {
+  const lines = [
+    `**free`,
+    `// *PSSR can be global or local; should require entry in appropriate "Allowed...Subroutines" to suppress.`,
+    `begsr *PSSR;`,
+    `  comment = '*PSSR subroutines can be created in global scope.';`,
+    `endsr;`,
+    ``,
+    `// *INZSR is only allowed in global; however, an entry should be required in "AllowedGlobalSubroutines" to suppress.`,
+    `begsr *INZSR;`,
+    `  comment = '*INZSR subroutines can be created only in global scope.';`,
+    `endsr;`,
+    ``,
+    `// Because the routine is in "AllowedGlobalSubroutines", no error should be flagged.`,
+    `begsr allowedInGlobal;`,
+    `  comment = 'Subroutine "allowedInGlobal" is allowed in global scope.';`,
+    `endsr;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoGlobalSubroutines: true
+  }, cache);
+
+  for (const err of errors) {
+    console.log({
+      text: lines.substring(err.offset.start, err.offset.end),
+    })
+  }
+ 
+  expect(errors.length).toBe(2);
+});

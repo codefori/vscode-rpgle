@@ -84,8 +84,10 @@ export default class Linter {
 
     const globalProcs = globalScope.procedures;
 
-    let inProcedure = false;
-    let inSubroutine = false;
+    interface ReferenceInfo {name: string, skipRules?: boolean};
+
+    let inProcedure: ReferenceInfo|undefined;
+    let inSubroutine: ReferenceInfo|undefined;
     let inStruct: string[] = [];
     let inPrototype = false;
     let inOnExit = false;
@@ -369,7 +371,7 @@ export default class Linter {
                       });
                     }
 
-                    inSubroutine = true;
+                    inSubroutine = {name: statement[1].value, skipRules: statement[1].type === `special`};
 
                     if (inProcedure) {
                       if (rules.NoLocalSubroutines) {
@@ -379,7 +381,7 @@ export default class Linter {
                         });
                       }
                     } else {
-                      if (rules.NoGlobalSubroutines) {
+                      if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
                         errors.push({
                           offset: statement[0].range,
                           type: `NoGlobalSubroutines`
@@ -395,10 +397,11 @@ export default class Linter {
                       });
                     }
 
-                    inProcedure = true;
+                    value = statement[1].value;
+                    inProcedure = {name: value};
+
                     if (statement.length < 2) break;
                     if (rules.RequiresProcedureDescription) {
-                      value = statement[1].value;
                       const procDef = globalProcs.find(def => def.name.toUpperCase() === value.toUpperCase());
                       if (procDef) {
                         if (!procDef.description) {
@@ -548,22 +551,22 @@ export default class Linter {
 
                 switch (value) {
                   case `ENDSR`:
+                    if (inProcedure === undefined && inSubroutine) {
+                      if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
+                        errors.push({
+                          offset: statement[0].range,
+                          type: `NoGlobalSubroutines`
+                        });
+                      }
+                    }
+
                     if (!inSubroutine) {
                       errors.push({
                         offset: statement[0].range,
                         type: `UnexpectedEnd`,
                       });
                     } else {
-                      inSubroutine = false;
-                    }
-
-                    if (inProcedure === false) {
-                      if (rules.NoGlobalSubroutines) {
-                        errors.push({
-                          offset: statement[0].range,
-                          type: `NoGlobalSubroutines`
-                        });
-                      }
+                      inSubroutine = undefined;
                     }
                     break;
                     
@@ -573,14 +576,14 @@ export default class Linter {
                     break;
 
                   case `END-PROC`:
-                    if (inProcedure === false || inSubroutine) {
+                    if (inProcedure === undefined || inSubroutine) {
                       errors.push({
                         offset: statement[0].range,
                         type: `UnexpectedEnd`,
                       });
                     }
 
-                    inProcedure = false;
+                    inProcedure = undefined;
                     break;
                   case `END-PR`:
                   case `END-PI`:
