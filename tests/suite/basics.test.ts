@@ -1357,3 +1357,21 @@ test('header file parse', async () => {
 
   expect(cache.procedures[0].name).toBe(`APIVAL01S_iws_validate`);
 });
+
+test('can define on the first line', async () => {
+  const lines = [
+    `        begsr sub1;`,
+    `        endsr;`,
+    `        `,
+    `        begsr sub2;`,
+    `        endsr;`,
+    ``,
+    `        `,
+    ``,
+    `        begsr sub3;`,
+    `        endsr;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  expect(cache.subroutines.length).toBe(3);
+});
