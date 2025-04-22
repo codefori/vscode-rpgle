@@ -641,4 +641,16 @@ test('depth test', async () => {
 
   expect(cache.includes.length).toBe(2);
   expect(cache.variables.length).toBe(3);
-})
+});
+
+test('fixed copy with comment and using double quotes', async () => {
+  const lines = [
+    `     h bnddir('M11')`,
+    `      /copy "./rpgle/db00030s_h.rpgleinc"    // Recycling codes`,
+    `      /copy "./rpgle/db00040s_h.rpgleinc" `,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+
+  expect(cache.includes.length).toBe(2);
+});
