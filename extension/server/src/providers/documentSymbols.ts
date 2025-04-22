@@ -1,12 +1,16 @@
 import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-languageserver';
 import { documents, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
-import { Position } from '../../../../language/models/DataPoints';
+import Declaration from '../../../../language/models/declaration';
 
 export default async function documentSymbolProvider(handler: DocumentSymbolParams): Promise<DocumentSymbol[]> {
 	const currentPath = handler.textDocument.uri;
 	const symbols: DocumentSymbol[] = [];
 	const document = documents.get(currentPath);
+
+	const validRange = (def: Declaration) => {
+		return def.range.start !== null && def.range.start >= 0 && def.range.end !== null;
+	}
 
 	if (document) {
 		const doc = await parser.getDocs(currentPath, document.getText());
@@ -19,7 +23,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			const currentScopeDefs: DocumentSymbol[] = [];
 
 			scope.procedures
-				.filter(proc => proc.position && proc.position.path === currentPath && proc.range.start && proc.range.end)
+				.filter(proc => proc.position && proc.position.path === currentPath && validRange(proc))
 				.forEach(proc => {
 					const procDef = DocumentSymbol.create(
 						proc.name,
@@ -47,8 +51,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				});
 
 			currentScopeDefs.push(
-				...scope.subroutines.filter(sub => sub.position && sub.position.path === currentPath && sub.range.start && sub.range.end)
-					.filter(def => def.range.start)
+				...scope.subroutines
+					.filter(sub => sub.position && sub.position.path === currentPath && validRange(sub))
 					.map(def => DocumentSymbol.create(
 						def.name,
 						prettyKeywords(def.keyword),
@@ -137,7 +141,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				});
 
 			scope.structs
-				.filter(struct => struct.position && struct.position.path === currentPath && struct.range.start && struct.range.end)
+				.filter(struct => struct.position && struct.position.path === currentPath && validRange(struct))
 				.forEach(struct => {
 					const structDef = DocumentSymbol.create(
 						struct.name,
