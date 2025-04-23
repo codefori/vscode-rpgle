@@ -12,6 +12,28 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 		return def.range.start !== null && def.range.start >= 0 && def.range.end !== null;
 	}
 
+	const expandStruct = (def: Declaration): DocumentSymbol => {
+		let start = def.range.start || def.position.range.line;
+		let end = def.range.end || def.position.range.line;
+		let hasChildren = def.subItems && def.subItems.length > 0;
+
+		const parent = DocumentSymbol.create(
+			def.name,
+			prettyKeywords(def.keyword),
+			hasChildren ? SymbolKind.Struct : SymbolKind.Property,
+			Range.create(start, 0, end, 0),
+			Range.create(start, 0, start, 0),
+		);
+
+		if (hasChildren) {
+			parent.children = def.subItems
+				.filter(subitem => subitem.position && subitem.position.path === currentPath)
+				.map(subitem => expandStruct(subitem));
+		}
+			
+		return parent;
+	}
+
 	if (document) {
 		const doc = await parser.getDocs(currentPath, document.getText());
 
@@ -143,25 +165,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			scope.structs
 				.filter(struct => struct.position && struct.position.path === currentPath && validRange(struct))
 				.forEach(struct => {
-					const structDef = DocumentSymbol.create(
-						struct.name,
-						prettyKeywords(struct.keyword),
-						SymbolKind.Struct,
-						Range.create(struct.range.start!, 0, struct.range.end!, 0),
-						Range.create(struct.range.start!, 0, struct.range.start!, 0),
-					);
-
-					structDef.children = struct.subItems
-						.filter(subitem => subitem.position && subitem.position.path === currentPath)
-						.map(subitem => DocumentSymbol.create(
-							subitem.name,
-							prettyKeywords(subitem.keyword),
-							SymbolKind.Property,
-							Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0),
-							Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0)
-						));
-
-					currentScopeDefs.push(structDef);
+					currentScopeDefs.push(expandStruct(struct));
 				});
 
 			return currentScopeDefs;
