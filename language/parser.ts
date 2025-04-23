@@ -887,10 +887,19 @@ export default class Parser {
                 await expandDs(fileUri, tokens[1], currentItem);
 
                 // Does the keywords include a keyword that makes end-ds useless?
-                if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                  currentItem.range.end = currentStmtStart.line;
-                  scope.structs.push(currentItem);
+                const singleLineDef = Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)));
+                if (singleLineDef) {
+                  if (dsScopes.length > 0) {
+                    // If we're already inside a dsScope, that means we need to add this item to the current definition
+                    let lastItem = dsScopes[dsScopes.length - 1];
+                    lastItem.subItems.push(currentItem);
+                  } else {
+                    // Otherwise, we push as a new item
+                    currentItem.range.end = currentStmtStart.line;
+                    scope.structs.push(currentItem);
+                  }
                 } else {
+                  // If it's not a single line defintion, flag the item to keep adding new fields
                   currentItem.readParms = true;
                   dsScopes.push(currentItem);
                 }

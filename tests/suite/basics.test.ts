@@ -502,6 +502,37 @@ test('subds1', async () => {
   });
 });
 
+test('subds2 likeds', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds t_fileinfo template qualified inz;`,
+    `  fielda char(10);`,
+    `  fieldb int(10) pos(0);`,
+    `  fieldc zoned(10) pos(0);`,
+    `end-ds;`,
+    ``,
+    `dcl-ds t_mysimpleDs template qualified inz;`,
+    `  fieldd char(20);`,
+    `  fielde char(20);`,
+    `  dcl-ds fieldDs likeds(t_fileinfo);`,
+    `  fieldf char(20);`,
+    `  fieldg char(20);`,
+    `end-ds;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  expect(cache.structs.length).toBe(2);
+
+  const t_fileinfo = cache.find(`t_fileinfo`);
+  expect(t_fileinfo.name).toBe(`t_fileinfo`);
+  expect(t_fileinfo.subItems.length).toBe(3);
+
+  const t_mysimpleDs = cache.find(`t_mysimpleDs`);
+  expect(t_mysimpleDs.name).toBe(`t_mysimpleDs`);
+  expect(t_mysimpleDs.subItems.length).toBe(5);
+})
+
 test('range1', async () => {
   const lines = [
     `**FREE`,

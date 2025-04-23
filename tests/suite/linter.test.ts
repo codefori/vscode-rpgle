@@ -3318,7 +3318,6 @@ test('issue_353_indent_4', async () => {
   }, cache);
 
   expect(errors.length).toBe(0);
-  console.log(indentErrors);
   expect(indentErrors.length).toBe(0);
 });
 
@@ -3649,12 +3648,6 @@ test('allow special global subroutines', async () => {
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalSubroutines: true
   }, cache);
-
-  for (const err of errors) {
-    console.log({
-      text: lines.substring(err.offset.start, err.offset.end),
-    })
-  }
  
   expect(errors.length).toBe(2);
 });
