@@ -495,6 +495,7 @@ test('subds1', async () => {
 
   expect(DsChangingNodeRole.subItems.length).toBe(13);
   expect(DsChangingNodeRole.subItems[12].name).toBe(`Role`);
+  expect(DsChangingNodeRole.subItems[12].subItems.length).toBe(2);
 
   expect(DsChangingNodeRole.range).toEqual({
     start: 2,
