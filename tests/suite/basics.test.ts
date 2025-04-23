@@ -531,6 +531,11 @@ test('subds2 likeds', async () => {
   const t_mysimpleDs = cache.find(`t_mysimpleDs`);
   expect(t_mysimpleDs.name).toBe(`t_mysimpleDs`);
   expect(t_mysimpleDs.subItems.length).toBe(5);
+
+  const fieldDs = t_mysimpleDs.subItems.find(item => item.name === `fieldDs`);
+  expect(fieldDs).toBeDefined();
+  expect(fieldDs.keyword[`LIKEDS`]).toBe(`t_fileinfo`);
+  expect(fieldDs.subItems.length).toBe(3);
 })
 
 test('range1', async () => {
