@@ -232,6 +232,10 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			let baseFile = parts.file || `QRPGLESRC`;
 			let baseMember = parts.name;
 
+			if (parts.library && parts.library.startsWith(`*`)) {
+				parts.library = undefined;
+			}
+
 			if (parts.library) {
 				cleanString = [
 					``,

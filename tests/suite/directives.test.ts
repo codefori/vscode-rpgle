@@ -2,6 +2,7 @@ import path from "path";
 import setupParser from "../parserSetup";
 import Linter from "../../language/linter";
 import { test, expect } from "vitest";
+import Parser from "../../language/parser";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -653,4 +654,12 @@ test('fixed copy with comment and using double quotes', async () => {
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
 
   expect(cache.includes.length).toBe(2);
+});
+
+test('test copy with *libl', async () => {
+  const valueA = Parser.getIncludeFromDirective(`/copy qrpgleref,stufh`);
+  expect(valueA).toBe(`qrpgleref,stufh`);
+
+  const valueB = Parser.getIncludeFromDirective(`/copy *libl/qrpgleref,stufh`);
+  expect(valueB).toBe(`*libl/qrpgleref,stufh`);
 });
