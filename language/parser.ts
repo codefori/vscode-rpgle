@@ -117,7 +117,7 @@ export default class Parser {
 	 * @returns {string|undefined}
 	 */
   static getIncludeFromDirective(line: string): string|undefined {
-    if (line.includes(`*`)) return; // Likely comment
+    if (line.indexOf(`*`) !== line.toLowerCase().indexOf(`*libl`)) return; // Likely comment
     if (line.trim().startsWith(`//`)) return; // Likely comment
 
     const upperLine = line.toUpperCase();
