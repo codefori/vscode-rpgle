@@ -31,6 +31,7 @@ import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
 import genericCodeActionsProvider from './providers/codeActions';
+import { isLinterEnabled } from './providers/linter';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -39,7 +40,6 @@ let hasDiagnosticRelatedInformationCapability = false;
 const outsideMerlin = !isInMerlin();
 
 const languageToolsEnabled = outsideMerlin;
-const linterEnabled = true;
 const formatterEnabled = outsideMerlin;
 
 let projectEnabled = false;
@@ -79,7 +79,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.renameProvider = {prepareProvider: true};
 	}
 
-	if (linterEnabled) {
+	if (isLinterEnabled()) {
 		result.capabilities.codeActionProvider = true;
 		if (formatterEnabled) {
 			result.capabilities.documentFormattingProvider = {
@@ -310,8 +310,7 @@ if (languageToolsEnabled) {
 	connection.onImplementation(implementationProvider);
 }
 
-// TODO: enable both code action providers
-// if (linterEnabled) Linter.initialise(connection);
+if (isLinterEnabled()) Linter.initialise(connection);
 
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
