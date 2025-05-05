@@ -30,7 +30,7 @@ import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
-import genericCodeActionsProvider from './providers/apis/codeActions';
+import genericCodeActionsProvider from './providers/codeActions';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;

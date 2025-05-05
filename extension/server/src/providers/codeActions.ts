@@ -1,7 +1,7 @@
 import { CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { documents, parser, prettyKeywords } from '..';
-import Cache from '../../../../../language/models/cache';
+import { documents, parser, prettyKeywords } from '.';
+import Cache from '../../../../language/models/cache';
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[]|undefined> {
 	const uri = params.textDocument.uri;
