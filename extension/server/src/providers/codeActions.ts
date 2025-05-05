@@ -33,10 +33,10 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 				}
 			}
 
-			const testCaseOption = getTestCaseAction(document, docs, range);
-			if (testCaseOption) {
-				actions.push(testCaseOption);
-			}
+			// const testCaseOption = getTestCaseAction(document, docs, range);
+			// if (testCaseOption) {
+			// 	actions.push(testCaseOption);
+			// }
 		}
 	}
 
