@@ -14,9 +14,18 @@ function calculateToken(lineNumber, startingPos, value, type) {
     return;
   }
 
-  if (type === `special-ind`) {
+  switch (type) {
+  case `special-ind`:
     type = `special`;
     resultValue = `*IN` + resultValue;
+    break;
+
+  case `opcode`:
+    // Remove extender from opcode
+    if (resultValue.includes(`(`) && resultValue.includes(`)`)) {
+      resultValue = resultValue.substring(0, resultValue.indexOf(`(`));
+    }
+    break;
   }
 
   const frontSpaces = value.length - value.trimStart().length;
