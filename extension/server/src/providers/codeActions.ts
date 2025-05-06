@@ -24,7 +24,7 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 
 				const extractOption = getExtractProcedureAction(document, docs, range);
 				if (extractOption) {
-					return [extractOption];
+					actions.push(extractOption);
 				}
 
 				const linterActions = await getLinterCodeActions(docs, document, range);
@@ -37,6 +37,11 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 			// if (testCaseOption) {
 			// 	actions.push(testCaseOption);
 			// }
+
+			const monitorAction = surroundWithMonitorAction(isFree, document, docs, range);
+			if (monitorAction) {
+				actions.push(monitorAction);
+			}
 		}
 	}
 
@@ -69,6 +74,74 @@ export function getTestCaseAction(document: TextDocument, docs: Cache, range: Ra
 
 		return refactorAction;
 	}
+}
+
+function lineAt(document: TextDocument, line: number): string {
+	return document.getText(Range.create(line, 0, line, 1000)).trimEnd();
+}
+
+function determineIndent(line: string): number {
+	const match = line.match(/^\s+/);
+	if (match) {
+		return match[0].length;
+	}
+	return 0;
+}
+
+export function surroundWithMonitorAction(isFree: boolean, document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {
+	let rangeStart = range.start.line;
+	let rangeEnd = range.end.line;
+	let indent = 0;
+
+	let validStart = -1;
+	let validEnd = -1;
+
+	const currentProcedure = docs.procedures.find(sub => rangeStart >= sub.position.range.line && rangeEnd <= sub.range.end!);
+	
+	if (currentProcedure && currentProcedure.scope && currentProcedure.range.end) {
+		validStart = currentProcedure.scope.getDefinitionBlockEnd(document.uri)+1;
+		validEnd = currentProcedure.range.end-1;
+	} else {
+		validStart = docs.getDefinitionBlockEnd(document.uri)+1;
+		const firstProc = docs.procedures.find(p => !Object.keys(p.keyword).some(k => k.toLowerCase().startsWith(`ext`)));
+		validEnd = firstProc && firstProc.range.start ? firstProc.range.start-1 : document.lineCount;
+	}
+
+	if (isFree) {
+		indent = determineIndent(lineAt(document, rangeStart));
+	} else {
+		const freePortion = lineAt(document, rangeStart).substring(7);
+		indent = determineIndent(freePortion) + 7;
+	}
+
+	const newLine = `\n`;
+	const indentStr = ` `.repeat(indent);
+	const space = `${newLine}${indentStr}`;
+
+	console.log({rangeStart, rangeEnd, validStart, validEnd});
+	if (rangeStart >= validStart && rangeEnd <= validEnd) {
+		const refactorAction = CodeAction.create(`Surround with monitor`, CodeActionKind.RefactorRewrite);
+
+		refactorAction.edit = {
+			changes: {
+				[document.uri]: [
+					TextEdit.insert(
+						Position.create(rangeStart, 0),
+						`${indentStr}monitor;${newLine}`
+					),
+					TextEdit.insert(
+						Position.create(rangeEnd+1, 0),
+						`${space}on-error *all;${space}  // TODO: implement${space}endmon;${newLine}`
+					)
+				]
+			},
+		};
+
+		return refactorAction;
+	}
+	
+
+	return;
 }
 
 export function getSubroutineActions(document: TextDocument, docs: Cache, range: Range): CodeAction|undefined {

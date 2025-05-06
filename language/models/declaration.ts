@@ -39,4 +39,8 @@ export default class Declaration {
     //clone.scope = this.scope;
     return clone;
   }
+
+  get description() {
+    return this.tags.find(tag => tag.tag === `description`)?.content || ``;
+  }
 }
