@@ -7,10 +7,11 @@ import * as ileExports from './apis';
 import skipRules from './linter/skipRules';
 import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
+import Parser from '../../../../language/parser';
 
 const completionKind = {
-  function: CompletionItemKind.Function,
-  struct: CompletionItemKind.Struct
+	function: CompletionItemKind.Function,
+	struct: CompletionItemKind.Struct
 };
 
 const eol = `\n`;
@@ -29,10 +30,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
 			// If they're typing inside of a procedure, let's get the stuff from there too
-			const currentProcedure = doc.procedures.find((proc, index) => 
+			const currentProcedure = doc.procedures.find((proc, index) =>
 				proc.range.start && proc.range.end &&
-				lineNumber >= proc.range.start && 
-				(lineNumber <= proc.range.end+1 || index === doc.procedures.length-1) &&
+				lineNumber >= proc.range.start &&
+				(lineNumber <= proc.range.end + 1 || index === doc.procedures.length - 1) &&
 				currentPath === proc.position.path
 			);
 
@@ -45,42 +46,61 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
-				let currentPosition = Position.create(handler.position.line, handler.position.character - 2);
-				let preWord = getWordRangeAtPosition(document, currentPosition);
+				const tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? currentLine.substring(7) : ``, 0, 0, true);
 
-				// Uh oh! Maybe we found dim struct?
-				if (preWord && preWord.includes(`)`)) {
-					const startBracket = currentLine.lastIndexOf(`(`, currentPosition.character);
+				if (tokens.length > 0) {
+					const cursorIndex = handler.position.character;
+					let tokenIndex = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
+					console.log(tokens);
+					console.log({ cPos: handler.position.character, tokenIndex });
 
-					if (startBracket > -1) {
-						currentPosition = Position.create(handler.position.line, startBracket - 1);
-						preWord = getWordRangeAtPosition(document, currentPosition);
+					while (tokens[tokenIndex] && [`block`, `word`, `dot`].includes(tokens[tokenIndex].type) && tokenIndex > 0) {
+						tokenIndex--;
 					}
-				}
 
-				// Ok, we have a 'preWord' (the name of the struct?)
-				if (preWord) {
-					preWord = preWord.toUpperCase();
-					
-					// Look at the parms or existing structs to find a possible reference
-					const possibleStruct: Declaration | undefined = [
-						// First we search the local procedure
-						currentProcedure && currentProcedure.scope ? currentProcedure.scope.parameters.find(parm => parm.name.toUpperCase() === preWord && parm.subItems.length > 0) : undefined,
-						currentProcedure && currentProcedure.scope ? currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === preWord) : undefined,
-						currentProcedure && currentProcedure.scope ? currentProcedure.scope.constants.find(struct => struct.subItems.length > 0 && struct.name.toUpperCase() === preWord) : undefined,
+					let currentDef: Declaration | undefined;
 
-						// Then we search the globals
-						doc.structs.find(struct => struct.name.toUpperCase() === preWord),
-						doc.constants.find(struct => struct.subItems.length > 0 && struct.name.toUpperCase() === preWord)
-					].find(x => x); // find the first non-undefined item
+					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
+						if ([`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
+							continue;
+						}
 
-					if (possibleStruct && possibleStruct.keyword[`QUALIFIED`]) {
-						items.push(...possibleStruct.subItems.map(subItem => {
+						const word = tokens[tokenIndex].value?.toUpperCase();
+
+						if (!word) break;
+
+						if (currentDef) {
+							if (currentDef.subItems && currentDef.subItems.length > 0) {
+								currentDef = currentDef.subItems.find(subItem => subItem.name.toUpperCase() === word);
+							}
+
+						} else {
+							currentDef = [
+								// First we search the local procedure
+								currentProcedure && currentProcedure.scope ? currentProcedure.scope.parameters.find(parm => parm.name.toUpperCase() === word && parm.subItems.length > 0) : undefined,
+								currentProcedure && currentProcedure.scope ? currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === word && struct.keyword[`QUALIFIED`]) : undefined,
+								currentProcedure && currentProcedure.scope ? currentProcedure.scope.constants.find(struct => struct.subItems.length > 0 && struct.name.toUpperCase() === word) : undefined,
+	
+								// Then we search the globals
+								doc.structs.find(struct => struct.name.toUpperCase() === word && struct.keyword[`QUALIFIED`]),
+								doc.constants.find(constants => constants.subItems.length > 0 && constants.name.toUpperCase() === word)
+							].find(x => x); // find the first non-undefined item
+
+							if (currentDef && currentDef.subItems.length > 0) {
+								// All good!
+							} else {
+								currentDef = undefined;
+							}
+						}
+					}
+
+					if (currentDef && currentDef.subItems.length > 0) {
+						items.push(...currentDef.subItems.map(subItem => {
 							const item = CompletionItem.create(subItem.name);
 							item.kind = CompletionItemKind.Property;
 							item.insertText = subItem.name;
 							item.detail = prettyKeywords(subItem.keyword);
-							item.documentation = subItem.description + `${possibleStruct ? ` (${possibleStruct.name})` : ``}`;
+							item.documentation = subItem.description + ` (${currentDef.name})`;
 							return item;
 						}));
 					}
@@ -100,10 +120,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 						item.detail = file.relative;
 						return item;
 					}));
-					
+
 				} else if (currentLine.trimStart().startsWith(`//`)) {
 					items.push(...skipRules);
-				
+
 				} else {
 					const expandScope = (localCache: Cache) => {
 						for (const subItem of localCache.parameters) {
@@ -266,7 +286,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 								kind: `markdown`,
 								value: [
 									currentExport.description,
-									(currentExport.example ? 
+									(currentExport.example ?
 										[`---`, '', '```rpgle', currentExport.example.join(eol), '```'].join(eol)
 										: undefined)
 								].filter(v => v).join(eol + eol)

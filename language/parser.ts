@@ -145,12 +145,16 @@ export default class Parser {
     }
   }
 
-  static lineTokens(input: string, lineNumber: number, lineIndex: number): Token[] {
+  static lineTokens(input: string, lineNumber: number, lineIndex: number, withBlocks?: boolean): Token[] {
     let tokens = tokenise(input, {
       baseIndex: lineIndex,
       lineNumber,
       ignoreTypes: [`tab`]
     });
+
+    if (withBlocks) {
+      tokens = createBlocks(tokens);
+    }
     
     return tokens;
   }
