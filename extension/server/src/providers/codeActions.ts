@@ -114,6 +114,11 @@ export function surroundWithMonitorAction(isFree: boolean, document: TextDocumen
 	let rangeStart = range.start.line;
 	let rangeEnd = range.end.line;
 
+	if (rangeStart === rangeEnd) {
+		// Only works for multi-line selections
+		return;
+	}
+
 	const validRange = getBodyRangeForRange(docs, rangeStart, rangeEnd, document);
 
 	if (!validRange) {
@@ -227,8 +232,8 @@ export function getSubroutineActions(document: TextDocument, docs: Cache, range:
 }
 
 export function getExtractProcedureAction(document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {
-	let rangeStart = range.start.line;
-	let rangeEnd = range.end.line;
+	const rangeStart = range.start.line;
+	const rangeEnd = range.end.line;
 	if (rangeEnd > rangeStart) {
 
 		const validRange = getBodyRangeForRange(docs, rangeStart, rangeEnd, document);
