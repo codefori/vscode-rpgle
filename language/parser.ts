@@ -741,7 +741,6 @@ export default class Parser {
                 currentItem = new Declaration(`file`);
                 currentItem.name = partsLower[1];
                 currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
                   path: fileUri,
@@ -792,7 +791,6 @@ export default class Parser {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
                 currentItem.keyword = Parser.expandKeywords(tokens.slice(2), true);
-                currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
                   path: fileUri,
@@ -811,7 +809,6 @@ export default class Parser {
                 currentItem = new Declaration(`variable`);
                 currentItem.name = partsLower[1];
                 currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
@@ -831,7 +828,6 @@ export default class Parser {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = partsLower[1];
                 currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                currentItem.description = currentDescription.join(`\n`);
 
                 currentItem.position = {
                   path: fileUri,
@@ -868,7 +864,6 @@ export default class Parser {
                 currentItem = new Declaration(`struct`);
                 currentItem.name = partsLower[1];
                 currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                currentItem.description = currentDescription.join(`\n`);
                 currentItem.tags = currentTags;
 
                 currentItem.position = {
@@ -933,7 +928,6 @@ export default class Parser {
                   currentItem = new Declaration(`procedure`);
                   currentItem.name = partsLower[1];
                   currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                  currentItem.description = currentDescription.join(`\n`);
                   currentItem.tags = currentTags;
 
                   currentItem.position = {
@@ -990,7 +984,6 @@ export default class Parser {
               currentProcName = partsLower[1];
               currentItem.name = currentProcName;
               currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-              currentItem.description = currentDescription.join(`\n`);
               currentItem.tags = currentTags;
 
               currentItem.position = {
@@ -1080,7 +1073,6 @@ export default class Parser {
               if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === parts[1])) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = partsLower[1];
-                currentItem.description = currentDescription.join(`\n`);
 		            currentItem.keyword = {'Subroutine': true};
 
                 currentItem.position = {
@@ -1179,9 +1171,14 @@ export default class Parser {
 
                       if (currentSqlItem.name)
                         currentSqlItem.keyword = {};
+                
+                      if (qualifiedObjectPath.schema) {
+                        currentSqlItem.tags.push({
+                          tag: `description`,
+                          content: qualifiedObjectPath.schema
+                        })
+                      }
                       
-                      currentSqlItem.description = qualifiedObjectPath.schema || ``;
-      
                       currentSqlItem.position = {
                         path: fileUri,
                         range: qualifiedObjectPath.nameToken.range
@@ -1219,14 +1216,20 @@ export default class Parser {
                     });
                   } else {
                     if (currentTags.length > 0) {
-                      currentTags[currentTags.length - 1].content += ` ${content}`;
+                      const lastTag = currentTags[currentTags.length - 1];
+                      lastTag.content += (lastTag.content.length === 0 ? `` : ` `) + content;
 
-                    } else {
-                      if (currentTitle === undefined) {
-                        currentTitle = content;
-                      } else {
-                        currentDescription.push(content);
-                      }
+                    } else if (!currentTags.some(tag => tag.tag === `title`)) {
+                      currentTags.push({
+                        tag: `title`,
+                        content
+                      });
+
+                      currentTags.push({
+                        tag: `description`,
+                        content: ``
+                      });
+
                     }
                   }
                 }
@@ -1265,7 +1268,10 @@ export default class Parser {
                     const paramTags = currentItem.tags.filter(tag => tag.tag === `param`);
                     const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
                     if (paramTag) {
-                      currentSub.description = paramTag.content;
+                      currentSub.tags = [{
+                        tag: `description`,
+                        content: paramTag.content
+                      }];
                     }
                   }
 
@@ -1439,7 +1445,6 @@ export default class Parser {
                 const f2Value = cSpec.factor2.value;
                 callItem.name = (f2Value.startsWith(`'`) && f2Value.endsWith(`'`) ? f2Value.substring(1, f2Value.length-1) : f2Value);
                 callItem.keyword = {'EXTPGM': true}
-                callItem.description = currentDescription.join(`\n`);
                 callItem.tags = currentTags;
 
                 callItem.position = {
