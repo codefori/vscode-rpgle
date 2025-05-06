@@ -3318,7 +3318,6 @@ test('issue_353_indent_4', async () => {
   }, cache);
 
   expect(errors.length).toBe(0);
-  console.log(indentErrors);
   expect(indentErrors.length).toBe(0);
 });
 
@@ -3579,4 +3578,113 @@ test('issue_361_bracket_usage', async () => {
   });
 
   expect(errors.length).toBe(0);
+});
+
+test('no names cannot be referenced', async () => {
+  const lines = [
+  `**FREE`,
+  `//...`,
+  `// Valid commands and the corresponding object type`,
+  `DCL-DS CommandsDS;`,
+  `  *n CHAR(10) INZ('CRTCMD');`,
+  `  *n CHAR(10) INZ('CRTBNDCL');`,
+  `  *n CHAR(10) INZ('CRTCLMOD');`,
+  `  *n CHAR(10) INZ('CRTDSPF');`,
+  `  *n CHAR(10) INZ('CRTPRTF');`,
+  `  *n CHAR(10) INZ('CRTLF');`,
+  `  *n CHAR(10) INZ('CRTPF');`,
+  `  *n CHAR(10) INZ('CRTMNU');`,
+  `  *n CHAR(10) INZ('CRTPNLGRP');`,
+  `  *n CHAR(10) INZ('CRTQMQRY');`,
+  `  *n CHAR(10) INZ('CRTSRVPGM');`,
+  `  *n CHAR(10) INZ('CRTWSCST');`,
+  `  *n CHAR(10) INZ('CRTRPGPGM');`,
+  `  *n CHAR(10) INZ('CRTSQLRPG');`,
+  `  Commands CHAR(10) DIM(14) POS(1);`,
+  `END-DS;`,
+  ``,
+  `DCL-DS ObjTypesDS;`,
+  `  *n CHAR(10) INZ('CMD');`,
+  `  *n CHAR(10) INZ('PGM');`,
+  `  *n CHAR(10) INZ('MODULE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('FILE');`,
+  `  *n CHAR(10) INZ('MENU');`,
+  `  *n CHAR(10) INZ('PNLGRP');`,
+  `  *n CHAR(10) INZ('QMQRY');`,
+  `  *n CHAR(10) INZ('SRVPGM');`,
+  `  *n CHAR(10) INZ('WSCST');`,
+  `  *n CHAR(10) INZ('PGM');`,
+  `  *n CHAR(10) INZ('PGM');`,
+  `  ObjTypes CHAR(10) DIM(14) POS(1);`,
+  `END-DS;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true
+  }, cache);
+
+  expect(errors.length).toBe(4);
+
+  const unusedNames = [`Commands`, `CommandsDS`, `ObjTypes`, `ObjTypesDS`];
+  
+  for (let i = 0; i < errors.length; i++) {
+    expect(errors[i].type).toBe(`NoUnreferenced`);
+    expect(lines.substring(errors[i].offset.start, errors[i].offset.end).includes(unusedNames[i])).toBeTruthy();
+  }
+});
+
+test('NoSELECTAll across multiple lines', () => {
+  const lines = [
+    `**free`,
+    `dcl-s i int(10);`,
+    `dcl-s j int(10);`,
+    `dcl-s k int(10);`,
+    ``,
+    `exec sql`,
+    `  select`,
+    `  *`,
+    `  into`,
+    `  :aDS`,
+    `  from`,
+    `  myfile`,
+    `  fetch first row only;`,
+  ].join(`\n`);
+
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoSELECTAll: true
+  });
+
+  expect(errors.length).toBe(1);
+  expect(errors[0].type).toBe(`NoSELECTAll`);
+});
+
+test('allow special global subroutines', async () => {
+  const lines = [
+    `**free`,
+    `// *PSSR can be global or local; should require entry in appropriate "Allowed...Subroutines" to suppress.`,
+    `begsr *PSSR;`,
+    `  comment = '*PSSR subroutines can be created in global scope.';`,
+    `endsr;`,
+    ``,
+    `// *INZSR is only allowed in global; however, an entry should be required in "AllowedGlobalSubroutines" to suppress.`,
+    `begsr *INZSR;`,
+    `  comment = '*INZSR subroutines can be created only in global scope.';`,
+    `endsr;`,
+    ``,
+    `// Because the routine is in "AllowedGlobalSubroutines", no error should be flagged.`,
+    `begsr allowedInGlobal;`,
+    `  comment = 'Subroutine "allowedInGlobal" is allowed in global scope.';`,
+    `endsr;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoGlobalSubroutines: true
+  }, cache);
+ 
+  expect(errors.length).toBe(2);
 });

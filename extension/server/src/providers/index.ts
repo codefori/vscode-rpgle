@@ -22,6 +22,8 @@ export function findFile(fileString: string, scheme = ``) {
 
 export const parser = new Parser();
 
+const wordMatch = /[\w\#\$@]/;
+
 export function getWordRangeAtPosition(document: TextDocument, position: Position): string|undefined {
 	const lines = document.getText().split(`\n`); // Safe to assume \n because \r is then at end of lines
 	const line = Math.min(lines.length - 1, Math.max(0, position.line));
@@ -29,12 +31,12 @@ export function getWordRangeAtPosition(document: TextDocument, position: Positio
 	const character = Math.min(lineText.length - 1, Math.max(0, position.character));
 
 	let startChar = character;
-	while (startChar > 0 && !/[\s\W]/.test(lineText.charAt(startChar - 1))) {
+	while (startChar > 0 && wordMatch.test(lineText.charAt(startChar - 1))) {
 		startChar -= 1;
 	}
 
 	let endChar = character;
-	while (endChar < lineText.length && (!/[\s\W]/.test(lineText.charAt(endChar + 1)))) {
+	while (endChar < lineText.length && wordMatch.test(lineText.charAt(endChar + 1))) {
 		endChar += 1;
 	}
 

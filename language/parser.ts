@@ -9,6 +9,7 @@ import oneLineTriggers from "./models/oneLineTriggers";
 import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
+import { NO_NAME } from "./statement";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
@@ -46,6 +47,11 @@ export default class Parser {
     this.includeFileFetch = promise;
   }
 
+  clearTableCache() {
+    console.log(`Clearing cache of these files: ${Object.keys(this.tables).join(`, `)}`)
+    this.tables = {};
+  }
+ 
   async fetchTable(name: string, keyVersion = ``, aliases?: boolean): Promise<Declaration[]> {
     if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
@@ -111,7 +117,7 @@ export default class Parser {
 	 * @returns {string|undefined}
 	 */
   static getIncludeFromDirective(line: string): string|undefined {
-    if (line.includes(`*`)) return; // Likely comment
+    if (line.indexOf(`*`) !== line.toLowerCase().indexOf(`*libl`)) return; // Likely comment
     if (line.trim().startsWith(`//`)) return; // Likely comment
 
     const upperLine = line.toUpperCase();
@@ -590,7 +596,7 @@ export default class Parser {
                 break;
               case '/':
                 // Comments in SQL, usually free-format
-                if (parts[1] === `*`) {
+                if (parts[1] === `*` && currentStmtStart) {
                   currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
                   continue;
                 }
@@ -881,10 +887,19 @@ export default class Parser {
                 await expandDs(fileUri, tokens[1], currentItem);
 
                 // Does the keywords include a keyword that makes end-ds useless?
-                if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)))) {
-                  currentItem.range.end = currentStmtStart.line;
-                  scope.structs.push(currentItem);
+                const singleLineDef = Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)));
+                if (singleLineDef) {
+                  if (dsScopes.length > 0) {
+                    // If we're already inside a dsScope, that means we need to add this item to the current definition
+                    let lastItem = dsScopes[dsScopes.length - 1];
+                    lastItem.subItems.push(currentItem);
+                  } else {
+                    // Otherwise, we push as a new item
+                    currentItem.range.end = currentStmtStart.line;
+                    scope.structs.push(currentItem);
+                  }
                 } else {
+                  // If it's not a single line defintion, flag the item to keep adding new fields
                   currentItem.readParms = true;
                   dsScopes.push(currentItem);
                 }
@@ -1237,7 +1252,7 @@ export default class Parser {
                   }
 
                   currentSub = new Declaration(`subitem`);
-                  currentSub.name = (parts[0] === `*N` ? `parm${currentItem.subItems.length+1}` : partsLower[0]);
+                  currentSub.name = (parts[0] === NO_NAME ? NO_NAME : partsLower[0]);
                   currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
 
                   currentSub.position = {
@@ -1370,19 +1385,19 @@ export default class Parser {
                   const decimals = cSpec.fieldDecimals ? parseInt(cSpec.fieldDecimals.value) : undefined;
                   const type = decimals !== undefined ? `PACKED`: `CHAR`;
 
-                  currentItem = new Declaration(`variable`);
-                  currentItem.name = fieldName;
-                  currentItem.keyword = {[type]: `${fieldLength}${decimals !== undefined ? `:${decimals}` : ``}`};
-                  currentItem.position = {
+                  currentSub = new Declaration(`variable`);
+                  currentSub.name = fieldName;
+                  currentSub.keyword = {[type]: `${fieldLength}${decimals !== undefined ? `:${decimals}` : ``}`};
+                  currentSub.position = {
                     path: fileUri,
                     range: cSpec.result.range
                   };
-                  currentItem.range = {
+                  currentSub.range = {
                     start: lineNumber,
                     end: lineNumber
                   };
 
-                  scope.variables.push(currentItem);
+                  scope.variables.push(currentSub);
                 }
               }
             }
@@ -1535,7 +1550,7 @@ export default class Parser {
               switch (dSpec.field && dSpec.field.value) {
               case `C`:
                 currentItem = new Declaration(`constant`);
-                currentItem.name = potentialName ? potentialName.value : `*N`;
+                currentItem.name = potentialName ? potentialName.value : NO_NAME;
                 currentItem.keyword = dSpec.keywords || {};
                   
                 // TODO: line number might be different with ...?
@@ -1549,7 +1564,7 @@ export default class Parser {
                 break;
               case `S`:
                 currentItem = new Declaration(`variable`);
-                currentItem.name = potentialName ? potentialName.value : `*N`;
+                currentItem.name = potentialName ? potentialName.value : NO_NAME;
                 currentItem.keyword = {
                   ...dSpec.keywords,
                   ...prettyTypeFromToken(dSpec),
@@ -1567,7 +1582,7 @@ export default class Parser {
 
               case `DS`:
                 currentItem = new Declaration(`struct`);
-                currentItem.name = potentialName ? potentialName.value : `*N`;
+                currentItem.name = potentialName ? potentialName.value : NO_NAME;
                 currentItem.keyword = dSpec.keywords;
 
                 currentItem.position = {
@@ -1591,7 +1606,7 @@ export default class Parser {
                 // Only add a PR if it's not been defined
                 if (potentialName && !scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase())) {
                   currentItem = new Declaration(`procedure`);
-                  currentItem.name = potentialName ? potentialName.value : `*N`;
+                  currentItem.name = potentialName ? potentialName.value : NO_NAME;
                   currentItem.keyword = {
                     ...prettyTypeFromToken(dSpec),
                     ...dSpec.keywords
@@ -1657,7 +1672,7 @@ export default class Parser {
                   if (!potentialName && baseToken) {
                     potentialName = {
                       ...baseToken,
-                      value: `parm${currentItem.subItems.length+1}`
+                      value: NO_NAME
                     }
                   }
 

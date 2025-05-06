@@ -17,7 +17,7 @@ import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, getFileRequest, getObject as getObjectData, memberResolve, streamfileResolve, validateUri } from "./connection";
+import { connection, getFileRequest, getObject as getObjectData, handleClientRequests, memberResolve, streamfileResolve, validateUri } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
@@ -113,12 +113,18 @@ connection.onInitialized(() => {
 	if (projectEnabled) {
 		Project.initialise();
 	}
+
+	handleClientRequests();
 });
 
 parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration[]> => {
 	if (!languageToolsEnabled) return [];
 
+	console.log(`Server is resolving ${table}`);
+
 	const data = await getObjectData(table);
+
+	console.log(`Resolved ${table} and got ${data.length} rows.`);
 
 	return dspffdToRecordFormats(data, aliases);
 });
@@ -225,6 +231,10 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			// If there is no file provided, assume QRPGLESRC
 			let baseFile = parts.file || `QRPGLESRC`;
 			let baseMember = parts.name;
+
+			if (parts.library && parts.library.startsWith(`*`)) {
+				parts.library = undefined;
+			}
 
 			if (parts.library) {
 				cleanString = [

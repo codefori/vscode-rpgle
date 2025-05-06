@@ -2,13 +2,9 @@ import path = require('path');
 import { Uri, workspace, RelativePattern, commands } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import { getInstance } from './base';
-import { projectFilesGlob } from "./configuration";
 import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
 
-let streamFileSupportChecked = false;
-let streamFileSupported = false;
-
-export default function buildRequestHandlers(client: LanguageClient) {
+export function buildRequestHandlers(client: LanguageClient) {
 	/**
 	 * Validates a URI.
 	 * 1. Attemps to open a valid full path
@@ -42,8 +38,9 @@ export default function buildRequestHandlers(client: LanguageClient) {
 	 */
 	client.onRequest("getWorkingDirectory", async (): Promise<string | undefined> => {
 		const instance = getInstance();
-		if (instance && instance.getConnection()) {
-			const config = instance.getConfig();
+		if (instance) {
+			const connection = instance.getConnection();
+			const config = connection?.getConfig();
 			if (config) {
 				return config.homeDirectory;
 			}
@@ -74,10 +71,11 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		let memberName = parms[0], sourceFile = parms[1];
 
 		const instance = getInstance();
+		const connection = instance?.getConnection();
 
-		if (instance) {
-			const config = instance?.getConfig();
-			const content = instance?.getContent();
+		if (connection) {
+			const config = connection.getConfig();
+			const content = connection.getContent();
 
 			if (config && content) {
 				const files = [config?.currentLibrary, ...config?.libraryList!]
@@ -101,18 +99,21 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		const includePaths: string[] = parms[1];
 
 		const instance = getInstance();
+		const connection = instance?.getConnection();
 
-		const content = instance?.getContent();
-		const config = instance?.getConfig()!;
+		if (connection) {
+			const content = connection.getContent();
+			const config = connection.getConfig()!;
 
-		if (instance && content && config) {
-			if (includePaths.length === 0) {
-				includePaths.push(config.homeDirectory);
+			if (instance && content && config) {
+				if (includePaths.length === 0) {
+					includePaths.push(config.homeDirectory);
+				}
+
+				const resolvedPath = await content?.streamfileResolve(bases, includePaths);
+
+				return resolvedPath;
 			}
-
-			const resolvedPath = await content?.streamfileResolve(bases, includePaths);
-
-			return resolvedPath;
 		}
 	});
 
@@ -123,11 +124,12 @@ export default function buildRequestHandlers(client: LanguageClient) {
 		const instance = getInstance();
 
 		if (instance) {
+			console.log(`Fetching table: ${table}`);
+
 			const connection = instance.getConnection();
 			if (connection) {
-
-				const content = instance.getContent();
-				const config = instance.getConfig();
+				const content = connection.getContent();
+				const config = connection.getConfig();
 
 				const dateStr = Date.now().toString().substr(-6);
 				const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
@@ -148,6 +150,8 @@ export default function buildRequestHandlers(client: LanguageClient) {
 					parts.table = table;
 				}
 
+				// TODO: handle .env file here?
+
 				const outfileRes: any = await connection.runCommand({
 					environment: `ile`,
 					command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
@@ -157,9 +161,14 @@ export default function buildRequestHandlers(client: LanguageClient) {
 				const resultCode = outfileRes.code || 0;
 
 				if (resultCode === 0) {
-					const data: object[] = await content.getTable(config.tempLibrary, randomFile, randomFile, true);
+					const data: any[] = await content.getTable(config.tempLibrary, randomFile, randomFile, true);
 
 					console.log(`Temp OUTFILE read. ${data.length} rows.`);
+
+					connection.runCommand({
+						environment: `ile`,
+						command: `DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
+					});
 
 					return data;
 				}
@@ -168,4 +177,8 @@ export default function buildRequestHandlers(client: LanguageClient) {
 
 		return [];
 	});
+}
+
+export function clearTableCache(client: LanguageClient) {
+	client.sendRequest(`clearTableCache`);
 }

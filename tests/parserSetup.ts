@@ -31,6 +31,8 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 	parser.setIncludeFileFetch(async (baseFile: string, includeFile: string) => {
 		if (includeFile.startsWith(`'`) && includeFile.endsWith(`'`)) {
 			includeFile = includeFile.substring(1, includeFile.length - 1);
+		} else if (includeFile.startsWith(`"`) && includeFile.endsWith(`"`)) {
+			includeFile = includeFile.substring(1, includeFile.length - 1);
 		}
 
 		if (includeFile.includes(`,`) || !includeFile.includes(`.`)) {

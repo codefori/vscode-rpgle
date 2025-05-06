@@ -495,12 +495,49 @@ test('subds1', async () => {
 
   expect(DsChangingNodeRole.subItems.length).toBe(13);
   expect(DsChangingNodeRole.subItems[12].name).toBe(`Role`);
+  expect(DsChangingNodeRole.subItems[12].subItems.length).toBe(2);
 
   expect(DsChangingNodeRole.range).toEqual({
     start: 2,
     end: 19
   });
 });
+
+test('subds2 likeds', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds t_fileinfo template qualified inz;`,
+    `  fielda char(10);`,
+    `  fieldb int(10) pos(0);`,
+    `  fieldc zoned(10) pos(0);`,
+    `end-ds;`,
+    ``,
+    `dcl-ds t_mysimpleDs template qualified inz;`,
+    `  fieldd char(20);`,
+    `  fielde char(20);`,
+    `  dcl-ds fieldDs likeds(t_fileinfo);`,
+    `  fieldf char(20);`,
+    `  fieldg char(20);`,
+    `end-ds;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  expect(cache.structs.length).toBe(2);
+
+  const t_fileinfo = cache.find(`t_fileinfo`);
+  expect(t_fileinfo.name).toBe(`t_fileinfo`);
+  expect(t_fileinfo.subItems.length).toBe(3);
+
+  const t_mysimpleDs = cache.find(`t_mysimpleDs`);
+  expect(t_mysimpleDs.name).toBe(`t_mysimpleDs`);
+  expect(t_mysimpleDs.subItems.length).toBe(5);
+
+  const fieldDs = t_mysimpleDs.subItems.find(item => item.name === `fieldDs`);
+  expect(fieldDs).toBeDefined();
+  expect(fieldDs.keyword[`LIKEDS`]).toBe(`t_fileinfo`);
+  expect(fieldDs.subItems.length).toBe(3);
+})
 
 test('range1', async () => {
   const lines = [
@@ -1320,4 +1357,58 @@ test('issue_353_comments', async () => {
   expect(hedinf.subItems.length).toBe(5);
   const p2at = cache.find(`p2@`);
   expect(p2at).toBeDefined();
+});
+
+test('header file parse', async () => {
+  const lines = [
+    `**free`,
+    `      //%METADATA                                                      *`,
+    `      // %TEXT API main validation procedure (IWS)                     *`,
+    `      //%EMETADATA                                                     *`,
+    `///`,
+    `// @Program APIVAL01S`,
+    `//`,
+    `// @Purpose IWS API validation procedures`,
+    `//`,
+    `// @author JHEI`,
+    `// @Date 22 May 2024`,
+    `//`,
+    `///`,
+    `ctl-opt option(*srcstmt:*nodebugio);`,
+    `ctl-opt debug(*retval:*constants);`,
+    `ctl-opt reqprexp(*require);`,
+    ``,
+    `// includes`,
+    `/copy './rpgle/apival01s.rpgleinc'`,
+    ``,
+    `dsply 'hello';`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+
+  expect(cache.includes.length).toBe(1);
+  expect(cache.constants.length).toBe(8);
+  expect(cache.procedures.length).toBe(1);
+
+  expect(cache.procedures[0].name).toBe(`APIVAL01S_iws_validate`);
+});
+
+test('can define on the first line', async () => {
+  const lines = [
+    `        begsr sub1;`,
+    `        endsr;`,
+    `        `,
+    `        begsr sub2;`,
+    `        endsr;`,
+    ``,
+    `        `,
+    ``,
+    `        begsr sub3;`,
+    `        endsr;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  expect(cache.subroutines.length).toBe(3);
 });

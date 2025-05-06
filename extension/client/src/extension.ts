@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, Uri, commands, RelativePattern } from 'vscode';
+import { workspace, ExtensionContext } from 'vscode';
 
 import * as Linter from "./linter";
 import * as columnAssist from "./language/columnAssist";
@@ -18,8 +18,11 @@ import {
 } from 'vscode-languageclient/node';
 
 import { projectFilesGlob } from './configuration';
-import buildRequestHandlers from './requests';
+import { clearTableCache, buildRequestHandlers } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
+import { checkAndWait, loadBase, onCodeForIBMiConfigurationChange } from './base';
+import { registerCommands } from './commands';
+import { setLanguageSettings } from './language/config';
 
 let client: LanguageClient;
 
@@ -42,6 +45,8 @@ export function activate(context: ExtensionContext) {
 			options: debugOptions
 		}
 	};
+
+	loadBase();
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
@@ -66,8 +71,25 @@ export function activate(context: ExtensionContext) {
 		clientOptions
 	);
 
-	client.onReady().then(() => {
+	client.onReady().then(async () => {
 		buildRequestHandlers(client);
+
+		const instance = await checkAndWait();
+
+		// We need to clear table caches when the connection changes
+		if (instance) {
+			// When the connection is established
+			instance.subscribe(context, "connected", "vscode-rpgle", () => {
+				clearTableCache(client);
+			});
+
+			// When the library list changes
+			context.subscriptions.push(
+				onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+					clearTableCache(client);
+				}),
+			);
+		}
 	});
 
 	// Start the client. This will also launch the server
@@ -76,10 +98,13 @@ export function activate(context: ExtensionContext) {
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
 	
+	registerCommands(context, client);
+	
 	context.subscriptions.push(getServerSymbolProvider());
 	context.subscriptions.push(getServerImplementationProvider());
-
+	context.subscriptions.push(setLanguageSettings());
 	// context.subscriptions.push(...initBuilder(client));
+
 
 	console.log(`started`);
 }

@@ -1,0 +1,34 @@
+**free
+// Constants
+// ---------
+// field & array sizes
+dcl-c APIVAL01S_MAX_DIM    1000;           // max array size
+dcl-c APIVAL01S_DATA_LEN    100;           // max field data length
+dcl-c APIVAL01S_FIELD_LEN    50;           // max field name length
+dcl-c APIVAL01S_VALID_LEN   500;           // max validation length
+dcl-c APIVAL01S_JSON_LEN   1000;           // JSON error response size
+// type constants
+dcl-c APIVAL01S_TYPE_STRING   'string';
+dcl-c APIVAL01S_TYPE_NUMERIC  'numeric';
+dcl-c APIVAL01S_TYPE_DATE     'date';
+
+// DS templates
+// ------------
+// list of validations to perform
+dcl-ds APIVAL01S_validationsDs qualified template;
+  field          varchar(APIVAL01S_FIELD_LEN);
+  type           varchar(50);
+  validations    varchar(APIVAL01S_VALID_LEN)        dim(6);
+end-ds;
+
+// perform validation for the given list of validations (validationDs)
+//   with the given input data (note: required char!)
+// returns the number of errors found (if any)
+// if errors returned = 0 then the validation succeeded
+//   in case of validation failure o_errorJson will contain a list of errors in JSON format
+dcl-pr APIVAL01S_iws_validate int(10) extproc(*dclcase);
+  i_validationsDs                 likeds(APIVAL01S_validationsDs) dim(APIVAL01S_MAX_DIM);
+  i_data                          varchar(APIVAL01S_DATA_LEN)     dim(APIVAL01S_MAX_DIM);
+  o_errorJson                     varchar(APIVAL01S_JSON_LEN);
+end-pr;
+
