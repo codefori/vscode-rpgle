@@ -1,12 +1,38 @@
 import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-languageserver';
 import { documents, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
-import { Position } from '../../../../language/models/DataPoints';
+import Declaration from '../../../../language/models/declaration';
 
 export default async function documentSymbolProvider(handler: DocumentSymbolParams): Promise<DocumentSymbol[]> {
 	const currentPath = handler.textDocument.uri;
 	const symbols: DocumentSymbol[] = [];
 	const document = documents.get(currentPath);
+
+	const validRange = (def: Declaration) => {
+		return def.range.start !== null && def.range.start >= 0 && def.range.end !== null;
+	}
+
+	const expandStruct = (def: Declaration): DocumentSymbol => {
+		let start = def.range.start || def.position.range.line;
+		let end = def.range.end || def.position.range.line;
+		let hasChildren = def.subItems && def.subItems.length > 0;
+
+		const parent = DocumentSymbol.create(
+			def.name,
+			prettyKeywords(def.keyword),
+			hasChildren ? SymbolKind.Struct : SymbolKind.Property,
+			Range.create(start, 0, end, 0),
+			Range.create(start, 0, start, 0),
+		);
+
+		if (hasChildren) {
+			parent.children = def.subItems
+				.filter(subitem => subitem.position && subitem.position.path === currentPath)
+				.map(subitem => expandStruct(subitem));
+		}
+			
+		return parent;
+	}
 
 	if (document) {
 		const doc = await parser.getDocs(currentPath, document.getText());
@@ -19,7 +45,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			const currentScopeDefs: DocumentSymbol[] = [];
 
 			scope.procedures
-				.filter(proc => proc.position && proc.position.path === currentPath && proc.range.start && proc.range.end)
+				.filter(proc => proc.position && proc.position.path === currentPath && validRange(proc))
 				.forEach(proc => {
 					const procDef = DocumentSymbol.create(
 						proc.name,
@@ -47,8 +73,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				});
 
 			currentScopeDefs.push(
-				...scope.subroutines.filter(sub => sub.position && sub.position.path === currentPath && sub.range.start && sub.range.end)
-					.filter(def => def.range.start)
+				...scope.subroutines
+					.filter(sub => sub.position && sub.position.path === currentPath && validRange(sub))
 					.map(def => DocumentSymbol.create(
 						def.name,
 						prettyKeywords(def.keyword),
@@ -137,27 +163,9 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				});
 
 			scope.structs
-				.filter(struct => struct.position && struct.position.path === currentPath && struct.range.start && struct.range.end)
+				.filter(struct => struct.position && struct.position.path === currentPath && validRange(struct))
 				.forEach(struct => {
-					const structDef = DocumentSymbol.create(
-						struct.name,
-						prettyKeywords(struct.keyword),
-						SymbolKind.Struct,
-						Range.create(struct.range.start!, 0, struct.range.end!, 0),
-						Range.create(struct.range.start!, 0, struct.range.start!, 0),
-					);
-
-					structDef.children = struct.subItems
-						.filter(subitem => subitem.position && subitem.position.path === currentPath)
-						.map(subitem => DocumentSymbol.create(
-							subitem.name,
-							prettyKeywords(subitem.keyword),
-							SymbolKind.Property,
-							Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0),
-							Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0)
-						));
-
-					currentScopeDefs.push(structDef);
+					currentScopeDefs.push(expandStruct(struct));
 				});
 
 			return currentScopeDefs;

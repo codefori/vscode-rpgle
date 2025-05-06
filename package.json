@@ -12,7 +12,7 @@
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
 	"license": "MIT",
-	"version": "0.28.9",
+	"version": "0.29.2",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
@@ -82,6 +82,20 @@
 				"category": "RPGLE",
 				"enablement": "code-for-ibmi:connected",
 				"icon": "$(refresh)"
+			},
+			{
+				"command": "vscode-rpgle.assist.moveLeft",
+				"title": "Move Left",
+				"category": "RPGLE Fixed-Format",
+				"icon": "$(arrow-left)",
+				"when": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.assist.moveRight",
+				"title": "Move Right",
+				"category": "RPGLE Fixed-Format",
+				"icon": "$(arrow-right)",
+				"when": "editorLangId == rpgle"
 			}
 		],
 		"keybindings": [
@@ -95,6 +109,18 @@
 				"command": "vscode-rpgle.assist.toggleFixedRuler",
 				"key": "shift+f4",
 				"mac": "shift+f4",
+				"when": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.assist.moveLeft",
+				"key": "ctrl+[",
+				"mac": "ctrl+[",
+				"when": "editorLangId == rpgle"
+			},
+			{
+				"command": "vscode-rpgle.assist.moveRight",
+				"key": "ctrl+]",
+				"mac": "ctrl+]",
 				"when": "editorLangId == rpgle"
 			}
 		],

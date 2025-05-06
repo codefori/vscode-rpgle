@@ -22,6 +22,7 @@ import { clearTableCache, buildRequestHandlers } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
 import { checkAndWait, loadBase, onCodeForIBMiConfigurationChange } from './base';
 import { registerCommands } from './commands';
+import { setLanguageSettings } from './language/config';
 
 let client: LanguageClient;
 
@@ -101,7 +102,7 @@ export function activate(context: ExtensionContext) {
 	
 	context.subscriptions.push(getServerSymbolProvider());
 	context.subscriptions.push(getServerImplementationProvider());
-
+	context.subscriptions.push(setLanguageSettings());
 	// context.subscriptions.push(...initBuilder(client));
 
 

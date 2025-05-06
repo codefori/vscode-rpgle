@@ -1,0 +1,21 @@
+**free
+Dcl-Pr  DB00040_getDescriptionByRecycCode Like(ds_recycling.description) ExtProc(*DclCase);
+   pRecycCode    Like(ds_recycling.RecycCode)  Const;
+End-Pr;
+Dcl-Pr  DB00040_getImageFileByRecycCode Like(ds_recycling.imageFile) ExtProc(*DclCase);
+   pRecycCode    Like(ds_recycling.RecycCode)  Const;
+End-Pr;
+Dcl-Pr  DB00040_checkRecordByRecycCode Ind ExtProc(*DclCase);
+   pRecycCode    Like(ds_recycling.RecycCode)  Const;
+End-Pr;
+
+Dcl-Pr  DB00040_getRecordByRecycCode LikeDs(ds_recycling) ExtProc(*DclCase);
+   pRecycCode    Like(ds_recycling.RecycCode)  Const;
+End-Pr;
+
+Dcl-Pr DB00040_getRecycError VarChar(256) ExtProc(*DclCase);
+   pErrId Int(10) Options(*NoPass:*Omit);
+End-Pr;
+
+Dcl-Ds ds_recycling Ext ExtName('VW_RECYC') Inz Alias Qualified;  // view 
+End-Ds;
