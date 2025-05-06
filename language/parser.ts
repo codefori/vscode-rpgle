@@ -18,16 +18,6 @@ export type includeFilePromise = (baseFile: string, includeString: string) => Pr
 export type TableDetail = {[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}};
 export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean};
 
-const lineTokens = (input: string, lineNumber: number, lineIndex: number): Token[] => {
-  let tokens = tokenise(input, {
-    baseIndex: lineIndex,
-    lineNumber,
-    ignoreTypes: [`tab`]
-  });
-  
-  return tokens;
-}
-
 const PROGRAMPARMS_NAME = `PROGRAMPARMS`;
 
 export default class Parser {
@@ -153,6 +143,16 @@ export default class Parser {
 
       return directiveValue;
     }
+  }
+
+  static lineTokens(input: string, lineNumber: number, lineIndex: number): Token[] {
+    let tokens = tokenise(input, {
+      baseIndex: lineIndex,
+      lineNumber,
+      ignoreTypes: [`tab`]
+    });
+    
+    return tokens;
   }
 
   async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {
@@ -570,7 +570,7 @@ export default class Parser {
           };
 
           const lineIsComment = line.trim().startsWith(`//`);
-          tokens = lineTokens(getValidStatement(line), lineNumber, lineIndex);
+          tokens = Parser.lineTokens(getValidStatement(line), lineNumber, lineIndex);
           partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
           parts = partsLower.map(piece => piece.toUpperCase());
 
@@ -711,7 +711,7 @@ export default class Parser {
                 // This means the line is just part of the end of the last statement as well.
                 line = currentStmtStart.content + getValidStatement(baseLine);
 
-                tokens = lineTokens(line, currentStmtStart.line, currentStmtStart.index);
+                tokens = Parser.lineTokens(line, currentStmtStart.line, currentStmtStart.index);
                 partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
                 parts = partsLower.map(piece => piece.toUpperCase());
 
@@ -1368,7 +1368,7 @@ export default class Parser {
             tokens = [cSpec.indicator, cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
             const fromToken = (token?: Token) => {
-              return token ? lineTokens(token.value, lineNumber, token.range.start) : [];
+              return token ? Parser.lineTokens(token.value, lineNumber, token.range.start) : [];
             };
 
             if (cSpec.opcode && ALLOWS_EXTENDED.includes(cSpec.opcode.value) && !cSpec.factor1 && cSpec.extended) {
@@ -1769,10 +1769,10 @@ export default class Parser {
 
   static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
     if (Array.isArray(content) && typeof content[0] === `string`) {
-      return lineTokens(content.join(` `), lineNumber, baseIndex);
+      return Parser.lineTokens(content.join(` `), lineNumber, baseIndex);
     } else 
       if (typeof content === `string`) {
-        return lineTokens(content, lineNumber, baseIndex);
+        return Parser.lineTokens(content, lineNumber, baseIndex);
       } else {
         return content as Token[];
       }
