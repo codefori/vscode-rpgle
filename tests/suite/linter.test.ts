@@ -3542,6 +3542,43 @@ test('issue_358_no_reference_2', async () => {
   }
 });
 
+test('issue_361_bracket_usage', async () => {
+  const lines = [
+    `**FREE`,
+    `/copy stat`,
+    ``,
+    `EXEC SQL`,
+    `  DECLARE UserInput CURSOR FOR`,
+    `    SELECT field FROM file`,
+    `    WHERE  field = :code`,
+    `    ORDER BY field ASC;`,
+    ``,
+    `EXEC SQL`,
+    `  OPEN UserInput;`,
+    ``,
+    `EXEC SQL`,
+    `  FETCH NEXT FROM UserInput INTO :MyRpgVar`,
+    `   For Read Only With NC;`,
+    ``,
+    `Dow SQLSTATE = '00000';`,
+    `  EXEC SQL`,
+    `    FETCH NEXT FROM UserInput INTO :MyRpgVar;`,
+    `ENDDO;`,
+    ``,
+    `EXEC SQL`,
+    `  CLOSE UserInput;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true, withIncludes: true });
+
+  expect(cache.includes.length).toBe(1);
+  
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    RequiresParameter: true
+  });
+
+  expect(errors.length).toBe(0);
+});
 
 test('no names cannot be referenced', async () => {
   const lines = [

@@ -1,0 +1,3 @@
+     D stat            PR            10I 0 ExtProc('stat')
+     D  filename                       *   value
+     D  buf                            *   value
