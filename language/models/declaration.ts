@@ -8,7 +8,6 @@ type DeclarationType = "procedure"|"subroutine"|"file"|"struct"|"subitem"|"varia
 export default class Declaration {
   name: string = ``;
   keyword: Keywords = {};
-  description: string = ``;
   tags: {tag: string, content: string}[] = [];
   position: {path: string, range: IRangeWithLine};
   references: Reference[] = [];
@@ -22,7 +21,6 @@ export default class Declaration {
     const clone = new Declaration(this.type);
     clone.name = this.name;
     clone.keyword = this.keyword;
-    clone.description = this.description;
     clone.tags = this.tags;
 
     if (this.position) {

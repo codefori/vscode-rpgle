@@ -884,7 +884,10 @@ test('exec_1', async () => {
 
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`sysdummy1`);
-  expect(cache.sqlReferences[0].description).toBe(`sysibm`);
+  expect(cache.sqlReferences[0].tags[0]).toEqual({
+    tag: `description`,
+    content: `sysibm`
+  });
 });
 
 test('exec_2', async () => {
@@ -912,10 +915,13 @@ test('exec_2', async () => {
 
   expect(cache.sqlReferences.length).toBe(2);
   expect(cache.sqlReferences[0].name).toBe(`Employee`);
-  expect(cache.sqlReferences[0].description).toBe(``);
+  expect(cache.sqlReferences[0].tags.length).toBe(0);
 
   expect(cache.sqlReferences[1].name).toBe(`Employee`);
-  expect(cache.sqlReferences[1].description).toBe(`sample`);
+  expect(cache.sqlReferences[1].tags[0]).toEqual({
+    tag: `description`,
+    content: `sample`
+  });
 });
 
 test('exec_3', async () => {
@@ -969,7 +975,10 @@ test('exec_4', async () => {
 
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`employee`);
-  expect(cache.sqlReferences[0].description).toBe(`sample`);
+  expect(cache.sqlReferences[0].tags[0]).toEqual({
+    tag: `description`,
+    content: `sample`
+  });
 });
 
 test('exec_5', async () => {
@@ -992,10 +1001,13 @@ test('exec_5', async () => {
   expect(cache.sqlReferences.length).toBe(2);
 
   expect(cache.sqlReferences[0].name).toBe(`mytable`);
-  expect(cache.sqlReferences[0].description).toBe(`sample`);
+  expect(cache.sqlReferences[0].tags[0]).toEqual({
+    tag: `description`,
+    content: `sample`
+  });
 
   expect(cache.sqlReferences[1].name).toBe(`othertable`);
-  expect(cache.sqlReferences[1].description).toBe(``);
+  expect(cache.sqlReferences[1].tags.length).toBe(0);
 });
 
 test('exec_6', async () => {
@@ -1020,10 +1032,13 @@ test('exec_6', async () => {
   expect(cache.sqlReferences.length).toBe(2);
 
   expect(cache.sqlReferences[0].name).toBe(`mytable`);
-  expect(cache.sqlReferences[0].description).toBe(`sample`);
+  expect(cache.sqlReferences[0].tags[0]).toEqual({
+    tag: `description`,
+    content: `sample`
+  });
 
   expect(cache.sqlReferences[1].name).toBe(`othertable`);
-  expect(cache.sqlReferences[1].description).toBe(``);
+  expect(cache.sqlReferences[1].tags.length).toBe(0);
 });
 
 test('exec_7', async () => {
@@ -1048,10 +1063,13 @@ test('exec_7', async () => {
   expect(cache.sqlReferences.length).toBe(2);
 
   expect(cache.sqlReferences[0].name).toBe(`thetable`);
-  expect(cache.sqlReferences[0].description).toBe(`sample`);
+  expect(cache.sqlReferences[0].tags[0]).toEqual({
+    tag: `description`,
+    content: `sample`
+  });
 
   expect(cache.sqlReferences[1].name).toBe(`cooltable`);
-  expect(cache.sqlReferences[1].description).toBe(``);
+  expect(cache.sqlReferences[1].tags.length).toBe(0);
 });
 
 test('exec_8', async () => {
@@ -1076,10 +1094,13 @@ test('exec_8', async () => {
   expect(cache.sqlReferences.length).toBe(2);
 
   expect(cache.sqlReferences[0].name).toBe(`thetable`);
-  expect(cache.sqlReferences[0].description).toBe(`sample`);
+  expect(cache.sqlReferences[0].tags[0]).toEqual({
+    tag: `description`,
+    content: `sample`
+  });
 
   expect(cache.sqlReferences[1].name).toBe(`wooptable`);
-  expect(cache.sqlReferences[1].description).toBe(``);
+  expect(cache.sqlReferences[1].tags.length).toBe(0);
 });
 
 test('exec_9', async () => {
@@ -1102,10 +1123,13 @@ test('exec_9', async () => {
   expect(cache.sqlReferences.length).toBe(2);
 
   expect(cache.sqlReferences[0].name).toBe(`MyRandomProc`);
-  expect(cache.sqlReferences[0].description).toBe(`sample`);
+  expect(cache.sqlReferences[0].tags[0]).toEqual({
+    tag: `description`,
+    content: `sample`
+  });
 
   expect(cache.sqlReferences[1].name).toBe(`OtherCoolProc`);
-  expect(cache.sqlReferences[1].description).toBe(``);
+  expect(cache.sqlReferences[1].tags.length).toBe(0);
 });
 
 test('exec_10', async () => {
@@ -1125,10 +1149,10 @@ test('exec_10', async () => {
   expect(cache.sqlReferences.length).toBe(2);
 
   expect(cache.sqlReferences[0].name).toBe(`PSBORDS`);
-  expect(cache.sqlReferences[0].description).toBe(``);
+  expect(cache.sqlReferences[0].tags.length).toBe(0);
 
   expect(cache.sqlReferences[1].name).toBe(`PMESSGS`);
-  expect(cache.sqlReferences[1].description).toBe(``);
+  expect(cache.sqlReferences[1].tags.length).toBe(0);
 });
 
 test('exec_11', async () => {
@@ -1353,7 +1377,6 @@ test('issue_353_comments', async () => {
 
   const hedinf = cache.find(`HEDINF`);
   expect(hedinf).toBeDefined();
-  console.log(hedinf.subItems.map(s => s.name));
   expect(hedinf.subItems.length).toBe(5);
   const p2at = cache.find(`p2@`);
   expect(p2at).toBeDefined();
@@ -1525,7 +1548,6 @@ test('fixed-format c spec', async () => {
   expect(cache.procedures[0].name).toBe(`UpdArt`);
   expect(cache.procedures[0].subItems.length).toBe(2);
 
-  console.log(cache.variables);
   expect(cache.structs.length).toBe(3);
   expect(cache.variables.length).toBe(1);
 

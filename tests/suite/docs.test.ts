@@ -29,21 +29,26 @@ test("issue_202", async () => {
 
   const toLower = cache.find(`ToLower`);
 
-  expect(toLower.description).toBe(`This procedure will take a string and transform it to lowercase`);
+  const titleTag = toLower.tags.find(tag => tag.tag === `title`);
+  expect(titleTag.content).toBe(`Transform to lowercase`);
+
+  const descTag = toLower.tags.find(tag => tag.tag === `description`);
+  expect(descTag.content).toBe(`This procedure will take a string and transform it to lowercase`);
 
   const tags = toLower.tags;
-  expect(tags[0]).toEqual({
+  expect(tags[2]).toEqual({
     tag: `param`,
     content: `The string`
   });
 
-  expect(tags[1]).toEqual({
+  expect(tags[3]).toEqual({
     tag: `return`,
     content: `The lowercase value`
   });
 
   const stringInParam = toLower.subItems[0];
-  expect(stringInParam.description).toBe(`The string`);
+  const parmTag = stringInParam.tags.find(tag => tag.tag === `description`);
+  expect(parmTag.content).toBe(`The string`);
 });
 
 test("issue_231", async () => {

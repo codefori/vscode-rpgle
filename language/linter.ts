@@ -404,7 +404,7 @@ export default class Linter {
                     if (rules.RequiresProcedureDescription) {
                       const procDef = globalProcs.find(def => def.name.toUpperCase() === value.toUpperCase());
                       if (procDef) {
-                        if (!procDef.description) {
+                        if (!procDef.tags.some(tag => tag.tag === `description`)) {
                           errors.push({
                             type: `RequiresProcedureDescription`,
                             offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
