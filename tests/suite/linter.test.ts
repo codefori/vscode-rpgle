@@ -3688,3 +3688,40 @@ test('allow special global subroutines', async () => {
  
   expect(errors.length).toBe(2);
 });
+
+test("DS template references", async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-Ds dept ExtName('department') Qualified template end-ds;`,
+    ``,
+    `Dcl-DS dsExample qualified inz;`,
+    `  Field1 like(dept.DEPTNO) inz;`,
+    `  Field2 like(dept.DEPTNAME) inz;`,
+    `END-DS`,
+    ``,
+    `return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    NoUnreferenced: true,
+  }, cache);
+
+  const dept = cache.find(`dept`);
+  const deptno = dept.subItems.find(s => s.name === `DEPTNO`);
+  const deptname = dept.subItems.find(s => s.name === `DEPTNAME`);
+
+  expect(deptno).toBeDefined();
+  expect(deptname).toBeDefined();
+
+  expect(deptno.references.length).toBe(1);
+  expect(deptname.references.length).toBe(1);
+
+  expect(errors.length).toBe(3);
+
+  for (const err of errors) {
+    expect(lines.substring(err.offset.start, err.offset.end)).toContain(`inz`);
+  }
+
+});

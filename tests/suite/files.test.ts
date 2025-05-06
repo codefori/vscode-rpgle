@@ -92,14 +92,14 @@ test("ds_extname", async () => {
   expect(structDef.subItems.length).toBe(14);
 });
 
-test("ds_extname_no_alias", async () => {
+test("ds_extname", async () => {
   const lines = [
     `**free`,
     ``,
-    `Dcl-Ds dept ExtName('department') Qualified;`,
+    `Dcl-Ds Employee ExtName('EMPLOYEE') Qualified;`,
     `end-ds;`,
     ``,
-    `Dsply dept.deptname;`,
+    `Dsply Employee.empno;`,
     ``,
     `return;`
   ].join(`\n`);
@@ -109,11 +109,31 @@ test("ds_extname_no_alias", async () => {
   expect(cache.files.length).toBe(0);
   expect(cache.structs.length).toBe(1);
 
-  const dept = cache.find(`dept`);
-  expect(dept.subItems.length).toBe(5);
+  const structDef = cache.find(`employee`);
+  expect(structDef.name).toBe(`Employee`);
+  expect(structDef.subItems.length).toBe(14);
+});
 
-  expect(dept.subItems[0].name).toBe(`DEPTNO`);
-  expect(dept.subItems[1].name).toBe(`DEPTNAME`);
+test("ds_extname_template", async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `Dcl-Ds dept ExtName('department') Qualified template end-ds;`,
+    ``,
+    `Dcl-DS dsExample qualified inz;`,
+    `  Field1 like(tmpDS.Field1) inz;`,
+    `  Field2 like(tmpDS.Field2) inz;`,
+    `END-DS`,
+    ``,
+    `return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.structs.length).toBe(2);
+
+  const dept = cache.find(`dsExample`);
+  expect(dept.subItems.length).toBe(2);
 });
 
 test("ds_extname_alias", async () => {
@@ -187,4 +207,5 @@ test('file DS in a copy book', async () => {
   expect(someStruct.subItems.length).toBeGreaterThan(0);
 
   expect(someStruct.subItems.map(s => ({name: s.name, keyword: s.keyword}))).toMatchObject(globalStruct.subItems.map(s => ({name: s.name, keyword: s.keyword})));
-})
+});
+
