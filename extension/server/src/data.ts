@@ -58,7 +58,8 @@ export function dspffdToRecordFormats(data: any, aliases = false): Declaration[]
 			field: ``,
 			pos: ``
 		});
-		currentSubfield.description = text.trim();
+		
+		currentSubfield.tags.push({tag: `description`, content: text.trim()});
 
 		recordFormat.subItems.push(currentSubfield);
 	});
