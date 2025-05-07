@@ -1,9 +1,12 @@
-import { CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit } from 'vscode-languageserver';
+import { CodeAction, CodeActionKind, CodeActionParams, CreateFile, Position, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { documents, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
 import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
+import { Keywords } from '../../../../language/parserTypes';
+import path = require('path');
+import { URI } from 'vscode-uri';
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[] | undefined> {
 	const uri = params.textDocument.uri;
@@ -33,10 +36,10 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 				}
 			}
 
-			// const testCaseOption = getTestCaseAction(document, docs, range);
-			// if (testCaseOption) {
-			// 	actions.push(testCaseOption);
-			// }
+			const testCaseOption = getTestCaseAction(document, docs, range);
+			if (testCaseOption) {
+				actions.push(testCaseOption);
+			}
 		}
 	}
 
@@ -44,20 +47,42 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 }
 
 export function getTestCaseAction(document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {
-	const currentProcedure = docs.procedures.find(sub => range.start.line >= sub.position.range.line && sub.range.start && sub.range.end);
+	const currentProcedure = docs.procedures.find(sub => range.start.line >= sub.position.range.line && sub.range.start && sub.range.end && sub.keyword[`EXPORT`]);
 	if (currentProcedure) {
 
 		const refactorAction = CodeAction.create(`Create IBM i test case`, CodeActionKind.RefactorExtract);
+		const parsedName = path.parse(document.uri);
+		const newFileName = `${parsedName.name}.test${parsedName.ext}`;
 
 		refactorAction.edit = {
+			documentChanges: [
+				CreateFile.create(`GEBERATE URI here`, {ignoreIfExists: true})
+			],
 			changes: {
-				['mynewtest.rpgle']: [
+				// should be .test.rpgle
+				// basename should be the same as the current file
+
+				// TODO: does the file already exist?
+				// TODO: how does it handle different file systems?
+
+				[`abcd.rpgle`]: [
 					TextEdit.insert(
 						Position.create(0, 0), // Insert at the start of the new test case file
 						[
 							`**free`,
 							``,
 							`dcl-proc test_${currentProcedure.name.toLowerCase()} export;`,
+							``,
+							`  dcl-pr ${currentProcedure.name} extproc;`,
+							...currentProcedure.subItems.map(s => `  ${s.name} ${prettyKeywords(s.keyword)}`),
+							`  end-pr;`,
+							``,
+							// TODO: what if parameter is a DS?
+							...currentProcedure.subItems.map(s => `  // dcl-s ${s.name} ${prettyKeywords(s.keyword)};`),
+							``,
+							`  // ${currentProcedure.name}(${currentProcedure.subItems.map(s => s.name).join(`:`)});`,
+							``,
+							...currentProcedure.subItems.map(s => `  // aEquals(${s.name} = '');`),
 							``,
 							`end-proc;`
 						].join(`\n`)
@@ -69,6 +94,16 @@ export function getTestCaseAction(document: TextDocument, docs: Cache, range: Ra
 
 		return refactorAction;
 	}
+}
+
+function determineType(keywords: Keywords) {
+	let type = `unknown`;
+
+	if (keywords[`CHAR`] || keywords[`VARCHAR`]) {
+		type = `string`;
+	}
+
+	return type;
 }
 
 export function getSubroutineActions(document: TextDocument, docs: Cache, range: Range): CodeAction|undefined {
