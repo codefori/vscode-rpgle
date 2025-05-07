@@ -138,6 +138,10 @@ export function handleClientRequests() {
 	connection.onRequest(`clearTableCache`, () => {
 		parser.clearTableCache();
 	});
+
+	connection.onRequest(`getCache`, (uri: string) => {
+		return parser.getParsedCache(uri);
+	});
 }
 
 export interface BindingDirectory {

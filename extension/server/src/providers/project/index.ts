@@ -51,10 +51,6 @@ export async function initialise() {
 			}
 		})
 	});
-
-	connection.onRequest(`getCache`, (uri: string) => {
-		return parser.getParsedCache(uri);
-	});
 }
 
 async function loadWorkspace() {
