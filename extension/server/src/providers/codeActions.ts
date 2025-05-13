@@ -59,21 +59,6 @@ export async function getTestActions(document: TextDocument, docs: Cache, range:
 		const testFileUri = `${parsedPath.dir}/${testFileName}`;
 		const workspaceFolder = await getWorkspaceFolder(document.uri);
 
-		// Test suite generation
-		const newTestCases = exportProcedures.map(proc => generateTestCase(workspaceFolder, proc, docs.structs));
-		const prototypes = newTestCases.map(tc => [...tc.prototype, ``]).flat();
-		const testCases = newTestCases.map(tc => [...tc.testCase, ``]).flat();
-		const includes = newTestCases.map(tc => tc.includes).flat();
-		const newTestSuite = generateTestSuite(prototypes, testCases, includes);
-		const testSuiteAction = CodeAction.create(`Generate RPGUnit test suite for '${fileName}'`, CodeActionKind.RefactorExtract);
-		testSuiteAction.edit = {
-			documentChanges: [
-				CreateFile.create(testFileUri, { ignoreIfExists: true }),
-				TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
-			]
-		};
-		codeActions.push(testSuiteAction);
-
 		// Test case generation
 		const currentProcedure = exportProcedures.find(sub => sub.range.start && sub.range.end && range.start.line >= sub.range.start && range.end.line <= sub.range.end);
 		if (currentProcedure) {
@@ -88,6 +73,21 @@ export async function getTestActions(document: TextDocument, docs: Cache, range:
 			};
 			codeActions.push(testCaseAction);
 		}
+
+		// Test suite generation
+		const newTestCases = exportProcedures.map(proc => generateTestCase(workspaceFolder, proc, docs.structs));
+		const prototypes = newTestCases.map(tc => [...tc.prototype, ``]).flat();
+		const testCases = newTestCases.map(tc => [...tc.testCase, ``]).flat();
+		const includes = newTestCases.map(tc => tc.includes).flat();
+		const newTestSuite = generateTestSuite(prototypes, testCases, includes);
+		const testSuiteAction = CodeAction.create(`Generate RPGUnit test suite for '${fileName}'`, CodeActionKind.RefactorExtract);
+		testSuiteAction.edit = {
+			documentChanges: [
+				CreateFile.create(testFileUri, { ignoreIfExists: true }),
+				TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
+			]
+		};
+		codeActions.push(testSuiteAction);
 	}
 
 	return codeActions;
@@ -181,7 +181,7 @@ function getInputs(workspaceFolder: WorkspaceFolder | undefined, currentProcedur
 	return {
 		declarations,
 		initializations,
-		 includes
+		includes
 	}
 }
 
