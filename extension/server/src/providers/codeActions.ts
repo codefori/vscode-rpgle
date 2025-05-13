@@ -1,4 +1,4 @@
-import { CodeAction, CodeActionKind, CodeActionParams, CreateFile, Position, Range, TextEdit } from 'vscode-languageserver';
+import { CodeAction, CodeActionKind, CodeActionParams, CreateFile, Position, Range, TextDocumentEdit, TextEdit, WorkspaceFolder } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { documents, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
@@ -7,6 +7,8 @@ import { createExtract, caseInsensitiveReplaceAll } from './language';
 import { Keywords } from '../../../../language/parserTypes';
 import path = require('path');
 import { URI } from 'vscode-uri';
+import { getWorkspaceFolder } from '../connection';
+import Declaration from '../../../../language/models/declaration';
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[] | undefined> {
 	const uri = params.textDocument.uri;
@@ -36,9 +38,9 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 				}
 			}
 
-			const testCaseOption = getTestCaseAction(document, docs, range);
-			if (testCaseOption) {
-				actions.push(testCaseOption);
+			const testActions = await getTestActions(document, docs, range);
+			if (testActions) {
+				actions.push(...testActions);
 			}
 		}
 	}
@@ -46,67 +48,247 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 	return actions;
 }
 
-export function getTestCaseAction(document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {
-	const currentProcedure = docs.procedures.find(sub => range.start.line >= sub.position.range.line && sub.range.start && sub.range.end && sub.keyword[`EXPORT`]);
-	if (currentProcedure) {
+export async function getTestActions(document: TextDocument, docs: Cache, range: Range): Promise<CodeAction[] | undefined> {
+	const codeActions: CodeAction[] = [];
 
-		const refactorAction = CodeAction.create(`Create IBM i test case`, CodeActionKind.RefactorExtract);
-		const parsedName = path.parse(document.uri);
-		const newFileName = `${parsedName.name}.test${parsedName.ext}`;
+	const exportProcedures = docs.procedures.filter(proc => proc.keyword[`EXPORT`]);
+	if (exportProcedures.length > 0) {
+		const parsedPath = path.parse(document.uri);
+		const fileName = parsedPath.base;
+		const testFileName = `${parsedPath.name}.test${parsedPath.ext}`;
+		const testFileUri = `${parsedPath.dir}/${testFileName}`;
+		const workspaceFolder = await getWorkspaceFolder(document.uri);
 
-		refactorAction.edit = {
+		// Test suite generation
+		const newTestCases = exportProcedures.map(proc => generateTestCase(workspaceFolder, proc, docs.structs));
+		const prototypes = newTestCases.map(tc => [...tc.prototype, ``]).flat();
+		const testCases = newTestCases.map(tc => [...tc.testCase, ``]).flat();
+		const includes = newTestCases.map(tc => tc.includes).flat();
+		const newTestSuite = generateTestSuite(prototypes, testCases, includes);
+		const testSuiteAction = CodeAction.create(`Generate RPGUnit test suite for '${fileName}'`, CodeActionKind.RefactorExtract);
+		testSuiteAction.edit = {
 			documentChanges: [
-				CreateFile.create(`GEBERATE URI here`, {ignoreIfExists: true})
-			],
-			changes: {
-				// should be .test.rpgle
-				// basename should be the same as the current file
-
-				// TODO: does the file already exist?
-				// TODO: how does it handle different file systems?
-
-				[`abcd.rpgle`]: [
-					TextEdit.insert(
-						Position.create(0, 0), // Insert at the start of the new test case file
-						[
-							`**free`,
-							``,
-							`dcl-proc test_${currentProcedure.name.toLowerCase()} export;`,
-							``,
-							`  dcl-pr ${currentProcedure.name} extproc;`,
-							...currentProcedure.subItems.map(s => `  ${s.name} ${prettyKeywords(s.keyword)}`),
-							`  end-pr;`,
-							``,
-							// TODO: what if parameter is a DS?
-							...currentProcedure.subItems.map(s => `  // dcl-s ${s.name} ${prettyKeywords(s.keyword)};`),
-							``,
-							`  // ${currentProcedure.name}(${currentProcedure.subItems.map(s => s.name).join(`:`)});`,
-							``,
-							...currentProcedure.subItems.map(s => `  // aEquals(${s.name} = '');`),
-							``,
-							`end-proc;`
-						].join(`\n`)
-
-					)
-				]
-			},
+				CreateFile.create(testFileUri, { ignoreIfExists: true }),
+				TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
+			]
 		};
+		codeActions.push(testSuiteAction);
 
-		return refactorAction;
+		// Test case generation
+		const currentProcedure = exportProcedures.find(sub => sub.range.start && sub.range.end && range.start.line >= sub.range.start && range.end.line <= sub.range.end);
+		if (currentProcedure) {
+			const newTestCase = generateTestCase(workspaceFolder, currentProcedure, docs.structs);
+			const newTestSuite = generateTestSuite([...newTestCase.prototype, ``], newTestCase.testCase, newTestCase.includes);
+			const testCaseAction = CodeAction.create(`Generate RPGUnit test case for '${currentProcedure.name}'`, CodeActionKind.RefactorExtract);
+			testCaseAction.edit = {
+				documentChanges: [
+					CreateFile.create(testFileUri, { ignoreIfExists: true }),
+					TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
+				]
+			};
+			codeActions.push(testCaseAction);
+		}
+	}
+
+	return codeActions;
+}
+
+function generateTestSuite(prototypes: string[], testCases: string[], includes: string[]) {
+	const uniqueIncludes = [...new Set(includes)];
+
+	return [
+		`**free`,
+		``,
+		`ctl-opt nomain;`,
+		``,
+		...prototypes,
+		...uniqueIncludes.map(include => `/include '${include}'`),
+		`/include qinclude,TESTCASE`,
+		``,
+		...testCases
+	]
+}
+
+function generateTestCase(workspaceFolder: WorkspaceFolder | undefined, procedure: Declaration, structs: Declaration[]) {
+	const inputs = getInputs(workspaceFolder, procedure);
+	const actualReturns = getReturns(workspaceFolder, structs, procedure, `actual`);
+	const expectedReturns = getReturns(workspaceFolder, structs, procedure, `expected`);
+	const includes = [...new Set([...inputs.includes, ...actualReturns.includes])];
+
+	// TODO: Can we check if the prototype already exists?
+	const prototype = [
+		`dcl-pr ${procedure.name} ${prettyKeywords(procedure.keyword, true)} extproc('${procedure.name.toLocaleUpperCase()}');`,
+		...procedure.subItems.map(s => `  ${s.name} ${prettyKeywords(s.keyword, true)};`),
+		`end-pr;`,
+	];
+
+	const testCase = [
+		`dcl-proc test_${procedure.name.toLowerCase()} export;`,
+		`  dcl-pi *n extproc(*dclcase) end-pi;`,
+		``,
+		...inputs.declarations,
+		...actualReturns.declarations,
+		...expectedReturns.declarations,
+		``,
+		`  // Input`,
+		...inputs.initializations,
+		``,
+		`  // Actual results`,
+		`  actual = ${procedure.name}(${procedure.subItems.map(s => s.name).join(` : `)});`,
+		``,
+		`  // Expected results`,
+		...expectedReturns.initializations,
+		``,
+		`  // Assertions`,
+		...expectedReturns.assertions,
+		`end-proc;`
+	]
+
+	return {
+		prototype,
+		testCase,
+		includes
+	};
+}
+
+function getInputs(workspaceFolder: WorkspaceFolder | undefined, currentProcedure: Declaration) {
+	const declarations: string[] = [];
+	const initializations: string[] = [];
+	const includes: string[] = [];
+
+	const inputs = currentProcedure.subItems;
+	for (const input of inputs) {
+		const type = getType(input.keyword);
+		const declaration = type === `struct` ? 'dcl-ds' : 'dcl-s';
+		declarations.push(`  ${declaration} ${input.name} ${prettyKeywords(input.keyword, true)};`);
+		if (type === `struct`) {
+			for (const subItem of input.subItems) {
+				initializations.push(`  ${input.name}.${subItem.name} = ${getDefaultValue(getType(subItem.keyword))};`)
+
+				const structPath = subItem.position.path;
+				if (workspaceFolder) {
+					const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
+					if (!includes.includes(relativePath)) {
+						includes.push(relativePath);
+					}
+				}
+			}
+		} else {
+			initializations.push(`  ${input.name} = ${getDefaultValue(type)};`);
+		}
+	}
+
+	return {
+		declarations,
+		initializations,
+		 includes
 	}
 }
 
-function determineType(keywords: Keywords) {
+function getReturns(workspaceFolder: WorkspaceFolder | undefined, structs: Declaration[], currentProcedure: Declaration, name: 'actual' | 'expected') {
+	const declarations: string[] = [];
+	const initializations: string[] = [];
+	const assertions: string[] = [];
+	const includes: string[] = [];
+
+	const type = getType(currentProcedure.keyword);
+	const declaration = type === `struct` ? 'dcl-ds' : 'dcl-s';
+	if (type === `struct`) {
+		declarations.push(`  ${declaration} ${name} likeDS(${currentProcedure.keyword['LIKE']});`);
+		const struct = structs.find(struct => struct.name === currentProcedure.keyword[`LIKE`]);
+		if (struct) {
+			for (const subItem of struct.subItems) {
+				const subItemType = getType(subItem.keyword);
+				const subItemDefaultValue = getDefaultValue(subItemType);
+				initializations.push(`  ${name}.${subItem.name} = ${subItemDefaultValue};`)
+
+				const structPath = subItem.position.path;
+				if (workspaceFolder) {
+					const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
+					if (!includes.includes(relativePath)) {
+						includes.push(relativePath);
+					}
+				}
+
+				const assertion = getAssertion(subItemType);
+				if (assertion === `assert`) {
+					assertions.push(`  ${assertion}(expected.${subItem.name} = actual.${subItem.name} : '${subItem.name}');`);
+				} else {
+					assertions.push(`  ${assertion}(expected.${subItem.name} : actual.${subItem.name} : '${subItem.name}');`);
+				}
+			}
+		}
+	} else {
+		declarations.push(`  ${declaration} ${name} ${prettyKeywords(currentProcedure.keyword, true)};`);
+		initializations.push(`  ${name} = ${getDefaultValue(type)};`);
+
+		const assertion = getAssertion(type);
+		if (assertion === `assert`) {
+			assertions.push(`  ${assertion}(expected = actual);`);
+		} else {
+			assertions.push(`  ${assertion}(expected : actual);`);
+		}
+	}
+
+	return {
+		declarations,
+		initializations,
+		assertions,
+		includes
+	}
+}
+
+function getType(keywords: Keywords): string {
 	let type = `unknown`;
 
+	// TODO: Add all types
 	if (keywords[`CHAR`] || keywords[`VARCHAR`]) {
 		type = `string`;
+	} else if (keywords[`INT`]) {
+		type = `int`;
+	} else if (keywords[`IND`]) {
+		type = `boolean`;
+	} else if (keywords[`LIKEDS`] || keywords[`LIKE`]) {
+		type = `struct`;
 	}
 
 	return type;
 }
 
-export function getSubroutineActions(document: TextDocument, docs: Cache, range: Range): CodeAction|undefined {
+function getDefaultValue(type: string): string | undefined {
+	let defaultValue = `unknown`;
+
+	if (type === `string`) {
+		defaultValue = `''`;
+	} else if (type === `int`) {
+		defaultValue = `0`;
+	} else if (type === `boolean`) {
+		defaultValue = `*off`;
+	}
+
+	return defaultValue;
+}
+
+function getAssertion(type: string): string {
+	let assertion = `assert`;
+
+	if (type === `string`) {
+		assertion = `aEqual`;
+	} else if (type === `int`) {
+		assertion = `iEqual`;
+	} else if (type === `boolean`) {
+		assertion = `nEqual`;
+	}
+
+	return assertion;
+}
+
+
+function asPosix(inPath?: string) {
+	return inPath ? inPath.split(path.sep).join(path.posix.sep) : ``;
+}
+
+export function getSubroutineActions(document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {
 	if (range.start.line === range.end.line) {
 		const currentGlobalSubroutine = docs.subroutines.find(sub => sub.position.range.line === range.start.line && sub.range.start && sub.range.end);
 
@@ -128,7 +310,7 @@ export function getSubroutineActions(document: TextDocument, docs: Cache, range:
 			const newProcedure = [
 				`Dcl-Proc ${currentGlobalSubroutine.name};`,
 				`  Dcl-Pi *N;`,
-					  ...extracted.references.map((ref, i) => `    ${extracted.newParamNames[i]} ${ref.dec.type === `struct` ? `LikeDS` : `Like`}(${ref.dec.name});`),
+				...extracted.references.map((ref, i) => `    ${extracted.newParamNames[i]} ${ref.dec.type === `struct` ? `likeDS` : `like`}(${ref.dec.name});`),
 				`  End-Pi;`,
 				``,
 				caseInsensitiveReplaceAll(extracted.newBody, `leavesr`, `return`),
@@ -166,40 +348,40 @@ export function getSubroutineActions(document: TextDocument, docs: Cache, range:
 	}
 }
 
-export function getExtractProcedureAction(document: TextDocument, docs: Cache, range: Range): CodeAction|undefined {
+export function getExtractProcedureAction(document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {
 	if (range.end.line > range.start.line) {
-			const lastLine = document.offsetAt({line: document.lineCount, character: 0});
+		const lastLine = document.offsetAt({ line: document.lineCount, character: 0 });
 
-			const extracted = createExtract(document, range, docs);
+		const extracted = createExtract(document, range, docs);
 
-			const newProcedure = [
-				`Dcl-Proc NewProcedure;`,
-				`  Dcl-Pi *N;`,
-					  ...extracted.references.map((ref, i) => `    ${extracted.newParamNames[i]} ${ref.dec.type === `struct` ? `LikeDS` : `Like`}(${ref.dec.name});`),
-				`  End-Pi;`,
-				``,
-				extracted.newBody,
-				`End-Proc;`
-			].join(`\n`)
+		const newProcedure = [
+			`Dcl-Proc NewProcedure;`,
+			`  Dcl-Pi *N;`,
+			...extracted.references.map((ref, i) => `    ${extracted.newParamNames[i]} ${ref.dec.type === `struct` ? `likeDS` : `like`}(${ref.dec.name});`),
+			`  End-Pi;`,
+			``,
+			extracted.newBody,
+			`End-Proc;`
+		].join(`\n`)
 
-			const newAction = CodeAction.create(`Extract to new procedure`, CodeActionKind.RefactorExtract);
+		const newAction = CodeAction.create(`Extract to new procedure`, CodeActionKind.RefactorExtract);
 
-			// First do the exit
-			newAction.edit = {
-				changes: {
-					[document.uri]: [
-						TextEdit.replace(extracted.range, `NewProcedure(${extracted.references.map(r => r.dec.name).join(`:`)});`),
-						TextEdit.insert(document.positionAt(lastLine), `\n\n`+newProcedure)
-					]
-				},
-			};
+		// First do the exit
+		newAction.edit = {
+			changes: {
+				[document.uri]: [
+					TextEdit.replace(extracted.range, `NewProcedure(${extracted.references.map(r => r.dec.name).join(`:`)});`),
+					TextEdit.insert(document.positionAt(lastLine), `\n\n` + newProcedure)
+				]
+			},
+		};
 
-			// Then format the document
-			newAction.command = {
-				command: `editor.action.formatDocument`,
-				title: `Format`
-			};
+		// Then format the document
+		newAction.command = {
+			command: `editor.action.formatDocument`,
+			title: `Format`
+		};
 
-			return newAction;
+		return newAction;
 	}
 }
