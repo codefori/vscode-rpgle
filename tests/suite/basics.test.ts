@@ -88,7 +88,7 @@ test('vitestTest4', async () => {
 
   const typeData = cache.resolveType(cache.variables[0]);
   expect(typeData.type).toBeDefined();
-  expect(typeData.type.name).toBe(`CHAR`);
+  expect(typeData.type.name).toBe(`char`);
   expect(typeData.type.value).toBe(`20`);
 });
 
@@ -225,7 +225,7 @@ test('vitestTest8', async () => {
 
   const typeData = cache.resolveType(cache.variables[0]);
   expect(typeData.type).toBeDefined();
-  expect(typeData.type.name).toBe(`CHAR`);
+  expect(typeData.type.name).toBe(`char`);
   expect(typeData.type.value).toBe(`20`);
 });
 
@@ -615,7 +615,7 @@ test('range1', async () => {
 
   const typeDataB = cache.resolveType(json_getDelims);
   expect(typeDataB).toBeDefined();
-  expect(typeDataB.type).toMatchObject({name: `POINTER`, value: true});
+  expect(typeDataB.type).toMatchObject({name: `pointer`, value: true});
   expect(typeDataB.reference).toBeUndefined();
 });
 
@@ -844,7 +844,7 @@ test('issue_195a', async () => {
 
   const typeDataB = cache.resolveType(cache.find(`ScomponiStringa`));
   expect(typeDataB).toBeDefined();
-  expect(typeDataB.type).toMatchObject({name: `VARCHAR`, value: `2000`});
+  expect(typeDataB.type).toMatchObject({name: `varchar`, value: `2000`});
   expect(typeDataB.reference).toBeUndefined();
 });
 
@@ -1662,7 +1662,7 @@ test('can resolve return structure correctly', async () => {
 
   const typeDataB = cache.resolveType(simpleProc);
   expect(typeDataB).toBeDefined();
-  expect(typeDataB.type).toMatchObject({name: `CHAR`, value: `10`});
+  expect(typeDataB.type).toMatchObject({name: `char`, value: `10`});
   expect(typeDataB.reference).toBeUndefined();
 
   const simpleReturn = cache.find(`simpleReturn`);
@@ -1671,7 +1671,7 @@ test('can resolve return structure correctly', async () => {
   const typeDataC = cache.resolveType(simpleReturn);
   expect(typeDataC).toBeDefined();
   expect(typeDataC).toBeDefined();
-  expect(typeDataC.type).toMatchObject({name: `CHAR`, value: `10`});
+  expect(typeDataC.type).toMatchObject({name: `char`, value: `10`});
   expect(typeDataC.reference).toBeUndefined();
 
   const dumbLikeReturn = cache.find(`dumbLikeReturn`);

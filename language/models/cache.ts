@@ -12,12 +12,13 @@ const newInds = () => {
   })
 };
 
+export type RpgleVariableType = `char`|`varchar`|`int`|`uns`|`packed`|`zoned`|`ind`|`date`|`time`|`timestamp`|`pointer`|`float`|`graph`;
+const validTypes: RpgleVariableType[] = [`char`, `varchar`, `int`, `uns`, `packed`, `zoned`, `ind`, `date`, `time`, `timestamp`, `pointer`, `float`, `graph`];
+
 export interface RpgleTypeDetail {
-  type?: {name: string, value?: string};
+  type?: {name: RpgleVariableType, value?: string};
   reference?: Declaration;
 }
-
-const validTypes = [`CHAR`, `VARCHAR`, `INT`, `UNS`, `PACKED`, `ZONED`, `IND`, `DATE`, `TIME`, `TIMESTAMP`, `POINTER`, `FLOAT`, `GRAPH`];
 
 export default class Cache {
   keyword: Keywords;
@@ -255,9 +256,9 @@ export default class Cache {
 
       return {reference}
     } else {
-      const type = Object.keys(keywords).find(key => validTypes.includes(key));
+      const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
       if (type) {
-        return {type: {name: type, value: keywords[type] as string}};
+        return {type: {name: (type.toLowerCase() as RpgleVariableType), value: keywords[type] as string}};
       }
     }
 
