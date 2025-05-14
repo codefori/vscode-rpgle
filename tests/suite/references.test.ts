@@ -1927,6 +1927,8 @@ test('references_prototype', async () => {
   const lines = [
     `**free`,
     ``,
+    `ctl-opt NoMain;`,
+    ``,
     `dcl-pr add int(10) extproc('ADD');`,
     `  num1 int(10);`,
     `  num2 int(10);`,
