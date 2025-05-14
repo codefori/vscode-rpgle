@@ -1943,6 +1943,13 @@ test('references_prototype', async () => {
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  expect(cache.procedures.length).toBe(1);
+
   const addProcedure = cache.find(`add`);
   expect(addProcedure.references.length).toBe(2);
+
+  for (const ref of addProcedure.references) {
+    expect(lines.substring(ref.offset.start, ref.offset.end)).toBe(`add`);
+  }
 });
