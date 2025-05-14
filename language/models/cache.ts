@@ -11,6 +11,13 @@ const newInds = () => {
   })
 };
 
+export interface RpgleTypeDetail {
+  type?: {name: string, value?: string};
+  reference?: Declaration;
+}
+
+const validTypes = [`CHAR`, `VARCHAR`, `INT`, `UNS`, `PACKED`, `ZONED`, `IND`, `DATE`, `TIME`, `TIMESTAMP`, `POINTER`];
+
 export default class Cache {
   keyword: Keywords;
   parameters: Declaration[];
@@ -212,6 +219,31 @@ export default class Cache {
     }
 
     return list;
+  }
+
+  resolveType(def: Declaration): RpgleTypeDetail {
+    const keywords = def.keyword;
+    let refName: string;
+    let reference: Declaration | undefined;
+
+    if (typeof def.keyword[`LIKEDS`] === `string`) {
+      refName = (keywords[`LIKEDS`] as string).toUpperCase();
+      reference = this.structs.find(s => s.name.toUpperCase() === refName);
+
+      return {reference}
+    } else if (typeof def.keyword[`LIKE`] === `string`) {
+      refName = (keywords[`LIKE`] as string).toUpperCase();
+      reference = this.variables.find(s => s.name.toUpperCase() === refName);
+
+      return {reference}
+    } else {
+      const type = Object.keys(keywords).find(key => validTypes.includes(key));
+      if (type) {
+        return {type: {name: type, value: keywords[type] as string}};
+      }
+    }
+
+    return {};
   }
 
   static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
