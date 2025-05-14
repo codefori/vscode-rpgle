@@ -1922,3 +1922,27 @@ test('broken free format code', async () => {
 
   expect(cache).toBeDefined();
 });
+
+test('references_prototype', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-pr add int(10) extproc('ADD');`,
+    `  num1 int(10);`,
+    `  num2 int(10);`,
+    `end-pr;`,
+    ``,
+    `dcl-proc add export;`,
+    `  dcl-pi *n int(10);`,
+    `    num1 int(10);`,
+    `    num2 int(10);`,
+    `  end-pi;`,
+    ``,
+    `  return num1 + num2;`,
+    `end-proc;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const addProcedure = cache.find(`add`);
+  expect(addProcedure.references.length).toBe(2);
+});
