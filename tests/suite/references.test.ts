@@ -1954,4 +1954,9 @@ test('references_prototype', async () => {
   for (const ref of addProcedure.references) {
     expect(lines.substring(ref.offset.start, ref.offset.end)).toBe(`add`);
   }
+
+  const typeData = cache.resolveType(addProcedure);
+  expect(typeData).toBeDefined();
+  expect(typeData.type).toMatchObject({name: `INT`, value: `10`});
+  expect(typeData.reference).toBeUndefined();
 });
