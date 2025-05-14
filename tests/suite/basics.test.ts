@@ -1620,6 +1620,20 @@ test('can resolve return structure correctly', async () => {
     `  return result;`,
     `end-proc;`,
     ``,
+    `dcl-proc dumbLikeReturn export;`,
+    `  dcl-pi *n like(return_t) end-pi;`,
+    ``,
+    `  // Declare a variable of the return type`,
+    `  dcl-ds result likeds(return_t);`,
+    ``,
+    `  // Assign values to the fields`,
+    `  result.valueA = valueA;`,
+    `  result.valueB = valueB;`,
+    ``,
+    `  // Return the structure`,
+    `  return result;`,
+    `end-proc;`,
+    ``,
     `dcl-proc simpleProc export;`,
     `  dcl-pi *n char(10) end-pi;`,
     ``,
@@ -1630,7 +1644,7 @@ test('can resolve return structure correctly', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
 
-  expect(cache.procedures.length).toBe(2);
+  expect(cache.procedures.length).toBe(3);
 
   const someProc = cache.find(`someProc`);
   expect(someProc.name).toBe(`someProc`);
@@ -1659,4 +1673,15 @@ test('can resolve return structure correctly', async () => {
   expect(typeDataC).toBeDefined();
   expect(typeDataC.type).toMatchObject({name: `CHAR`, value: `10`});
   expect(typeDataC.reference).toBeUndefined();
+
+  const dumbLikeReturn = cache.find(`dumbLikeReturn`);
+  expect(dumbLikeReturn.name).toBe(`dumbLikeReturn`);
+
+  const typeDataD = cache.resolveType(dumbLikeReturn);
+  expect(typeDataD).toBeDefined();
+  expect(typeDataD.type).toBeUndefined();
+  expect(typeDataD.reference).toBeDefined();
+  expect(typeDataD.reference.name).toBe(`return_t`);
+  expect(typeDataD.reference.type).toBe(`struct`);
+  expect(typeDataD.reference.subItems.length).toBe(2);
 });

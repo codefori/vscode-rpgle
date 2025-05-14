@@ -1,3 +1,4 @@
+import { re } from "../../out/extension";
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import { IRange } from "../types";
 import Declaration from "./declaration";
@@ -221,6 +222,9 @@ export default class Cache {
     return list;
   }
 
+  /**
+   * Typically used to resolve the type of a procedure correctly.
+   */
   resolveType(def: Declaration): RpgleTypeDetail {
     const keywords = def.keyword;
     let refName: string;
@@ -236,7 +240,13 @@ export default class Cache {
       reference = this.variables.find(s => s.name.toUpperCase() === refName);
 
       if (!reference) {
-        // If no variable found, check procedures and get the return type of the procedure
+        // Like does technically work on structs too, so let's check those
+        // Though it's recommend to use LIKEDS in modern code
+        reference = this.structs.find(s => s.name.toUpperCase() === refName);
+      }
+
+      if (!reference) {
+        // LIKE can also be used on procedures, and it will return the return type of the procedure
         reference = this.procedures.find(s => s.name.toUpperCase() === refName);
         if (reference) {
           return this.resolveType(reference);
