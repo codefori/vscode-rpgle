@@ -16,7 +16,7 @@ export interface RpgleTypeDetail {
   reference?: Declaration;
 }
 
-const validTypes = [`CHAR`, `VARCHAR`, `INT`, `UNS`, `PACKED`, `ZONED`, `IND`, `DATE`, `TIME`, `TIMESTAMP`, `POINTER`];
+const validTypes = [`CHAR`, `VARCHAR`, `INT`, `UNS`, `PACKED`, `ZONED`, `IND`, `DATE`, `TIME`, `TIMESTAMP`, `POINTER`, `FLOAT`, `GRAPH`];
 
 export default class Cache {
   keyword: Keywords;
@@ -234,6 +234,14 @@ export default class Cache {
     } else if (typeof def.keyword[`LIKE`] === `string`) {
       refName = (keywords[`LIKE`] as string).toUpperCase();
       reference = this.variables.find(s => s.name.toUpperCase() === refName);
+
+      if (!reference) {
+        // If no variable found, check procedures and get the return type of the procedure
+        reference = this.procedures.find(s => s.name.toUpperCase() === refName);
+        if (reference) {
+          return this.resolveType(reference);
+        }
+      }
 
       return {reference}
     } else {
