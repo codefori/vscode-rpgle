@@ -6,7 +6,6 @@ import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
 import { Keywords } from '../../../../language/parserTypes';
 import path = require('path');
-import { URI } from 'vscode-uri';
 import { getWorkspaceFolder } from '../connection';
 import Declaration from '../../../../language/models/declaration';
 
@@ -53,17 +52,21 @@ export async function getTestActions(document: TextDocument, docs: Cache, range:
 
 	const exportProcedures = docs.procedures.filter(proc => proc.keyword[`EXPORT`]);
 	if (exportProcedures.length > 0) {
+		const workspaceFolder = await getWorkspaceFolder(document.uri);
+
+		// Build new test file uri
 		const parsedPath = path.parse(document.uri);
 		const fileName = parsedPath.base;
 		const testFileName = `${parsedPath.name}.test${parsedPath.ext}`;
-		const testFileUri = `${parsedPath.dir}/${testFileName}`;
-		const workspaceFolder = await getWorkspaceFolder(document.uri);
+		const testFileUri = workspaceFolder ?
+			`${workspaceFolder.uri}/qtestsrc/${testFileName}` :
+			`${parsedPath.dir}/${testFileName}`;
 
 		// Test case generation
 		const currentProcedure = exportProcedures.find(sub => sub.range.start && sub.range.end && range.start.line >= sub.range.start && range.end.line <= sub.range.end);
 		if (currentProcedure) {
-			const newTestCase = generateTestCase(workspaceFolder, currentProcedure, docs.structs);
-			const newTestSuite = generateTestSuite([...newTestCase.prototype, ``], newTestCase.testCase, newTestCase.includes);
+			const newTestCase = await generateTestCase(workspaceFolder, currentProcedure, docs.structs);
+			const newTestSuite = generateTestSuite([newTestCase]);
 			const testCaseAction = CodeAction.create(`Generate RPGUnit test case for '${currentProcedure.name}'`, CodeActionKind.RefactorExtract);
 			testCaseAction.edit = {
 				documentChanges: [
@@ -75,11 +78,8 @@ export async function getTestActions(document: TextDocument, docs: Cache, range:
 		}
 
 		// Test suite generation
-		const newTestCases = exportProcedures.map(proc => generateTestCase(workspaceFolder, proc, docs.structs));
-		const prototypes = newTestCases.map(tc => [...tc.prototype, ``]).flat();
-		const testCases = newTestCases.map(tc => [...tc.testCase, ``]).flat();
-		const includes = newTestCases.map(tc => tc.includes).flat();
-		const newTestSuite = generateTestSuite(prototypes, testCases, includes);
+		const newTestCases = await Promise.all(exportProcedures.map(async proc => await generateTestCase(workspaceFolder, proc, docs.structs)));
+		const newTestSuite = generateTestSuite(newTestCases);
 		const testSuiteAction = CodeAction.create(`Generate RPGUnit test suite for '${fileName}'`, CodeActionKind.RefactorExtract);
 		testSuiteAction.edit = {
 			documentChanges: [
@@ -93,34 +93,46 @@ export async function getTestActions(document: TextDocument, docs: Cache, range:
 	return codeActions;
 }
 
-function generateTestSuite(prototypes: string[], testCases: string[], includes: string[]) {
+function generateTestSuite(components: { prototype: string[], testCase: string[], includes: string[] }[]) {
+	const prototypes = components.map(tc => tc.prototype.length > 0 ? [``, ...tc.prototype] : tc.prototype).flat();
+	const testCases = components.map(tc => tc.testCase.length > 0 ? [``, ...tc.testCase] : tc.testCase).flat();
+	const includes = components.map(tc => tc.includes).flat();
 	const uniqueIncludes = [...new Set(includes)];
 
 	return [
 		`**free`,
 		``,
 		`ctl-opt nomain;`,
-		``,
 		...prototypes,
-		...uniqueIncludes.map(include => `/include '${include}'`),
-		`/include qinclude,TESTCASE`,
 		``,
+		`/include qinclude,TESTCASE`,
+		...uniqueIncludes,
 		...testCases
 	]
 }
 
-function generateTestCase(workspaceFolder: WorkspaceFolder | undefined, procedure: Declaration, structs: Declaration[]) {
+async function generateTestCase(workspaceFolder: WorkspaceFolder | undefined, procedure: Declaration, structs: Declaration[]) {
 	const inputs = getInputs(workspaceFolder, procedure);
 	const actualReturns = getReturns(workspaceFolder, structs, procedure, `actual`);
 	const expectedReturns = getReturns(workspaceFolder, structs, procedure, `expected`);
 	const includes = [...new Set([...inputs.includes, ...actualReturns.includes])];
 
-	// TODO: Can we check if the prototype already exists?
-	const prototype = [
+	let prototypeFound = false;
+	for (const reference of procedure.references) {
+		const docs = await parser.getDocs(reference.uri);
+		if (docs) {
+			prototypeFound = docs.procedures.some(proc => proc.name === procedure.name && proc.keyword['EXTPROC'])
+			if (prototypeFound) {
+				break;
+			}
+		}
+	}
+
+	const prototype = !prototypeFound ? [
 		`dcl-pr ${procedure.name} ${prettyKeywords(procedure.keyword, true)} extproc('${procedure.name.toLocaleUpperCase()}');`,
 		...procedure.subItems.map(s => `  ${s.name} ${prettyKeywords(s.keyword, true)};`),
 		`end-pr;`,
-	];
+	] : [];
 
 	const testCase = [
 		`dcl-proc test_${procedure.name.toLowerCase()} export;`,
@@ -169,7 +181,7 @@ function getInputs(workspaceFolder: WorkspaceFolder | undefined, currentProcedur
 				if (workspaceFolder) {
 					const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
 					if (!includes.includes(relativePath)) {
-						includes.push(relativePath);
+						includes.push(`/include '${relativePath}'`);
 					}
 				}
 			}
@@ -206,7 +218,7 @@ function getReturns(workspaceFolder: WorkspaceFolder | undefined, structs: Decla
 				if (workspaceFolder) {
 					const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
 					if (!includes.includes(relativePath)) {
-						includes.push(relativePath);
+						includes.push(`/include '${relativePath}'`);
 					}
 				}
 
