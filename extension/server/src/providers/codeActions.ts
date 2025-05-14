@@ -244,9 +244,17 @@ function getType(keywords: Keywords): string {
 	// TODO: Add all types
 	if (keywords[`CHAR`] || keywords[`VARCHAR`]) {
 		type = `string`;
-	} else if (keywords[`INT`]) {
+	} else if (keywords[`INT`] || keywords[`UNS`]) {
 		type = `int`;
+	} else if (keywords[`PACKED`] || keywords[`ZONED`]) {
+		type = `decimal`;
 	} else if (keywords[`IND`]) {
+		type = `boolean`;
+	} else if (keywords[`DATE`]) {
+		type = `date`;
+	} else if (keywords[`TIME`]) {
+		type = `boolean`;
+	} else if (keywords[`TIMESTAMP`]) {
 		type = `boolean`;
 	} else if (keywords[`LIKEDS`] || keywords[`LIKE`]) {
 		type = `struct`;
@@ -262,8 +270,16 @@ function getDefaultValue(type: string): string | undefined {
 		defaultValue = `''`;
 	} else if (type === `int`) {
 		defaultValue = `0`;
+	} else if (type === `decimal`) {
+		defaultValue = `0`;
 	} else if (type === `boolean`) {
 		defaultValue = `*off`;
+	} else if (type === `date`) {
+		defaultValue = `'0001-01-01'`;
+	} else if (type === `time`) {
+		defaultValue = `'00:00:00'`;
+	} else if (type === `timestamp`) {
+		defaultValue = `'0001-01-01-00.00.00.000000'`;
 	}
 
 	return defaultValue;
