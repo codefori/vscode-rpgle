@@ -1,13 +1,19 @@
 import { CodeAction, CodeActionKind, CodeActionParams, CreateFile, Position, Range, TextDocumentEdit, TextEdit, WorkspaceFolder } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { documents, parser, prettyKeywords } from '.';
-import Cache from '../../../../language/models/cache';
+import Cache, { RpgleTypeDetail } from '../../../../language/models/cache';
 import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
 import { Keywords } from '../../../../language/parserTypes';
 import path = require('path');
 import { getWorkspaceFolder } from '../connection';
 import Declaration from '../../../../language/models/declaration';
+
+interface TestCaseSpec {
+	prototype: string[];
+	testCase: string[];
+	includes: string[];
+}
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[] | undefined> {
 	const uri = params.textDocument.uri;
@@ -52,52 +58,54 @@ export async function getTestActions(document: TextDocument, docs: Cache, range:
 
 	const exportProcedures = docs.procedures.filter(proc => proc.keyword[`EXPORT`]);
 	if (exportProcedures.length > 0) {
-		const workspaceFolder = await getWorkspaceFolder(document.uri);
+		const workspaceFolder = await getWorkspaceFolder(document.uri); // TODO: Can workspace folder not be a requirement?
+		if (workspaceFolder) {
+			// Build new test file uri
+			const parsedPath = path.parse(document.uri);
+			const fileName = parsedPath.base;
+			const testFileName = `${parsedPath.name}.test${parsedPath.ext}`;
+			const testFileUri = workspaceFolder ?
+				`${workspaceFolder.uri}/qtestsrc/${testFileName}` :
+				`${parsedPath.dir}/${testFileName}`;
 
-		// Build new test file uri
-		const parsedPath = path.parse(document.uri);
-		const fileName = parsedPath.base;
-		const testFileName = `${parsedPath.name}.test${parsedPath.ext}`;
-		const testFileUri = workspaceFolder ?
-			`${workspaceFolder.uri}/qtestsrc/${testFileName}` :
-			`${parsedPath.dir}/${testFileName}`;
+			// Test case generation
+			const currentProcedure = exportProcedures.find(sub => sub.range.start && sub.range.end && range.start.line >= sub.range.start && range.end.line <= sub.range.end);
+			if (currentProcedure) {
+				const testCaseSpec = await getTestCaseSpec(docs, currentProcedure, workspaceFolder);
+				const newTestSuite = generateTestSuite([testCaseSpec]);
+				const testCaseAction = CodeAction.create(`Generate test case for '${currentProcedure.name}'`, CodeActionKind.RefactorExtract);
+				testCaseAction.edit = {
+					documentChanges: [
+						CreateFile.create(testFileUri, { ignoreIfExists: true }),
+						TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
+					]
+				};
+				codeActions.push(testCaseAction);
+			}
 
-		// Test case generation
-		const currentProcedure = exportProcedures.find(sub => sub.range.start && sub.range.end && range.start.line >= sub.range.start && range.end.line <= sub.range.end);
-		if (currentProcedure) {
-			const newTestCase = await generateTestCase(workspaceFolder, currentProcedure, docs.structs);
-			const newTestSuite = generateTestSuite([newTestCase]);
-			const testCaseAction = CodeAction.create(`Generate RPGUnit test case for '${currentProcedure.name}'`, CodeActionKind.RefactorExtract);
-			testCaseAction.edit = {
+			// Test suite generation
+			const newTestCases = await Promise.all(exportProcedures.map(async proc => await getTestCaseSpec(docs, proc, workspaceFolder)));
+			const newTestSuite = generateTestSuite(newTestCases);
+			const testSuiteAction = CodeAction.create(`Generate test suite for '${fileName}'`, CodeActionKind.RefactorExtract);
+			testSuiteAction.edit = {
 				documentChanges: [
 					CreateFile.create(testFileUri, { ignoreIfExists: true }),
 					TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
 				]
 			};
-			codeActions.push(testCaseAction);
+			codeActions.push(testSuiteAction);
 		}
-
-		// Test suite generation
-		const newTestCases = await Promise.all(exportProcedures.map(async proc => await generateTestCase(workspaceFolder, proc, docs.structs)));
-		const newTestSuite = generateTestSuite(newTestCases);
-		const testSuiteAction = CodeAction.create(`Generate RPGUnit test suite for '${fileName}'`, CodeActionKind.RefactorExtract);
-		testSuiteAction.edit = {
-			documentChanges: [
-				CreateFile.create(testFileUri, { ignoreIfExists: true }),
-				TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
-			]
-		};
-		codeActions.push(testSuiteAction);
 	}
 
 	return codeActions;
 }
 
-function generateTestSuite(components: { prototype: string[], testCase: string[], includes: string[] }[]) {
-	const prototypes = components.map(tc => tc.prototype.length > 0 ? [``, ...tc.prototype] : tc.prototype).flat();
-	const testCases = components.map(tc => tc.testCase.length > 0 ? [``, ...tc.testCase] : tc.testCase).flat();
-	const includes = components.map(tc => tc.includes).flat();
-	const uniqueIncludes = [...new Set(includes)];
+
+function generateTestSuite(testCaseSpecs: TestCaseSpec[]) {
+	const prototypes = testCaseSpecs.map(tc => tc.prototype.length > 0 ? [``, ...tc.prototype] : tc.prototype).flat();
+	const testCases = testCaseSpecs.map(tc => tc.testCase.length > 0 ? [``, ...tc.testCase] : tc.testCase).flat();
+	const allIncludes = testCaseSpecs.map(tc => tc.includes).flat();
+	const uniqueIncludes = [...new Set(allIncludes)];
 
 	return [
 		`**free`,
@@ -111,50 +119,61 @@ function generateTestSuite(components: { prototype: string[], testCase: string[]
 	]
 }
 
-async function generateTestCase(workspaceFolder: WorkspaceFolder | undefined, procedure: Declaration, structs: Declaration[]) {
-	const inputs = getInputs(workspaceFolder, procedure);
-	const actualReturns = getReturns(workspaceFolder, structs, procedure, `actual`);
-	const expectedReturns = getReturns(workspaceFolder, structs, procedure, `expected`);
-	const includes = [...new Set([...inputs.includes, ...actualReturns.includes])];
+async function getTestCaseSpec(docs: Cache, procedure: Declaration, workspaceFolder: WorkspaceFolder): Promise<TestCaseSpec> {
+	// Get procedure prototype
+	const prototype = await getPrototype(procedure);
 
-	let prototypeFound = false;
-	for (const reference of procedure.references) {
-		const docs = await parser.getDocs(reference.uri);
-		if (docs) {
-			prototypeFound = docs.procedures.some(proc => proc.name === procedure.name && proc.keyword['EXTPROC'])
-			if (prototypeFound) {
-				break;
-			}
-		}
+	// Get inputs
+	const inputDecs: string[] = [];
+	const inputInits: string[] = [];
+	const inputIncludes: string[] = [];
+	for (const subItem of procedure.subItems) {
+		const subItemType = docs.resolveType(subItem);
+
+		const subItemDec = getDeclaration(subItemType, `${subItem.name}`);
+		inputDecs.push(...subItemDec);
+
+		const subItemInits = getInitializations(docs, subItemType, `${subItem.name}`);
+		inputInits.push(...subItemInits);
+
+		const subItemIncludes = getIncludes(subItemType, workspaceFolder);
+		inputIncludes.push(...subItemIncludes);
 	}
 
-	const prototype = !prototypeFound ? [
-		`dcl-pr ${procedure.name} ${prettyKeywords(procedure.keyword, true)} extproc('${procedure.name.toLocaleUpperCase()}');`,
-		...procedure.subItems.map(s => `  ${s.name} ${prettyKeywords(s.keyword, true)};`),
-		`end-pr;`,
-	] : [];
+	// Get return
+	const resolvedType = docs.resolveType(procedure);
+	const actualDec = getDeclaration(resolvedType, 'actual');
+	const expectedDec = getDeclaration(resolvedType, 'expected');
+	const expectedInits = getInitializations(docs, resolvedType, 'expected');
+	const returnIncludes = getIncludes(resolvedType, workspaceFolder);
+
+	// Get unique includes
+	const includes = [...new Set([...inputIncludes, ...returnIncludes])];
+
+	// Get assertions
+	const assertions = getAssertions(docs, resolvedType, 'expected', 'actual');
 
 	const testCase = [
-		`dcl-proc test_${procedure.name.toLowerCase()} export;`,
+		`dcl-proc test_${procedure.name} export;`,
 		`  dcl-pi *n extproc(*dclcase) end-pi;`,
 		``,
-		...inputs.declarations,
-		...actualReturns.declarations,
-		...expectedReturns.declarations,
+		...inputDecs.map(dec => `  ${dec}`),
+		...actualDec.map(dec => `  ${dec}`),
+		...expectedDec.map(dec => `  ${dec}`),
 		``,
 		`  // Input`,
-		...inputs.initializations,
+		...inputInits.map(init => `  ${init}`),
 		``,
 		`  // Actual results`,
 		`  actual = ${procedure.name}(${procedure.subItems.map(s => s.name).join(` : `)});`,
 		``,
 		`  // Expected results`,
-		...expectedReturns.initializations,
+		...expectedInits.map(init => `  ${init}`),
 		``,
 		`  // Assertions`,
-		...expectedReturns.assertions,
+		...assertions.map(assert => `  ${assert}`),
 		`end-proc;`
-	]
+	];
 
 	return {
 		prototype,
@@ -163,152 +182,149 @@ async function generateTestCase(workspaceFolder: WorkspaceFolder | undefined, pr
 	};
 }
 
-function getInputs(workspaceFolder: WorkspaceFolder | undefined, currentProcedure: Declaration) {
+function getDeclaration(detail: RpgleTypeDetail, name: string): string[] {
 	const declarations: string[] = [];
-	const initializations: string[] = [];
-	const includes: string[] = [];
 
-	const inputs = currentProcedure.subItems;
-	for (const input of inputs) {
-		const type = getType(input.keyword);
-		const declaration = type === `struct` ? 'dcl-ds' : 'dcl-s';
-		declarations.push(`  ${declaration} ${input.name} ${prettyKeywords(input.keyword, true)};`);
-		if (type === `struct`) {
-			for (const subItem of input.subItems) {
-				initializations.push(`  ${input.name}.${subItem.name} = ${getDefaultValue(getType(subItem.keyword))};`)
-
-				const structPath = subItem.position.path;
-				if (workspaceFolder) {
-					const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
-					if (!includes.includes(relativePath)) {
-						includes.push(`/include '${relativePath}'`);
-					}
-				}
-			}
-		} else {
-			initializations.push(`  ${input.name} = ${getDefaultValue(type)};`);
+	if (detail) {
+		if (detail.type) {
+			declarations.push(`dcl-s ${name} ${detail.type.name}${detail.type.value ? `(${detail.type.value})` : ``};`);
+		} else if (detail.reference) {
+			declarations.push(`dcl-ds ${name} likeDs(${detail.reference.name});`);
 		}
 	}
 
-	return {
-		declarations,
-		initializations,
-		includes
-	}
+	return declarations;
 }
 
-function getReturns(workspaceFolder: WorkspaceFolder | undefined, structs: Declaration[], currentProcedure: Declaration, name: 'actual' | 'expected') {
-	const declarations: string[] = [];
-	const initializations: string[] = [];
+function getInitializations(docs: Cache, detail: RpgleTypeDetail, name: string): string[] {
+	const inits: string[] = [];
+
+	if (detail) {
+		if (detail.type) {
+			const defaultValue = getDefaultValue(detail.type.name);
+			inits.push(`${name} = ${defaultValue};`);
+		} else if (detail.reference) {
+			for (const subItem of detail.reference.subItems) {
+				const subItemType = docs.resolveType(subItem);
+				const subItemInits = subItemType ?
+					getInitializations(docs, subItemType, `${name}.${subItem.name}`) : [];
+				inits.push(...subItemInits);
+			}
+		}
+	}
+
+	return inits;
+}
+
+async function getPrototype(procedure: Declaration): Promise<string[]> {
+	for (const reference of procedure.references) {
+		const docs = await parser.getDocs(reference.uri);
+		if (docs) {
+			const prototype = docs.procedures.some(proc => proc.name === procedure.name && proc.keyword['EXTPROC'])
+			if (prototype) {
+				return [];
+			}
+		}
+	}
+
+	return [
+		`dcl-pr ${procedure.name} ${prettyKeywords(procedure.keyword, true)} extproc('${procedure.name.toLocaleUpperCase()}');`,
+		...procedure.subItems.map(s => `  ${s.name} ${prettyKeywords(s.keyword, true)};`),
+		`end-pr;`
+	];
+}
+
+function getIncludes(detail: RpgleTypeDetail, workspaceFolder: WorkspaceFolder): string[] {
+	const includes: string[] = [];
+
+	if (detail.reference) {
+		const structPath = detail.reference.position.path;
+		if (workspaceFolder) {
+			const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
+			if (!includes.includes(relativePath)) {
+				includes.push(`/include ${relativePath}`);
+			}
+		}
+	}
+
+	return includes;
+}
+
+function getAssertions(docs: Cache, detail: RpgleTypeDetail, expected: string, actual: string): string[] {
 	const assertions: string[] = [];
-	const includes: string[] = [];
 
-	const type = getType(currentProcedure.keyword);
-	const declaration = type === `struct` ? 'dcl-ds' : 'dcl-s';
-	if (type === `struct`) {
-		declarations.push(`  ${declaration} ${name} likeDS(${currentProcedure.keyword['LIKE']});`);
-		const struct = structs.find(struct => struct.name === currentProcedure.keyword[`LIKE`]);
-		if (struct) {
-			for (const subItem of struct.subItems) {
-				const subItemType = getType(subItem.keyword);
-				const subItemDefaultValue = getDefaultValue(subItemType);
-				initializations.push(`  ${name}.${subItem.name} = ${subItemDefaultValue};`)
-
-				const structPath = subItem.position.path;
-				if (workspaceFolder) {
-					const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
-					if (!includes.includes(relativePath)) {
-						includes.push(`/include '${relativePath}'`);
-					}
-				}
-
-				const assertion = getAssertion(subItemType);
-				if (assertion === `assert`) {
-					assertions.push(`  ${assertion}(expected.${subItem.name} = actual.${subItem.name} : '${subItem.name}');`);
-				} else {
-					assertions.push(`  ${assertion}(expected.${subItem.name} : actual.${subItem.name} : '${subItem.name}');`);
-				}
+	if (detail) {
+		if (detail.type) {
+			const assertion = getAssertion(detail.type.name);
+			const fieldName = actual.split(`.`).pop();
+			if (assertion === `assert`) {
+				assertions.push(`${assertion}(${expected} = ${actual}${fieldName ? ` : '${fieldName}'` : ``});`);
+			} else {
+				assertions.push(`${assertion}(${expected} : ${actual}${fieldName ? ` : '${fieldName}'` : ``});`);
+			}
+		} else if (detail.reference) {
+			for (const subItem of detail.reference.subItems) {
+				const subItemType = docs.resolveType(subItem);
+				const subItemAssertions = subItemType ?
+					getAssertions(docs, subItemType, `${expected}.${subItem.name}`, `${actual}.${subItem.name}`) : [];
+				assertions.push(...subItemAssertions);
 			}
 		}
-	} else {
-		declarations.push(`  ${declaration} ${name} ${prettyKeywords(currentProcedure.keyword, true)};`);
-		initializations.push(`  ${name} = ${getDefaultValue(type)};`);
-
-		const assertion = getAssertion(type);
-		if (assertion === `assert`) {
-			assertions.push(`  ${assertion}(expected = actual);`);
-		} else {
-			assertions.push(`  ${assertion}(expected : actual);`);
-		}
 	}
 
-	return {
-		declarations,
-		initializations,
-		assertions,
-		includes
-	}
+	return assertions;
 }
 
-function getType(keywords: Keywords): string {
-	let type = `unknown`;
-
-	// TODO: Add all types
-	if (keywords[`CHAR`] || keywords[`VARCHAR`]) {
-		type = `string`;
-	} else if (keywords[`INT`] || keywords[`UNS`]) {
-		type = `int`;
-	} else if (keywords[`PACKED`] || keywords[`ZONED`]) {
-		type = `decimal`;
-	} else if (keywords[`IND`]) {
-		type = `boolean`;
-	} else if (keywords[`DATE`]) {
-		type = `date`;
-	} else if (keywords[`TIME`]) {
-		type = `boolean`;
-	} else if (keywords[`TIMESTAMP`]) {
-		type = `boolean`;
-	} else if (keywords[`LIKEDS`] || keywords[`LIKE`]) {
-		type = `struct`;
+function getDefaultValue(type: string): string {
+	switch (type) {
+		case `CHAR`:
+		case `VARCHAR`:
+			return `''`;
+		case `INT`:
+		case `UNS`:
+			return `0`;
+		case `PACKED`:
+		case `ZONED`:
+			return `0.0`;
+		case `IND`:
+			return `*OFF`;
+		case `DATE`:
+			return `%date('0001-01-01' : *ISO)`;
+		case `TIME`:
+			return `%time('00.00.00' : *ISO)`;
+		case `TIMESTAMP`:
+			return `%timestamp('0001-01-01-00.00.00.000000' : *ISO)`;
+		case `POINTER`:
+			return `*NULL`;
+		default:
+			return 'unknown';
 	}
-
-	return type;
-}
-
-function getDefaultValue(type: string): string | undefined {
-	let defaultValue = `unknown`;
-
-	if (type === `string`) {
-		defaultValue = `''`;
-	} else if (type === `int`) {
-		defaultValue = `0`;
-	} else if (type === `decimal`) {
-		defaultValue = `0`;
-	} else if (type === `boolean`) {
-		defaultValue = `*off`;
-	} else if (type === `date`) {
-		defaultValue = `'0001-01-01'`;
-	} else if (type === `time`) {
-		defaultValue = `'00:00:00'`;
-	} else if (type === `timestamp`) {
-		defaultValue = `'0001-01-01-00.00.00.000000'`;
-	}
-
-	return defaultValue;
 }
 
 function getAssertion(type: string): string {
-	let assertion = `assert`;
-
-	if (type === `string`) {
-		assertion = `aEqual`;
-	} else if (type === `int`) {
-		assertion = `iEqual`;
-	} else if (type === `boolean`) {
-		assertion = `nEqual`;
+	switch (type) {
+		case `CHAR`:
+		case `VARCHAR`:
+			return `aEqual`;
+		case `INT`:
+		case `UNS`:
+			return `iEqual`;
+		case `PACKED`:
+		case `ZONED`:
+			return `assert`;
+		case `IND`:
+			return `nEqual`;
+		case `DATE`:
+			return `assert`;
+		case `TIME`:
+			return `assert`;
+		case `TIMESTAMP`:
+			return `assert`;
+		case `POINTER`:
+			return `assert`;
+		default:
+			return 'unknown';
 	}
-
-	return assertion;
 }
 
 

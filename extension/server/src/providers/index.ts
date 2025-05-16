@@ -46,7 +46,7 @@ export function getWordRangeAtPosition(document: TextDocument, position: Positio
 		return document.getText(Range.create(line, Math.max(0, startChar), line, endChar + 1)).replace(/(\r\n|\n|\r)/gm, "");
 }
 
-const filteredKeywords = ['CONST', 'QUALIFIED', 'EXPORT'];
+const filteredKeywords = ['QUALIFIED', 'EXPORT']; // TODO: Any other filtered keywords?
 
 export function prettyKeywords(keywords: Keywords, filter: boolean = false): string {
 	return Object.keys(keywords).map(key => {

@@ -6,13 +6,13 @@ const newInds = () => {
   return [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
     const indDef = new Declaration(`variable`);
     indDef.name = ind;
-    indDef.keyword = {IND: true};
+    indDef.keyword = { IND: true };
     return indDef;
   })
 };
 
 export interface RpgleTypeDetail {
-  type?: {name: string, value?: string};
+  type?: { name: string, value?: string };
   reference?: Declaration;
 }
 
@@ -107,7 +107,7 @@ export default class Cache {
     return (lines.length >= 1 ? lines[0] : 0);
   }
 
-  find(name: string, includeProcedure?: string): Declaration|undefined {
+  find(name: string, includeProcedure?: string): Declaration | undefined {
     name = name.toUpperCase();
 
     const fileStructs = this.files.flatMap(file => file.subItems);
@@ -226,20 +226,24 @@ export default class Cache {
     let refName: string;
     let reference: Declaration | undefined;
 
-    if (typeof def.keyword[`LIKEDS`] === `string`) {
+    if (typeof keywords[`LIKEDS`] === `string`) {
       refName = (keywords[`LIKEDS`] as string).toUpperCase();
       reference = this.structs.find(s => s.name.toUpperCase() === refName);
 
-      return {reference}
-    } else if (typeof def.keyword[`LIKE`] === `string`) {
+      return { reference };
+    } else if (typeof keywords[`LIKE`] === `string`) {
       refName = (keywords[`LIKE`] as string).toUpperCase();
       reference = this.variables.find(s => s.name.toUpperCase() === refName);
 
-      return {reference}
+      if (!reference) {
+        reference = this.structs.find(s => s.name.toUpperCase() === refName);
+      }
+
+      return { reference };
     } else {
       const type = Object.keys(keywords).find(key => validTypes.includes(key));
       if (type) {
-        return {type: {name: type, value: keywords[type] as string}};
+        return { type: { name: type, value: keywords[type] as string } };
       }
     }
 
