@@ -1,3 +1,4 @@
+import { re } from "../../out/extension";
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import { IRange } from "../types";
 import Declaration from "./declaration";
@@ -11,12 +12,13 @@ const newInds = () => {
   })
 };
 
+export type RpgleVariableType = `char` | `varchar` | `int` | `uns` | `packed` | `zoned` | `ind` | `date` | `time` | `timestamp` | `pointer` | `float` | `graph`;
+const validTypes: RpgleVariableType[] = [`char`, `varchar`, `int`, `uns`, `packed`, `zoned`, `ind`, `date`, `time`, `timestamp`, `pointer`, `float`, `graph`];
+
 export interface RpgleTypeDetail {
-  type?: { name: string, value?: string };
+  type?: { name: RpgleVariableType, value?: string };
   reference?: Declaration;
 }
-
-const validTypes = [`CHAR`, `VARCHAR`, `INT`, `UNS`, `PACKED`, `ZONED`, `IND`, `DATE`, `TIME`, `TIMESTAMP`, `POINTER`];
 
 export default class Cache {
   keyword: Keywords;
@@ -221,6 +223,9 @@ export default class Cache {
     return list;
   }
 
+  /**
+   * Typically used to resolve the type of a procedure correctly.
+   */
   resolveType(def: Declaration): RpgleTypeDetail {
     const keywords = def.keyword;
     let refName: string;
@@ -236,14 +241,24 @@ export default class Cache {
       reference = this.variables.find(s => s.name.toUpperCase() === refName);
 
       if (!reference) {
+        // Like does technically work on structs too, so let's check those
+        // Though it's recommend to use LIKEDS in modern code
         reference = this.structs.find(s => s.name.toUpperCase() === refName);
       }
 
-      return { reference };
+      if (!reference) {
+        // LIKE can also be used on procedures, and it will return the return type of the procedure
+        reference = this.procedures.find(s => s.name.toUpperCase() === refName);
+        if (reference) {
+          return this.resolveType(reference);
+        }
+      }
+
+      return { reference }
     } else {
-      const type = Object.keys(keywords).find(key => validTypes.includes(key));
+      const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
       if (type) {
-        return { type: { name: type, value: keywords[type] as string } };
+        return { type: { name: (type.toLowerCase() as RpgleVariableType), value: keywords[type] as string } };
       }
     }
 

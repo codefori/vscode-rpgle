@@ -88,7 +88,7 @@ test('vitestTest4', async () => {
 
   const typeData = cache.resolveType(cache.variables[0]);
   expect(typeData.type).toBeDefined();
-  expect(typeData.type.name).toBe(`CHAR`);
+  expect(typeData.type.name).toBe(`char`);
   expect(typeData.type.value).toBe(`20`);
 });
 
@@ -225,7 +225,7 @@ test('vitestTest8', async () => {
 
   const typeData = cache.resolveType(cache.variables[0]);
   expect(typeData.type).toBeDefined();
-  expect(typeData.type.name).toBe(`CHAR`);
+  expect(typeData.type.name).toBe(`char`);
   expect(typeData.type.value).toBe(`20`);
 });
 
@@ -615,7 +615,7 @@ test('range1', async () => {
 
   const typeDataB = cache.resolveType(json_getDelims);
   expect(typeDataB).toBeDefined();
-  expect(typeDataB.type).toMatchObject({name: `POINTER`, value: true});
+  expect(typeDataB.type).toMatchObject({name: `pointer`, value: true});
   expect(typeDataB.reference).toBeUndefined();
 });
 
@@ -844,7 +844,7 @@ test('issue_195a', async () => {
 
   const typeDataB = cache.resolveType(cache.find(`ScomponiStringa`));
   expect(typeDataB).toBeDefined();
-  expect(typeDataB.type).toMatchObject({name: `VARCHAR`, value: `2000`});
+  expect(typeDataB.type).toMatchObject({name: `varchar`, value: `2000`});
   expect(typeDataB.reference).toBeUndefined();
 });
 
@@ -1604,6 +1604,8 @@ test('can resolve return structure correctly', async () => {
     `  valueB char(2);`,
     `end-ds;`,
     ``,
+    `dcl-s simpleReturn like(simpleProc);`,
+    ``,
     `dcl-proc someProc export;`,
     `  dcl-pi *n likeds(return_t) end-pi;`,
     ``,
@@ -1617,20 +1619,69 @@ test('can resolve return structure correctly', async () => {
     `  // Return the structure`,
     `  return result;`,
     `end-proc;`,
+    ``,
+    `dcl-proc dumbLikeReturn export;`,
+    `  dcl-pi *n like(return_t) end-pi;`,
+    ``,
+    `  // Declare a variable of the return type`,
+    `  dcl-ds result likeds(return_t);`,
+    ``,
+    `  // Assign values to the fields`,
+    `  result.valueA = valueA;`,
+    `  result.valueB = valueB;`,
+    ``,
+    `  // Return the structure`,
+    `  return result;`,
+    `end-proc;`,
+    ``,
+    `dcl-proc simpleProc export;`,
+    `  dcl-pi *n char(10) end-pi;`,
+    ``,
+    `  return 'hello';`,
+    `end-proc;`,
+    ``,
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
 
-  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures.length).toBe(3);
 
   const someProc = cache.find(`someProc`);
   expect(someProc.name).toBe(`someProc`);
 
-  const typeData = cache.resolveType(someProc);
-  expect(typeData).toBeDefined();
-  expect(typeData.type).toBeUndefined();
-  expect(typeData.reference).toBeDefined();
-  expect(typeData.reference.name).toBe(`return_t`);
-  expect(typeData.reference.type).toBe(`struct`);
-  expect(typeData.reference.subItems.length).toBe(2);
+  const typeDataA = cache.resolveType(someProc);
+  expect(typeDataA).toBeDefined();
+  expect(typeDataA.type).toBeUndefined();
+  expect(typeDataA.reference).toBeDefined();
+  expect(typeDataA.reference.name).toBe(`return_t`);
+  expect(typeDataA.reference.type).toBe(`struct`);
+  expect(typeDataA.reference.subItems.length).toBe(2);
+
+  const simpleProc = cache.find(`simpleProc`);
+  expect(simpleProc.name).toBe(`simpleProc`);
+
+  const typeDataB = cache.resolveType(simpleProc);
+  expect(typeDataB).toBeDefined();
+  expect(typeDataB.type).toMatchObject({name: `char`, value: `10`});
+  expect(typeDataB.reference).toBeUndefined();
+
+  const simpleReturn = cache.find(`simpleReturn`);
+  expect(simpleReturn.name).toBe(`simpleReturn`);
+
+  const typeDataC = cache.resolveType(simpleReturn);
+  expect(typeDataC).toBeDefined();
+  expect(typeDataC).toBeDefined();
+  expect(typeDataC.type).toMatchObject({name: `char`, value: `10`});
+  expect(typeDataC.reference).toBeUndefined();
+
+  const dumbLikeReturn = cache.find(`dumbLikeReturn`);
+  expect(dumbLikeReturn.name).toBe(`dumbLikeReturn`);
+
+  const typeDataD = cache.resolveType(dumbLikeReturn);
+  expect(typeDataD).toBeDefined();
+  expect(typeDataD.type).toBeUndefined();
+  expect(typeDataD.reference).toBeDefined();
+  expect(typeDataD.reference.name).toBe(`return_t`);
+  expect(typeDataD.reference.type).toBe(`struct`);
+  expect(typeDataD.reference.subItems.length).toBe(2);
 });

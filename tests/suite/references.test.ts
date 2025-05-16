@@ -1957,6 +1957,6 @@ test('references_prototype', async () => {
 
   const typeData = cache.resolveType(addProcedure);
   expect(typeData).toBeDefined();
-  expect(typeData.type).toMatchObject({name: `INT`, value: `10`});
+  expect(typeData.type).toMatchObject({name: `int`, value: `10`});
   expect(typeData.reference).toBeUndefined();
 });
