@@ -92,7 +92,7 @@ function getBodyRangeForRange(docs: Cache, rangeStart: number, rangeEnd: number,
 	} else {
 		validStart = docs.getDefinitionBlockEnd(document.uri) + 1;
 		const firstProc = docs.procedures.find(p => !Object.keys(p.keyword).some(k => k.toLowerCase().startsWith(`ext`)));
-		validEnd = firstProc && firstProc.range.start ? firstProc.range.start - 1 : document.lineCount;
+		validEnd = firstProc && firstProc.range.start ? firstProc.range.start - 1 : document.lineCount - 1;
 	}
 
 	if (validStart < 0 || validEnd < 0) {
