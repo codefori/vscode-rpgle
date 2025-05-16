@@ -1,7 +1,7 @@
 import { CodeAction, CodeActionKind, CodeActionParams, CreateFile, Position, Range, TextDocumentEdit, TextEdit, WorkspaceFolder } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { documents, parser, prettyKeywords } from '.';
-import Cache, { RpgleTypeDetail } from '../../../../language/models/cache';
+import Cache, { RpgleTypeDetail, RpgleVariableType } from '../../../../language/models/cache';
 import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
 import { Keywords } from '../../../../language/parserTypes';
@@ -275,52 +275,52 @@ function getAssertions(docs: Cache, detail: RpgleTypeDetail, expected: string, a
 	return assertions;
 }
 
-function getDefaultValue(type: string): string {
+function getDefaultValue(type: RpgleVariableType): string {
 	switch (type) {
-		case `CHAR`:
-		case `VARCHAR`:
+		case `char`:
+		case `varchar`:
 			return `''`;
-		case `INT`:
-		case `UNS`:
+		case `int`:
+		case `uns`:
 			return `0`;
-		case `PACKED`:
-		case `ZONED`:
+		case `packed`:
+		case `zoned`:
 			return `0.0`;
-		case `IND`:
-			return `*OFF`;
-		case `DATE`:
-			return `%date('0001-01-01' : *ISO)`;
-		case `TIME`:
-			return `%time('00.00.00' : *ISO)`;
-		case `TIMESTAMP`:
-			return `%timestamp('0001-01-01-00.00.00.000000' : *ISO)`;
-		case `POINTER`:
-			return `*NULL`;
+		case `ind`:
+			return `*off`;
+		case `date`:
+			return `%date('0001-01-01' : *iso)`;
+		case `time`:
+			return `%time('00.00.00' : *iso)`;
+		case `timestamp`:
+			return `%timestamp('0001-01-01-00.00.00.000000' : *iso)`;
+		case `pointer`:
+			return `*null`;
 		default:
 			return 'unknown';
 	}
 }
 
-function getAssertion(type: string): string {
+function getAssertion(type: RpgleVariableType): string {
 	switch (type) {
-		case `CHAR`:
-		case `VARCHAR`:
+		case `char`:
+		case `varchar`:
 			return `aEqual`;
-		case `INT`:
-		case `UNS`:
+		case `int`:
+		case `uns`:
 			return `iEqual`;
-		case `PACKED`:
-		case `ZONED`:
+		case `packed`:
+		case `zoned`:
 			return `assert`;
-		case `IND`:
+		case `ind`:
 			return `nEqual`;
-		case `DATE`:
+		case `date`:
 			return `assert`;
-		case `TIME`:
+		case `time`:
 			return `assert`;
-		case `TIMESTAMP`:
+		case `timestamp`:
 			return `assert`;
-		case `POINTER`:
+		case `pointer`:
 			return `assert`;
 		default:
 			return 'unknown';
