@@ -86,7 +86,7 @@ export default class Cache {
    * @param {string} fsPath Path to check
    * @returns {number} Line number
    */
-  getDefinitionBlockEnd(fsPath) {
+  getDefinitionBlockEnd(fsPath: string) {
     const lasts = [
       this.procedures.filter(d => d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined).pop(),
       this.structs.filter(d => d.position.path === fsPath).pop(),
