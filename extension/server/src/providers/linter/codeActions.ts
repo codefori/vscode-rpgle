@@ -1,6 +1,5 @@
-import { CodeAction, CodeActionKind, CodeActionParams, Range } from 'vscode-languageserver';
-import { getActions, getExtractProcedureAction, getSubroutineActions, refreshLinterDiagnostics } from '.';
-import { documents, parser } from '..';
+import { Range } from 'vscode-languageserver';
+import { getActions, refreshLinterDiagnostics } from '.';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import Cache from '../../../../../language/models/cache';
 
