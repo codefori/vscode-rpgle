@@ -247,7 +247,7 @@ function getIncludes(detail: RpgleTypeDetail, workspaceFolder: WorkspaceFolder):
 		if (workspaceFolder) {
 			const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
 			if (!includes.includes(relativePath)) {
-				includes.push(`/include ${relativePath}`);
+				includes.push(`/include '${relativePath}'`); // TODO: Support members style includes
 			}
 		}
 	}
