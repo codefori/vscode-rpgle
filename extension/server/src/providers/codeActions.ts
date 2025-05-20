@@ -1,9 +1,19 @@
-import { CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit } from 'vscode-languageserver';
+import { CodeAction, CodeActionKind, CodeActionParams, CreateFile, Position, Range, TextDocumentEdit, TextEdit, WorkspaceFolder } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { documents, parser, prettyKeywords } from '.';
-import Cache from '../../../../language/models/cache';
+import Cache, { RpgleTypeDetail, RpgleVariableType } from '../../../../language/models/cache';
 import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
+import { Keywords } from '../../../../language/parserTypes';
+import path = require('path');
+import { getWorkspaceFolder } from '../connection';
+import Declaration from '../../../../language/models/declaration';
+
+interface TestCaseSpec {
+	prototype: string[];
+	testCase: string[];
+	includes: string[];
+}
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[] | undefined> {
 	const uri = params.textDocument.uri;
@@ -33,10 +43,10 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 				}
 			}
 
-			// const testCaseOption = getTestCaseAction(document, docs, range);
-			// if (testCaseOption) {
-			// 	actions.push(testCaseOption);
-			// }
+			const testActions = await getTestActions(document, docs, range);
+			if (testActions) {
+				actions.push(...testActions);
+			}
 
 			const monitorAction = surroundWithMonitorAction(isFree, document, docs, range);
 			if (monitorAction) {
@@ -48,32 +58,282 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 	return actions;
 }
 
-export function getTestCaseAction(document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {
-	const currentProcedure = docs.procedures.find(sub => range.start.line >= sub.position.range.line && sub.range.start && sub.range.end);
-	if (currentProcedure) {
+export async function getTestActions(document: TextDocument, docs: Cache, range: Range): Promise<CodeAction[] | undefined> {
+	const codeActions: CodeAction[] = [];
 
-		const refactorAction = CodeAction.create(`Create IBM i test case`, CodeActionKind.RefactorExtract);
+	const exportProcedures = docs.procedures.filter(proc => proc.keyword[`EXPORT`]);
+	if (exportProcedures.length > 0) {
+		const workspaceFolder = await getWorkspaceFolder(document.uri); // TODO: Can workspace folder not be a requirement?
+		if (workspaceFolder) {
+			// Build new test file uri
+			const parsedPath = path.parse(document.uri);
+			const fileName = parsedPath.base;
+			const testFileName = `${parsedPath.name}.test${parsedPath.ext}`;
+			const testFileUri = workspaceFolder ?
+				`${workspaceFolder.uri}/qtestsrc/${testFileName}` :
+				`${parsedPath.dir}/${testFileName}`;
 
-		refactorAction.edit = {
-			changes: {
-				['mynewtest.rpgle']: [
-					TextEdit.insert(
-						Position.create(0, 0), // Insert at the start of the new test case file
-						[
-							`**free`,
-							``,
-							`dcl-proc test_${currentProcedure.name.toLowerCase()} export;`,
-							``,
-							`end-proc;`
-						].join(`\n`)
+			// Test case generation
+			const currentProcedure = exportProcedures.find(sub => sub.range.start && sub.range.end && range.start.line >= sub.range.start && range.end.line <= sub.range.end);
+			if (currentProcedure) {
+				const testCaseSpec = await getTestCaseSpec(docs, currentProcedure, workspaceFolder);
+				const newTestSuite = generateTestSuite([testCaseSpec]);
+				const testCaseAction = CodeAction.create(`Generate test case for '${currentProcedure.name}'`, CodeActionKind.RefactorExtract);
+				testCaseAction.edit = {
+					documentChanges: [
+						CreateFile.create(testFileUri, { ignoreIfExists: true }),
+						TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
+					]
+				};
+				codeActions.push(testCaseAction);
+			}
 
-					)
+			// Test suite generation
+			const newTestCases = await Promise.all(exportProcedures.map(async proc => await getTestCaseSpec(docs, proc, workspaceFolder)));
+			const newTestSuite = generateTestSuite(newTestCases);
+			const testSuiteAction = CodeAction.create(`Generate test suite for '${fileName}'`, CodeActionKind.RefactorExtract);
+			testSuiteAction.edit = {
+				documentChanges: [
+					CreateFile.create(testFileUri, { ignoreIfExists: true }),
+					TextDocumentEdit.create({ uri: testFileUri, version: null }, [TextEdit.insert(Position.create(0, 0), newTestSuite.join(`\n`))])
 				]
-			},
-		};
-
-		return refactorAction;
+			};
+			codeActions.push(testSuiteAction);
+		}
 	}
+
+	return codeActions;
+}
+
+
+function generateTestSuite(testCaseSpecs: TestCaseSpec[]) {
+	const prototypes = testCaseSpecs.map(tc => tc.prototype.length > 0 ? [``, ...tc.prototype] : tc.prototype).flat();
+	const testCases = testCaseSpecs.map(tc => tc.testCase.length > 0 ? [``, ...tc.testCase] : tc.testCase).flat();
+	const allIncludes = testCaseSpecs.map(tc => tc.includes).flat();
+	const uniqueIncludes = [...new Set(allIncludes)];
+
+	return [
+		`**free`,
+		``,
+		`ctl-opt nomain;`,
+		...prototypes,
+		``,
+		`/include qinclude,TESTCASE`,
+		...uniqueIncludes,
+		...testCases
+	]
+}
+
+async function getTestCaseSpec(docs: Cache, procedure: Declaration, workspaceFolder: WorkspaceFolder): Promise<TestCaseSpec> {
+	// Get procedure prototype
+	const prototype = await getPrototype(procedure);
+
+	// Get inputs
+	const inputDecs: string[] = [];
+	const inputInits: string[] = [];
+	const inputIncludes: string[] = [];
+	for (const subItem of procedure.subItems) {
+		const subItemType = docs.resolveType(subItem);
+
+		const subItemDec = getDeclaration(subItemType, `${subItem.name}`);
+		inputDecs.push(...subItemDec);
+
+		const subItemInits = getInitializations(docs, subItemType, `${subItem.name}`);
+		inputInits.push(...subItemInits);
+
+		const subItemIncludes = getIncludes(subItemType, workspaceFolder);
+		inputIncludes.push(...subItemIncludes);
+	}
+
+	// Get return
+	const resolvedType = docs.resolveType(procedure);
+	const actualDec = getDeclaration(resolvedType, 'actual');
+	const expectedDec = getDeclaration(resolvedType, 'expected');
+	const expectedInits = getInitializations(docs, resolvedType, 'expected');
+	const returnIncludes = getIncludes(resolvedType, workspaceFolder);
+
+	// Get unique includes
+	const includes = [...new Set([...inputIncludes, ...returnIncludes])];
+
+	// Get assertions
+	const assertions = getAssertions(docs, resolvedType, 'expected', 'actual');
+
+	const testCase = [
+		`dcl-proc test_${procedure.name} export;`,
+		`  dcl-pi *n extproc(*dclcase) end-pi;`,
+		``,
+		...inputDecs.map(dec => `  ${dec}`),
+		...actualDec.map(dec => `  ${dec}`),
+		...expectedDec.map(dec => `  ${dec}`),
+		``,
+		`  // Input`,
+		...inputInits.map(init => `  ${init}`),
+		``,
+		`  // Actual results`,
+		`  actual = ${procedure.name}(${procedure.subItems.map(s => s.name).join(` : `)});`,
+		``,
+		`  // Expected results`,
+		...expectedInits.map(init => `  ${init}`),
+		``,
+		`  // Assertions`,
+		...assertions.map(assert => `  ${assert}`),
+		`end-proc;`
+	];
+
+	return {
+		prototype,
+		testCase,
+		includes
+	};
+}
+
+function getDeclaration(detail: RpgleTypeDetail, name: string): string[] {
+	const declarations: string[] = [];
+
+	if (detail) {
+		if (detail.type) {
+			declarations.push(`dcl-s ${name} ${detail.type.name}${detail.type.value ? `(${detail.type.value})` : ``};`);
+		} else if (detail.reference) {
+			declarations.push(`dcl-ds ${name} likeDs(${detail.reference.name});`);
+		}
+	}
+
+	return declarations;
+}
+
+function getInitializations(docs: Cache, detail: RpgleTypeDetail, name: string): string[] {
+	const inits: string[] = [];
+
+	if (detail) {
+		if (detail.type) {
+			const defaultValue = getDefaultValue(detail.type.name);
+			inits.push(`${name} = ${defaultValue};`);
+		} else if (detail.reference) {
+			for (const subItem of detail.reference.subItems) {
+				const subItemType = docs.resolveType(subItem);
+				const subItemInits = subItemType ?
+					getInitializations(docs, subItemType, `${name}.${subItem.name}`) : [];
+				inits.push(...subItemInits);
+			}
+		}
+	}
+
+	return inits;
+}
+
+async function getPrototype(procedure: Declaration): Promise<string[]> {
+	for (const reference of procedure.references) {
+		const docs = await parser.getDocs(reference.uri);
+		if (docs) {
+			const prototype = docs.procedures.some(proc => proc.name === procedure.name && proc.keyword['EXTPROC'])
+			if (prototype) {
+				return [];
+			}
+		}
+	}
+
+	return [
+		`dcl-pr ${procedure.name} ${prettyKeywords(procedure.keyword, true)} extproc('${procedure.name.toLocaleUpperCase()}');`,
+		...procedure.subItems.map(s => `  ${s.name} ${prettyKeywords(s.keyword, true)};`),
+		`end-pr;`
+	];
+}
+
+function getIncludes(detail: RpgleTypeDetail, workspaceFolder: WorkspaceFolder): string[] {
+	const includes: string[] = [];
+
+	if (detail.reference) {
+		const structPath = detail.reference.position.path;
+		if (workspaceFolder) {
+			const relativePath = asPosix(path.relative(workspaceFolder.uri, structPath));
+			if (!includes.includes(relativePath)) {
+				includes.push(`/include '${relativePath}'`); // TODO: Support members style includes
+			}
+		}
+	}
+
+	return includes;
+}
+
+function getAssertions(docs: Cache, detail: RpgleTypeDetail, expected: string, actual: string): string[] {
+	const assertions: string[] = [];
+
+	if (detail) {
+		if (detail.type) {
+			const assertion = getAssertion(detail.type.name);
+			const fieldName = actual.split(`.`).pop();
+			if (assertion === `assert`) {
+				assertions.push(`${assertion}(${expected} = ${actual}${fieldName ? ` : '${fieldName}'` : ``});`);
+			} else {
+				assertions.push(`${assertion}(${expected} : ${actual}${fieldName ? ` : '${fieldName}'` : ``});`);
+			}
+		} else if (detail.reference) {
+			for (const subItem of detail.reference.subItems) {
+				const subItemType = docs.resolveType(subItem);
+				const subItemAssertions = subItemType ?
+					getAssertions(docs, subItemType, `${expected}.${subItem.name}`, `${actual}.${subItem.name}`) : [];
+				assertions.push(...subItemAssertions);
+			}
+		}
+	}
+
+	return assertions;
+}
+
+function getDefaultValue(type: RpgleVariableType): string {
+	switch (type) {
+		case `char`:
+		case `varchar`:
+			return `''`;
+		case `int`:
+		case `uns`:
+			return `0`;
+		case `packed`:
+		case `zoned`:
+			return `0.0`;
+		case `ind`:
+			return `*off`;
+		case `date`:
+			return `%date('0001-01-01' : *iso)`;
+		case `time`:
+			return `%time('00.00.00' : *iso)`;
+		case `timestamp`:
+			return `%timestamp('0001-01-01-00.00.00.000000' : *iso)`;
+		case `pointer`:
+			return `*null`;
+		default:
+			return 'unknown';
+	}
+}
+
+function getAssertion(type: RpgleVariableType): string {
+	switch (type) {
+		case `char`:
+		case `varchar`:
+			return `aEqual`;
+		case `int`:
+		case `uns`:
+			return `iEqual`;
+		case `packed`:
+		case `zoned`:
+			return `assert`;
+		case `ind`:
+			return `nEqual`;
+		case `date`:
+			return `assert`;
+		case `time`:
+			return `assert`;
+		case `timestamp`:
+			return `assert`;
+		case `pointer`:
+			return `assert`;
+		default:
+			return 'unknown';
+	}
+}
+
+function asPosix(inPath?: string) {
+	return inPath ? inPath.split(path.sep).join(path.posix.sep) : ``;
 }
 
 function lineAt(document: TextDocument, line: number): string {

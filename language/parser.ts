@@ -978,12 +978,16 @@ export default class Parser {
             if (parts.length > 1) {
             //We can overwrite it.. it might have been a PR before.
             // eslint-disable-next-line no-case-declarations
-              const existingProc = scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === parts[1]);
+              currentItem = new Declaration(`procedure`);
+
+              const existingProcI = scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === parts[1]);
+              const existingProc = scope.procedures[existingProcI];
 
               // We found the PR... so we can overwrite it
-              if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
-
-              currentItem = new Declaration(`procedure`);
+              if (existingProc) {
+                currentItem.references.push(...existingProc.references);
+                scope.procedures.splice(existingProcI, 1);
+              }
 
               currentProcName = partsLower[1];
               currentItem.name = currentProcName;
@@ -1498,13 +1502,17 @@ export default class Parser {
                 potentialName = pSpec.name && pSpec.name.value.length > 0 ? pSpec.name : potentialName;
 
                 if (potentialName) {
+                  currentItem = new Declaration(`procedure`);
+
                   //We can overwrite it.. it might have been a PR before.
-                  const existingProc = potentialName ? scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase()) : -1;
+                  const existingProcI = potentialName ? scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase()) : -1;
+                  const existingProc = scope.procedures[existingProcI];
 
                   // We found the PR... so we can overwrite it
-                  if (existingProc >= 0) scope.procedures.splice(existingProc, 1);
-
-                  currentItem = new Declaration(`procedure`);
+                  if (existingProc) {
+                    currentItem.references.push(...existingProc.references);
+                    scope.procedures.splice(existingProcI, 1);
+                  }
 
                   currentProcName = potentialName.value;
                   currentItem.name = currentProcName;

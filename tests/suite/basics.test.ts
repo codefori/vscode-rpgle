@@ -34,7 +34,7 @@ test('vitestTest2', async () => {
 
   expect(cache.variables.length).toBe(2);
   expect(cache.variables[0].position.range.line).toBe(1);
-  expect(cache.variables[1].position.range.line).toBe(3);
+  expect(cache.variables[1].position.range.line).toBe(3); 
 });
 
 test('vitestTest3', async () => {
@@ -85,6 +85,11 @@ test('vitestTest4', async () => {
   expect(cache.variables[0].position.range.line).toBe(1);
   expect(cache.subroutines[0].range.start).toBe(4);
   expect(cache.subroutines[0].range.end).toBe(6);
+
+  const typeData = cache.resolveType(cache.variables[0]);
+  expect(typeData.type).toBeDefined();
+  expect(typeData.type.name).toBe(`char`);
+  expect(typeData.type.value).toBe(`20`);
 });
 
 /**
@@ -119,6 +124,14 @@ test('vitestTest5', async () => {
 
   expect(cache.procedures[0].subItems.length).toBe(0);
   expect(cache.procedures[1].subItems.length).toBe(1);
+
+  let typeData;
+  for (const proc of cache.procedures) {
+    typeData = cache.resolveType(cache.procedures[0]);
+    expect(typeData).toBeDefined();
+    expect(typeData.type).toBeUndefined();
+    expect(typeData.reference).toBeUndefined();
+  }
 });
 
 test('vitestTest6', async () => {
@@ -209,6 +222,11 @@ test('vitestTest8', async () => {
 
   expect(cache.variables.length).toBe(1);
   expect(cache.constants.length).toBe(1);
+
+  const typeData = cache.resolveType(cache.variables[0]);
+  expect(typeData.type).toBeDefined();
+  expect(typeData.type.name).toBe(`char`);
+  expect(typeData.type.value).toBe(`20`);
 });
 
 /**
@@ -396,6 +414,11 @@ test('test12', async () => {
 
   // Should have a local variable
   expect(theLocalProc.scope.variables.length).toBe(1);
+
+  const typeData = cache.resolveType(theLocalProc);
+  expect(typeData).toBeDefined();
+  expect(typeData.type).toBeUndefined();
+  expect(typeData.reference).toBeUndefined();
 });
 
 test('test13', async () => {
@@ -584,6 +607,16 @@ test('range1', async () => {
     start: 21,
     end: 23
   });
+
+  const typeDataA = cache.resolveType(json_getDelimiters);
+  expect(typeDataA).toBeDefined();
+  expect(typeDataA.type).toBeUndefined();
+  expect(typeDataA.reference).toBeUndefined();
+
+  const typeDataB = cache.resolveType(json_getDelims);
+  expect(typeDataB).toBeDefined();
+  expect(typeDataB.type).toMatchObject({name: `pointer`, value: true});
+  expect(typeDataB.reference).toBeUndefined();
 });
 
 test('range2', async () => {
@@ -607,6 +640,11 @@ test('range2', async () => {
     start: 2,
     end: 2
   });
+
+  const typeDataB = cache.resolveType(ABCD);
+  expect(typeDataB).toBeDefined();
+  expect(typeDataB.type).toBeUndefined();
+  expect(typeDataB.reference).toBeUndefined(); //Because BBOOP is not defined
 });
 
 test('inline_end_pi', async () => {
@@ -803,6 +841,11 @@ test('issue_195a', async () => {
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
+
+  const typeDataB = cache.resolveType(cache.find(`ScomponiStringa`));
+  expect(typeDataB).toBeDefined();
+  expect(typeDataB.type).toMatchObject({name: `varchar`, value: `2000`});
+  expect(typeDataB.reference).toBeUndefined();
 });
 
 test('issue_195b', async () => {
@@ -1550,5 +1593,95 @@ test('fixed-format c spec', async () => {
 
   expect(cache.structs.length).toBe(3);
   expect(cache.variables.length).toBe(1);
+});
 
+test('can resolve return structure correctly', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds return_t qualified template;`,
+    `  valueA char(1);`,
+    `  valueB char(2);`,
+    `end-ds;`,
+    ``,
+    `dcl-s simpleReturn like(simpleProc);`,
+    ``,
+    `dcl-proc someProc export;`,
+    `  dcl-pi *n likeds(return_t) end-pi;`,
+    ``,
+    `  // Declare a variable of the return type`,
+    `  dcl-ds result likeds(return_t);`,
+    ``,
+    `  // Assign values to the fields`,
+    `  result.valueA = valueA;`,
+    `  result.valueB = valueB;`,
+    ``,
+    `  // Return the structure`,
+    `  return result;`,
+    `end-proc;`,
+    ``,
+    `dcl-proc dumbLikeReturn export;`,
+    `  dcl-pi *n like(return_t) end-pi;`,
+    ``,
+    `  // Declare a variable of the return type`,
+    `  dcl-ds result likeds(return_t);`,
+    ``,
+    `  // Assign values to the fields`,
+    `  result.valueA = valueA;`,
+    `  result.valueB = valueB;`,
+    ``,
+    `  // Return the structure`,
+    `  return result;`,
+    `end-proc;`,
+    ``,
+    `dcl-proc simpleProc export;`,
+    `  dcl-pi *n char(10) end-pi;`,
+    ``,
+    `  return 'hello';`,
+    `end-proc;`,
+    ``,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  expect(cache.procedures.length).toBe(3);
+
+  const someProc = cache.find(`someProc`);
+  expect(someProc.name).toBe(`someProc`);
+
+  const typeDataA = cache.resolveType(someProc);
+  expect(typeDataA).toBeDefined();
+  expect(typeDataA.type).toBeUndefined();
+  expect(typeDataA.reference).toBeDefined();
+  expect(typeDataA.reference.name).toBe(`return_t`);
+  expect(typeDataA.reference.type).toBe(`struct`);
+  expect(typeDataA.reference.subItems.length).toBe(2);
+
+  const simpleProc = cache.find(`simpleProc`);
+  expect(simpleProc.name).toBe(`simpleProc`);
+
+  const typeDataB = cache.resolveType(simpleProc);
+  expect(typeDataB).toBeDefined();
+  expect(typeDataB.type).toMatchObject({name: `char`, value: `10`});
+  expect(typeDataB.reference).toBeUndefined();
+
+  const simpleReturn = cache.find(`simpleReturn`);
+  expect(simpleReturn.name).toBe(`simpleReturn`);
+
+  const typeDataC = cache.resolveType(simpleReturn);
+  expect(typeDataC).toBeDefined();
+  expect(typeDataC).toBeDefined();
+  expect(typeDataC.type).toMatchObject({name: `char`, value: `10`});
+  expect(typeDataC.reference).toBeUndefined();
+
+  const dumbLikeReturn = cache.find(`dumbLikeReturn`);
+  expect(dumbLikeReturn.name).toBe(`dumbLikeReturn`);
+
+  const typeDataD = cache.resolveType(dumbLikeReturn);
+  expect(typeDataD).toBeDefined();
+  expect(typeDataD.type).toBeUndefined();
+  expect(typeDataD.reference).toBeDefined();
+  expect(typeDataD.reference.name).toBe(`return_t`);
+  expect(typeDataD.reference.type).toBe(`struct`);
+  expect(typeDataD.reference.subItems.length).toBe(2);
 });
