@@ -1302,3 +1302,31 @@ test('subroutine with C spec definitions', async () => {
   expect(SRCJUL).toBeDefined();
   expect(SRCJUL.references.length).toBe(2);
 });
+
+test('f spec range', async () => {
+  const lines = [
+    ``,
+    `      //---------------------------------------------------------------*`,
+    ``,
+    `     Fdepts     CF   E             WorkStn Sfile(SFLDta:Rrn)`,
+    `     F                                     IndDS(WkStnInd)`,
+    `     F                                     InfDS(fileinfo)`,
+    ``,
+    `          Dcl-S Exit Ind Inz(*Off);`,
+    ``,
+    `          Dcl-S Rrn          Zoned(4:0) Inz;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  expect(cache.files.length).to.equal(1);
+
+  const depts = cache.find(`depts`);
+  expect(depts).toBeDefined();
+  expect(depts.keyword[`SFILE`]).to.equal(`SFLDta:Rrn`);
+  expect(depts.keyword[`INDDS`]).to.equal(`WkStnInd`);
+  expect(depts.keyword[`INFDS`]).to.equal(`fileinfo`);
+  expect(depts.range).to.deep.equal({
+    start: 3,
+    end: 5
+  });
+});

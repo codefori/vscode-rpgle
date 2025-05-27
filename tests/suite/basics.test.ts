@@ -753,6 +753,11 @@ test('issues_168a', async () => {
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  const testFile = cache.find(`TESTFILE3`);
+
+  expect(testFile.range.start).toBe(3);
+  expect(testFile.range.end).toBe(3);
 });
 
 test('issues_170b', async () => {
@@ -782,6 +787,9 @@ test('issues_170b', async () => {
   const WkStnInd = cache.find(`WkStnInd`);
   expect(WkStnInd.name).toBe(`WkStnInd`);
   expect(WkStnInd.subItems.length).toBe(11);
+
+  expect(WkStnInd.range.start).toBe(2);
+  expect(WkStnInd.range.end).toBe(17);
 
   const error = cache.find(`Error`);
   expect(error.name).toBe(`Error`);
