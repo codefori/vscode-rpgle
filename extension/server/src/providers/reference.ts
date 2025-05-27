@@ -25,10 +25,11 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 
 				if (def) {
 					let locations: Location[] = [];
-					if (Project.isEnabled) {
-						const procRefs = await getAllProcedureReferences(def);
-						locations.push(...procRefs);
-					}
+					// TODO: Currently disabled due to reference bug in getAllProcedureReferences
+					// if (Project.isEnabled) {
+					// 	const procRefs = await getAllProcedureReferences(def);
+					// 	locations.push(...procRefs);
+					// }
 
 					for (const ref of def.references) {
 						let refDoc = documents.get(ref.uri);
