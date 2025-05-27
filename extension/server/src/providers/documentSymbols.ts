@@ -123,12 +123,14 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			scope.files
 				.filter(struct => struct.position && struct.position.path === currentPath)
 				.forEach(file => {
+					const start = file.range.start || file.position.range.line;
+					const end = file.range.end || file.position.range.line;
 					const fileDef = DocumentSymbol.create(
 						file.name,
 						prettyKeywords(file.keyword),
 						SymbolKind.File,
-						Range.create(file.position.range.line, 0, file.position.range.line, 0),
-						Range.create(file.position.range.line, 0, file.position.range.line, 0)
+						Range.create(start, 0, end, 0),
+						Range.create(start, 0, end, 0)
 					);
 
 					fileDef.children = [];
