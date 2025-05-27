@@ -751,6 +751,11 @@ export default class Parser {
                   range: tokens[1].range
                 };
 
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: lineNumber
+                }
+
                 const objectName = getObjectName(tokens[1].value, currentItem.keyword);
                 let prefix = ``;
 
@@ -1322,6 +1327,9 @@ export default class Parser {
                 path: fileUri,
                 range: fSpec.name.range
               };
+
+              currentItem.range.start = lineNumber;
+              currentItem.range.end = lineNumber;
 			  
 			        let prefix = ``;
 
@@ -1360,6 +1368,7 @@ export default class Parser {
             } else {
               currentItem = scope.files[scope.files.length-1];
               if (currentItem) {
+                currentItem.range.end = lineNumber;
                 currentItem.keyword = {
                   ...fSpec.keywords,
                   ...currentItem.keyword,
