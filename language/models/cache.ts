@@ -1,4 +1,3 @@
-import { re } from "../../out/extension";
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import { IRange } from "../types";
 import Declaration from "./declaration";
