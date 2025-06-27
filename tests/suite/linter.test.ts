@@ -3773,4 +3773,50 @@ test('embedded sql with variable references (#209)', async () => {
   expect(caseError.type).toBe(`IncorrectVariableCase`);
   expect(lines.substring(caseError.offset.start, caseError.offset.end)).toContain(`OStPc`);
   expect(caseError.newValue).toBe(`Ostpc`);
-})
+});
+
+test('crash report #388', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `ctl-opt dftactgrp(*no);`,
+    ``,
+    `/INCLUDE 'qrpgleref/constants.rpgleinc'`,
+    ``,
+    `dcl-s mytext char(50);`,
+    ``,
+    `Dcl-PR printf Int(10) extproc('printf');`,
+    `  input Pointer value options(*string);`,
+    `End-PR;`,
+    ``,
+    `mytext = 'Hello to all you people';`,
+    `printf(mytext);`,
+    ``,
+    `// ========================================`,
+    `// some desc here`,
+    `// ========================================`,
+    `begsr somesrtitle; `,
+    `  // some other comment `,
+    `  chain a b ;`,
+    `  `,
+    `   if(%found(b);`,
+    `     // do something `,
+    `     // error occurs near here in the logs`,
+    `   elseif; `,
+    `     // do something `,
+    `   endif; `,
+    `endsr; `,
+    ``,
+    `dsply mytext;`,
+    ``,
+    `return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    "ForceOptionalParens": true,
+  }, cache);
+
+  console.log(errors);
+  expect(errors.length).toBe(0);
+});
