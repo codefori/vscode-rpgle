@@ -43,26 +43,28 @@ export namespace TestCodeActions {
             commands.registerCommand('vscode-rpgle.generateTestStub', async (document: TextDocument, docs: Cache, testFileName: string, exportProcedures: Declaration[]) => {
                 // Build test file URI
                 let testFileUri: Uri;
-                const workspaceFolder = workspace.getWorkspaceFolder(document.uri);
-                if (workspaceFolder && workspaceFolder.uri.scheme === 'file') {
-                    const testFilePath = path.posix.join(workspaceFolder.uri.fsPath, 'qtestsrc', testFileName);
-                    testFileUri = Uri.file(testFilePath);
-                } else if (document.uri.scheme === 'member') {
-                    const ibmi = getInstance();
-                    const connection = ibmi!.getConnection();
-                    const parsedPath = connection.parserMemberPath(document.uri.fsPath);
-                    const testFilePath = parsedPath.asp ?
-                        path.posix.join(parsedPath.asp, parsedPath.library, 'QTESTSRC', testFileName) :
-                        path.posix.join(parsedPath.library, 'QTESTSRC', testFileName);
-                    testFileUri = Uri.from({ scheme: 'member', path: `/${testFilePath}` });
-                } else {
-                    return;
-                }
+                // const workspaceFolder = workspace.getWorkspaceFolder(document.uri);
+                // if (workspaceFolder && workspaceFolder.uri.scheme === 'file') {
+                //     const testFilePath = path.posix.join(workspaceFolder.uri.fsPath, 'qtestsrc', testFileName);
+                //     testFileUri = Uri.file(testFilePath);
+                // } else if (document.uri.scheme === 'member') {
+                //     const ibmi = getInstance();
+                //     const connection = ibmi!.getConnection();
+                //     const parsedPath = connection.parserMemberPath(document.uri.fsPath);
+                //     const testFilePath = parsedPath.asp ?
+                //         path.posix.join(parsedPath.asp, parsedPath.library, 'QTESTSRC', testFileName) :
+                //         path.posix.join(parsedPath.library, 'QTESTSRC', testFileName);
+                //     testFileUri = Uri.from({ scheme: 'member', path: `/${testFilePath}` });
+                // } else {
+                //     return;
+                // }
+
+                testFileUri = Uri.from({ scheme: 'member', path: `/SANJULA/QTESTSRC/example.rpgle` });
 
                 // Build test suite
                 // TODO: Workspace folder is optional
-                const newTestCases = await Promise.all(exportProcedures.map(async proc => await getTestCaseSpec(docs, proc, workspaceFolder!)));
-                const newTestSuite = generateTestSuite(newTestCases);
+                // const newTestCases = await Promise.all(exportProcedures.map(async proc => await getTestCaseSpec(docs, proc, workspaceFolder!)));
+                // const newTestSuite = generateTestSuite(newTestCases);
 
                 // Build workspace edit
                 const workspaceEdit = new WorkspaceEdit();
@@ -78,16 +80,16 @@ export namespace TestCodeActions {
                     }
                 );
                 // TODO: Fix label
-                workspaceEdit.insert(
-                    testFileUri,
-                    new Position(0, 0),
-                    newTestSuite.join(`\n`),
-                    {
-                        label: `Generate test suite`,
-                        iconPath: new ThemeIcon('symbol-method'),
-                        needsConfirmation: true
-                    }
-                );
+                // workspaceEdit.insert(
+                //     testFileUri,
+                //     new Position(0, 0),
+                //     newTestSuite.join(`\n`),
+                //     {
+                //         label: `Generate test suite`,
+                //         iconPath: new ThemeIcon('symbol-method'),
+                //         needsConfirmation: true
+                //     }
+                // );
 
                 await workspace.applyEdit(workspaceEdit);
             })
