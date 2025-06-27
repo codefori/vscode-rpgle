@@ -1,7 +1,8 @@
 import path = require('path');
 import { APIInterface } from '../apis';
 import { isEnabled } from '.';
-import { parser, prettyKeywords } from '..';
+import { parser } from '..';
+import { Utils } from '../../../../../language/utilts';
 
 export function getInterfaces(): APIInterface[] {
 	let interfaces: APIInterface[] = [];
@@ -34,9 +35,9 @@ export function getInterfaces(): APIInterface[] {
 								entryFunction.keyword[`EXTPGM`] = `'${objectName}'`;
 
 								const prototype = [
-									`dcl-pr ${entryFunction.name} ${prettyKeywords(entryFunction.keyword)};`,
+									`dcl-pr ${entryFunction.name} ${Utils.prettyKeywords(entryFunction.keyword)};`,
 									...entryFunction.subItems.map(subItem =>
-										`  ${subItem.name} ${prettyKeywords(subItem.keyword)};`
+										`  ${subItem.name} ${Utils.prettyKeywords(subItem.keyword)};`
 									),
 									`end-pr;`
 								];
@@ -61,9 +62,9 @@ export function getInterfaces(): APIInterface[] {
 								proc.keyword[`EXTPROC`] = `'${proc.name.toUpperCase()}'`;
 
 								const prototype = [
-									`dcl-pr ${proc.name} ${prettyKeywords(proc.keyword)};`,
+									`dcl-pr ${proc.name} ${Utils.prettyKeywords(proc.keyword)};`,
 									...proc.subItems.map(subItem =>
-										`  ${subItem.name} ${prettyKeywords(subItem.keyword)};`
+										`  ${subItem.name} ${Utils.prettyKeywords(subItem.keyword)};`
 									),
 									`end-pr;`
 								];

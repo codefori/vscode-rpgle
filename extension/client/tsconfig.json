@@ -4,13 +4,14 @@
 		"module": "commonjs",
 		"target": "es2020",
 		"outDir": "out",
-		"rootDir": "src",
+		"rootDir": "./../..",
 		"lib": [ "es2020" ],
 		"sourceMap": true,
 		"composite": true
 	},
 	"include": [
-		"src"
+		"src",
+		"../../language"
 	],
 	"exclude": [
 		"node_modules", ".vscode-test", "src/test"
