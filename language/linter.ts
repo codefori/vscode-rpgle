@@ -757,7 +757,7 @@ export default class Linter {
                   case `DOU`:
                     if (rules.ForceOptionalParens) {
                       const lastStatement = statement[statement.length - 1];
-                      if (statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`) {
+                      if (lastStatement && statement[1] &&(statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`)) {
                         errors.push({
                           type: `ForceOptionalParens`,
                           offset: { start: statement[1].range.start, end: statement[statement.length - 1].range.end }
