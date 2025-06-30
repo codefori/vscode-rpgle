@@ -1,8 +1,9 @@
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
+import { documents, getWordRangeAtPosition, parser } from '.';
 import Parser from "../../../../language/parser";
 import { URI } from 'vscode-uri';
 import { Keywords } from '../../../../language/parserTypes';
+import { Utils } from '../../../../language/utilts';
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover|undefined> {
 	const currentPath = params.textDocument.uri;
@@ -26,7 +27,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 				};
 				delete returnKeywords[`EXTPROC`];
 
-				if (Object.keys(returnKeywords).length > 0) returnValue = prettyKeywords(returnKeywords);
+				if (Object.keys(returnKeywords).length > 0) returnValue = Utils.prettyKeywords(returnKeywords);
 
 				const returnTag = procedure.tags.find(tag => tag.tag === `return`);
 				const deprecatedTag = procedure.tags.find(tag => tag.tag === `deprecated`);
@@ -40,7 +41,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 				markdown += `\`\`\`vb\n${procedure.name}(`;
 
 				if (procedure.subItems.length > 0) {
-					markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${prettyKeywords(parm.keyword)}`).join(`,\n  `)}\n`;
+					markdown += `\n  ${procedure.subItems.map(parm => `${parm.name}: ${Utils.prettyKeywords(parm.keyword)}`).join(`,\n  `)}\n`;
 				}
 
 				markdown += `): ${returnValue}\n\`\`\` \n`;
@@ -88,7 +89,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 					// Variable definition found
 					const refs = theVariable.references.length;
 										
-					let markdown = `\`${theVariable.name} ${prettyKeywords(theVariable.keyword)}\` (${refs} reference${refs === 1 ? `` : `s`})`;
+					let markdown = `\`${theVariable.name} ${Utils.prettyKeywords(theVariable.keyword)}\` (${refs} reference${refs === 1 ? `` : `s`})`;
 
 					if (theVariable.position && currentPath !== theVariable.position.path) {
 						markdown += `\n\n*@file* \`${theVariable.position.path}:${theVariable.position.range.line+1}\``;

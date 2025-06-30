@@ -23,6 +23,7 @@ import { getServerImplementationProvider, getServerSymbolProvider } from './lang
 import { checkAndWait, loadBase, onCodeForIBMiConfigurationChange } from './base';
 import { registerCommands } from './commands';
 import { setLanguageSettings } from './language/config';
+import { TestCodeActions } from './testCodeActions';
 
 let client: LanguageClient;
 
@@ -104,7 +105,7 @@ export function activate(context: ExtensionContext) {
 	context.subscriptions.push(getServerImplementationProvider());
 	context.subscriptions.push(setLanguageSettings());
 	// context.subscriptions.push(...initBuilder(client));
-
+	context.subscriptions.push(...TestCodeActions.getTestCodeActions());
 
 	console.log(`started`);
 }
