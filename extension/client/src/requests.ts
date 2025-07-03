@@ -1,5 +1,5 @@
 import path = require('path');
-import { Uri, workspace, RelativePattern, commands } from 'vscode';
+import { Uri, workspace } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import { getInstance } from './base';
 import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
@@ -181,4 +181,8 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 export function clearTableCache(client: LanguageClient) {
 	client.sendRequest(`clearTableCache`);
+}
+
+export function getCache(client: LanguageClient, uri: Uri): Promise<any> {
+	return client.sendRequest(`getCache`, uri.toString());
 }
