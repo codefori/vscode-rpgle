@@ -631,6 +631,7 @@ export default class Parser {
                     if (include.found && include.uri) {
                       if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
                         scopes[0].includes.push({
+                          fromPath: fileUri,
                           toPath: include.uri,
                           line: lineNumber
                         });
