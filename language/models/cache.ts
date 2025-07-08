@@ -117,7 +117,8 @@ export default class Cache {
     const searchIn = [
       this.parameters,
       this.constants,
-      this.procedures,
+      this.procedures.filter(p => !p.prototype), //Regular procedures
+      this.procedures.filter(p => p.prototype), //Prototypes
       this.files,
       allStructs,
       this.subroutines,
@@ -132,7 +133,7 @@ export default class Cache {
     }
 
     if (includeProcedure) {
-      const procedureScope = this.procedures.find(proc => proc.name.toUpperCase() === includeProcedure);
+      const procedureScope = this.procedures.find(proc => proc.name.toUpperCase() === includeProcedure && proc.scope !== undefined);
       if (procedureScope) {
         const found = procedureScope.scope.find(name);
         if (found) return found;
