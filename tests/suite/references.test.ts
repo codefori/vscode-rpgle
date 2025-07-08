@@ -1941,22 +1941,47 @@ test('references_prototype', async () => {
     `  end-pi;`,
     ``,
     `  return num1 + num2;`,
+    `end-proc;`,
+    ``,
+    `dcl-proc doThing export;`,
+    `  dcl-s numa int(10) inz(5);`,
+    `  dcl-s numb int(10) inz(10);`,
+    ``,
+    `  // Call the add procedure`,
+    `  dcl-s result int(10);`,
+    `  result = add(numa: numb);`,
+    `  // call in reverse order`,
+    `  result = add(numb: numa);`,
+    `  dsply result;`,
     `end-proc;`
   ].join(`\n`);
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
-  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures.length).toBe(3);
 
-  const addProcedure = cache.find(`add`);
-  expect(addProcedure.references.length).toBe(2);
+  const actualProcedure = cache.find(`add`);
+  expect(actualProcedure).toBeDefined();
+  expect(actualProcedure.prototype).toBeFalsy();
+  expect(actualProcedure.references.length).toBe(3);
 
-  for (const ref of addProcedure.references) {
+  for (const ref of actualProcedure.references) {
     expect(lines.substring(ref.offset.start, ref.offset.end)).toBe(`add`);
   }
 
-  const typeData = cache.resolveType(addProcedure);
-  expect(typeData).toBeDefined();
-  expect(typeData.type).toMatchObject({name: `int`, value: `10`});
-  expect(typeData.reference).toBeUndefined();
+  const procTypeData = cache.resolveType(actualProcedure);
+  expect(procTypeData).toBeDefined();
+  expect(procTypeData.type).toMatchObject({name: `int`, value: `10`});
+  expect(procTypeData.reference).toBeUndefined();
+
+  const prototype = cache.procedures[0];
+  expect(prototype).toBeDefined();
+  expect(prototype.name).toBe(`add`);
+  expect(prototype.prototype).toBeTruthy();
+  expect(prototype.references.length).toBe(1);
+
+  const protoTypeData = cache.resolveType(prototype);
+  expect(protoTypeData).toBeDefined();
+  expect(protoTypeData.type).toMatchObject({name: `int`, value: `10`});
+  expect(protoTypeData.reference).toBeUndefined();
 });
