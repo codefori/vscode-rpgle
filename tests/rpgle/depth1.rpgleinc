@@ -1,5 +1,7 @@
 **FREE
 
+// Hello world
+
 /include 'copy3.rpgle'
 
 Dcl-S Scooby varchar(40) template;

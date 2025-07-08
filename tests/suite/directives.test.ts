@@ -249,6 +249,8 @@ test('eof4', async () => {
 
   expect(cache.includes.length).toBe(1);
   expect(cache.includes[0].line).toBe(4);
+  expect(cache.includes[0].fromPath).toBe(uri);
+  expect(cache.includes[0].toPath.endsWith(path.join(`rpgle`, `eof4.rpgle`))).toBeTruthy();
 
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
@@ -641,6 +643,17 @@ test('depth test', async () => {
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
 
   expect(cache.includes.length).toBe(2);
+
+  console.log(cache.includes);
+
+  expect(cache.includes[0].fromPath).toBe(uri);
+  expect(cache.includes[0].toPath.endsWith(path.join(`rpgle`, `depth1.rpgleinc`))).toBeTruthy();
+  expect(cache.includes[0].line).toBe(2); // zero indexed
+
+  expect(cache.includes[1].fromPath).toBe(cache.includes[0].toPath);
+  expect(cache.includes[1].toPath.endsWith(path.join(`rpgle`, `copy3.rpgle`))).toBeTruthy();
+  expect(cache.includes[1].line).toBe(4); // zero indexed
+
   expect(cache.variables.length).toBe(3);
 });
 
