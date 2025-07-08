@@ -1449,7 +1449,7 @@ export default class Parser {
               if (cSpec.factor2) {
                 const f2Value = cSpec.factor2.value;
                 callItem.name = (f2Value.startsWith(`'`) && f2Value.endsWith(`'`) ? f2Value.substring(1, f2Value.length-1) : f2Value);
-                callItem.keyword = {'EXTPGM': true}
+                callItem.keyword = {'CALL': true}
                 callItem.tags = currentTags;
 
                 callItem.position = {

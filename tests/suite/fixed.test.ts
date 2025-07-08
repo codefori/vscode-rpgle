@@ -1064,7 +1064,7 @@ test('call_opcode', async () => {
 
   const fixedCall = cache.find(`BBSWINASKR`)
   expect(fixedCall.name).to.equal(`BBSWINASKR`);
-  expect(fixedCall.keyword[`EXTPGM`]).to.equal(true);
+  expect(fixedCall.keyword[`CALL`]).to.equal(true);
 });
 
 test('file_keywords', async () => {
