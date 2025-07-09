@@ -64,6 +64,7 @@ export function parseFLine(lineNumber, lineIndex, content) {
  */
 export function parseCLine(lineNumber, lineIndex, content) {
   content = content.padEnd(80);
+  const clIndicator = content.substr(7, 8).toUpperCase();
   const indicator = content.substr(9, 11);
   const factor1 = content.substr(11, 14);
   const opcode = content.substr(25, 10).toUpperCase();
@@ -79,6 +80,7 @@ export function parseCLine(lineNumber, lineIndex, content) {
   const ind3 = content.substr(74, 2);
 
   return {
+    clIndicator: calculateToken(lineNumber, lineIndex+7, clIndicator, `special-ind`),
     indicator: calculateToken(lineNumber, lineIndex+9, indicator, `special-ind`),
     opcode: calculateToken(lineNumber, lineIndex+25, opcode, `opcode`),
     factor1: calculateToken(lineNumber, lineIndex+11, factor1),
