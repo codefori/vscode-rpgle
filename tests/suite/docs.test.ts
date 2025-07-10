@@ -25,7 +25,7 @@ test("issue_202", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
   const toLower = cache.find(`ToLower`);
 
@@ -83,7 +83,7 @@ test("issue_231", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
 
   const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2,
@@ -92,4 +92,25 @@ test("issue_231", async () => {
 
   expect(indentErrors.length).toBe(0);
   expect(errors.length).toBe(0);
+});
+
+test("Clear cache on empty file", async () => {
+  const lines = [
+    `**free`,
+    `ctl-opt nomain;`,
+    `dcl-proc Add export;`,
+    `    dcl-pi *n int(10);`,
+    `        num1 int(10) value;`,
+    `        num2 int(10) value;`,
+    `    end-pi;`,
+    `    return num1 + num2;`,
+    `end-proc;`
+  ].join(`\n`);
+
+  const cache1 = await parser.getDocs(uri, lines, { ignoreCache: true });
+  expect(cache1.procedures.length).toBe(1);
+
+  const emptyLines = ``;
+  const cache2 = await parser.getDocs(uri, emptyLines, { ignoreCache: true });
+  expect(cache2.procedures.length).toBe(0);
 });
