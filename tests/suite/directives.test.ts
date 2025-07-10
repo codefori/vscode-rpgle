@@ -250,7 +250,7 @@ test('eof4', async () => {
   expect(cache.includes.length).toBe(1);
   expect(cache.includes[0].line).toBe(4);
   expect(cache.includes[0].fromPath).toBe(uri);
-  expect(cache.includes[0].toPath.endsWith(path.join(`rpgle`, `eof4.rpgle`))).toBeTruthy();
+  expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `eof4.rpgle`))).toBeTruthy();
 
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
