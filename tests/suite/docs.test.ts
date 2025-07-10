@@ -94,7 +94,13 @@ test("issue_231", async () => {
   expect(errors.length).toBe(0);
 });
 
-test("Clear cache on empty file", async () => {
+test("Cache for empty files", async () => {
+  const emptyLines = ``;
+  const cache2 = await parser.getDocs(uri, emptyLines);
+  expect(cache2.procedures.length).toBe(0);
+});
+
+test("Clear cache on change to empty file", async () => {
   const lines = [
     `**free`,
     `ctl-opt nomain;`,
@@ -107,10 +113,15 @@ test("Clear cache on empty file", async () => {
     `end-proc;`
   ].join(`\n`);
 
+  // First parse should add the proc to the cache
   const cache1 = await parser.getDocs(uri, lines, { ignoreCache: true });
   expect(cache1.procedures.length).toBe(1);
 
+  // Second parse with empty content should clear the cache
   const emptyLines = ``;
-  const cache2 = await parser.getDocs(uri, emptyLines, { ignoreCache: true });
-  expect(cache2.procedures.length).toBe(0);
+  await parser.getDocs(uri, emptyLines, { ignoreCache: true });
+
+  // Verify that the cache is cleared
+  const cache3 = parser.getParsedCache(uri);
+  expect(cache3.procedures.length).toBe(0);
 });
