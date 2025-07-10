@@ -7,7 +7,7 @@ export interface Keywords {
 }
 
 export interface IncludeStatement {
-  /** vscode.Uri.path */
+  fromPath: string;
   toPath: string;
   line: number;
 }
