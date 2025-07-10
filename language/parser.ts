@@ -967,7 +967,7 @@ export default class Parser {
             if (currentItem && currentItem.type === `procedure`) {
               currentItem.range.end = currentStmtStart.line;
 
-              const isDefinedGlobally = scopes[0].procedures.some(proc => proc.name.toUpperCase() === currentItem.name.toUpperCase());
+              const isDefinedGlobally = scopes[0].procedures.some(proc => !proc.prototype && proc.name.toUpperCase() === currentItem.name.toUpperCase());
 
               // Don't re-add self. This can happens when `END-PR` is used in the wrong place.
               if (!isDefinedGlobally) {
@@ -1043,7 +1043,7 @@ export default class Parser {
           case `END-PI`:
             //Procedures can only exist in the global scope.
             if (currentProcName) {
-              currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+              currentItem = scopes[0].procedures.find(proc => !proc.prototype && proc.name === currentProcName);
 
               if (currentItem && currentItem.type === `procedure`) {
                 currentItem.readParms = false;
@@ -1059,7 +1059,7 @@ export default class Parser {
           case `END-PROC`:
             //Procedures can only exist in the global scope.
             if (scopes.length > 1) {
-              currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+              currentItem = scopes[0].procedures.find(proc => !proc.prototype && proc.name === currentProcName);
 
               if (currentItem && currentItem.type === `procedure`) {
                 scopes.pop();
