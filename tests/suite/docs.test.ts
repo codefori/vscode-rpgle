@@ -96,8 +96,8 @@ test("issue_231", async () => {
 
 test("Cache for empty files", async () => {
   const emptyLines = ``;
-  const cache2 = await parser.getDocs(uri, emptyLines);
-  expect(cache2.procedures.length).toBe(0);
+  const cache = await parser.getDocs(uri, emptyLines);
+  expect(cache.procedures.length).toBe(0);
 });
 
 test("Clear cache on change to empty file", async () => {
@@ -122,6 +122,6 @@ test("Clear cache on change to empty file", async () => {
   await parser.getDocs(uri, emptyLines, { ignoreCache: true });
 
   // Verify that the cache is cleared
-  const cache3 = parser.getParsedCache(uri);
-  expect(cache3.procedures.length).toBe(0);
+  const cache2 = parser.getParsedCache(uri);
+  expect(cache2.procedures.length).toBe(0);
 });
