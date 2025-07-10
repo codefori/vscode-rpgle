@@ -165,7 +165,7 @@ export default class Parser {
       return existingCache;
     }
 
-    if (!baseContent) return null;
+    if (baseContent === undefined) return null;
 
     let scopes: Cache[] = [];
 
