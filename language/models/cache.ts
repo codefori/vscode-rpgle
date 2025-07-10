@@ -22,8 +22,8 @@ const newInds = () => {
   })
 };
 
-export type RpgleVariableType = `char` | `varchar` | `int` | `uns` | `packed` | `zoned` | `ind` | `date` | `time` | `timestamp` | `pointer` | `float` | `graph`;
-const validTypes: RpgleVariableType[] = [`char`, `varchar`, `int`, `uns`, `packed`, `zoned`, `ind`, `date`, `time`, `timestamp`, `pointer`, `float`, `graph`];
+export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
+const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
 
 export interface RpgleTypeDetail {
   type?: { name: RpgleVariableType, value?: string };
