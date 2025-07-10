@@ -1964,6 +1964,8 @@ test('references_prototype', async () => {
   expect(actualProcedure).toBeDefined();
   expect(actualProcedure.prototype).toBeFalsy();
   expect(actualProcedure.references.length).toBe(3);
+  expect(actualProcedure.range.start).toBe(9);
+  expect(actualProcedure.range.end).toBe(16);
 
   for (const ref of actualProcedure.references) {
     expect(lines.substring(ref.offset.start, ref.offset.end)).toBe(`add`);
@@ -1979,6 +1981,8 @@ test('references_prototype', async () => {
   expect(prototype.name).toBe(`add`);
   expect(prototype.prototype).toBeTruthy();
   expect(prototype.references.length).toBe(1);
+  expect(prototype.range.start).toBe(4);
+  expect(prototype.range.end).toBe(7);
 
   const protoTypeData = cache.resolveType(prototype);
   expect(protoTypeData).toBeDefined();
