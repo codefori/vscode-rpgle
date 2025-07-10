@@ -96,7 +96,7 @@ test("issue_231", async () => {
 
 test("Cache for empty files", async () => {
   const emptyLines = ``;
-  const cache = await parser.getDocs(uri, emptyLines);
+  const cache = await parser.getDocs(uri, emptyLines, { ignoreCache: true });
   expect(cache.procedures.length).toBe(0);
 });
 
