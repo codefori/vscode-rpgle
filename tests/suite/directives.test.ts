@@ -647,7 +647,7 @@ test('depth test', async () => {
   console.log(cache.includes);
 
   expect(cache.includes[0].fromPath).toBe(uri);
-  expect(cache.includes[0].toPath.endsWith(path.join(`rpgle`, `depth1.rpgleinc`))).toBeTruthy();
+  expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `depth1.rpgleinc`))).toBeTruthy();
   expect(cache.includes[0].line).toBe(2); // zero indexed
 
   expect(cache.includes[1].fromPath).toBe(cache.includes[0].toPath);
