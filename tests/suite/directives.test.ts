@@ -651,7 +651,7 @@ test('depth test', async () => {
   expect(cache.includes[0].line).toBe(2); // zero indexed
 
   expect(cache.includes[1].fromPath).toBe(cache.includes[0].toPath);
-  expect(cache.includes[1].toPath.endsWith(path.join(`rpgle`, `copy3.rpgle`))).toBeTruthy();
+  expect(cache.includes[1].toPath.endsWith(path.posix.join(`rpgle`, `copy3.rpgle`))).toBeTruthy();
   expect(cache.includes[1].line).toBe(4); // zero indexed
 
   expect(cache.variables.length).toBe(3);
