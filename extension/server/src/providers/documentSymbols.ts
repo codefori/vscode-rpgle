@@ -50,7 +50,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 					const procDef = DocumentSymbol.create(
 						proc.name,
 						prettyKeywords(proc.keyword),
-						SymbolKind.Function,
+						proc.prototype ? SymbolKind.Interface : SymbolKind.Function,
 						Range.create(proc.range.start!, 0, proc.range.end!, 0),
 						Range.create(proc.range.start!, 0, proc.range.start!, 0),
 					);

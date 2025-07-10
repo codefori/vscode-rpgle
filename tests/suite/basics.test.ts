@@ -150,6 +150,11 @@ test('vitestTest6', async () => {
 
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
+
+  const resolved = cache.find(`TheProcedure`);
+  expect(resolved).toBeDefined();
+  expect(resolved.name).toBe(`TheProcedure`);
+  expect(resolved.prototype).toBeTruthy();
 });
 
 /**
@@ -177,8 +182,20 @@ test('vitestTest7', async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.variables.length).toBe(1);
-  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures.length).toBe(2);
+
+  expect(cache.procedures[0].name).toBe(`TheProcedure`);
+  expect(cache.procedures[0].prototype).toBeTruthy();
   expect(cache.procedures[0].subItems.length).toBe(1);
+
+  expect(cache.procedures[1].name).toBe(`theProcedure`);
+  expect(cache.procedures[1].prototype).toBeFalsy();
+  expect(cache.procedures[1].subItems.length).toBe(1);
+
+  const resolved = cache.find(`TheProcedure`);
+  expect(resolved).toBeDefined();
+  expect(resolved.name).toBe(`theProcedure`);
+  expect(resolved.prototype).toBeFalsy();
 });
 
 /**
@@ -203,8 +220,20 @@ test('vitestTest7_fixed', async () => {
 
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
-  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures.length).toBe(2);
+  
+  expect(cache.procedures[0].name).toBe(`GetArtDesc`);
   expect(cache.procedures[0].subItems.length).toBe(1);
+  expect(cache.procedures[0].prototype).toBeTruthy();
+
+  expect(cache.procedures[1].name).toBe(`GetArtDesc`);
+  expect(cache.procedures[1].subItems.length).toBe(1);
+  expect(cache.procedures[1].prototype).toBeFalsy();
+
+  const resolved = cache.find(`GetArtDesc`);
+  expect(resolved).toBeDefined();
+  expect(resolved.name).toBe(`GetArtDesc`);
+  expect(resolved.prototype).toBeFalsy();
 });
 
 /**
@@ -1595,9 +1624,20 @@ test('fixed-format c spec', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
   expect(cache.constants.length).toBe(0);
-  expect(cache.procedures.length).toBe(1);
+  expect(cache.procedures.length).toBe(2);
+  
   expect(cache.procedures[0].name).toBe(`UpdArt`);
+  expect(cache.procedures[0].prototype).toBeTruthy();
   expect(cache.procedures[0].subItems.length).toBe(2);
+
+  expect(cache.procedures[1].name).toBe(`UpdArt`);
+  expect(cache.procedures[1].prototype).toBeFalsy();
+  expect(cache.procedures[1].subItems.length).toBe(2);
+
+  const resolved = cache.find(`UpdArt`);
+  expect(resolved).toBeDefined();
+  expect(resolved.name).toBe(`UpdArt`);
+  expect(resolved.prototype).toBeFalsy();
 
   expect(cache.structs.length).toBe(3);
   expect(cache.variables.length).toBe(1);

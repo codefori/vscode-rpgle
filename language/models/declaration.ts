@@ -8,13 +8,20 @@ type DeclarationType = "procedure"|"subroutine"|"file"|"struct"|"subitem"|"varia
 export default class Declaration {
   name: string = ``;
   keyword: Keywords = {};
+  prototype: boolean = false;
   tags: {tag: string, content: string}[] = [];
+  /**
+   * Position is the location of the declaration in the source file, by offset and line number.
+   */
   position: {path: string, range: IRangeWithLine};
   references: Reference[] = [];
   subItems: Declaration[] = [];
   readParms: boolean = false;
+  /**
+   * This range property is solely line numbers.
+   */
   range: {start: number|null, end: number|null} = {start: null, end: null};
-  scope: Cache|undefined;
+  scope?: Cache;
   constructor(public type: DeclarationType) {}
 
   clone() {

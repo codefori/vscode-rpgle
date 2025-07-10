@@ -10,7 +10,7 @@ import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/parser';
 
 const completionKind = {
-	function: CompletionItemKind.Function,
+	function: CompletionItemKind.Interface,
 	struct: CompletionItemKind.Struct
 };
 
@@ -127,7 +127,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 				} else {
 					const expandScope = (localCache: Cache) => {
 						for (const subItem of localCache.parameters) {
-							const item = CompletionItem.create(`${subItem.name}`);
+							const item = CompletionItem.create(subItem.name);
 							item.kind = CompletionItemKind.TypeParameter;
 							item.insertText = subItem.name;
 							item.detail = [`parameter`, prettyKeywords(subItem.keyword)].join(` `);
@@ -136,8 +136,8 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 
 						for (const procedure of localCache.procedures) {
-							const item = CompletionItem.create(`${procedure.name}`);
-							item.kind = CompletionItemKind.Function;
+							const item = CompletionItem.create(procedure.name);
+							item.kind = procedure.prototype ? CompletionItemKind.Interface : CompletionItemKind.Function;
 							item.insertTextFormat = InsertTextFormat.Snippet;
 							item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`;
 							item.detail = prettyKeywords(procedure.keyword);
@@ -146,41 +146,41 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 
 						for (const subroutine of localCache.subroutines) {
-							const item = CompletionItem.create(`${subroutine.name}`);
+							const item = CompletionItem.create(subroutine.name);
 							item.kind = CompletionItemKind.Function;
-							item.insertText = `${subroutine.name}`;
+							item.insertText = subroutine.name;
 							item.documentation = subroutine.description;
 							items.push(item);
 						}
 
 						for (const variable of localCache.variables) {
-							const item = CompletionItem.create(`${variable.name}`);
+							const item = CompletionItem.create(variable.name);
 							item.kind = CompletionItemKind.Variable;
-							item.insertText = `${variable.name}`;
+							item.insertText = variable.name;
 							item.detail = prettyKeywords(variable.keyword);
 							item.documentation = variable.description;
 							items.push(item);
 						}
 
 						localCache.files.forEach(file => {
-							const item = CompletionItem.create(`${file.name}`);
+							const item = CompletionItem.create(file.name);
 							item.kind = CompletionItemKind.File;
-							item.insertText = `${file.name}`;
+							item.insertText = file.name;
 							item.detail = prettyKeywords(file.keyword);
 							item.documentation = file.description;
 							items.push(item);
 
 							for (const struct of file.subItems) {
-								const item = CompletionItem.create(`${struct.name}`);
+								const item = CompletionItem.create(struct.name);
 								item.kind = CompletionItemKind.Struct;
-								item.insertText = `${struct.name}`;
+								item.insertText = struct.name;
 								item.detail = prettyKeywords(struct.keyword);
 								item.documentation = struct.description;
 								items.push(item);
 
 								if (!struct.keyword[`QUALIFIED`]) {
 									struct.subItems.forEach((subItem: Declaration) => {
-										const item = CompletionItem.create(`${subItem.name}`);
+										const item = CompletionItem.create(subItem.name);
 										item.kind = CompletionItemKind.Property;
 										item.insertText = `${subItem.name}`;
 										item.detail = prettyKeywords(subItem.keyword);
@@ -192,16 +192,16 @@ export default async function completionItemProvider(handler: CompletionParams):
 						});
 
 						for (const struct of localCache.structs) {
-							const item = CompletionItem.create(`${struct.name}`);
+							const item = CompletionItem.create(struct.name);
 							item.kind = CompletionItemKind.Struct;
-							item.insertText = `${struct.name}`;
+							item.insertText = struct.name;
 							item.detail = prettyKeywords(struct.keyword);
 							item.documentation = struct.description;
 							items.push(item);
 
 							if (!struct.keyword[`QUALIFIED`]) {
 								struct.subItems.forEach((subItem: Declaration) => {
-									const item = CompletionItem.create(`${subItem.name}`);
+									const item = CompletionItem.create(subItem.name);
 									item.kind = CompletionItemKind.Property;
 									item.insertText = `${subItem.name}`;
 									item.detail = prettyKeywords(subItem.keyword);
@@ -212,16 +212,16 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 
 						for (const constant of localCache.constants) {
-							const item = CompletionItem.create(`${constant.name}`);
+							const item = CompletionItem.create(constant.name);
 							item.kind = CompletionItemKind.Constant;
-							item.insertText = `${constant.name}`;
+							item.insertText = constant.name;
 							item.detail = prettyKeywords(constant.keyword);
 							item.documentation = constant.description;
 							items.push(item);
 
 							if (!constant.keyword[`QUALIFIED`]) {
 								constant.subItems.forEach((subItem: Declaration) => {
-									const item = CompletionItem.create(`${subItem.name}`);
+									const item = CompletionItem.create(subItem.name);
 									item.kind = CompletionItemKind.Property;
 									item.insertText = `${subItem.name}`;
 									item.detail = prettyKeywords(subItem.keyword);
@@ -244,7 +244,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						// So if the user is in the middle of a statement, then they still exist in the subItems
 						else if (currentProcedure.subItems.length > 0) {
 							for (const subItem of currentProcedure.subItems) {
-								const item = CompletionItem.create(`${subItem.name}`);
+								const item = CompletionItem.create(subItem.name);
 								item.kind = CompletionItemKind.TypeParameter;
 								item.insertText = subItem.name;
 								item.detail = [`parameter`, prettyKeywords(subItem.keyword)].join(` `);

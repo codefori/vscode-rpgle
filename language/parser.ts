@@ -932,34 +932,33 @@ export default class Parser {
           case `DCL-PR`:
             if (currentItem === undefined) {
               if (parts.length > 1) {
-                if (!scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === parts[1])) {
-                  currentGroup = `procedures`;
-                  currentItem = new Declaration(`procedure`);
-                  currentItem.name = partsLower[1];
-                  currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                  currentItem.tags = currentTags;
+                currentGroup = `procedures`;
+                currentItem = new Declaration(`procedure`);
+                currentItem.name = partsLower[1];
+                currentItem.prototype = true;
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+                currentItem.tags = currentTags;
 
-                  currentItem.position = {
-                    path: fileUri,
-                    range: tokens[1].range
-                  };
+                currentItem.position = {
+                  path: fileUri,
+                  range: tokens[1].range
+                };
 
-                  currentItem.readParms = true;
+                currentItem.readParms = true;
 
-                  currentItem.range = {
-                    start: currentStmtStart.line,
-                    end: currentStmtStart.line
-                  };
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
+                };
 
-                  // Does the keywords include a keyword that makes end-ds useless?
-                  if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
-                    currentItem.range.end = currentStmtStart.line;
-                    scope.procedures.push(currentItem);
-                    resetDefinition = true;
-                  }
-
-                  currentDescription = [];
+                // Does the keywords include a keyword that makes end-ds useless?
+                if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
+                  currentItem.range.end = currentStmtStart.line;
+                  scope.procedures.push(currentItem);
+                  resetDefinition = true;
                 }
+
+                currentDescription = [];
               }
             }
             break;
@@ -981,18 +980,7 @@ export default class Parser {
         
           case `DCL-PROC`:
             if (parts.length > 1) {
-            //We can overwrite it.. it might have been a PR before.
-            // eslint-disable-next-line no-case-declarations
               currentItem = new Declaration(`procedure`);
-
-              const existingProcI = scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === parts[1]);
-              const existingProc = scope.procedures[existingProcI];
-
-              // We found the PR... so we can overwrite it
-              if (existingProc) {
-                currentItem.references.push(...existingProc.references);
-                scope.procedures.splice(existingProcI, 1);
-              }
 
               currentProcName = partsLower[1];
               currentItem.name = currentProcName;
@@ -1025,7 +1013,7 @@ export default class Parser {
             if (parts.length > 0) {
               if (currentProcName) {
                 currentGroup = `procedures`;
-                currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+                currentItem = scopes[0].procedures.find(proc => !proc.prototype && proc.name === currentProcName);
               } else {
                 currentItem = new Declaration(`struct`);
                 currentItem.name = PROGRAMPARMS_NAME;
@@ -1461,7 +1449,7 @@ export default class Parser {
               if (cSpec.factor2) {
                 const f2Value = cSpec.factor2.value;
                 callItem.name = (f2Value.startsWith(`'`) && f2Value.endsWith(`'`) ? f2Value.substring(1, f2Value.length-1) : f2Value);
-                callItem.keyword = {'EXTPGM': true}
+                callItem.keyword = {'CALL': true}
                 callItem.tags = currentTags;
 
                 callItem.position = {
@@ -1512,16 +1500,6 @@ export default class Parser {
 
                 if (potentialName) {
                   currentItem = new Declaration(`procedure`);
-
-                  //We can overwrite it.. it might have been a PR before.
-                  const existingProcI = potentialName ? scope.procedures.findIndex(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase()) : -1;
-                  const existingProc = scope.procedures[existingProcI];
-
-                  // We found the PR... so we can overwrite it
-                  if (existingProc) {
-                    currentItem.references.push(...existingProc.references);
-                    scope.procedures.splice(existingProcI, 1);
-                  }
 
                   currentProcName = potentialName.value;
                   currentItem.name = currentProcName;
@@ -1629,35 +1607,33 @@ export default class Parser {
                 break;
 
               case `PR`:
-                // Only add a PR if it's not been defined
-                if (potentialName && !scope.procedures.find(proc => proc.name && proc.name.toUpperCase() === potentialName.value.toUpperCase())) {
-                  currentItem = new Declaration(`procedure`);
-                  currentItem.name = potentialName ? potentialName.value : NO_NAME;
-                  currentItem.keyword = {
-                    ...prettyTypeFromToken(dSpec),
-                    ...dSpec.keywords
-                  }
-  
-                  currentItem.position = {
-                    path: fileUri,
-                    range: useNameToken.range
-                  };
-  
-                  currentItem.range = {
-                    start: currentItem.position.range.line,
-                    end: currentItem.position.range.line
-                  };
-  
-                  currentGroup = `procedures`;
-                  scope.procedures.push(currentItem);
-                  currentDescription = [];
+                currentItem = new Declaration(`procedure`);
+                currentItem.name = potentialName ? potentialName.value : NO_NAME;
+                currentItem.prototype = true;
+                currentItem.keyword = {
+                  ...prettyTypeFromToken(dSpec),
+                  ...dSpec.keywords
                 }
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: useNameToken.range
+                };
+
+                currentItem.range = {
+                  start: currentItem.position.range.line,
+                  end: currentItem.position.range.line
+                };
+
+                currentGroup = `procedures`;
+                scope.procedures.push(currentItem);
+                currentDescription = [];
                 break;
 
               case `PI`:
                 //Procedures can only exist in the global scope.
                 if (currentProcName) {
-                  currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+                  currentItem = scopes[0].procedures.find(proc => proc && !proc.prototype && proc.name === currentProcName);
 
                   currentGroup = `procedures`;
                   if (currentItem) {
