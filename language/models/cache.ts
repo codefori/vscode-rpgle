@@ -2,8 +2,19 @@ import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import { IRange } from "../types";
 import Declaration from "./declaration";
 
+const DEFAULT_INDICATORS = [
+  ...Array(98).keys(), 
+  `LR`, `KL`, `MR`,
+  `L1`, `L2`, `L3`, `L4`, `L5`, `L6`, `L7`, `L8`, `L9`,
+  `U1`, `U2`, `U3`, `U4`, `U5`, `U6`, `U7`, `U8`,
+  `OA`, `OB`, `OC`, `OD`, `OE`, `OF`, `OG`, `OV`,
+  `KA`, `KB`, `KC`, `KD`, `KE`, `KF`, `KG`, `KH`, `KI`, `KJ`, `KK`, `KL`, `KM`, `KN`,
+  `KP`, `KQ`, `KR`, `KS`, `KT`, `KU`, `KV`, `KW`, `KX`, `KY`,
+  `H1`, `H2`, `H3`, `H4`, `H5`, `H6`, `H7`, `H8`, `H9`
+];
+
 const newInds = () => {
-  return [...Array(98).keys(), `LR`, `KL`].map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
+  return DEFAULT_INDICATORS.map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
     const indDef = new Declaration(`variable`);
     indDef.name = ind;
     indDef.keyword = { IND: true };
