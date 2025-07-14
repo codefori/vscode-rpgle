@@ -3296,7 +3296,7 @@ test('issue_353_indent_4', async () => {
   const atQuote = cache.find(`@QUOTE`);
   expect(atQuote).toBeDefined();
   expect(atQuote).toBeDefined();
-  expect(atQuote.keyword[`CONST`]).toBe(`''`);
+  expect(atQuote.keyword[`CONST`]).toBe(`''''`);
 
   const atSomethingInBetween = cache.find(`@SOMETHING_IN_BETWEEN`);
   expect(atSomethingInBetween).toBeDefined();
