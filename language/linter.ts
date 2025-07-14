@@ -171,9 +171,6 @@ export default class Linter {
           const currentProcedure = globalScope.procedures.find(proc => proc.position.path === data.uri && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
           const currentScope = globalScope.merge(inProcedure && currentProcedure ? currentProcedure.scope : undefined);
 
-          // Only fetch the names if we have a rule that requires it. It might be slow.
-          const definedNames = (rules.IncorrectVariableCase || rules.SQLHostVarCheck ? currentScope.getNames() : []);
-
           let value;
           let isEmbeddedSQL = false;
 
@@ -699,7 +696,7 @@ export default class Linter {
 
                     if (rules.SQLHostVarCheck) {
                       statement.forEach((part, index) => {
-                        if (part.type === `word` && definedNames.some(name => name.toUpperCase() === part.value.toUpperCase())) {
+                        if (part.type === `word` && currentScope.findDefinition(lineNumber, part.value)) {
                           const prior = statement[index - 1];
                           if (prior && ![`dot`, `seperator`].includes(prior.type)) {
                             errors.push({
@@ -820,24 +817,6 @@ export default class Linter {
                     }
 
                     const isDeclare = [`declare`, `end`].includes(statement[0].type);
-
-                    if (rules.IncorrectVariableCase) {
-                      // Check the casing of the reference matches the definition
-                      if ((isEmbeddedSQL === false || (isEmbeddedSQL && statement[i - 1] && statement[i - 1].type === `seperator`))) {
-                        const possibleKeyword = (isDeclare || inPrototype || inStruct.length > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
-
-                        if (!possibleKeyword && !isDirective) {
-                          const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
-                          if (definedName && definedName !== part.value) {
-                            errors.push({
-                              offset: part.range,
-                              type: `IncorrectVariableCase`,
-                              newValue: definedName
-                            });
-                          }
-                        }
-                      }
-                    }
 
                     if ((isDeclare && i >= 2) || !isDeclare) {
                       if (rules.RequiresParameter && !inPrototype && !isDeclare) {
@@ -1026,7 +1005,7 @@ export default class Linter {
       });
     }
 
-    if (rules.NoUnreferenced) {
+    if (rules.NoUnreferenced || rules.IncorrectVariableCase) {
       [
         globalScope,
         ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
@@ -1034,7 +1013,7 @@ export default class Linter {
         [...dec.constants, ...dec.variables]
           .filter(def => def.position.path === data.uri)
           .forEach(def => {
-            if (def.references.length <= 1) {
+            if (rules.NoUnreferenced && def.references.length <= 1) {
               // Add an error to def
               const possibleStatement = doc.getStatementByLine(def.position.range.line);
               if (possibleStatement) {
@@ -1044,12 +1023,25 @@ export default class Linter {
                 });
               }
             }
+
+            if (rules.IncorrectVariableCase) {
+              def.references.forEach(ref => {
+                const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                if (contentPosition !== def.name) {
+                  errors.push({
+                    type: `IncorrectVariableCase`,
+                    offset: { start: ref.offset.start, end: ref.offset.end },
+                    newValue: def.name
+                  });
+                }
+              });
+            }
           });
 
         dec.subroutines
           .filter(def => def.position.path === data.uri && def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
           .forEach(def => {
-            if (def.references.length <= 1) {
+            if (rules.NoUnreferenced && def.references.length <= 1) {
               // Add an error to def
               const possibleStatement = doc.getStatementByLine(def.position.range.line);
               if (possibleStatement) {
@@ -1058,6 +1050,19 @@ export default class Linter {
                   offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
                 });
               }
+            }
+
+            if (rules.IncorrectVariableCase) {
+              def.references.forEach(ref => {
+                const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                if (contentPosition !== def.name) {
+                  errors.push({
+                    type: `IncorrectVariableCase`,
+                    offset: { start: ref.offset.start, end: ref.offset.end },
+                    newValue: def.name
+                  });
+                }
+              });
             }
           });
 
@@ -1068,10 +1073,24 @@ export default class Linter {
               if (proc.references.length <= 1) {
                 // Add an error to proc
                 const possibleStatement = doc.getStatementByLine(proc.position.range.line);
-                if (possibleStatement) {
+                if (rules.NoUnreferenced && possibleStatement) {
                   errors.push({
                     type: `NoUnreferenced`,
                     offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
+                  });
+                }
+
+
+                if (rules.IncorrectVariableCase) {
+                  proc.references.forEach(ref => {
+                    const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                    if (contentPosition !== proc.name) {
+                      errors.push({
+                        type: `IncorrectVariableCase`,
+                        offset: { start: ref.offset.start, end: ref.offset.end },
+                        newValue: proc.name
+                      });
+                    }
                   });
                 }
               }
@@ -1080,10 +1099,23 @@ export default class Linter {
                 proc.subItems.forEach(parm => {
                   if (parm.references.length <= 1) {
                     const possibleStatement = doc.getStatementByLine(parm.position.range.line);
-                    if (possibleStatement) {
+                    if (rules.NoUnreferenced && possibleStatement) {
                       errors.push({
                         type: `NoUnreferenced`,
                         offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
+                      });
+                    }
+
+                    if (rules.IncorrectVariableCase) {
+                      parm.references.forEach(ref => {
+                        const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                        if (contentPosition !== parm.name) {
+                          errors.push({
+                            type: `IncorrectVariableCase`,
+                            offset: { start: ref.offset.start, end: ref.offset.end },
+                            newValue: parm.name
+                          });
+                        }
                       });
                     }
                   }
@@ -1104,16 +1136,29 @@ export default class Linter {
                 if (subf.name !== NO_NAME && subf.references.length <= 1) {
                   // Add an error to subf
                   const possibleStatement = doc.getStatementByLine(subf.position.range.line);
-                  if (possibleStatement) {
+                  if (rules.NoUnreferenced && possibleStatement) {
                     errors.push({
                       type: `NoUnreferenced`,
                       offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
                     });
                   }
                 }
+
+                if (rules.IncorrectVariableCase) {
+                  subf.references.forEach(ref => {
+                    const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                    if (contentPosition !== subf.name) {
+                      errors.push({
+                        type: `IncorrectVariableCase`,
+                        offset: { start: ref.offset.start, end: ref.offset.end },
+                        newValue: subf.name
+                      });
+                    }
+                  });
+                }
               });
 
-              if (subFieldIsUsed === false) {
+              if (rules.NoUnreferenced && subFieldIsUsed === false) {
                 const possibleStatement = doc.getStatementByLine(struct.position.range.line);
                 if (possibleStatement) {
                   errors.push({
@@ -1121,6 +1166,19 @@ export default class Linter {
                     offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
                   });
                 }
+              }
+              
+              if (struct.name !== NO_NAME && rules.IncorrectVariableCase) {
+                struct.references.forEach(ref => {
+                  const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                  if (contentPosition !== struct.name) {
+                    errors.push({
+                      type: `IncorrectVariableCase`,
+                      offset: { start: ref.offset.start, end: ref.offset.end },
+                      newValue: struct.name
+                    });
+                  }
+                });
               }
             }
           });
