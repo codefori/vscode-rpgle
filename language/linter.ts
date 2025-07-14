@@ -1023,13 +1023,15 @@ export default class Linter {
         if (def.name !== undefined && def.name.toUpperCase() !== NO_NAME) {
           def.references.forEach(ref => {
             if (ref.uri === data.uri) { // We're only checking the active file
-              const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
-              if (contentPosition !== def.name) {
-                errors.push({
-                  type: `IncorrectVariableCase`,
-                  offset: { start: ref.offset.start, end: ref.offset.end },
-                  newValue: def.name
-                });
+              if (!errors.some(e => e.offset.start === ref.offset.start)) { //This is required because LIKEDS shares subfields
+                const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                if (contentPosition !== def.name) {
+                  errors.push({
+                    type: `IncorrectVariableCase`,
+                    offset: { start: ref.offset.start, end: ref.offset.end },
+                    newValue: def.name
+                  });
+                }
               }
             }
           });

@@ -3857,19 +3857,23 @@ test('subfield casing #402', async () => {
     `  dcl-ds customer likeds(CUSTOMER_t) inz(*likeds);`,
     ``,
     `  customer.CODE = %upper(code);`,
-    `  customer.NAME = name;`,
+    `  customer.NAmE = name;`,
     `  customer.CREDIT_LIMIT = 1000;`,
     ``,
     `  return customer;`,
     `end-proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true,
   }, cache);
 
   console.log(errors);
 
-  expect(errors.length).toBe(0);
+  expect(errors.length).toBe(1);
+
+  expect(errors[0].type).toBe(`IncorrectVariableCase`);
+  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toContain(`NAmE`);
+  expect(errors[0].newValue).toBe(`NAME`);
 });
