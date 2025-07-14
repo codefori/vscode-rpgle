@@ -171,9 +171,6 @@ export default class Linter {
           const currentProcedure = globalScope.procedures.find(proc => proc.position.path === data.uri && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
           const currentScope = globalScope.merge(inProcedure && currentProcedure ? currentProcedure.scope : undefined);
 
-          // Only fetch the names if we have a rule that requires it. It might be slow.
-          const definedNames = (rules.IncorrectVariableCase || rules.SQLHostVarCheck ? currentScope.getNames() : []);
-
           let value;
           let isEmbeddedSQL = false;
 
@@ -699,7 +696,7 @@ export default class Linter {
 
                     if (rules.SQLHostVarCheck) {
                       statement.forEach((part, index) => {
-                        if (part.type === `word` && definedNames.some(name => name.toUpperCase() === part.value.toUpperCase())) {
+                        if (part.type === `word` && currentScope.findDefinition(lineNumber, part.value)) {
                           const prior = statement[index - 1];
                           if (prior && ![`dot`, `seperator`].includes(prior.type)) {
                             errors.push({
@@ -820,24 +817,6 @@ export default class Linter {
                     }
 
                     const isDeclare = [`declare`, `end`].includes(statement[0].type);
-
-                    if (rules.IncorrectVariableCase) {
-                      // Check the casing of the reference matches the definition
-                      if ((isEmbeddedSQL === false || (isEmbeddedSQL && statement[i - 1] && statement[i - 1].type === `seperator`))) {
-                        const possibleKeyword = (isDeclare || inPrototype || inStruct.length > 0) && i >= 0 && statement[i + 1] && statement[i + 1].type === `openbracket`;
-
-                        if (!possibleKeyword && !isDirective) {
-                          const definedName = definedNames.find(defName => defName.toUpperCase() === upperName);
-                          if (definedName && definedName !== part.value) {
-                            errors.push({
-                              offset: part.range,
-                              type: `IncorrectVariableCase`,
-                              newValue: definedName
-                            });
-                          }
-                        }
-                      }
-                    }
 
                     if ((isDeclare && i >= 2) || !isDeclare) {
                       if (rules.RequiresParameter && !inPrototype && !isDeclare) {
@@ -1026,66 +1005,85 @@ export default class Linter {
       });
     }
 
-    if (rules.NoUnreferenced) {
+    if (rules.NoUnreferenced || rules.IncorrectVariableCase) {
+      const noRefCheck = (def: Declaration) => {
+        if (def.name !== undefined && def.name.toUpperCase() !== NO_NAME && def.position.path === data.uri) {
+          if (def.references.length <= 1) {
+            const possibleStatement = doc.getStatementByLine(def.position.range.line);
+            if (possibleStatement) {
+              errors.push({
+                type: `NoUnreferenced`,
+                offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
+              });
+            }
+          }
+        }
+      }
+      const casingCheck = (def: Declaration) => {
+        if (def.name !== undefined && def.name.toUpperCase() !== NO_NAME) {
+          def.references.forEach(ref => {
+            if (ref.uri === data.uri) { // We're only checking the active file
+              if (!errors.some(e => e.offset.start === ref.offset.start)) { //This is required because LIKEDS shares subfields
+                const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+                if (contentPosition !== def.name) {
+                  errors.push({
+                    type: `IncorrectVariableCase`,
+                    offset: { start: ref.offset.start, end: ref.offset.end },
+                    newValue: def.name
+                  });
+                }
+              }
+            }
+          });
+        }
+      }
+
       [
         globalScope,
         ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
       ].forEach(dec => {
         [...dec.constants, ...dec.variables]
-          .filter(def => def.position.path === data.uri)
           .forEach(def => {
-            if (def.references.length <= 1) {
-              // Add an error to def
-              const possibleStatement = doc.getStatementByLine(def.position.range.line);
-              if (possibleStatement) {
-                errors.push({
-                  type: `NoUnreferenced`,
-                  offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
-                });
-              }
+            if (rules.NoUnreferenced) {
+              noRefCheck(def);
+            }
+
+            if (rules.IncorrectVariableCase) {
+              casingCheck(def);
             }
           });
 
         dec.subroutines
-          .filter(def => def.position.path === data.uri && def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
+          .filter(def => def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
           .forEach(def => {
-            if (def.references.length <= 1) {
-              // Add an error to def
-              const possibleStatement = doc.getStatementByLine(def.position.range.line);
-              if (possibleStatement) {
-                errors.push({
-                  type: `NoUnreferenced`,
-                  offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
-                });
-              }
+            if (rules.NoUnreferenced) {
+              noRefCheck(def);
+            }
+
+            if (rules.IncorrectVariableCase) {
+              casingCheck(def);
             }
           });
 
         dec.procedures
-          .filter(struct => struct.position.path === data.uri)
           .forEach(proc => {
             if (!proc.keyword[`EXPORT`]) {
-              if (proc.references.length <= 1) {
-                // Add an error to proc
-                const possibleStatement = doc.getStatementByLine(proc.position.range.line);
-                if (possibleStatement) {
-                  errors.push({
-                    type: `NoUnreferenced`,
-                    offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
-                  });
-                }
+              if (rules.NoUnreferenced) {
+                noRefCheck(proc);
+              }
+
+              if (rules.IncorrectVariableCase) {
+                casingCheck(proc);
               }
 
               if (!proc.keyword[`EXTPGM`] && !proc.keyword[`EXTPROC`]) {
                 proc.subItems.forEach(parm => {
-                  if (parm.references.length <= 1) {
-                    const possibleStatement = doc.getStatementByLine(parm.position.range.line);
-                    if (possibleStatement) {
-                      errors.push({
-                        type: `NoUnreferenced`,
-                        offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
-                      });
-                    }
+                  if (rules.NoUnreferenced) {
+                    noRefCheck(parm);
+                  }
+
+                  if (rules.IncorrectVariableCase) {
+                    casingCheck(parm);
                   }
                 });
               }
@@ -1093,35 +1091,26 @@ export default class Linter {
           });
 
         dec.structs
-          .filter(struct => struct.position.path === data.uri)
           .forEach(struct => {
-            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 1);
 
-            if (struct.references.length <= 1) {
+            struct.subItems.forEach(subf => {
               // We only check the subfields if the parent is never references.
-
-              struct.subItems.forEach(subf => {
-                if (subf.name !== NO_NAME && subf.references.length <= 1) {
-                  // Add an error to subf
-                  const possibleStatement = doc.getStatementByLine(subf.position.range.line);
-                  if (possibleStatement) {
-                    errors.push({
-                      type: `NoUnreferenced`,
-                      offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
-                    });
-                  }
-                }
-              });
-
-              if (subFieldIsUsed === false) {
-                const possibleStatement = doc.getStatementByLine(struct.position.range.line);
-                if (possibleStatement) {
-                  errors.push({
-                    type: `NoUnreferenced`,
-                    offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
-                  });
-                }
+              if (rules.NoUnreferenced && struct.references.length <= 1) {
+                noRefCheck(subf);
               }
+
+              if (rules.IncorrectVariableCase) {
+                casingCheck(subf);
+              }
+            });
+
+            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 1);
+            if (rules.NoUnreferenced && subFieldIsUsed === false) {
+              noRefCheck(struct);
+            }
+
+            if (rules.IncorrectVariableCase) {
+              casingCheck(struct);
             }
           });
       });

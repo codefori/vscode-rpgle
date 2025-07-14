@@ -139,7 +139,7 @@ test('skip3', async () => {
     `return`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -286,7 +286,7 @@ test('eof5_issue181', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -479,26 +479,26 @@ test('variable_case1', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
   expect(errors.length).toBe(3);
 
-  expect(errors[0]).toMatchObject({
+  expect(errors).toContainEqual({
     offset: { start: 86, end: 100 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
 
-  expect(errors[1]).toMatchObject({
+  expect(errors).toContainEqual({
     offset: { start: 174, end: 188 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
   });
 
-  expect(errors[2]).toMatchObject({
+  expect(errors).toContainEqual({
     offset: { start: 218, end: 232 },
     type: `IncorrectVariableCase`,
     newValue: `CustomerName_t`
