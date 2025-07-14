@@ -1733,3 +1733,17 @@ test('can resolve return structure correctly', async () => {
   expect(typeDataD.reference.type).toBe(`struct`);
   expect(typeDataD.reference.subItems.length).toBe(2);
 });
+
+test('const value #400', async () => {
+  const lines = [
+    `**free`,
+    `Dcl-C PI         3.14159;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+
+  expect(cache.constants.length).toBe(1);
+  const pi = cache.find(`PI`);
+  expect(pi.name).toBe(`PI`);
+  expect(pi.keyword[`CONST`]).toBe(`3.14159`);
+})

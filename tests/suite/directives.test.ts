@@ -643,9 +643,7 @@ test('depth test', async () => {
   const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
 
   expect(cache.includes.length).toBe(2);
-
-  console.log(cache.includes);
-
+  
   expect(cache.includes[0].fromPath).toBe(uri);
   expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `depth1.rpgleinc`))).toBeTruthy();
   expect(cache.includes[0].line).toBe(2); // zero indexed

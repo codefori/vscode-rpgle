@@ -1789,7 +1789,11 @@ export default class Parser {
             i++; // Skip one for the block.
           } else {
             if (isConst) {
-              keyvalues[`CONST`] = keywordParts[i].value;
+              if (!keyvalues[`CONST`]) {
+                keyvalues[`CONST`] = ``;
+              }
+              
+              keyvalues[`CONST`] += keywordParts[i].value;
             } else {
               keyvalues[keywordParts[i].value.toUpperCase()] = true;
             }
