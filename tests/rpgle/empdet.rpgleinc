@@ -1,0 +1,22 @@
+**free
+
+dcl-ds employee_detail_t qualified template;
+  found ind;
+  name varchar(50);
+  netincome packed(9:2);
+end-ds;
+
+dcl-ds department_detail_t qualified template;
+  found ind;
+  deptname varchar(50);
+  location varchar(50);
+  totalsalaries packed(9:2);
+end-ds;
+
+dcl-pr getDeptDetail like(department_detail_t) extproc('GETDEPTDETAIL');
+  deptno char(3) const;
+end-pr;
+
+dcl-pr getEmployeeDetail like(employee_detail_t) extproc('GETEMPLOYEEDETAIL');
+  empno char(6) const;
+end-pr;

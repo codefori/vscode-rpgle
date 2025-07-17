@@ -332,7 +332,7 @@ export default class Parser {
 
       const scanScopeForReferences = () => {
         for (const procedure in postProcessingStatements) {
-          const currentProcedure = scopes[0].procedures.find(proc => proc.name === procedure) ;
+          const currentProcedure = scopes[0].findDefinition(lineNumber, procedure);
           const statements = postProcessingStatements[procedure];
           for (const statement of statements) {
             collectReferences(fileUri, statement, currentProcedure);
@@ -1728,7 +1728,7 @@ export default class Parser {
         }
 
         if (options.collectReferences && tokens.length > 0) {
-          const currentProc = scopes[0].procedures.find(proc => proc.name === currentProcName);
+          const currentProc = currentProcName ? scopes[0].findDefinition(lineNumber, currentProcName) : undefined;
           collectReferences(fileUri, tokens, currentProc, currentItem);
           addPostProcessingStatements(currentProcName, tokens);
         }
