@@ -2038,3 +2038,17 @@ test('references in procedure', async () => {
   expect(department_detail).toBeDefined();
   expect(department_detail.references.length).toBe(7);
 });
+
+test('variable reference', async () => {
+  const lines = [
+    `       dcl-f FILE disk(32766) usage(*input: *output) usropn infds(psds);`,
+    `       dcl-s InPut char(1280);`,
+    `       RtvQryF(Qry:Lib:Input:OutPut:Stat);`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const input = cache.find(`InPut`);
+  expect(input).toBeDefined();
+  expect(input.references.length).toBe(2);
+});
