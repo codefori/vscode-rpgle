@@ -209,3 +209,54 @@ test('file DS in a copy book', async () => {
   expect(someStruct.subItems.map(s => ({name: s.name, keyword: s.keyword}))).toMatchObject(globalStruct.subItems.map(s => ({name: s.name, keyword: s.keyword})));
 });
 
+test('test rename (#407)', async () => {
+  const lines = [
+
+    `      *`,
+    `     FDEPARTMENTO  A E             DISK`,
+    `     F                                     RENAME(DEPARTMENT:DEPTR)`,
+    `      ******************************************`,
+
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.files.length).toBe(1);
+
+  const dept = cache.find(`DEPARTMENT`);
+  expect(dept.name).toBe(`DEPARTMENT`);
+  expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
+
+  // One record format
+  expect(dept.subItems.length).toBe(1);
+  expect(dept.subItems[0].name).toBe(`DEPTR`);
+
+  expect(dept.subItems[0].subItems.length).toBeGreaterThan(0);
+  expect(dept.subItems[0].subItems[0].name).toBe(`DEPTNO`);
+});
+
+test('test rename + prefix (#407)', async () => {
+  const lines = [
+
+    `      *`,
+    `     FDEPARTMENTO  A E             DISK`,
+    `     F                                     RENAME(DEPARTMENT:DEPTR)`,
+    `     F                                     PREFIX(CC)`,
+    `      ******************************************`,
+
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.files.length).toBe(1);
+
+  const dept = cache.find(`DEPARTMENT`);
+  expect(dept.name).toBe(`DEPARTMENT`);
+  expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
+
+  // One record format
+  expect(dept.subItems.length).toBe(1);
+  expect(dept.subItems[0].name).toBe(`DEPTR`);
+  expect(dept.subItems[0].subItems.length).toBeGreaterThan(0);
+  expect(dept.subItems[0].subItems[0].name).toBe(`CCDEPTNO`);
+});
