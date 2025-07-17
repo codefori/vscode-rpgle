@@ -254,6 +254,11 @@ export default class Parser {
           // The only specials that can be looked up at global indicators
           defRef = scopes[0].find(lookupName);
 
+          if (defRef && defRef.type !== `indicator`) {
+            // If the definition is not an indicator, we don't want to use it
+            defRef = undefined;
+          }
+
         } else {
           if (currentDef) {
             if (currentDef.name.toUpperCase() === lookupName) {
