@@ -3,7 +3,7 @@ import { Keywords, Reference } from "../parserTypes";
 import { IRangeWithLine } from "../types";
 import Cache from "./cache";
 
-type DeclarationType = "procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag";
+export type DeclarationType = "procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag"|"indicator";
 
 export default class Declaration {
   name: string = ``;

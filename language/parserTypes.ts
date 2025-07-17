@@ -14,16 +14,9 @@ export interface IncludeStatement {
 
 export interface CacheProps {
   parameters?: Declaration[];
-  subroutines?: Declaration[];
-  procedures?: Declaration[];
-  files?: Declaration[];
-  variables?: Declaration[];
-  structs?: Declaration[];
-  constants?: Declaration[];
+  symbols?: Declaration[];
   sqlReferences?: Declaration[];
-  indicators?: Declaration[];
   includes?: IncludeStatement[];
-  tags?: Declaration[];
 }
 
 export interface Rules {

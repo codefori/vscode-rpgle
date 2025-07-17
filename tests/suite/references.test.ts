@@ -481,7 +481,7 @@ test('references_12_fixed_1', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
-  expect(cache.variables.length).to.equal(2);
+  expect(cache.symbols.filter(s => s.type === `variable`).length).to.equal(2);
 
   const wkInvoice = cache.find(`wkInvoice`);
 
@@ -1958,7 +1958,8 @@ test('references_prototype', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
-  expect(cache.procedures.length).toBe(3);
+  const procedures = cache.symbols.filter(s => s.type === `procedure`);
+  expect(procedures.length).toBe(3);
 
   const actualProcedure = cache.find(`add`);
   expect(actualProcedure).toBeDefined();
@@ -1976,7 +1977,7 @@ test('references_prototype', async () => {
   expect(procTypeData.type).toMatchObject({name: `int`, value: `10`});
   expect(procTypeData.reference).toBeUndefined();
 
-  const prototype = cache.procedures[0];
+  const prototype = procedures[0];
   expect(prototype).toBeDefined();
   expect(prototype.name).toBe(`add`);
   expect(prototype.prototype).toBeTruthy();

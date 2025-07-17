@@ -252,7 +252,7 @@ export default class Parser {
 
         if (isSpecial) {
           // The only specials that can be looked up at global indicators
-          defRef = scopes[0].indicators.find(ind => ind.name.toUpperCase() === lookupName);
+          defRef = scopes[0].find(lookupName);
 
         } else {
           if (currentDef) {
@@ -467,7 +467,8 @@ export default class Parser {
 
               // Fetch from local definitions
               for (let i = scopes.length - 1; i >= 0; i--) {
-                const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue.toUpperCase());
+                // const valuePointer = scopes[i].structs.find(struct => struct.name.toUpperCase() === keywordValue.toUpperCase());
+                const valuePointer = scopes[i].find(keywordValue.toUpperCase());
                 if (valuePointer) {
                   // Only use same subItems if local definition is from same path
                   if (ds.position.path === valuePointer.position.path) {
@@ -789,7 +790,7 @@ export default class Parser {
                   currentItem.subItems.push(...recordFormats);
                 }
 
-                scope.files.push(currentItem);
+                scope.symbols.push(currentItem);
                 resetDefinition = true;
               }
             }
@@ -807,7 +808,7 @@ export default class Parser {
                   range: tokens[1].range
                 };
 
-                scope.constants.push(currentItem);
+                scope.symbols.push(currentItem);
                 resetDefinition = true;
               }
             }
@@ -826,7 +827,7 @@ export default class Parser {
                   range: tokens[1].range
                 };
 
-                scope.variables.push(currentItem);
+                scope.symbols.push(currentItem);
                 resetDefinition = true;
               }
             }
@@ -862,7 +863,7 @@ export default class Parser {
             if (currentItem && currentItem.type === `constant`) {
               currentItem.range.end = currentStmtStart.line;
               
-              scope.constants.push(currentItem);
+              scope.symbols.push(currentItem);
 
               resetDefinition = true;
             }
@@ -901,7 +902,7 @@ export default class Parser {
                   } else {
                     // Otherwise, we push as a new item
                     currentItem.range.end = currentStmtStart.line;
-                    scope.structs.push(currentItem);
+                    scope.symbols.push(currentItem);
                   }
                 } else {
                   // If it's not a single line defintion, flag the item to keep adding new fields
@@ -923,7 +924,7 @@ export default class Parser {
             }
 
             if (dsScopes.length === 1) {
-              scope.structs.push(dsScopes.pop());
+              scope.symbols.push(dsScopes.pop());
             } else
               if (dsScopes.length > 1) {
                 dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
@@ -955,7 +956,7 @@ export default class Parser {
                 // Does the keywords include a keyword that makes end-ds useless?
                 if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
                   currentItem.range.end = currentStmtStart.line;
-                  scope.procedures.push(currentItem);
+                  scope.symbols.push(currentItem);
                   resetDefinition = true;
                 }
 
@@ -968,11 +969,11 @@ export default class Parser {
             if (currentItem && currentItem.type === `procedure`) {
               currentItem.range.end = currentStmtStart.line;
 
-              const isDefinedGlobally = scopes[0].procedures.some(proc => !proc.prototype && proc.name.toUpperCase() === currentItem.name.toUpperCase());
+              const isDefinedGlobally = scopes[0].symbols.some(proc => !proc.prototype && proc.name.toUpperCase() === currentItem.name.toUpperCase());
 
               // Don't re-add self. This can happens when `END-PR` is used in the wrong place.
               if (!isDefinedGlobally) {
-                scope.procedures.push(currentItem);
+                scope.symbols.push(currentItem);
               }
 
               resetDefinition = true;
@@ -1002,7 +1003,7 @@ export default class Parser {
 
               currentItem.scope = new Cache();
 
-              scope.procedures.push(currentItem);
+              scope.symbols.push(currentItem);
               resetDefinition = true;
 
               scopes.push(currentItem.scope);
@@ -1014,7 +1015,7 @@ export default class Parser {
             if (parts.length > 0) {
               if (currentProcName) {
                 currentGroup = `procedures`;
-                currentItem = scopes[0].procedures.find(proc => !proc.prototype && proc.name === currentProcName);
+                currentItem = scopes[0].symbols.find(proc => !proc.prototype && proc.name === currentProcName);
               } else {
                 currentItem = new Declaration(`struct`);
                 currentItem.name = PROGRAMPARMS_NAME;
@@ -1044,7 +1045,7 @@ export default class Parser {
           case `END-PI`:
             //Procedures can only exist in the global scope.
             if (currentProcName) {
-              currentItem = scopes[0].procedures.find(proc => !proc.prototype && proc.name === currentProcName);
+              currentItem = scopes[0].symbols.find(proc => !proc.prototype && proc.name === currentProcName);
 
               if (currentItem && currentItem.type === `procedure`) {
                 currentItem.readParms = false;
@@ -1060,7 +1061,7 @@ export default class Parser {
           case `END-PROC`:
             //Procedures can only exist in the global scope.
             if (scopes.length > 1) {
-              currentItem = scopes[0].procedures.find(proc => !proc.prototype && proc.name === currentProcName);
+              currentItem = scopes[0].symbols.find(proc => !proc.prototype && proc.name === currentProcName);
 
               if (currentItem && currentItem.type === `procedure`) {
                 scopes.pop();
@@ -1072,7 +1073,7 @@ export default class Parser {
 
           case `BEGSR`:
             if (parts.length > 1) {
-              if (!scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === parts[1])) {
+              if (!scope.symbols.find(sub => sub.name && sub.name.toUpperCase() === parts[1])) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = partsLower[1];
 		            currentItem.keyword = {'Subroutine': true};
@@ -1095,7 +1096,7 @@ export default class Parser {
           case `ENDSR`:
             if (currentItem && currentItem.type === `subroutine`) {
               currentItem.range.end = currentStmtStart.line;
-              scope.subroutines.push(currentItem);
+              scope.symbols.push(currentItem);
               resetDefinition = true;
             }
             break;
@@ -1353,9 +1354,9 @@ export default class Parser {
                 currentItem.subItems.push(...recordFormats);
               }
 
-              scope.files.push(currentItem);
+              scope.symbols.push(currentItem);
             } else {
-              currentItem = scope.files[scope.files.length-1];
+              currentItem = scope.symbols[scope.symbols.length-1];
               if (currentItem) {
                 currentItem.range.end = lineNumber;
                 currentItem.keyword = {
@@ -1409,7 +1410,7 @@ export default class Parser {
                     end: lineNumber
                   };
 
-                  scope.variables.push(currentSub);
+                  scope.symbols.push(currentSub);
                 }
               }
             }
@@ -1418,7 +1419,8 @@ export default class Parser {
 
             switch (cSpec.opcode && cSpec.opcode.value) {
             case `BEGSR`:
-              if (cSpec.factor1 && !scope.subroutines.find(sub => sub.name && sub.name.toUpperCase() === cSpec.factor1.value.toUpperCase())) {
+              
+              if (cSpec.factor1 && !scope.find(cSpec.factor1.value.toUpperCase())) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = cSpec.factor1.value;
                 currentItem.keyword = {'Subroutine': true};
@@ -1440,7 +1442,7 @@ export default class Parser {
             case `ENDSR`:
               if (currentItem && currentItem.type === `subroutine`) {
                 currentItem.range.end = lineNumber;
-                scope.subroutines.push(currentItem);
+                scope.symbols.push(currentItem);
                 resetDefinition = true;
               }
               break;
@@ -1463,7 +1465,7 @@ export default class Parser {
                   end: lineNumber
                 };
 
-                scope.procedures.push(callItem);
+                scope.symbols.push(callItem);
               }
               break;
 
@@ -1481,7 +1483,7 @@ export default class Parser {
                   end: lineNumber
                 };
 
-                scope.tags.push(tagItem);
+                scope.symbols.push(tagItem);
               }
               break;
             }
@@ -1518,7 +1520,7 @@ export default class Parser {
 
                   currentItem.scope = new Cache();
 
-                  scope.procedures.push(currentItem);
+                  scope.symbols.push(currentItem);
                   resetDefinition = true;
 
                   scopes.push(currentItem.scope);
@@ -1526,7 +1528,7 @@ export default class Parser {
               } else {
                 if (scopes.length > 1) {
                   //Procedures can only exist in the global scope.
-                  currentItem = scopes[0].procedures.find(proc => proc.name === currentProcName);
+                  currentItem = scopes[0].symbols.find(proc => proc.name === currentProcName);
 
                   if (currentItem && currentItem.type === `procedure`) {
                     scopes.pop();
@@ -1564,7 +1566,7 @@ export default class Parser {
                   range: useNameToken.range
                 };
     
-                scope.constants.push(currentItem);
+                scope.symbols.push(currentItem);
                 resetDefinition = true;
                 break;
               case `S`:
@@ -1581,7 +1583,7 @@ export default class Parser {
                   range: useNameToken.range
                 };
 
-                scope.variables.push(currentItem);
+                scope.symbols.push(currentItem);
                 resetDefinition = true;
                 break;
 
@@ -1603,7 +1605,7 @@ export default class Parser {
                 expandDs(fileUri, useNameToken, currentItem);
 
                 currentGroup = `structs`;
-                scope.structs.push(currentItem);
+                scope.symbols.push(currentItem);
                 resetDefinition = true;
                 break;
 
@@ -1627,14 +1629,14 @@ export default class Parser {
                 };
 
                 currentGroup = `procedures`;
-                scope.procedures.push(currentItem);
+                scope.symbols.push(currentItem);
                 currentDescription = [];
                 break;
 
               case `PI`:
                 //Procedures can only exist in the global scope.
                 if (currentProcName) {
-                  currentItem = scopes[0].procedures.find(proc => proc && !proc.prototype && proc.name === currentProcName);
+                  currentItem = scopes[0].symbols.find(proc => proc && !proc.prototype && proc.name === currentProcName);
 
                   currentGroup = `procedures`;
                   if (currentItem) {
