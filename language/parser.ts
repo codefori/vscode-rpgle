@@ -1043,7 +1043,7 @@ export default class Parser {
                 end: currentStmtStart.line
               };
 
-              currentItem.scope = new Cache();
+              currentItem.scope = new Cache(undefined, true);
 
               scope.addSymbol(currentItem);
               resetDefinition = true;
