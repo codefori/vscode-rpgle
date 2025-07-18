@@ -252,7 +252,7 @@ export default class Parser {
 
         if (isSpecial) {
           // The only specials that can be looked up at global indicators
-          defRef = scopes[0].find(lookupName);
+          defRef = scopes[0].find(lookupName, `indicator`);
 
           if (defRef && defRef.type !== `indicator`) {
             // If the definition is not an indicator, we don't want to use it
@@ -1398,7 +1398,7 @@ export default class Parser {
                 // This means we need to dynamically define this field
                 const fieldName = cSpec.result.value;
                 // Don't redefine this field.
-                if (!scopes[0].find(fieldName, currentProcName)) {
+                if (!scopes[0].findDefinition(lineNumber, fieldName)) {
                   const fieldLength = parseInt(cSpec.fieldLength.value);
                   const decimals = cSpec.fieldDecimals ? parseInt(cSpec.fieldDecimals.value) : undefined;
                   const type = decimals !== undefined ? `PACKED`: `CHAR`;

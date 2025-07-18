@@ -121,38 +121,34 @@ export default class Cache {
     return (lines.length >= 1 ? lines[0] : 0);
   }
 
-  find(name: string, includeProcedure?: string): Declaration | undefined {
+  find(name: string, specificType?: DeclarationType): Declaration | undefined {
     name = name.toUpperCase();
 
-    const fileStructs = this.symbols.filter(d => d.type === `file`).flatMap(file => file.subItems);
+    const checkSymbols = [...this.symbols, ...this.parameters];
 
-    const searchIn = [
-      this.parameters,
-      this.symbols.filter(d => d.type !== `procedure`),
-      this.symbols.filter(d => d.type === `procedure` && !d.prototype),
-      this.symbols.filter(d => d.type === `procedure` && d.prototype),
-    ];
-
-    for (const list of searchIn) {
-      const found = list.find(def => def.name.toUpperCase() === name);
-      if (found) return found;
-    }
-
-    if (includeProcedure) {
-      const procedureScope = this.symbols.find(proc => proc.scope && proc.name.toUpperCase() === includeProcedure);
-      if (procedureScope) {
-        const found = procedureScope.scope.find(name);
-        if (found) return found;
+    for (let si = checkSymbols.length - 1; si >= 0; si--) {
+      const symbol = checkSymbols[si];
+      if (specificType && symbol.type !== specificType) {
+        continue;
       }
-    }
 
-    const allStructs = [...fileStructs, ...this.symbols.filter(d => d.type === `struct`)];
+      if (symbol.name.toUpperCase() === name) {
+        return symbol;
+      }
 
-    if (allStructs.length > 0) {
-      for (const def of allStructs) {
-        if (def.keyword[`QUALIFIED`] !== true) {
-          const subItem = def.subItems.find(sub => sub.name.toUpperCase() === name);
+      if ([`struct`, `file`].includes(symbol.type)) {
+        if (symbol.keyword[`QUALIFIED`] !== true) {
+          // If the symbol is qualified, we need to check the subItems
+          const subItem = symbol.subItems.find(sub => sub.name.toUpperCase() === name);
           if (subItem) return subItem;
+
+          if (symbol.type === `file`) {
+            // If it's a file, we also need to check the subItems of the file's recordformats
+            for (const subFile of symbol.subItems) {
+              const subSubItem = subFile.subItems.find(sub => sub.name.toUpperCase() === name);
+              if (subSubItem) return subSubItem;
+            }
+          }
         }
       }
     }
@@ -164,7 +160,7 @@ export default class Cache {
     return this.symbols.find(proc => proc.scope && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
   }
 
-  findDefinition(lineNumber, word) {
+  findDefinition(lineNumber: number, word: string) {
     // If they're typing inside of a procedure, let's get the stuff from there too
     const currentProcedure = this.findProcedurebyLine(lineNumber);
 
