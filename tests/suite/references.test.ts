@@ -1577,6 +1577,7 @@ test('references_24_comment_in_statement', async () => {
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
   const freeFormatEvaluationFound = cache.find(`freeFormatEvaluationFound`);
   const code = freeFormatEvaluationFound.scope.find(`code`);
+  expect(code).toBeDefined();
   expect(code.references.length).toBe(25);
   expect(code.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `code`)).toBe(true);
 });
@@ -1882,6 +1883,7 @@ test('reference_28_parameters', async () => {
 
   const deptno = cache.find(`deptno`);
   expect(deptno).toBeDefined();
+  expect(deptno.type).toBe(`parameter`);
   expect(deptno.references.length).toBe(2);
   expect(deptno.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `deptno`)).toBe(true);
 });

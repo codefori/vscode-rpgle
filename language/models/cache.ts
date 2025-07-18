@@ -22,6 +22,8 @@ const newInds = () => {
   })
 };
 
+export type SymbolRegister = Map<string, Declaration | Declaration[]>;
+
 export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
 const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
 
@@ -32,17 +34,37 @@ export interface RpgleTypeDetail {
 
 export default class Cache {
   keyword: Keywords;
-  parameters: Declaration[];
-  symbols: Declaration[];
   sqlReferences: Declaration[];
   includes: IncludeStatement[];
+  private symbolRegister: SymbolRegister;
 
-  constructor(cache: CacheProps = {}) {
+  constructor(cache: CacheProps = {}, isProcedure: boolean = false) {
     this.keyword = {};
-    this.parameters = cache.parameters || [];
-    this.symbols = cache.symbols || [...newInds()];
+    // this.symbols = cache.symbols || [...newInds()];
+
+    if (isProcedure) {
+      this.symbolRegister = cache.symbolRegister || new Map();
+    } else {
+      this.symbolRegister = cache.symbolRegister || new Map();
+
+      newInds().forEach(ind => {
+        this.addSymbol(ind);
+      });
+    }
+
+
     this.sqlReferences = cache.sqlReferences || [];
     this.includes = cache.includes || [];
+  }
+
+  private symbolCache: Declaration[] | undefined;
+
+  get symbols() {
+    if (this.symbolCache) return this.symbolCache;
+
+    this.symbolCache = Array.from(this.symbolRegister.values()).flat(1);
+
+    return this.symbolCache;
   }
 
   get subroutines() {
@@ -77,32 +99,25 @@ export default class Cache {
     return this.symbols.filter(s => s.type === `tag`);
   }
 
-  /**
-   * @param {Cache} [second] 
-   * @returns {Cache} merged caches
-   */
-  merge(second) {
-    if (second) {
-      return new Cache({
-        parameters: [...this.parameters, ...second.parameters],
-        symbols: [...this.symbols, ...second.symbols],
-        sqlReferences: [...this.sqlReferences, ...second.sqlReferences],
-      });
-    } else {
-      return this;
-    }
+  get parameters() {
+    return this.symbols.filter(s => s.type === `parameter`);
   }
+  
+  addSymbol(symbol: Declaration) {
+    const name = symbol.name.toUpperCase();
+    if (this.symbolRegister.has(name)) {
+      // If the symbol already exists, we can merge it
+      const existing = this.symbolRegister.get(name);
+      if (Array.isArray(existing)) {
+        existing.push(symbol);
+      } else {
+        this.symbolRegister.set(name, [existing, symbol]);
+      }
+    } else {
+      this.symbolRegister.set(name, symbol);
+    }
 
-  /**
-   * @returns {String[]}
-   */
-  getNames() {
-    const names = new Set<string>();
-
-    this.parameters.forEach(def => names.add(def.name));
-    this.symbols.forEach(def => names.add(def.name));
-
-    return Array.from(names);
+    this.symbolCache = undefined;
   }
 
   /**
@@ -124,30 +139,32 @@ export default class Cache {
   find(name: string, specificType?: DeclarationType): Declaration | undefined {
     name = name.toUpperCase();
 
-    const checkSymbols = [...this.symbols, ...this.parameters];
-
-    for (let si = checkSymbols.length - 1; si >= 0; si--) {
-      const symbol = checkSymbols[si];
+    const existing = this.symbolRegister.get(name);
+    if (existing) {
+      const symbol = Array.isArray(existing) ? existing[existing.length-1] : existing;
       if (specificType && symbol.type !== specificType) {
-        continue;
+        return undefined;
       }
 
       if (symbol.name.toUpperCase() === name) {
         return symbol;
       }
+    }
 
-      if ([`struct`, `file`].includes(symbol.type)) {
-        if (symbol.keyword[`QUALIFIED`] !== true) {
-          // If the symbol is qualified, we need to check the subItems
-          const subItem = symbol.subItems.find(sub => sub.name.toUpperCase() === name);
-          if (subItem) return subItem;
+    // Additional logic to check for subItems in symbols
+    const symbolsWithSubs = [...this.structs, ...this.files];
 
-          if (symbol.type === `file`) {
-            // If it's a file, we also need to check the subItems of the file's recordformats
-            for (const subFile of symbol.subItems) {
-              const subSubItem = subFile.subItems.find(sub => sub.name.toUpperCase() === name);
-              if (subSubItem) return subSubItem;
-            }
+    for (const struct of symbolsWithSubs) {
+      if (struct.keyword[`QUALIFIED`] !== true) {
+        // If the symbol is qualified, we need to check the subItems
+        const subItem = struct.subItems.find(sub => sub.name.toUpperCase() === name);
+        if (subItem) return subItem;
+
+        if (struct.type === `file`) {
+          // If it's a file, we also need to check the subItems of the file's recordformats
+          for (const subFile of struct.subItems) {
+            const subSubItem = subFile.subItems.find(sub => sub.name.toUpperCase() === name);
+            if (subSubItem) return subSubItem;
           }
         }
       }
@@ -156,8 +173,18 @@ export default class Cache {
     return;
   }
 
+  findAll(name: string): Declaration[] {
+    name = name.toUpperCase();
+    const symbols = this.symbolRegister.get(name);
+    if (symbols) {
+      return Array.isArray(symbols) ? symbols : [symbols];
+    }
+
+    return [];
+  }
+
   public findProcedurebyLine(lineNumber: number): Declaration | undefined {
-    return this.symbols.find(proc => proc.scope && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+    return this.procedures.find(proc => proc.scope && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
   }
 
   findDefinition(lineNumber: number, word: string) {
@@ -195,21 +222,6 @@ export default class Cache {
 
     if (globalDef) {
       return globalDef;
-    }
-  }
-
-  /**
-   * Move all procedure subItems (the paramaters) into the cache
-   */
-  fixProcedures() {
-    const procedures = this.symbols.filter(d => d.type === `procedure` && d.scope && d.subItems.length > 0);
-    if (procedures.length > 0) {
-      procedures.forEach(proc => {
-        if (proc.scope && proc.subItems.length > 0) {
-          proc.scope.parameters = [...proc.subItems];
-          proc.scope.fixProcedures();
-        }
-      })
     }
   }
 
