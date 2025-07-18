@@ -6,3 +6,4 @@ dist
 .vscode/settings.json
 out
 tsconfig.tsbuildinfo
+tests/private
