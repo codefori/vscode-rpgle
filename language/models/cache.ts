@@ -141,13 +141,18 @@ export default class Cache {
 
     const existing = this.symbolRegister.get(name);
     if (existing) {
-      const symbol = Array.isArray(existing) ? existing[existing.length-1] : existing;
-      if (specificType && symbol.type !== specificType) {
-        return undefined;
-      }
+      const symbols = Array.isArray(existing) ? existing : [existing];
+      // Loop through them all in case of duplicate names with different types
+      for (let i = symbols.length - 1; i >= 0; i--) {
+        // Scan symbols in reverse to determine the most recently defined
+        const symbol = symbols[i];
+        if (specificType && symbol.type !== specificType) {
+          return undefined;
+        }
 
-      if (symbol.name.toUpperCase() === name) {
-        return symbol;
+        if (symbol.name.toUpperCase() === name) {
+          return symbol;
+        }
       }
     }
 
