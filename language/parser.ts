@@ -427,6 +427,70 @@ export default class Parser {
         return inputLine;
       }
 
+
+      const handleFSpec = async (currentItem: Declaration, fOptions: {
+        keyword: Keywords,
+        unique: string
+      }) => {
+        const objectName = getObjectName(currentItem.name, fOptions.keyword);
+      
+        // ========
+        // First we do the work to set the subfields
+        // ========
+        if (currentItem.subItems.length === 0) {
+          const recordFormats = await this.fetchTable(objectName, fOptions.unique, fOptions.keyword[`ALIAS`] !== undefined);
+
+          if (recordFormats.length > 0) {
+            // Got to fix the positions for the defintions to be the declare.
+            recordFormats.forEach(recordFormat => {
+              recordFormat.keyword = {[objectName]: true};
+
+              recordFormat.position = currentItem.position;
+
+              recordFormat.subItems.forEach(subItem => {
+                subItem.position = currentItem.position;
+              });
+            });
+
+            currentGroup = `structs`;
+            currentItem.subItems.push(...recordFormats);
+          }
+        }
+
+        let renames: {[recordFormatFrom: string]: string} = {};
+        if (fOptions.keyword[`RENAME`] && typeof fOptions.keyword[`RENAME`] === `string`) {
+          const renameParts = fOptions.keyword[`RENAME`].split(`:`);
+          if (renameParts.length === 2) {
+            renames[renameParts[0].toUpperCase()] = renameParts[1].toUpperCase();
+          }
+        }
+
+        // ========
+        // Then comes the magic to apply to keywords
+        // ========
+
+        const qualified = fOptions.keyword[`QUALIFIED`] === true;
+        const prefixKeyword = fOptions.keyword[`PREFIX`];
+        const prefix = prefixKeyword && typeof prefixKeyword === `string` ? prefixKeyword.toUpperCase() : ``;
+
+        for (const recordFormat of currentItem.subItems) {
+          if (renames[recordFormat.name.toUpperCase()]) {
+            recordFormat.name = renames[recordFormat.name.toUpperCase()];
+          }
+
+          if (qualified) {
+            recordFormat.keyword[`QUALIFIED`] = true;
+          }
+
+          for (const field of recordFormat.subItems) {
+            // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
+            if (prefix && !field.name.startsWith(prefix)) {
+              field.name = prefix + field.name;
+            }
+          }
+        }
+      }
+
       const expandDs = async (fileUri: string, fileToken: Token, ds: Declaration): Promise<void> => {
         const tags = [`LIKEDS`, `LIKEREC`, `EXTNAME`];
         const keywords = ds.keyword;
@@ -764,37 +828,10 @@ export default class Parser {
                   end: lineNumber
                 }
 
-                const objectName = getObjectName(tokens[1].value, currentItem.keyword);
-                let prefix = ``;
-
-                const prefixKeyword = currentItem.keyword[`PREFIX`];
-                if (prefixKeyword  && typeof prefixKeyword === `string`) {
-                  prefix = prefixKeyword.toUpperCase();
-                }
-          
-                const recordFormats = await this.fetchTable(objectName, parts.length.toString(), currentItem.keyword[`ALIAS`] !== undefined);
-
-                if (recordFormats.length > 0) {
-                  const qualified = parts.includes(`QUALIFIED`);
-
-                  // Got to fix the positions for the defintions to be the declare.
-                  recordFormats.forEach(recordFormat => {
-                    recordFormat.keyword = {[parts[1]]: true};
-                    if (qualified) recordFormat.keyword[`QUALIFIED`] = true;
-
-                    recordFormat.position = currentItem.position;
-
-                    recordFormat.subItems.forEach(subItem => {
-                      // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
-                      if(prefix) {
-                        subItem.name = prefix + subItem.name;
-                      }
-                      subItem.position = currentItem.position;
-                    });
-                  });
-
-                  currentItem.subItems.push(...recordFormats);
-                }
+                await handleFSpec(currentItem, {
+                  keyword: currentItem.keyword,
+                  unique: parts.length.toString()
+                });
 
                 scope.addSymbol(currentItem);
                 resetDefinition = true;
@@ -1338,38 +1375,10 @@ export default class Parser {
               currentItem.range.start = lineNumber;
               currentItem.range.end = lineNumber;
 			  
-			        let prefix = ``;
-
-              const prefixKeyword = fSpec.keywords[`PREFIX`];
-              if (prefixKeyword && typeof prefixKeyword === `string`) {
-                prefix = prefixKeyword.toUpperCase();
-              }
-
-              const objectName = getObjectName(fSpec.name.value, fSpec.keywords);
-              const recordFormats = await this.fetchTable(objectName, line.length.toString(), fSpec.keywords[`ALIAS`] !== undefined);
-
-              if (recordFormats.length > 0) {
-                const qualified = fSpec.keywords[`QUALIFIED`] === true;
-
-                // Got to fix the positions for the defintions to be the declare.
-                recordFormats.forEach(recordFormat => {
-                  recordFormat.keyword = {[objectName]: true};
-                  if (qualified) recordFormat.keyword[`QUALIFIED`] = true;;
-
-                  recordFormat.position = currentItem.position;
-
-                  recordFormat.subItems.forEach(subItem => {
-					          // We put the prefix here because in 'fetchTable' we use cached version. So if the user change the prefix, it will not refresh the variable name
-                    if(prefix) {
-                      subItem.name = prefix + subItem.name;
-                    }					 
-                    subItem.position = currentItem.position;
-                  });
-                });
-
-                currentGroup = `structs`;
-                currentItem.subItems.push(...recordFormats);
-              }
+              await handleFSpec(currentItem, {
+                keyword: fSpec.keywords,
+                unique: line.length.toString()
+              });
 
               scope.addSymbol(currentItem);
             } else {
@@ -1379,7 +1388,13 @@ export default class Parser {
                 currentItem.keyword = {
                   ...fSpec.keywords,
                   ...currentItem.keyword,
-                }
+                };
+
+                // We have to run this after the keyword is set
+                await handleFSpec(currentItem, {
+                  keyword: fSpec.keywords,
+                  unique: line.length.toString()
+                });
               }
             }
             
