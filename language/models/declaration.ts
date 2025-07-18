@@ -8,7 +8,6 @@ export type DeclarationType = "parameter"|"procedure"|"subroutine"|"file"|"struc
 export default class Declaration {
   name: string = ``;
   keyword: Keywords = {};
-  prototype: boolean = false;
   tags: {tag: string, content: string}[] = [];
   /**
    * Position is the location of the declaration in the source file, by offset and line number.
@@ -49,5 +48,9 @@ export default class Declaration {
 
   get description() {
     return this.tags.find(tag => tag.tag === `description`)?.content || ``;
+  }
+
+  get prototype() {
+    return this.scope === undefined;
   }
 }

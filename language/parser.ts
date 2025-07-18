@@ -980,7 +980,6 @@ export default class Parser {
                 currentGroup = `procedures`;
                 currentItem = new Declaration(`procedure`);
                 currentItem.name = partsLower[1];
-                currentItem.prototype = true;
                 currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
                 currentItem.tags = currentTags;
 
@@ -1643,7 +1642,6 @@ export default class Parser {
               case `PR`:
                 currentItem = new Declaration(`procedure`);
                 currentItem.name = potentialName ? potentialName.value : NO_NAME;
-                currentItem.prototype = true;
                 currentItem.keyword = {
                   ...prettyTypeFromToken(dSpec),
                   ...dSpec.keywords
