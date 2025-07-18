@@ -1126,7 +1126,7 @@ export default class Parser {
 
           case `BEGSR`:
             if (parts.length > 1) {
-              if (!scope.find(parts[1])) {
+              if (!scope.find(parts[1], `subroutine`)) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = partsLower[1];
 		            currentItem.keyword = {'Subroutine': true};
@@ -1450,7 +1450,7 @@ export default class Parser {
             switch (cSpec.opcode && cSpec.opcode.value) {
             case `BEGSR`:
               
-              if (cSpec.factor1 && !scope.find(cSpec.factor1.value)) {
+              if (cSpec.factor1 && !scope.find(cSpec.factor1.value, `subroutine`)) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = cSpec.factor1.value;
                 currentItem.keyword = {'Subroutine': true};
