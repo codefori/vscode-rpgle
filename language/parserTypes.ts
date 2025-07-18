@@ -1,6 +1,6 @@
 import Declaration from './models/declaration';
-import {Range} from "./models/DataPoints";
 import { IRange } from './types';
+import { SymbolRegister } from './models/cache';
 
 export interface Keywords {
   [keyword: string]: string|true;
@@ -14,16 +14,9 @@ export interface IncludeStatement {
 
 export interface CacheProps {
   parameters?: Declaration[];
-  subroutines?: Declaration[];
-  procedures?: Declaration[];
-  files?: Declaration[];
-  variables?: Declaration[];
-  structs?: Declaration[];
-  constants?: Declaration[];
+  symbolRegister?: SymbolRegister;
   sqlReferences?: Declaration[];
-  indicators?: Declaration[];
   includes?: IncludeStatement[];
-  tags?: Declaration[];
 }
 
 export interface Rules {
