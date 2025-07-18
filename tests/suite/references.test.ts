@@ -1989,3 +1989,51 @@ test('references_prototype', async () => {
   expect(protoTypeData.type).toMatchObject({name: `int`, value: `10`});
   expect(protoTypeData.reference).toBeUndefined();
 });
+
+test('references in procedure', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `/copy './rpgle/empdet.rpgleinc'`,
+    ``,
+    `dcl-proc getDeptDetail export;`,
+    `  dcl-pi *n like(department_detail_t);`,
+    `    deptno char(3) const;`,
+    `  end-pi;`,
+    ``,
+    `  dcl-ds department_detail likeds(department_detail_t);`,
+    ``,
+    `  exec sql`,
+    `    select`,
+    `      rtrim(deptname),`,
+    `      coalesce(location, 'N/A'),`,
+    `      (select sum(salary + bonus + comm)`,
+    `       from employee`,
+    `       where workdept = :deptno)`,
+    `    into`,
+    `      :department_detail.deptname,`,
+    `      :department_detail.location,`,
+    `      :department_detail.totalsalaries`,
+    `    from`,
+    `      department`,
+    `    where`,
+    `      deptno = :deptno;`,
+    ``,
+    `  if (sqlcode = 0);`,
+    `    department_detail.found = *on;`,
+    `  else;`,
+    `    department_detail.found = *off;`,
+    `  endif;`,
+    ``,
+    `  return department_detail;`,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const getDeptDetail = cache.find(`getDeptDetail`);
+  expect(getDeptDetail).toBeDefined();
+
+  const department_detail = getDeptDetail.scope.find(`department_detail`);
+  expect(department_detail).toBeDefined();
+  expect(department_detail.references.length).toBe(7);
+});
