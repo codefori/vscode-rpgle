@@ -33,10 +33,11 @@ export function getInterfaces(): APIInterface[] {
 							if (entryFunction) {
 
 								// We assume the file name is the name of the object
-								entryFunction.keyword[`EXTPGM`] = `'${objectName}'`;
+								const useKeywords = {...entryFunction.keyword};
+								useKeywords[`EXTPGM`] = `'${objectName}'`;
 
 								const prototype = [
-									`dcl-pr ${entryFunction.name} ${prettyKeywords(entryFunction.keyword)};`,
+									`dcl-pr ${entryFunction.name} ${prettyKeywords(useKeywords, true)};`,
 									...entryFunction.subItems.map(subItem =>
 										`  ${subItem.name} ${prettyKeywords(subItem.keyword)};`
 									),
@@ -68,10 +69,11 @@ export function getInterfaces(): APIInterface[] {
 									return; // Skip user test functions
 								}
 
-								proc.keyword[`EXTPROC`] = `'${proc.name.toUpperCase()}'`;
+								const useKeywords = {...proc.keyword};
+								useKeywords[`EXTPROC`] = `'${proc.name.toUpperCase()}'`;
 
 								const prototype = [
-									`dcl-pr ${proc.name} ${prettyKeywords(proc.keyword)};`,
+									`dcl-pr ${proc.name} ${prettyKeywords(useKeywords, true)};`,
 									...proc.subItems.map(subItem =>
 										`  ${subItem.name} ${prettyKeywords(subItem.keyword)};`
 									),
