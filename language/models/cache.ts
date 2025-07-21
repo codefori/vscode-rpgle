@@ -22,7 +22,7 @@ const newInds = () => {
   })
 };
 
-export type SymbolRegister = Map<string, Declaration | Declaration[]>;
+export type SymbolRegister = Map<string, Declaration[]>;
 
 export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
 const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
@@ -108,13 +108,9 @@ export default class Cache {
     if (this.symbolRegister.has(name)) {
       // If the symbol already exists, we can merge it
       const existing = this.symbolRegister.get(name);
-      if (Array.isArray(existing)) {
-        existing.push(symbol);
-      } else {
-        this.symbolRegister.set(name, [existing, symbol]);
-      }
+      existing.push(symbol);
     } else {
-      this.symbolRegister.set(name, symbol);
+      this.symbolRegister.set(name, [symbol]);
     }
 
     this.symbolCache = undefined;
