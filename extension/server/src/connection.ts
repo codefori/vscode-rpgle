@@ -146,7 +146,10 @@ export function handleClientRequests() {
 			keyword: doc.keyword,
 			parameters: doc.parameters,
 			subroutines: doc.subroutines,
-			procedures: doc.procedures,
+			procedures: doc.procedures.map(p => ({
+				...p,
+				prototype: p.prototype
+			})),
 			files: doc.files,
 			variables: doc.variables,
 			structs: doc.structs,
