@@ -3,6 +3,8 @@ import { APIInterface } from '../apis';
 import { isEnabled } from '.';
 import { parser, prettyKeywords } from '..';
 
+const TEST_FUNCTIONS = [`SETUPSUITE`, `TEARDOWNSUITE`, `SETUP`, `TEARDOWN`];
+
 export function getInterfaces(): APIInterface[] {
 	let interfaces: APIInterface[] = [];
 
@@ -57,6 +59,14 @@ export function getInterfaces(): APIInterface[] {
 						// This might mean it is a module. Look for EXPORTs
 						cache.procedures.forEach(proc => {
 							if (proc.keyword[`EXPORT`]) {
+
+								if (TEST_FUNCTIONS.includes(proc.name.toUpperCase())) {
+									return; // Skip test functions
+								}
+
+								if (proc.name.toUpperCase().startsWith(`TEST`)) {
+									return; // Skip user test functions
+								}
 
 								proc.keyword[`EXTPROC`] = `'${proc.name.toUpperCase()}'`;
 
