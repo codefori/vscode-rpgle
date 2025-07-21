@@ -62,7 +62,14 @@ test("Generic reference tests", { timeout }, async () => {
         for (const ref of refs) {
           const offsetContent = cachedFiles[ref.uri].substring(ref.offset.start, ref.offset.end);
 
-          if (offsetContent.toUpperCase() === def.name.toUpperCase()) {
+          const isInd = def.type === `indicator`;
+
+          if (isInd) continue;
+
+          if (isInd && offsetContent.endsWith(def.name)) {
+            referencesCollected++;
+          }
+          else if (offsetContent.toUpperCase() === def.name.toUpperCase()) {
             referencesCollected++;
           } else {
             errorCount++;
@@ -72,7 +79,7 @@ test("Generic reference tests", { timeout }, async () => {
       }
 
       const checkScope = async (scope: Cache) => {
-        for (const def of [...scope.variables, ...scope.subroutines, ...scope.procedures, ...scope.constants, ...scope.structs, ...scope.files, ...scope.tags, ...scope.sqlReferences]) {
+        for (const def of [...scope.symbols, ...scope.sqlReferences]) {
           await checkReferences(def);
 
           if (def.subItems && def.subItems.length > 0) {

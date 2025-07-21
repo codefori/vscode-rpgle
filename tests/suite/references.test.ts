@@ -1577,6 +1577,7 @@ test('references_24_comment_in_statement', async () => {
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
   const freeFormatEvaluationFound = cache.find(`freeFormatEvaluationFound`);
   const code = freeFormatEvaluationFound.scope.find(`code`);
+  expect(code).toBeDefined();
   expect(code.references.length).toBe(25);
   expect(code.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `code`)).toBe(true);
 });
@@ -1882,6 +1883,7 @@ test('reference_28_parameters', async () => {
 
   const deptno = cache.find(`deptno`);
   expect(deptno).toBeDefined();
+  expect(deptno.type).toBe(`parameter`);
   expect(deptno.references.length).toBe(2);
   expect(deptno.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `deptno`)).toBe(true);
 });
@@ -1958,7 +1960,8 @@ test('references_prototype', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
-  expect(cache.procedures.length).toBe(3);
+  const procedures = cache.procedures;
+  expect(procedures.length).toBe(3);
 
   const actualProcedure = cache.find(`add`);
   expect(actualProcedure).toBeDefined();
@@ -1976,7 +1979,7 @@ test('references_prototype', async () => {
   expect(procTypeData.type).toMatchObject({name: `int`, value: `10`});
   expect(procTypeData.reference).toBeUndefined();
 
-  const prototype = cache.procedures[0];
+  const prototype = procedures[0];
   expect(prototype).toBeDefined();
   expect(prototype.name).toBe(`add`);
   expect(prototype.prototype).toBeTruthy();
@@ -2036,4 +2039,18 @@ test('references in procedure', async () => {
   const department_detail = getDeptDetail.scope.find(`department_detail`);
   expect(department_detail).toBeDefined();
   expect(department_detail.references.length).toBe(7);
+});
+
+test('variable reference', async () => {
+  const lines = [
+    `       dcl-f FILE disk(32766) usage(*input: *output) usropn infds(psds);`,
+    `       dcl-s InPut char(1280);`,
+    `       RtvQryF(Qry:Lib:Input:OutPut:Stat);`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+
+  const input = cache.find(`InPut`);
+  expect(input).toBeDefined();
+  expect(input.references.length).toBe(2);
 });
