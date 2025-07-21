@@ -481,7 +481,7 @@ test('references_12_fixed_1', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
-  expect(cache.symbols.filter(s => s.type === `variable`).length).to.equal(2);
+  expect(cache.variables.length).to.equal(2);
 
   const wkInvoice = cache.find(`wkInvoice`);
 
@@ -1960,7 +1960,7 @@ test('references_prototype', async () => {
 
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
 
-  const procedures = cache.symbols.filter(s => s.type === `procedure`);
+  const procedures = cache.procedures;
   expect(procedures.length).toBe(3);
 
   const actualProcedure = cache.find(`add`);
