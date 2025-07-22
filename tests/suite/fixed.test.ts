@@ -1357,12 +1357,19 @@ test('multiline procedure names', async () => {
     `     PTestA            B                   Export`,
     `     Ddnasdhhfhbd     PI`,
     `     P                 E`,
-  ].join(`\n`);
+  ];
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: true });
   expect(cache.procedures.length).to.equal(4);
   expect(cache.procedures[0].name).to.equal(`abcTest`);
-  expect(cache.procedures[1].name).to.equal(`abcxyzTest`);
   expect(cache.procedures[2].name).to.equal(`Test`);
   expect(cache.procedures[3].name).to.equal(`TestA`);
+
+  const abcxyzTest = cache.find(`abcxyzTest`);
+  expect(abcxyzTest).toBeDefined();
+  expect(abcxyzTest.name).to.equal(`abcxyzTest`);
+
+  const procRange = abcxyzTest.range;
+  expect(lines[procRange.start]).to.equal(`     Pabc...`);
+  expect(lines[procRange.end]).to.equal(`     P                 E`);
 });

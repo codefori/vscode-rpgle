@@ -203,14 +203,12 @@ export default class Parser {
       return objectName;
     };
 
+    // ========
+    // Potential name logic is used for fixed-format only.
+    // In fixed format, symbol names can be spread over multiple lines
+    // and we use tokens to collect each part of the name.
+    // ========
     let potentialName: Token[]|undefined;
-    const getPotentialName = () => {
-      if (potentialName && potentialName.length > 0) {
-        return potentialName.map(p => p.value).join(``);
-      } else {
-        return undefined;
-      }
-    }
     const pushPotentialNameToken = (token?: Token) => {
       if (!potentialName) {
         potentialName = [];
@@ -221,7 +219,15 @@ export default class Parser {
     }
     const getPotentialNameToken = (): Token|undefined => {
       if (potentialName && potentialName.length > 0) {
-        return potentialName[potentialName.length - 1];
+        return {
+          type: `block`,
+          range: {
+            line: potentialName[0].range.line,
+            start: potentialName[0].range.start,
+            end: potentialName[potentialName.length - 1].range.end
+          },
+          value: potentialName.map(p => p.value).join(``),
+        };
       } else {
         return undefined;
       }
@@ -1558,7 +1564,7 @@ export default class Parser {
                 if (currentNameToken) {
                   currentItem = new Declaration(`procedure`);
 
-                  currentProcName = getPotentialName();
+                  currentProcName = currentNameToken.value;
                   currentItem.name = currentProcName;
                   currentItem.keyword = pSpec.keywords;
 
@@ -1609,10 +1615,12 @@ export default class Parser {
 
               tokens = [dSpec.field, ...dSpec.keywordsRaw, dSpec.name];
 
+              const currentNameToken = getPotentialNameToken();
+
               switch (dSpec.field && dSpec.field.value) {
               case `C`:
                 currentItem = new Declaration(`constant`);
-                currentItem.name = getPotentialName() || NO_NAME;
+                currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = dSpec.keywords || {};
                   
                 // TODO: line number might be different with ...?
@@ -1626,7 +1634,7 @@ export default class Parser {
                 break;
               case `S`:
                 currentItem = new Declaration(`variable`);
-                currentItem.name = getPotentialName() || NO_NAME;
+                currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = {
                   ...dSpec.keywords,
                   ...prettyTypeFromToken(dSpec),
@@ -1635,7 +1643,7 @@ export default class Parser {
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: fileUri,
-                  range: getPotentialNameToken().range
+                  range: currentNameToken.range
                 };
 
                 scope.addSymbol(currentItem);
@@ -1644,12 +1652,12 @@ export default class Parser {
 
               case `DS`:
                 currentItem = new Declaration(`struct`);
-                currentItem.name = getPotentialName() || NO_NAME;
+                currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = dSpec.keywords;
 
                 currentItem.position = {
                   path: fileUri,
-                  range: getPotentialNameToken()?.range || dSpec.field.range
+                  range: currentNameToken?.range || dSpec.field.range
                 };
 
                 currentItem.range = {
@@ -1657,7 +1665,7 @@ export default class Parser {
                   end: currentItem.position.range.line
                 };
 
-                expandDs(fileUri, getPotentialNameToken(), currentItem);
+                expandDs(fileUri, currentNameToken, currentItem);
 
                 currentGroup = `structs`;
                 scope.addSymbol(currentItem);
@@ -1666,7 +1674,7 @@ export default class Parser {
 
               case `PR`:
                 currentItem = new Declaration(`procedure`);
-                currentItem.name = getPotentialName() || NO_NAME;
+                currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = {
                   ...prettyTypeFromToken(dSpec),
                   ...dSpec.keywords
@@ -1735,9 +1743,11 @@ export default class Parser {
                     });
                   }
 
+                  const currentNameToken = getPotentialNameToken();
+
                   if (potentialName) {
                     currentSub = new Declaration(`subitem`);
-                    currentSub.name = getPotentialName();
+                    currentSub.name = currentNameToken?.value || NO_NAME;
                     currentSub.keyword = {
                       ...prettyTypeFromToken(dSpec),
                       ...dSpec.keywords
@@ -1745,11 +1755,11 @@ export default class Parser {
 
                     currentSub.position = {
                       path: fileUri,
-                      range: getPotentialNameToken().range
+                      range: currentNameToken?.range
                     };
 
                     // If the parameter has likeds, add the subitems to make it a struct.
-                    await expandDs(fileUri, getPotentialNameToken(), currentSub);
+                    await expandDs(fileUri, currentNameToken, currentSub);
 
                     currentItem.subItems.push(currentSub);
                     currentSub = undefined;
