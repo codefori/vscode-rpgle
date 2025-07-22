@@ -1373,11 +1373,8 @@ test('incorrect range on prototypes and procedures (#412)', async () => {
   expect(procedures[0].name).toBe('SCO000');
   expect(procedures[0].prototype).toBe(true);
 
-  console.log(procedures[0].range);
-
   expect(procedures[1].name).toBe('SCO000');
   expect(procedures[1].prototype).toBe(false);
-  console.log(procedures[1].range);
 
   const prRange = procedures[0].range;
   const procRange = procedures[1].range;
