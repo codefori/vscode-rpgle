@@ -136,6 +136,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 
 						for (const procedure of localCache.procedures) {
+							if (procedure.prototype && localCache.procedures.some(proc => proc.name.toUpperCase() === procedure.name.toUpperCase() && !proc.prototype)) {
+								continue; // Skip if the actual procedure is already defined
+							}
+
 							const item = CompletionItem.create(procedure.name);
 							item.kind = procedure.prototype ? CompletionItemKind.Interface : CompletionItemKind.Function;
 							item.insertTextFormat = InsertTextFormat.Snippet;

@@ -140,7 +140,25 @@ export function handleClientRequests() {
 	});
 
 	connection.onRequest(`getCache`, (uri: string) => {
-		return parser.getParsedCache(uri);
+		const doc = parser.getParsedCache(uri);
+		if (!doc) return undefined;
+		return {
+			keyword: doc.keyword,
+			parameters: doc.parameters,
+			subroutines: doc.subroutines,
+			procedures: doc.procedures.map(p => ({
+				...p,
+				prototype: p.prototype
+			})),
+			files: doc.files,
+			variables: doc.variables,
+			structs: doc.structs,
+			constants: doc.constants,
+			sqlReferences: doc.sqlReferences,
+			indicators: doc.indicators,
+			tags: doc.tags,
+			includes: doc.includes,
+		}
 	});
 }
 

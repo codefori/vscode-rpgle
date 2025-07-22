@@ -73,16 +73,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover|
 				};
 			} else {
 				// If they're inside of a procedure, let's get the stuff from there too
-				const currentProcedure = doc.procedures.find(proc => proc.range.start && proc.range.end && currentLine >= proc.range.start && currentLine <= proc.range.end);
-				let theVariable;
-
-				if (currentProcedure && currentProcedure.scope) {
-					theVariable = currentProcedure.scope.find(word);
-				}
-
-				if (!theVariable) {
-					theVariable = doc.find(word);
-				}
+				let theVariable = doc.findDefinition(currentLine, word);
 
 				if (theVariable) {
 					// Variable definition found

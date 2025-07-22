@@ -1,6 +1,6 @@
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
 import { IRange } from "../types";
-import Declaration from "./declaration";
+import Declaration, { DeclarationType } from "./declaration";
 
 const DEFAULT_INDICATORS = [
   ...Array(98).keys(), 
@@ -15,12 +15,14 @@ const DEFAULT_INDICATORS = [
 
 const newInds = () => {
   return DEFAULT_INDICATORS.map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
-    const indDef = new Declaration(`variable`);
+    const indDef = new Declaration(`indicator`);
     indDef.name = ind;
     indDef.keyword = { IND: true };
     return indDef;
   })
 };
+
+export type SymbolRegister = Map<string, Declaration[]>;
 
 export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
 const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
@@ -32,72 +34,86 @@ export interface RpgleTypeDetail {
 
 export default class Cache {
   keyword: Keywords;
-  parameters: Declaration[];
-  subroutines: Declaration[];
-  procedures: Declaration[];
-  files: Declaration[];
-  variables: Declaration[];
-  structs: Declaration[];
-  constants: Declaration[];
   sqlReferences: Declaration[];
-  indicators: Declaration[];
-  tags: Declaration[];
   includes: IncludeStatement[];
+  private symbolRegister: SymbolRegister;
 
-  constructor(cache: CacheProps = {}) {
+  constructor(cache: CacheProps = {}, isProcedure: boolean = false) {
     this.keyword = {};
-    this.parameters = cache.parameters || [];
-    this.subroutines = cache.subroutines || [];
-    this.procedures = cache.procedures || [];
-    this.files = cache.files || [];
-    this.variables = cache.variables || [];
-    this.structs = cache.structs || [];
-    this.constants = cache.constants || [];
-    this.sqlReferences = cache.sqlReferences || [];
-    this.indicators = cache.indicators || [...newInds()];
-    this.includes = cache.includes || [];
-    this.tags = cache.tags || [];
-  }
+    // this.symbols = cache.symbols || [...newInds()];
 
-  /**
-   * @param {Cache} [second] 
-   * @returns {Cache} merged caches
-   */
-  merge(second) {
-    if (second) {
-      return new Cache({
-        parameters: [...this.parameters, ...second.parameters],
-        subroutines: [...this.subroutines, ...second.subroutines],
-        procedures: [...this.procedures, ...second.procedures],
-        variables: [...this.variables, ...second.variables],
-        files: [...this.files, ...second.files],
-        structs: [...this.structs, ...second.structs],
-        constants: [...this.constants, ...second.constants],
-        sqlReferences: [...this.sqlReferences, ...second.sqlReferences],
-        indicators: [...this.indicators, ...second.indicators],
-      });
+    if (isProcedure) {
+      this.symbolRegister = cache.symbolRegister || new Map();
     } else {
-      return this;
+      this.symbolRegister = cache.symbolRegister || new Map();
+
+      newInds().forEach(ind => {
+        this.addSymbol(ind);
+      });
     }
+
+
+    this.sqlReferences = cache.sqlReferences || [];
+    this.includes = cache.includes || [];
   }
 
-  /**
-   * @returns {String[]}
-   */
-  getNames() {
-    const names = new Set<string>();
+  private symbolCache: Declaration[] | undefined;
 
-    this.parameters.forEach(def => names.add(def.name));
-    this.constants.forEach(def => names.add(def.name));
-    this.procedures.forEach(def => names.add(def.name));
-    this.files.forEach(def => names.add(def.name));
-    this.files.forEach(file => file.subItems.forEach(sub => names.add(sub.name)));
-    this.subroutines.forEach(def => names.add(def.name));
-    this.variables.forEach(def => names.add(def.name));
-    this.structs.forEach(def => names.add(def.name));
-    this.tags.forEach(def => names.add(def.name));
+  get symbols() {
+    if (this.symbolCache) return this.symbolCache;
 
-    return Array.from(names);
+    this.symbolCache = Array.from(this.symbolRegister.values()).flat(1);
+
+    return this.symbolCache;
+  }
+
+  get subroutines() {
+    return this.symbols.filter(s => s.type === `subroutine`);
+  }
+
+  get procedures() {
+    return this.symbols.filter(s => s.type === `procedure`);
+  }
+
+  get files() {
+    return this.symbols.filter(s => s.type === `file`);
+  }
+
+  get constants() {
+    return this.symbols.filter(s => s.type === `constant`);
+  }
+
+  get variables() {
+    return this.symbols.filter(s => s.type === `variable`);
+  }
+
+  get structs() {
+    return this.symbols.filter(s => s.type === `struct`);
+  }
+
+  get indicators() {
+    return this.symbols.filter(s => s.type === `indicator`);
+  }
+
+  get tags() {
+    return this.symbols.filter(s => s.type === `tag`);
+  }
+
+  get parameters() {
+    return this.symbols.filter(s => s.type === `parameter`);
+  }
+  
+  addSymbol(symbol: Declaration) {
+    const name = symbol.name.toUpperCase();
+    if (this.symbolRegister.has(name)) {
+      // If the symbol already exists, we can merge it
+      const existing = this.symbolRegister.get(name);
+      existing.push(symbol);
+    } else {
+      this.symbolRegister.set(name, [symbol]);
+    }
+
+    this.symbolCache = undefined;
   }
 
   /**
@@ -106,12 +122,9 @@ export default class Cache {
    * @returns {number} Line number
    */
   getDefinitionBlockEnd(fsPath: string) {
+    const checkTypes: DeclarationType[] = [`procedure`, `struct`, `file`, `variable`, `constant`];
     const lasts = [
-      this.procedures.filter(d => d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined).pop(),
-      this.structs.filter(d => d.position.path === fsPath).pop(),
-      this.variables.filter(d => d.position.path === fsPath).pop(),
-      this.constants.filter(d => d.position.path === fsPath).pop(),
-      this.files.filter(d => d.position.path === fsPath).pop()
+      this.symbols.filter(d => checkTypes.includes(d.type) && d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined).pop(),
     ].filter(d => d !== undefined);
 
     const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.range.line).sort((a, b) => b - a);
@@ -119,43 +132,41 @@ export default class Cache {
     return (lines.length >= 1 ? lines[0] : 0);
   }
 
-  find(name: string, includeProcedure?: string): Declaration | undefined {
+  find(name: string, specificType?: DeclarationType): Declaration | undefined {
     name = name.toUpperCase();
 
-    const fileStructs = this.files.flatMap(file => file.subItems);
-    const allStructs = [...fileStructs, ...this.structs];
+    const existing = this.symbolRegister.get(name);
+    if (existing) {
+      const symbols = Array.isArray(existing) ? existing : [existing];
+      // Loop through them all in case of duplicate names with different types
+      for (let i = symbols.length - 1; i >= 0; i--) {
+        // Scan symbols in reverse to determine the most recently defined
+        const symbol = symbols[i];
+        if (specificType && symbol.type !== specificType) {
+          return undefined;
+        }
 
-    const searchIn = [
-      this.parameters,
-      this.constants,
-      this.procedures.filter(p => !p.prototype), //Regular procedures
-      this.procedures.filter(p => p.prototype), //Prototypes
-      this.files,
-      allStructs,
-      this.subroutines,
-      this.variables,
-      this.indicators,
-      this.tags
-    ];
-
-    for (const list of searchIn) {
-      const found = list.find(def => def.name.toUpperCase() === name);
-      if (found) return found;
-    }
-
-    if (includeProcedure) {
-      const procedureScope = this.procedures.find(proc => proc.name.toUpperCase() === includeProcedure && proc.scope !== undefined);
-      if (procedureScope) {
-        const found = procedureScope.scope.find(name);
-        if (found) return found;
+        if (symbol.name.toUpperCase() === name) {
+          return symbol;
+        }
       }
     }
 
-    if (allStructs.length > 0) {
-      for (const def of allStructs) {
-        if (def.keyword[`QUALIFIED`] !== true) {
-          const subItem = def.subItems.find(sub => sub.name.toUpperCase() === name);
-          if (subItem) return subItem;
+    // Additional logic to check for subItems in symbols
+    const symbolsWithSubs = [...this.structs, ...this.files];
+
+    for (const struct of symbolsWithSubs) {
+      if (struct.keyword[`QUALIFIED`] !== true) {
+        // If the symbol is qualified, we need to check the subItems
+        const subItem = struct.subItems.find(sub => sub.name.toUpperCase() === name);
+        if (subItem) return subItem;
+
+        if (struct.type === `file`) {
+          // If it's a file, we also need to check the subItems of the file's recordformats
+          for (const subFile of struct.subItems) {
+            const subSubItem = subFile.subItems.find(sub => sub.name.toUpperCase() === name);
+            if (subSubItem) return subSubItem;
+          }
         }
       }
     }
@@ -163,11 +174,25 @@ export default class Cache {
     return;
   }
 
-  findDefinition(lineNumber, word) {
-    // If they're typing inside of a procedure, let's get the stuff from there too
-    const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+  findAll(name: string): Declaration[] {
+    name = name.toUpperCase();
+    const symbols = this.symbolRegister.get(name);
+    if (symbols) {
+      return Array.isArray(symbols) ? symbols : [symbols];
+    }
 
-    if (currentProcedure && currentProcedure.scope) {
+    return [];
+  }
+
+  public findProcedurebyLine(lineNumber: number): Declaration | undefined {
+    return this.procedures.find(proc => proc.scope && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+  }
+
+  findDefinition(lineNumber: number, word: string) {
+    // If they're typing inside of a procedure, let's get the stuff from there too
+    const currentProcedure = this.findProcedurebyLine(lineNumber);
+
+    if (currentProcedure) {
       const localDef = currentProcedure.scope.find(word);
 
       if (localDef) {
@@ -184,34 +209,20 @@ export default class Cache {
 
   findConstByValue(lineNumber: number, value: string) {
     // If they're typing inside of a procedure, let's get the stuff from there too
-    const currentProcedure = this.procedures.find(proc => lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+    const currentProcedure = this.findProcedurebyLine(lineNumber);
 
-    if (currentProcedure && currentProcedure.scope) {
-      const localDef = currentProcedure.scope.constants.find(def => def.keyword[`CONST`] === value);
+    if (currentProcedure) {
+      const localDef = currentProcedure.scope.symbols.find(def => def.keyword[`CONST`] === value);
 
       if (localDef) {
         return localDef;
       }
     }
 
-    const globalDef = this.constants.find(def => def.keyword[`CONST`] === value);
+    const globalDef = this.symbols.find(def => def.keyword[`CONST`] === value);
 
     if (globalDef) {
       return globalDef;
-    }
-  }
-
-  /**
-   * Move all procedure subItems (the paramaters) into the cache
-   */
-  fixProcedures() {
-    if (this.procedures.length > 0) {
-      this.procedures.forEach(proc => {
-        if (proc.scope && proc.subItems.length > 0) {
-          proc.scope.parameters = [...proc.subItems];
-          proc.scope.fixProcedures();
-        }
-      })
     }
   }
 
@@ -244,28 +255,19 @@ export default class Cache {
 
     if (typeof keywords[`LIKEDS`] === `string`) {
       refName = (keywords[`LIKEDS`] as string).toUpperCase();
-      reference = this.structs.find(s => s.name.toUpperCase() === refName);
+      reference = this.symbols.find(s => s.name.toUpperCase() === refName);
 
       return { reference };
     } else if (typeof keywords[`LIKE`] === `string`) {
       refName = (keywords[`LIKE`] as string).toUpperCase();
-      reference = this.variables.find(s => s.name.toUpperCase() === refName);
+      reference = this.symbols.find(s => s.name.toUpperCase() === refName);
 
-      if (!reference) {
-        // Like does technically work on structs too, so let's check those
-        // Though it's recommend to use LIKEDS in modern code
-        reference = this.structs.find(s => s.name.toUpperCase() === refName);
+      if (reference && reference.type === `procedure`) {
+        // If the LIKE is a procedure, we need to resolve the return type of the procedure
+        return this.resolveType(reference);
       }
 
-      if (!reference) {
-        // LIKE can also be used on procedures, and it will return the return type of the procedure
-        reference = this.procedures.find(s => s.name.toUpperCase() === refName);
-        if (reference) {
-          return this.resolveType(reference);
-        }
-      }
-
-      return { reference }
+      return { reference };
     } else {
       const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
       if (type) {
@@ -276,30 +278,26 @@ export default class Cache {
     return {};
   }
 
-  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
-    const props: (keyof Cache)[] = [`parameters`, `subroutines`, `procedures`, `files`, `variables`, `structs`, `constants`, `indicators`, `tags`];
-    for (const prop of props) {
-      const list = scope[prop] as unknown as Declaration[];
-      for (const def of list) {
-        let possibleRef: boolean;
+  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {  
+    for (const def of scope.symbols) {
+      let possibleRef: boolean;
 
-        // Search top level
-        possibleRef = def.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
-        if (possibleRef) return def;
+      // Search top level
+      possibleRef = def.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
+      if (possibleRef) return def;
 
-        // Search any subitems
-        if (def.subItems.length > 0) {
-          for (const subItem of def.subItems) {
-            possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
-            if (possibleRef) return subItem;
-          }
+      // Search any subitems
+      if (def.subItems.length > 0) {
+        for (const subItem of def.subItems) {
+          possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
+          if (possibleRef) return subItem;
         }
+      }
 
-        // Search scope if any
-        if (def.scope) {
-          const inScope = Cache.referenceByOffset(baseUri, def.scope, offset);
-          if (inScope) return inScope;
-        }
+      // Search scope if any
+      if (def.scope) {
+        const inScope = Cache.referenceByOffset(baseUri, def.scope, offset);
+        if (inScope) return inScope;
       }
     }
   }
