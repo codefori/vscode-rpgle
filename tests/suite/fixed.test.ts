@@ -1373,3 +1373,56 @@ test('multiline procedure names', async () => {
   expect(lines[procRange.start]).to.equal(`     Pabc...`);
   expect(lines[procRange.end]).to.equal(`     P                 E`);
 });
+
+test('incorrect range on prototypes and procedures (#412)', async () => {
+  const lines = [
+    ``,
+    `     H NoMain`,
+    `      *****************************************************************`,
+    `     FSCOOBYFM  CF   E             WorkStn SFile(OOPPS:SCOOPS)`,
+    `     F                                     InfDS(INFDS) USROPN`,
+    ``,
+    `     D Type            S              1S 0`,
+    `     D PTitle          S             40`,
+    `      ******************************************`,
+    `     DSCO000           PR            34`,
+    `     D                               40`,
+    ``,
+    `     PSCO000           B                   Export`,
+    `     DSCO000           PI            34`,
+    `     D PTitle                        40`,
+    `      ******************************************`,
+    `     D jgvb            S              4  0 Dim(1)`,
+    `     D gtdc            S              1    Dim(1)`,
+    `     D ditn            S              1    Dim(1)`,
+    `     D mgur            S              1    Dim(1)`,
+    `     D dfgx            S              4  0 Dim(1)`,
+    `     D G               S              1  0 Inz(1)`,
+    `      ******************************************`,
+    ``,
+    `        dsply 'this is awesome';`,
+    ` `,
+    `      ******************************************`,
+    `     P                 E`,
+    `      ******************************************`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache).toBeDefined();
+
+  const procedures = cache.procedures;
+  expect(procedures.length).toBe(2);
+  expect(procedures[0].name).toBe('SCO000');
+  expect(procedures[0].prototype).toBe(true);
+
+  expect(procedures[1].name).toBe('SCO000');
+  expect(procedures[1].prototype).toBe(false);
+
+  const prRange = procedures[0].range;
+  const procRange = procedures[1].range;
+
+  expect(prRange.start).to.deep.equal(prRange.end-1);
+  expect(procRange.start).toBeGreaterThan(prRange.end);
+  expect(procRange.end).toBeGreaterThan(procRange.start);
+});
