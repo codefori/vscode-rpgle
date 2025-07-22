@@ -131,7 +131,11 @@ export function parseDLine(lineNumber, lineIndex, content) {
  */
 export function parsePLine(content, lineNumber, lineIndex) {
   content = content.padEnd(80);
-  const name = content.substr(6, 16)
+  let name = content.substr(6, 16).trimEnd();
+  if (name.endsWith(`...`)) {
+    name = name.substring(0, name.length - 3);
+  }
+  
   const longForm = content.substring(6).trimEnd();
   const potentialName = longForm.endsWith(`...`) ? calculateToken(lineNumber, lineIndex+6, longForm.substring(0, longForm.length - 3)) : undefined;
   const start = content[23].toUpperCase() === `B`;
