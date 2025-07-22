@@ -177,11 +177,7 @@ export default class Cache {
   findAll(name: string): Declaration[] {
     name = name.toUpperCase();
     const symbols = this.symbolRegister.get(name);
-    if (symbols) {
-      return Array.isArray(symbols) ? symbols : [symbols];
-    }
-
-    return [];
+    return symbols || [];
   }
 
   public findProcedurebyLine(lineNumber: number): Declaration | undefined {
