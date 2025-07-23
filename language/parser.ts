@@ -1240,7 +1240,7 @@ export default class Parser {
                   (inBlock || isContinued) &&  // If this is true, usually means next word is the object
                   (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
                 ) {
-                  if (index >= 0 && (index+1) < parts.length && !ignoredWords.includes(parts[index+1])) {
+                  if (index >= 0 && (index+1) < parts.length && tokens[index+1].type === `word` && !ignoredWords.includes(parts[index+1])) {
 
                     const qualifiedObjectPath = cleanupObjectRef(index+1);
 

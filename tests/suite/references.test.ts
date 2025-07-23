@@ -2054,3 +2054,47 @@ test('variable reference', async () => {
   expect(input).toBeDefined();
   expect(input.references.length).toBe(2);
 });
+
+test('sql prepare reference', async () => {
+  const lines = [
+    `**free`,
+    `dcl-proc getGenerationTime;`,
+    `  dcl-pi *n timestamp;`,
+    `    fileName char(10) const;`,
+    `  end-pi;`,
+    ``,
+    `  dcl-s sqlQuery varchar(200);`,
+    `  dcl-s generationTime timestamp;`,
+    ``,
+    `  sqlQuery =`,
+    `    'SELECT TO_DATE(substring('`,
+    `       + %trim(fileName)`,
+    `       + ', 95, 17), ''DD/MM/YY HH24:MI:SS'') ' +`,
+    `      'FROM qtemp/' + %trim(fileName) + ' ';`,
+    ``,
+    `  exec sql`,
+    `    PREPARE genTimeSqlBlock FROM :sqlQuery;`,
+    ``,
+    `  exec sql`,
+    `    DECLARE genTIme CURSOR FOR genTimeSqlBlock;`,
+    ``,
+    `  exec sql`,
+    `    OPEN genTime;`,
+    ``,
+    `  exec sql`,
+    `    FETCH NEXT FROM genTime INTO :generationTime;`,
+    ``,
+    `  exec sql`,
+    `    CLOSE genTime;`,
+    ``,
+    `  return generationTime;`,
+    ``,
+    `end-proc;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  // console.log(cache);
+  const getGenerationTime = cache.find(`getGenerationTime`);
+  const sqlReferences = getGenerationTime.scope.sqlReferences;
+  console.log(sqlReferences);
+}) 
