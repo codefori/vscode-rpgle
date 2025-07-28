@@ -101,8 +101,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						def.name,
 						prettyKeywords(def.keyword),
 						SymbolKind.Constant,
-						Range.create(def.position.range.line, 0, def.position.range.line, 0),
-						Range.create(def.position.range.line, 0, def.position.range.line, 0)
+						Range.create(def.range.start!, 0, def.range.end!, 0),
+						Range.create(def.range.start!, 0, def.range.start!, 0)
 					);
 
 					if (def.subItems.length > 0) {
