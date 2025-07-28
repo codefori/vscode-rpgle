@@ -1746,4 +1746,30 @@ test('const value #400', async () => {
   const pi = cache.find(`PI`);
   expect(pi.name).toBe(`PI`);
   expect(pi.keyword[`CONST`]).toBe(`3.14159`);
-})
+});
+
+test('dcl-enum range (#425)', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s myprogramText char(20);`,
+    ``,
+    ``,
+    `dcl-enum myenum qualified;`,
+    `  CONSTANT1 'value1';`,
+    `  CONSTANT2 55;`,
+    `end-enum;`,
+    ``,
+    `dsply myprogramText;`,
+  ];
+
+  const cache = await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: false });
+
+  const constants = cache.constants;
+  expect(constants.length).toBe(1);
+  expect(constants[0].name).toBe(`myenum`);
+  expect(constants[0].subItems.length).toBe(2);
+  expect(constants[0].range).toMatchObject({ start: 5, end: 8 });
+  expect(lines[constants[0].range.start]).toBe(`dcl-enum myenum qualified;`);
+  expect(lines[constants[0].range.end]).toBe(`end-enum;`);
+});
