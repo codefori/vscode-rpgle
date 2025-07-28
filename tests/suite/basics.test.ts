@@ -1773,3 +1773,75 @@ test('dcl-enum range (#425)', async () => {
   expect(lines[constants[0].range.start]).toBe(`dcl-enum myenum qualified;`);
   expect(lines[constants[0].range.end]).toBe(`end-enum;`);
 });
+
+test('correct ranges (#427)', async () => {
+  const lines = [
+    `     d                                     extproc('main')`,
+    `     d  io_test                 12345a         options(*varsize)`,
+    `     d testing...`,
+    `     d                 pr`,
+    `     d                                     extproc('testing')`,
+    `     d msgInfo                      787a   const varying options(*varsize)`,
+    `     d tester          s                   like(ai_tester)`,
+    `     d system          s                   like(ai_system)`,
+    `     d fmtType         s                   like(ai_fmtType)`,
+    `      /free`,
+    ``,
+    `       *inlr = *on;`,
+    ``,
+    `       if (%parms() >= p_tester and %addr(ai_tester) <> *null);`,
+    `          tester = ai_tester;`,
+    `       endif;`,
+    ``,
+    ``,
+    `      //*==========================================================================================*`,
+    `      //* Program entry point                                                                      *`,
+    `      //*==========================================================================================*`,
+    ``,
+    `     d TESTING...`,
+    `     d                 pi`,
+    `     d  aio_test                  12345a         options(*varsize)`,
+    `     d  ai_lenFldInf                 10i 0 const`,
+    `     d  ai_format                     8a   const`,
+    `     d  ai_qFile                           const likeds(qObj_t)`,
+    `     d  ai_rcdFmt                    10a   const`,
+    `     d  ai_tester                     1a   const options(*nopass)`,
+    `     d  ai_system                    10a   const options(*nopass)`,
+    `     d  ai_fmtType                   10a   const options(*nopass)`,
+    ``,
+    `     d p_tester        c                   7`,
+    `     d p_system        c                   8`,
+    `     d p_fmtType       c                   9`,
+    ``,
+    `     d tester          s                   like(ai_tester)`,
+    `     d system          s                   like(ai_system)`,
+    `     d fmtType         s                   like(ai_fmtType)`,
+    ``,
+    ``,
+    `      //*==========================================================================================*`,
+    `      //* Main procedure                                                                           *`,
+    `      //*==========================================================================================*`,
+    `     p main...`,
+    `     p                 b`,
+    `     d                 pi`,
+    `     d  io_test                 12345a         options(*varsize)`,
+    `     p                 e`,
+  ];
+
+  const cache = await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: false });
+
+  const testingPr = cache.find(`testing`);
+  expect(testingPr.range.start).toBe(2);
+  expect(testingPr.range.end).toBe(5);
+
+  expect(cache.parameters.length).toBe(8);
+  expect(cache.parameters[0].name).toBe(`aio_test`);
+  expect(cache.parameters[0].range.start).toBe(24)
+  expect(cache.parameters[7].name).toBe(`ai_fmtType`);
+  expect(cache.parameters[7].range.start).toBe(31)
+
+  const mainProcedure = cache.find(`main`);
+  const procStart = mainProcedure.range.start;
+  const procEnd = mainProcedure.range.end;
+  expect(procEnd-procStart).toBe(4);
+});
