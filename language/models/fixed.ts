@@ -1,4 +1,7 @@
+
 import Parser from "../parser";
+import { Keywords } from "../parserTypes";
+import { Token } from "../types";
 
 /**
  * @param {number} lineNumber 
@@ -7,7 +10,7 @@ import Parser from "../parser";
  * @param {string} [type]
  * @returns {import("../types").Token|undefined}
  */
-function calculateToken(lineNumber, startingPos, value, type) {
+function calculateToken(lineNumber: number, startingPos: number, value: string, type?: string): Token | undefined {
   let resultValue = value.trim();
 
   if (resultValue === ``) {
@@ -62,7 +65,7 @@ export function parseFLine(lineNumber, lineIndex, content) {
 /**
  * @param {string} content 
  */
-export function parseCLine(lineNumber, lineIndex, content) {
+export function parseCLine(lineNumber: number, lineIndex: number, content: string) {
   content = content.padEnd(80);
   const clIndicator = content.substr(7, 8).toUpperCase();
   const indicator = content.substr(9, 11);
@@ -97,10 +100,7 @@ export function parseCLine(lineNumber, lineIndex, content) {
   };
 }
 
-/**
- * @param {string} content
- */
-export function parseDLine(lineNumber, lineIndex, content) {
+export function parseDLine(lineNumber: number, lineIndex: number, content: string) {
   content = content.padEnd(80);
   const longForm = content.substring(6).trimEnd();
   const potentialName = longForm.endsWith(`...`) ? calculateToken(lineNumber, lineIndex+6, longForm.substring(0, longForm.length - 3)) : undefined;
@@ -129,7 +129,7 @@ export function parseDLine(lineNumber, lineIndex, content) {
 /**
  * @param {string} content
  */
-export function parsePLine(content, lineNumber, lineIndex) {
+export function parsePLine(content: string, lineNumber: number, lineIndex: number) {
   content = content.padEnd(80);
   let name = content.substr(6, 16).trimEnd();
   if (name.endsWith(`...`)) {
@@ -162,12 +162,7 @@ export function prettyTypeFromToken(dSpec) {
   })
 }
 
-/**
- * 
- * @param {{type: string, keywords: import("../parserTypes").Keywords, len: string, pos: string, decimals: string, field: string}} lineData 
- * @returns {import("../parserTypes").Keywords}
- */
-export function getPrettyType(lineData) {
+export function getPrettyType(lineData: {type: string, keywords: Keywords, len: string, pos: string, decimals: string, field: string}): Keywords {
   let outType = ``;
   let length = Number(lineData.len);
 
@@ -304,4 +299,103 @@ export function getPrettyType(lineData) {
   }
 
   return Parser.expandKeywords(Parser.getTokens(outType));
+}
+
+// https://www.ibm.com/docs/fr/i/7.4.0?topic=specifications-input
+export function parseILine(lineNumber: number, lineIndex: number, content: string) {
+  content = content.padEnd(80);
+  let iType: "programRecord"|"programField"|"externalRecord"|"externalField"|undefined;
+
+  const name = content.substring(6, 16).trimEnd();
+
+  if (name) {
+    // RECORD
+    const externalReserved = content.substring(15, 20).trim();
+    if (externalReserved) {
+      // If this reserved area is not empty, then it is a program record
+      iType = `programRecord`;
+    } else {
+      iType = `externalRecord`;
+    }
+
+  } else {
+    // FIELD
+    const externalName = content.substring(20, 30).trim();
+
+    if (externalName) {
+      iType = `externalField`;
+    } else {
+      iType = `programField`;
+    }
+  }
+
+  const getPart = (start: number, end: number, type?: string) => {
+    return calculateToken(lineNumber, lineIndex + start, content.substring(start-1, end).trimEnd(), type);
+  }
+
+  switch (iType) {
+    case `programRecord`:
+      // Handle program record
+      // https://www.ibm.com/docs/fr/i/7.4.0?topic=specifications-record-identification-entries#iri
+
+      return {
+        iType,
+        name: getPart(7, 16),
+        logicalRelationship: getPart(16, 18),
+        sequence: getPart(18, 19),
+        number: getPart(19, 20),
+        option: getPart(20, 21),
+        recordIdentifyingIndicator: getPart(21, 23, `special-ind`) // 2 characters
+      }
+      break;
+    case `programField`:
+      // Handle program field
+      // https://www.ibm.com/docs/fr/i/7.4.0?topic=specifications-field-description-entries#ifd
+
+      return {
+        iType,
+        dataAttributes: getPart(31, 34),
+        dateTimeSeparator: getPart(35, 36),
+        dataFormat: getPart(36, 37),
+        fieldLocation: getPart(37, 46),
+        decimalPositions: getPart(47, 48),
+        fieldName: getPart(49, 62),
+        controlLevel: getPart(63, 64),
+        matchingFields: getPart(65, 66),
+        fieldRecordRelation: getPart(67, 68),
+        fieldIndicators: [
+          getPart(69, 70, `special-ind`),
+          getPart(71, 72, `special-ind`),
+          getPart(73, 74, `special-ind`)
+        ]
+      }
+
+    case `externalRecord`:
+      // Handle external record
+      // https://www.ibm.com/docs/fr/i/7.4.0?topic=is-record-identification-entries#ier
+
+      return {
+        iType,
+        name: getPart(7, 16),
+        recordIdentifyingIndicator: getPart(21, 22, `special-ind`), // 2 characters
+      };
+      break;
+    case `externalField`:
+      // Handle external field
+      // https://www.ibm.com/docs/fr/i/7.4.0?topic=is-field-description-entries#ied
+
+      return {
+        iType,
+        externalName: getPart(21, 30),
+        fieldName: getPart(49, 62),
+        controlLevel: getPart(63, 64),
+        matchingFields: getPart(65, 66),
+        fieldIndicators: [
+          getPart(69, 70, `special-ind`),
+          getPart(71, 72, `special-ind`),
+          getPart(73, 74, `special-ind`)
+        ]
+      };
+      break;
+  }
 }
