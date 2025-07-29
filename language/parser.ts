@@ -233,7 +233,7 @@ export default class Parser {
       }
     }
 
-    let currentGroup: "structs"|"procedures"|"constants";
+    let currentGroup: "structs"|"procedures"|"constants"|"parameters";
 
     let definedMacros: string[] = [];
 
@@ -878,6 +878,11 @@ export default class Parser {
                   range: tokens[1].range
                 };
 
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: lineNumber
+                };
+
                 scope.addSymbol(currentItem);
                 resetDefinition = true;
               }
@@ -895,6 +900,11 @@ export default class Parser {
                 currentItem.position = {
                   path: fileUri,
                   range: tokens[1].range
+                };
+
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: lineNumber
                 };
 
                 scope.addSymbol(currentItem);
@@ -1346,6 +1356,11 @@ export default class Parser {
                     range: tokens[0].range
                   };
 
+                  currentSub.range = {
+                    start: currentStmtStart.line,
+                    end: lineNumber
+                  };
+
                   // Add comments from the tags
                   if (currentItem.type === `procedure`) {
                     const paramTags = currentItem.tags.filter(tag => tag.tag === `param`);
@@ -1628,6 +1643,11 @@ export default class Parser {
                   path: fileUri,
                   range: dSpec.field.range
                 };
+
+                currentItem.range = {
+                  start: currentNameToken.range.line,
+                  end: currentItem.position.range.line
+                };
     
                 scope.addSymbol(currentItem);
                 resetDefinition = true;
@@ -1644,6 +1664,11 @@ export default class Parser {
                 currentItem.position = {
                   path: fileUri,
                   range: currentNameToken.range
+                };
+
+                currentItem.range = {
+                  start: currentNameToken.range.line,
+                  end: currentItem.position.range.line
                 };
 
                 scope.addSymbol(currentItem);
@@ -1708,6 +1733,8 @@ export default class Parser {
                       ...dSpec.keywords
                     }
                   }
+                } else {
+                  currentGroup = `parameters`;
                 }
                 break;
 
@@ -1717,7 +1744,6 @@ export default class Parser {
                   switch (currentGroup) {
                   case `structs`:
                   case `procedures`:
-
                     // We have to do this backwards lookup to find the definition
                     // because in fixed format, currentItem is not defined. So
                     // we go find the latest procedure/structure defined
@@ -1729,13 +1755,19 @@ export default class Parser {
                   
                     currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
                     break;
+
+                  case `parameters`:
+                    currentItem = new Declaration(`struct`);
+                    currentItem.name = PROGRAMPARMS_NAME;
+                    break;
                   }
                 }
 
                 if (currentItem) {
+                  const isProgramParameter = currentItem.name === PROGRAMPARMS_NAME;
 
                   // This happens when it's a blank parm.
-                    const baseToken = dSpec.type || dSpec.len;
+                  const baseToken = dSpec.type || dSpec.len;
                   if (!potentialName && baseToken) {
                     pushPotentialNameToken({
                       ...baseToken,
@@ -1746,7 +1778,7 @@ export default class Parser {
                   const currentNameToken = getPotentialNameToken();
 
                   if (potentialName) {
-                    currentSub = new Declaration(`subitem`);
+                    currentSub = new Declaration(isProgramParameter ? `parameter` : `subitem`);
                     currentSub.name = currentNameToken?.value || NO_NAME;
                     currentSub.keyword = {
                       ...prettyTypeFromToken(dSpec),
@@ -1758,10 +1790,19 @@ export default class Parser {
                       range: currentNameToken?.range
                     };
 
+                    currentSub.range = {
+                      start: lineNumber,
+                      end: lineNumber
+                    }
+
                     // If the parameter has likeds, add the subitems to make it a struct.
                     await expandDs(fileUri, currentNameToken, currentSub);
 
-                    currentItem.subItems.push(currentSub);
+                    if (isProgramParameter) {
+                      scope.addSymbol(currentSub);
+                    } else {
+                      currentItem.subItems.push(currentSub);
+                    }
                     currentSub = undefined;
 
                     resetDefinition = true;
@@ -1772,12 +1813,15 @@ export default class Parser {
                           ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
                           ...prettyTypeFromToken(dSpec),
                           ...dSpec.keywords
-                        }
+                        };
+
+                        currentItem.subItems[currentItem.subItems.length - 1].range.end = lineNumber;
                       } else {
                         currentItem.keyword = {
                           ...currentItem.keyword,
                           ...dSpec.keywords
                         }
+
                       }
                     }
                   }

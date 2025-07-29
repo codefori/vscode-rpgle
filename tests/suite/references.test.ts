@@ -2096,5 +2096,4 @@ test('sql prepare reference', async () => {
   // console.log(cache);
   const getGenerationTime = cache.find(`getGenerationTime`);
   const sqlReferences = getGenerationTime.scope.sqlReferences;
-  console.log(sqlReferences);
 }) 
