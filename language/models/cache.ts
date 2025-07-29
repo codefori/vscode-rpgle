@@ -297,6 +297,14 @@ export default class Cache {
         for (const subItem of def.subItems) {
           possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
           if (possibleRef) return subItem;
+
+          // Do one more level deep
+          if (subItem.subItems.length > 0) {
+            for (const subSubItem of subItem.subItems) {
+              possibleRef = subSubItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
+              if (possibleRef) return subSubItem;
+            }
+          }
         }
       }
 
