@@ -52,7 +52,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						prettyKeywords(proc.keyword),
 						proc.prototype ? SymbolKind.Interface : SymbolKind.Function,
 						Range.create(proc.range.start!, 0, proc.range.end!, 0),
-						Range.create(proc.range.start!, 0, proc.range.start!, 0),
+						Range.create(proc.range.start!, 0, proc.range.end!, 0),
 					);
 
 					if (proc.scope) {
@@ -62,8 +62,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 							subitem.name,
 							prettyKeywords(subitem.keyword),
 							SymbolKind.Property,
-							Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0),
-							Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0)
+							Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
+							Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
 						));
 						
 						procDef.children.push(...getScopeVars(proc.scope));
@@ -80,7 +80,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						prettyKeywords(def.keyword),
 						SymbolKind.Function,
 						Range.create(def.range.start!, 0, def.range.end!, 0),
-						Range.create(def.range.start!, 0, def.range.start!, 0),
+						Range.create(def.range.start!, 0, def.range.end!, 0),
 					)),
 
 				...scope.variables
@@ -89,8 +89,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						def.name,
 						prettyKeywords(def.keyword),
 						SymbolKind.Variable,
-						Range.create(def.position.range.line, 0, def.position.range.line, 0),
-						Range.create(def.position.range.line, 0, def.position.range.line, 0)
+						Range.create(def.range.start!, 0, def.range.end!, 0),
+						Range.create(def.range.start!, 0, def.range.end!, 0)
 					))
 			);
 
@@ -102,7 +102,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						prettyKeywords(def.keyword),
 						SymbolKind.Constant,
 						Range.create(def.range.start!, 0, def.range.end!, 0),
-						Range.create(def.range.start!, 0, def.range.start!, 0)
+						Range.create(def.range.start!, 0, def.range.end!, 0)
 					);
 
 					if (def.subItems.length > 0) {
@@ -112,8 +112,8 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 								subitem.name,
 								prettyKeywords(subitem.keyword),
 								SymbolKind.Property,
-								Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0),
-								Range.create(subitem.position.range.line, 0, subitem.position.range.line, 0)
+								Range.create(subitem.range.start!, 0, subitem.range.start!, 0),
+								Range.create(subitem.range.end!, 0, subitem.range.end!, 0)
 							));
 					}
 
