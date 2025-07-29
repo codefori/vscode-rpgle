@@ -156,6 +156,28 @@ test("references_7", async () => {
   expect(varColors.references.length).toEqual(1);
 });
 
+test("reference from file (#406)", async () => {
+  const lines = [
+    `**free`,
+    `dcl-s var1 varchar(20);`,
+    ``,
+    `dcl-f department keyed;`,
+    ``,
+    `deptname = 'scoobydo';`,
+    ``,
+    `dsply deptname;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, collectReferences: true});
+
+  const deptname = cache.find(`deptname`);
+  expect(deptname.name).toEqual(`DEPTNAME`);
+  expect(deptname.references.length).toEqual(2);
+
+  const reference = Cache.referenceByOffset(uri, cache, lines.indexOf(`deptname`));
+  expect(reference).toMatchObject(deptname);
+});
+
 test("references_8", async () => {
   const lines = [
     `**free`,
