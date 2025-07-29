@@ -1,6 +1,6 @@
 
 import path from "path";
-import setupParser from "../parserSetup";
+import setupParser, { getFileContent } from "../parserSetup";
 import Linter from "../../language/linter";
 import { test, expect } from "vitest";
 
@@ -1876,3 +1876,23 @@ test('correct ranges (#427)', async () => {
   expect(constants[3].range.end).toBe(37);
   expect(constants[3].keyword[`CONST`]).toBe(`9`);
 });
+
+// test('scoobydo', async () => {
+//   const content = await getFileContent(path.join(__dirname, `..`, `rpgle`, `testing.rpgle`));
+//   const lines = content.split(/\r?\n/);
+//   const cache = await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: false });
+
+//   const kill = cache.findAll(`kill`);
+  
+//   const killPrototype = kill[0];
+//   expect(killPrototype.name).toBe(`kill`);
+//   expect(killPrototype.prototype).toBeTruthy();
+//   expect(killPrototype.range.start).toBe(71);
+//   expect(killPrototype.range.end).toBe(74);
+
+//   const killProc = kill[1];
+//   expect(killProc.name).toBe(`kill`);
+//   expect(killProc.prototype).toBeFalsy();
+//   expect(killProc.range.start).toBe(741);
+//   expect(killProc.range.end).toBe(761);  
+// });
