@@ -125,6 +125,12 @@ test('vitestTest5', async () => {
   expect(cache.procedures[0].subItems.length).toBe(0);
   expect(cache.procedures[1].subItems.length).toBe(1);
 
+  const setValue = cache.procedures[1];
+  expect(setValue.name).toBe(`setValue`);
+  expect(setValue.subItems[0].name).toBe(`newValue`);
+  expect(setValue.subItems[0].range.start).toBe(10);
+  expect(setValue.subItems[0].range.end).toBe(10);
+
   let typeData;
   for (const proc of cache.procedures) {
     typeData = cache.resolveType(cache.procedures[0]);
@@ -1746,6 +1752,7 @@ test('const value #400', async () => {
   const pi = cache.find(`PI`);
   expect(pi.name).toBe(`PI`);
   expect(pi.keyword[`CONST`]).toBe(`3.14159`);
+  expect(pi.range).toMatchObject({ start: 1, end: 1 });
 });
 
 test('dcl-enum range (#425)', async () => {
@@ -1785,6 +1792,8 @@ test('correct ranges (#427)', async () => {
     `     d tester          s                   like(ai_tester)`,
     `     d system          s                   like(ai_system)`,
     `     d fmtType         s                   like(ai_fmtType)`,
+    `     d TYPE_VAR_CHAR...`,
+    `     d                 c                   x'8004'`,
     `      /free`,
     ``,
     `       *inlr = *on;`,
@@ -1836,12 +1845,34 @@ test('correct ranges (#427)', async () => {
 
   expect(cache.parameters.length).toBe(8);
   expect(cache.parameters[0].name).toBe(`aio_test`);
-  expect(cache.parameters[0].range.start).toBe(24)
+  expect(cache.parameters[0].range.start).toBe(26)
   expect(cache.parameters[7].name).toBe(`ai_fmtType`);
-  expect(cache.parameters[7].range.start).toBe(31)
+  expect(cache.parameters[7].range.start).toBe(33)
 
   const mainProcedure = cache.find(`main`);
   const procStart = mainProcedure.range.start;
   const procEnd = mainProcedure.range.end;
   expect(procEnd-procStart).toBe(4);
+
+  const constants = cache.constants;
+  expect(constants.length).toBe(4);
+
+  expect(constants[0].name).toBe(`TYPE_VAR_CHAR`);
+  expect(constants[0].range.start).toBe(9);
+  expect(constants[0].range.end).toBe(10);
+  expect(constants[0].keyword[`CONST`]).toBe(`x'8004'`);
+
+  expect(constants[1].name).toBe(`p_tester`);
+  expect(constants[1].range.start).toBe(35);
+  expect(constants[1].range.end).toBe(35);
+  expect(constants[1].keyword[`CONST`]).toBe(`7`);
+
+  expect(constants[2].name).toBe(`p_system`);
+  expect(constants[2].range.start).toBe(36);
+  expect(constants[2].range.end).toBe(36);
+
+  expect(constants[3].name).toBe(`p_fmtType`);
+  expect(constants[3].range.start).toBe(37);
+  expect(constants[3].range.end).toBe(37);
+  expect(constants[3].keyword[`CONST`]).toBe(`9`);
 });

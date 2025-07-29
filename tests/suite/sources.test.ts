@@ -91,6 +91,14 @@ test("Generic reference tests", { timeout }, async () => {
           if (def.scope) {
             await checkScope(def.scope);
           }
+
+          // Skip indicators and files/sql references for range checks
+          if ([`indicator`, `file`].includes(def.type) == false && def.range) {
+            if (def.range.start === null || def.range.end === null) {
+              errorCount++;
+              console.error(`Declaration ${def.name} (${def.type}) has invalid range in ${basename}`);
+            }
+          }
         }
       }
 

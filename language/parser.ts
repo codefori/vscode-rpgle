@@ -878,6 +878,11 @@ export default class Parser {
                   range: tokens[1].range
                 };
 
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: lineNumber
+                };
+
                 scope.addSymbol(currentItem);
                 resetDefinition = true;
               }
@@ -895,6 +900,11 @@ export default class Parser {
                 currentItem.position = {
                   path: fileUri,
                   range: tokens[1].range
+                };
+
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: lineNumber
                 };
 
                 scope.addSymbol(currentItem);
@@ -1346,6 +1356,11 @@ export default class Parser {
                     range: tokens[0].range
                   };
 
+                  currentSub.range = {
+                    start: currentStmtStart.line,
+                    end: lineNumber
+                  };
+
                   // Add comments from the tags
                   if (currentItem.type === `procedure`) {
                     const paramTags = currentItem.tags.filter(tag => tag.tag === `param`);
@@ -1628,6 +1643,11 @@ export default class Parser {
                   path: fileUri,
                   range: dSpec.field.range
                 };
+
+                currentItem.range = {
+                  start: currentNameToken.range.line,
+                  end: currentItem.position.range.line
+                };
     
                 scope.addSymbol(currentItem);
                 resetDefinition = true;
@@ -1644,6 +1664,11 @@ export default class Parser {
                 currentItem.position = {
                   path: fileUri,
                   range: currentNameToken.range
+                };
+
+                currentItem.range = {
+                  start: currentNameToken.range.line,
+                  end: currentItem.position.range.line
                 };
 
                 scope.addSymbol(currentItem);
@@ -1797,7 +1822,6 @@ export default class Parser {
                           ...dSpec.keywords
                         }
 
-                        currentItem.range.end = lineNumber;
                       }
                     }
                   }
