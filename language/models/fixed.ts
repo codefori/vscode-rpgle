@@ -302,7 +302,7 @@ export function getPrettyType(lineData: {type: string, keywords: Keywords, len: 
 }
 
 // https://www.ibm.com/docs/fr/i/7.4.0?topic=specifications-input
-export function parseILine(lineNumber: number, lineIndex: number, content: string) {
+export function parseISpec(lineNumber: number, lineIndex: number, content: string) {
   content = content.padEnd(80);
   let iType: "programRecord"|"programField"|"externalRecord"|"externalField"|undefined;
 
