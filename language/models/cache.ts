@@ -80,6 +80,10 @@ export default class Cache {
     return this.symbols.filter(s => s.type === `file`);
   }
 
+  get inputs() {
+    return this.symbols.filter(s => s.type === `input`);
+  }
+
   get constants() {
     return this.symbols.filter(s => s.type === `constant`);
   }
@@ -161,9 +165,14 @@ export default class Cache {
 
   findAll(name: string, ignorePrefix?: boolean): Declaration[] {
     name = name.toUpperCase();
-    const symbols = this.symbolRegister.get(name) || [];
+    let symbols = this.symbolRegister.get(name) || [];
 
     symbols.push(...this.findSubfields(name, ignorePrefix));
+
+    // Remove duplicates by position, since we can have the same reference to symbols in structures due to I-spec
+    symbols = symbols.filter((s, index, self) => {
+      return self.findIndex(item => item.position.path === s.position.path && s.position.range.line === item.position.range.line) === index;
+    });
 
     return symbols || [];
   }
@@ -172,7 +181,7 @@ export default class Cache {
     let symbols: Declaration[] = [];
 
     // Additional logic to check for subItems in symbols
-    const symbolsWithSubs = [...this.structs, ...this.files];
+    const symbolsWithSubs = [...this.structs, ...this.files, ...this.inputs];
 
     const subNameIsValid = (sub: Declaration, name: string, prefix?: string) => {
       if (prefix) {
@@ -185,7 +194,15 @@ export default class Cache {
     // First we do a loop to check all names without changing the prefix.
     // This only applied to files
     for (const struct of symbolsWithSubs) {
-      if (struct.type === `file` && struct.keyword[`QUALIFIED`] !== true) {
+      if (struct.keyword[`QUALIFIED`] !== true) {
+
+        // If the symbol is qualified, we need to check the subItems
+        const subItem = struct.subItems.find(sub => subNameIsValid(sub, name));
+        if (subItem) {
+          symbols.push(subItem);
+          if (onlyOne) return symbols;
+        }
+
         // If it's a file, we also need to check the subItems of the file's recordformats
         for (const subFile of struct.subItems) {
           const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name));
@@ -200,24 +217,15 @@ export default class Cache {
     // Then we check the names, ignoring the prefix
     if (ignorePrefix) {
       for (const struct of symbolsWithSubs) {
-        if (struct.keyword[`QUALIFIED`] !== true) {
-          // If the symbol is qualified, we need to check the subItems
-          const subItem = struct.subItems.find(sub => subNameIsValid(sub, name));
-          if (subItem) {
-            symbols.push(subItem);
-            if (onlyOne) return symbols;
-          }
+        if (struct.type === `file` && struct.keyword[`QUALIFIED`] !== true) {
+          const prefix = ignorePrefix && struct.keyword[`PREFIX`] && typeof struct.keyword[`PREFIX`] === `string` ? trimQuotes(struct.keyword[`PREFIX`].toUpperCase()) : ``;
 
-          if (struct.type === `file`) {
-            const prefix = ignorePrefix && struct.keyword[`PREFIX`] && typeof struct.keyword[`PREFIX`] === `string` ? trimQuotes(struct.keyword[`PREFIX`].toUpperCase()) : ``;
-
-            // If it's a file, we also need to check the subItems of the file's recordformats
-            for (const subFile of struct.subItems) {
-              const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name, prefix));
-              if (subSubItem) {
-                symbols.push(subSubItem);
-                if (onlyOne) return symbols;
-              }
+          // If it's a file, we also need to check the subItems of the file's recordformats
+          for (const subFile of struct.subItems) {
+            const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name, prefix));
+            if (subSubItem) {
+              symbols.push(subSubItem);
+              if (onlyOne) return symbols;
             }
           }
         }

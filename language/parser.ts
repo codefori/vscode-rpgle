@@ -1469,11 +1469,42 @@ export default class Parser {
                 // TODO: generate a type for this
                 let lookup = scope.find(iSpec.fieldName.value, undefined);
 
-                if (iSpec.dataFormat) {
-                  const definedDataType = prettyTypeFromISpecTokens(iSpec);
-                  console.log(definedDataType);
-                } else if (lookup) {
+                // This means the lookup is part of a struct
+                if (lookup && lookup.type === `subitem` && iSpec.dataFormat === undefined) {
+                  // So we assign it a default type if there isn't one
+                  iSpec.dataFormat = {
+                    type: `word`,
+                    value: iSpec.decimalPositions ? `S` : `A`,
+                    range: {start: 35, end: 37, line: lineNumber}
+                  };
+                }
+
+                const definedDataType = prettyTypeFromISpecTokens(iSpec);
+
+                if (lookup) {
+                  // TODO: does definedDataType match to lookup?
+                  if (Object.keys(lookup.keyword).length === 0) {
+                    lookup.keyword = definedDataType;
+                    // console.log({name: lookup.name, definedDataType});
+                  } else {
+                    // console.log({name: lookup.name, lookupKeyword: lookup.keyword, definedDataType});
+                  }
+
                   currentItem.subItems.push(lookup);
+                } else {
+                  currentSub = new Declaration(`subitem`);
+                  currentSub.name = iSpec.fieldName.value;
+                  currentSub.keyword = definedDataType;
+                  currentSub.position = {
+                    path: fileUri,
+                    range: iSpec.fieldName.range
+                  };
+                  currentSub.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  currentItem.subItems.push(currentSub);
                 }
 
                 currentItem.range.end = lineNumber;
