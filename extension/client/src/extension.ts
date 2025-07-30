@@ -37,14 +37,22 @@ export function activate(context: ExtensionContext) {
 
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
-	const serverOptions: ServerOptions = {
-		run: { module: serverModule, transport: TransportKind.ipc },
-		debug: {
-			module: serverModule,
-			transport: TransportKind.ipc,
-			options: debugOptions
-		}
-	};
+        const globalLintPath = workspace.getConfiguration('vscode-rpgle').get<string>('globalLintConfigPath');
+        const env = { ...process.env } as NodeJS.ProcessEnv;
+        if (globalLintPath) env.GLOBAL_LINT_CONFIG_PATH = globalLintPath;
+
+        const serverOptions: ServerOptions = {
+                run: {
+                        module: serverModule,
+                        transport: TransportKind.ipc,
+                        options: { env }
+                },
+                debug: {
+                        module: serverModule,
+                        transport: TransportKind.ipc,
+                        options: { ...debugOptions, env }
+                }
+        };
 
 	loadBase();
 

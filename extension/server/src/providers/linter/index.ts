@@ -101,14 +101,29 @@ enum ResolvedState {
 let boundLintConfig: {[workingUri: string]: {resolved: ResolvedState, uri: string}} = {};
 
 export async function getLintConfigUri(workingUri: string) {
-	const uri = URI.parse(workingUri);
-	let cleanString: string | undefined;
+        const uri = URI.parse(workingUri);
+        let cleanString: string | undefined;
 
-	const cached = boundLintConfig[workingUri];
+        const cached = boundLintConfig[workingUri];
 
-	if (cached) {
-		return cached.resolved === ResolvedState.Found ? cached.uri : undefined;
-	}
+        if (cached) {
+                return cached.resolved === ResolvedState.Found ? cached.uri : undefined;
+        }
+
+        if (uri.scheme === `member`) {
+                const globalPath = process.env.GLOBAL_LINT_CONFIG_PATH;
+                if (globalPath) {
+                        cleanString = URI.from({ scheme: `member`, path: globalPath }).toString();
+                        cleanString = await validateUri(cleanString, `member`);
+                        if (cleanString) {
+                                boundLintConfig[workingUri] = {
+                                        resolved: ResolvedState.Found,
+                                        uri: cleanString
+                                };
+                                return cleanString;
+                        }
+                }
+        }
 
 	switch (uri.scheme) {
 		case `member`:
