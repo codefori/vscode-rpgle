@@ -44,7 +44,7 @@
                                 "vscode-rpgle.globalLintConfigPath": {
                                         "type": "string",
                                         "default": "",
-                                        "description": "QSYS object path to use as a template when creating RPGLINT.JSON inside a library."
+                                        "description": "QSYS.LIB path for global RPGLINT.JSON."
                                 }
                         }
                 },
