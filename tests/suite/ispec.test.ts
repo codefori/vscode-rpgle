@@ -48,6 +48,16 @@ test('ispec rename 1', async () => {
 
   // TODO: add check for input symbols in cache
 
+  const inputs = cache.symbols.filter(s => s.type === `input`);
+
+  expect(inputs.length).toBe(2);
+
+  const qarpg = inputs.find(s => s.name === `qarpglesrc`);
+  expect(qarpg).toBeDefined();
+  expect(qarpg.subItems.length).toBe(3);
+
+  // TODO: more testing
+
   // for (const file of [rpgSrc, cblSrc]) {
   //   console.log(`File: ${file.name}`);
   //   for (const subItem of file.subItems) {

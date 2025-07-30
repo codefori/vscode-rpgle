@@ -1448,6 +1448,9 @@ export default class Parser {
                   start: lineNumber,
                   end: lineNumber
                 };
+
+                scope.addSymbol(currentItem);
+
                 break;
 
               case `programField`:
@@ -1458,6 +1461,15 @@ export default class Parser {
                 tokens = [iSpec.fieldName, ...iSpec.fieldIndicators];
 
                 // TODO: generate a type for this
+                let lookup = scope.find(iSpec.fieldName.value, undefined);
+
+                if (iSpec.dataFormat) {
+
+                } else if (lookup) {
+                  currentItem.subItems.push(lookup);
+                }
+
+                currentItem.range.end = lineNumber;
 
                 break;
 

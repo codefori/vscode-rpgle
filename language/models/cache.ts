@@ -182,24 +182,16 @@ export default class Cache {
       return sub.name.toUpperCase() === name;
     }
 
-    // First we do a loop to check all names without changing the prefix
+    // First we do a loop to check all names without changing the prefix.
+    // This only applied to files
     for (const struct of symbolsWithSubs) {
-      if (struct.keyword[`QUALIFIED`] !== true) {
-        // If the symbol is qualified, we need to check the subItems
-        const subItem = struct.subItems.find(sub => subNameIsValid(sub, name));
-        if (subItem) {
-          symbols.push(subItem);
-          if (onlyOne) return symbols;
-        }
-
-        if (struct.type === `file`) {
-          // If it's a file, we also need to check the subItems of the file's recordformats
-          for (const subFile of struct.subItems) {
-            const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name));
-            if (subSubItem) {
-              symbols.push(subSubItem);
-              if (onlyOne) return symbols;
-            }
+      if (struct.type === `file` && struct.keyword[`QUALIFIED`] !== true) {
+        // If it's a file, we also need to check the subItems of the file's recordformats
+        for (const subFile of struct.subItems) {
+          const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name));
+          if (subSubItem) {
+            symbols.push(subSubItem);
+            if (onlyOne) return symbols;
           }
         }
       }
