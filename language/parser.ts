@@ -6,7 +6,7 @@ import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken, parseISpec } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -1432,7 +1432,7 @@ export default class Parser {
             switch (iSpec.iType) {
               case `programRecord`:
               case `externalRecord`:
-                tokens = [iSpec.name];
+                tokens = [iSpec.name, iSpec.recordIdentifyingIndicator];
                 currentItem = new Declaration(`input`);
                 currentItem.name = iSpec.name.value;
                 currentItem.keyword = {
@@ -1458,13 +1458,20 @@ export default class Parser {
                   break;
                 }
 
-                tokens = [iSpec.fieldName, ...iSpec.fieldIndicators];
+                tokens = [
+                  iSpec.fieldName, 
+                  iSpec.controlLevel,
+                  iSpec.matchingFields,
+                  iSpec.fieldRecordRelation,
+                  ...iSpec.fieldIndicators
+                ];
 
                 // TODO: generate a type for this
                 let lookup = scope.find(iSpec.fieldName.value, undefined);
 
                 if (iSpec.dataFormat) {
-
+                  const definedDataType = prettyTypeFromISpecTokens(iSpec);
+                  console.log(definedDataType);
                 } else if (lookup) {
                   currentItem.subItems.push(lookup);
                 }
@@ -1478,7 +1485,13 @@ export default class Parser {
                   break;
                 }
 
-                tokens = [iSpec.externalName, iSpec.fieldName, ...iSpec.fieldIndicators];
+                tokens = [
+                  iSpec.externalName, 
+                  iSpec.fieldName, 
+                  iSpec.controlLevel,
+                  iSpec.matchingFields,
+                  ...iSpec.fieldIndicators
+                ];
                 if (iSpec.externalName) {
                   // Generate a type for this
                   let lookup = scope.find(iSpec.externalName.value, undefined, true);
@@ -1709,7 +1722,7 @@ export default class Parser {
                 currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = {
                   ...dSpec.keywords,
-                  ...prettyTypeFromToken(dSpec),
+                  ...prettyTypeFromDSpecTokens(dSpec),
                 }
 
                 // TODO: line number might be different with ...?
@@ -1748,7 +1761,7 @@ export default class Parser {
                 currentItem = new Declaration(`procedure`);
                 currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = {
-                  ...prettyTypeFromToken(dSpec),
+                  ...prettyTypeFromDSpecTokens(dSpec),
                   ...dSpec.keywords
                 }
 
@@ -1776,7 +1789,7 @@ export default class Parser {
                   if (currentItem) {
                     currentItem.keyword = {
                       ...currentItem.keyword,
-                      ...prettyTypeFromToken(dSpec),
+                      ...prettyTypeFromDSpecTokens(dSpec),
                       ...dSpec.keywords
                     }
                   }
@@ -1821,7 +1834,7 @@ export default class Parser {
                     currentSub = new Declaration(`subitem`);
                     currentSub.name = currentNameToken?.value || NO_NAME;
                     currentSub.keyword = {
-                      ...prettyTypeFromToken(dSpec),
+                      ...prettyTypeFromDSpecTokens(dSpec),
                       ...dSpec.keywords
                     }
 
@@ -1842,7 +1855,7 @@ export default class Parser {
                       if (currentItem.subItems.length > 0) {
                         currentItem.subItems[currentItem.subItems.length - 1].keyword = {
                           ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
-                          ...prettyTypeFromToken(dSpec),
+                          ...prettyTypeFromDSpecTokens(dSpec),
                           ...dSpec.keywords
                         }
                       } else {

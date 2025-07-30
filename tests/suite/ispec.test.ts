@@ -55,16 +55,18 @@ test('ispec rename 1', async () => {
   const qarpg = inputs.find(s => s.name === `qarpglesrc`);
   expect(qarpg).toBeDefined();
   expect(qarpg.subItems.length).toBe(3);
+  const qaRpgNames = [`RPG_SRCSEQ`, `RPG_SRCDTA`, `ALL_SRCDAT`];
+  expect(qarpg.subItems.map(s => s.name)).toEqual(qaRpgNames);
 
-  // TODO: more testing
+  const qacbl = inputs.find(s => s.name === `qacbllesrc`);
+  expect(qacbl).toBeDefined();
+  expect(qacbl.subItems.length).toBe(3);
+  const qaCblNames = [`CBL_SRCSEQ`, `CBL_SRCDTA`, `ALL_SRCDAT`];
+  expect(qacbl.subItems.map(s => s.name)).toEqual(qaCblNames);
 
-  // for (const file of [rpgSrc, cblSrc]) {
-  //   console.log(`File: ${file.name}`);
-  //   for (const subItem of file.subItems) {
-  //     console.log(`  Record format: ${subItem.name}`);
-  //     for (const subSubItem of subItem.subItems) {
-  //       console.log(`    Field: ${subSubItem.name}`);
-  //     }
-  //   }
-  // }
-})
+  const allSrcDat = cache.find(`ALL_SRCDAT`);
+  expect(allSrcDat).toBeDefined();
+
+  const cblSrcSeq = cache.find(`CBL_SRCSEQ`);
+  expect(cblSrcSeq).toBeDefined();
+});

@@ -151,7 +151,7 @@ export function parsePLine(content: string, lineNumber: number, lineIndex: numbe
   };
 }
 
-export function prettyTypeFromToken(dSpec) {
+export function prettyTypeFromDSpecTokens(dSpec) {
   return getPrettyType({
     type: dSpec.type ? dSpec.type.value : ``,
     keywords: dSpec.keywords,
@@ -159,6 +159,17 @@ export function prettyTypeFromToken(dSpec) {
     pos: dSpec.pos ? dSpec.pos.value : ``,
     decimals: dSpec.decimals ? dSpec.decimals.value : ``,
     field: dSpec.field ? dSpec.field.value : ``
+  })
+}
+
+export function prettyTypeFromISpecTokens(iSpec) {
+  return getPrettyType({
+    type: iSpec.dataFormat ? iSpec.dataFormat.value : ``,
+    keywords: {},
+    len: iSpec.length ? iSpec.length.value : ``,
+    pos: iSpec.fieldLocation ? iSpec.fieldLocation.value : ``,
+    decimals: iSpec.decimalPositions ? iSpec.decimalPositions.value : ``,
+    field: ``
   })
 }
 
@@ -357,12 +368,13 @@ export function parseISpec(lineNumber: number, lineIndex: number, content: strin
         dataAttributes: getPart(31, 34),
         dateTimeSeparator: getPart(35, 36),
         dataFormat: getPart(36, 37),
-        fieldLocation: getPart(37, 46),
+        fieldLocation: getPart(37, 41),
+        length: getPart(42, 46),
         decimalPositions: getPart(47, 48),
         fieldName: getPart(49, 62),
-        controlLevel: getPart(63, 64),
-        matchingFields: getPart(65, 66),
-        fieldRecordRelation: getPart(67, 68),
+        controlLevel: getPart(63, 64, `special-ind`),
+        matchingFields: getPart(65, 66, `special-ind`),
+        fieldRecordRelation: getPart(67, 68, `special-ind`),
         fieldIndicators: [
           getPart(69, 70, `special-ind`),
           getPart(71, 72, `special-ind`),
@@ -388,8 +400,8 @@ export function parseISpec(lineNumber: number, lineIndex: number, content: strin
         iType,
         externalName: getPart(21, 30),
         fieldName: getPart(49, 62),
-        controlLevel: getPart(63, 64),
-        matchingFields: getPart(65, 66),
+        controlLevel: getPart(63, 64, `special-ind`),
+        matchingFields: getPart(65, 66, `special-ind`),
         fieldIndicators: [
           getPart(69, 70, `special-ind`),
           getPart(71, 72, `special-ind`),
