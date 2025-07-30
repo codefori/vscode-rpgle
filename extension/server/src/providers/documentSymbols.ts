@@ -97,21 +97,22 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			scope.constants
 				.filter(constant => constant.position && constant.position.path === currentPath)
 				.forEach(def => {
+					const isEnum = def.subItems && def.subItems.length > 0;
 					const constantDef = DocumentSymbol.create(
 						def.name,
 						prettyKeywords(def.keyword),
-						SymbolKind.Constant,
+						isEnum ? SymbolKind.Enum : SymbolKind.Constant,
 						Range.create(def.range.start!, 0, def.range.end!, 0),
 						Range.create(def.range.start!, 0, def.range.end!, 0)
 					);
 
-					if (def.subItems.length > 0) {
+					if (isEnum) {
 						constantDef.children = def.subItems
 							.filter(subitem => subitem.position && subitem.position.path === currentPath)
 							.map(subitem => DocumentSymbol.create(
 								subitem.name,
 								prettyKeywords(subitem.keyword),
-								SymbolKind.Property,
+								SymbolKind.EnumMember,
 								Range.create(subitem.range.start!, 0, subitem.range.start!, 0),
 								Range.create(subitem.range.end!, 0, subitem.range.end!, 0)
 							));
