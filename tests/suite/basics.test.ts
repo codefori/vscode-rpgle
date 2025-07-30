@@ -1877,22 +1877,59 @@ test('correct ranges (#427)', async () => {
   expect(constants[3].keyword[`CONST`]).toBe(`9`);
 });
 
-// test('scoobydo', async () => {
-//   const content = await getFileContent(path.join(__dirname, `..`, `rpgle`, `testing.rpgle`));
-//   const lines = content.split(/\r?\n/);
-//   const cache = await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: false });
+test('that symbols can be defined correctly', async () => {
+  const lines = [
+    ``,
+    `     D SAMPLEPG        Ds                  Qualified  `,
+    `       dcl-s myprogramText char(20);`,
+    `       dcl-s  sampleDcl               char(2);`,
+    `       dcl-enum ENUMTEST qualified;`,
+    `         CONSTANT1 value1;`,
+    `         CONSTANT2 value2;`,
+    `       end-enum;`,
+    `       `,
+    `       dcl-proc testing123 ;`,
+    `        dcl-pi *n ;`,
+    `        end-pi;`,
+    `         `,
+    `       end-proc;`,
+    `     `,
+  ].join(`\n`);
 
-//   const kill = cache.findAll(`kill`);
-  
-//   const killPrototype = kill[0];
-//   expect(killPrototype.name).toBe(`kill`);
-//   expect(killPrototype.prototype).toBeTruthy();
-//   expect(killPrototype.range.start).toBe(71);
-//   expect(killPrototype.range.end).toBe(74);
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
 
-//   const killProc = kill[1];
-//   expect(killProc.name).toBe(`kill`);
-//   expect(killProc.prototype).toBeFalsy();
-//   expect(killProc.range.start).toBe(741);
-//   expect(killProc.range.end).toBe(761);  
-// });
+  expect(cache.structs.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.procedures.length).toBe(1);
+});
+
+test('that mixed symbols can be defined correctly', async () => {
+  const lines = [
+    ``,
+    ``,
+    `     D SAMPLEPG        Ds                  Qualified`,
+    `     F TEST  `,
+    `       dcl-s myprogramText char(20);`,
+    `       dcl-s  sampleDcl               char(2);`,
+    `       dcl-enum ENUMTEST qualified;`,
+    `         CONSTANT1 value1;`,
+    `         CONSTANT2 value2;`,
+    `       end-enum;`,
+    `       `,
+    `       dcl-proc testing123 ;`,
+    `        dcl-pi *n ;`,
+    `        end-pi;`,
+    `         `,
+    `       end-proc;`,
+    `     `,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache.structs.length).toBe(1);
+  expect(cache.files.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.procedures.length).toBe(1);
+});

@@ -891,51 +891,47 @@ export default class Parser {
 
           case `DCL-S`:
             if (parts.length > 1) {
-              if (currentItem === undefined) {
-                currentItem = new Declaration(`variable`);
-                currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                currentItem.tags = currentTags;
+              currentItem = new Declaration(`variable`);
+              currentItem.name = partsLower[1];
+              currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+              currentItem.tags = currentTags;
 
-                currentItem.position = {
-                  path: fileUri,
-                  range: tokens[1].range
-                };
+              currentItem.position = {
+                path: fileUri,
+                range: tokens[1].range
+              };
 
-                currentItem.range = {
-                  start: currentStmtStart.line,
-                  end: lineNumber
-                };
+              currentItem.range = {
+                start: currentStmtStart.line,
+                end: lineNumber
+              };
 
-                scope.addSymbol(currentItem);
-                resetDefinition = true;
-              }
+              scope.addSymbol(currentItem);
+              resetDefinition = true;
             }
             break;
 
           case `DCL-ENUM`:
-            if (currentItem === undefined) {
-              if (parts.length > 1) {
-                currentItem = new Declaration(`constant`);
-                currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+            if (parts.length > 1) {
+              currentItem = new Declaration(`constant`);
+              currentItem.name = partsLower[1];
+              currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
 
-                currentItem.position = {
-                  path: fileUri,
-                  range: tokens[1].range
-                };
+              currentItem.position = {
+                path: fileUri,
+                range: tokens[1].range
+              };
 
-                currentItem.range = {
-                  start: currentStmtStart.line,
-                  end: currentStmtStart.line
-                };
+              currentItem.range = {
+                start: currentStmtStart.line,
+                end: currentStmtStart.line
+              };
 
-                currentItem.readParms = true;
+              currentItem.readParms = true;
 
-                currentGroup = `constants`;
+              currentGroup = `constants`;
 
-                currentDescription = [];
-              }
+              currentDescription = [];
             }
             break;
 
