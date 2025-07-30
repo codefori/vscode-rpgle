@@ -171,6 +171,30 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 					currentScopeDefs.push(expandStruct(struct));
 				});
 
+			scope.inputs
+				.filter(input => input.position && input.position.path === currentPath && validRange(input))
+				.forEach(input => {
+					const inputSymbol = DocumentSymbol.create(
+						input.name,
+						prettyKeywords(input.keyword),
+						SymbolKind.Interface,
+						Range.create(input.range.start!, 0, input.range.end!, 0),
+						Range.create(input.range.start!, 0, input.range.end!, 0)
+					);
+
+					inputSymbol.children = input.subItems
+						.filter(subitem => subitem.position && subitem.position.path === currentPath && validRange(subitem))
+						.map(subitem => DocumentSymbol.create(
+							subitem.name,
+							prettyKeywords(subitem.keyword),
+							SymbolKind.Property,
+							Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
+							Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
+						));
+
+					currentScopeDefs.push(inputSymbol);
+				});
+
 			return currentScopeDefs;
 		};
 
