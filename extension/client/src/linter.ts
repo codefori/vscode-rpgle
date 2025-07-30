@@ -47,8 +47,30 @@ export function initialise(context: ExtensionContext) {
 				}
 
 			} else if (instance && instance.getConnection()) {
-				const connection = instance.getConnection();
-				const content = instance.getContent();
+                        const connection = instance.getConnection();
+                        const content = instance.getContent();
+
+                        const globalPath = Configuration.get<string>(Configuration.GLOBAL_LINT_CONFIG_PATH);
+
+                        if (globalPath) {
+                                try {
+                                        const parts = connection.parserMemberPath(globalPath);
+                                        const existsRes = await connection.runCommand({
+                                                command: `CHKOBJ OBJ(${parts.library}/${parts.file}) OBJTYPE(*FILE) MBR(${parts.name})`,
+                                                noLibList: true
+                                        });
+
+                                        if (existsRes.code === 0) {
+                                                await commands.executeCommand(`code-for-ibmi.openEditable`, globalPath);
+                                        } else {
+                                                window.showErrorMessage(`Global lint config does not exist at ${globalPath}.`);
+                                        }
+                                } catch (e) {
+                                        console.log(e);
+                                        window.showErrorMessage(`Failed to open global lint configuration.`);
+                                }
+                                return;
+                        }
 
 				/** @type {"member"|"streamfile"} */
 				let type = `member`;
