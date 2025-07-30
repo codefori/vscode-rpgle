@@ -50,7 +50,7 @@ export function initialise(context: ExtensionContext) {
                         const connection = instance.getConnection();
                         const content = instance.getContent();
 
-                        const globalPath = Configuration.get<string>(Configuration.GLOBAL_LINT_CONFIG_PATH);
+                        let globalPath = Configuration.get<string>(Configuration.GLOBAL_LINT_CONFIG_PATH);
 
 			if (globalPath?.startsWith('/')) {
 			  globalPath = globalPath.substring(1);
