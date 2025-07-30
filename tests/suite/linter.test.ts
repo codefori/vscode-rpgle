@@ -432,8 +432,6 @@ test('linter6_crlf', async () => {
 
   expect(errors.length).to.equal(3);
 
-  console.log(errors);
-
   expect(errors).toContainEqual({
     offset: { start: 101, end: 113 },
     type: 'IncorrectVariableCase',
@@ -3764,8 +3762,6 @@ test('embedded sql with variable references (#209)', async () => {
     SQLHostVarCheck: true
   }, cache);
 
-  console.log(errors);
-
   expect(errors.length).toBe(2);
 
   const hostError = errors[0];
@@ -3821,7 +3817,6 @@ test('crash report #388', async () => {
     "ForceOptionalParens": true,
   }, cache);
 
-  console.log(errors);
   expect(errors.length).toBe(0);
 });
 
@@ -3868,8 +3863,6 @@ test('subfield casing #402', async () => {
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true,
   }, cache);
-
-  console.log(errors);
 
   expect(errors.length).toBe(1);
 

@@ -63,7 +63,17 @@ export default class Cache {
   get symbols() {
     if (this.symbolCache) return this.symbolCache;
 
-    this.symbolCache = Array.from(this.symbolRegister.values()).flat(1);
+    this.symbolCache = Array.from(this.symbolRegister.values()).flat(1).sort((a, b) => {
+      if (a.position && b.position) {
+        return a.position.range.line - b.position.range.line
+      } else if (a.range.start && b.range.start) {
+        return a.range.start - b.range.start;
+      } else if (a.position) {
+        return -1;
+      } else if (b.position) {
+        return 1;
+      }
+    });
 
     return this.symbolCache;
   }
@@ -342,6 +352,14 @@ export default class Cache {
         for (const subItem of def.subItems) {
           possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
           if (possibleRef) return subItem;
+
+          // Do one more level deep
+          if (subItem.subItems.length > 0) {
+            for (const subSubItem of subItem.subItems) {
+              possibleRef = subSubItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
+              if (possibleRef) return subSubItem;
+            }
+          }
         }
       }
 

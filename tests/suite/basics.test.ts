@@ -1,6 +1,6 @@
 
 import path from "path";
-import setupParser from "../parserSetup";
+import setupParser, { getFileContent } from "../parserSetup";
 import Linter from "../../language/linter";
 import { test, expect } from "vitest";
 
@@ -124,6 +124,12 @@ test('vitestTest5', async () => {
 
   expect(cache.procedures[0].subItems.length).toBe(0);
   expect(cache.procedures[1].subItems.length).toBe(1);
+
+  const setValue = cache.procedures[1];
+  expect(setValue.name).toBe(`setValue`);
+  expect(setValue.subItems[0].name).toBe(`newValue`);
+  expect(setValue.subItems[0].range.start).toBe(10);
+  expect(setValue.subItems[0].range.end).toBe(10);
 
   let typeData;
   for (const proc of cache.procedures) {
@@ -1746,6 +1752,7 @@ test('const value #400', async () => {
   const pi = cache.find(`PI`);
   expect(pi.name).toBe(`PI`);
   expect(pi.keyword[`CONST`]).toBe(`3.14159`);
+  expect(pi.range).toMatchObject({ start: 1, end: 1 });
 });
 
 test('dcl-enum range (#425)', async () => {
@@ -1772,4 +1779,157 @@ test('dcl-enum range (#425)', async () => {
   expect(constants[0].range).toMatchObject({ start: 5, end: 8 });
   expect(lines[constants[0].range.start]).toBe(`dcl-enum myenum qualified;`);
   expect(lines[constants[0].range.end]).toBe(`end-enum;`);
+});
+
+test('correct ranges (#427)', async () => {
+  const lines = [
+    `     d                                     extproc('main')`,
+    `     d  io_test                 12345a         options(*varsize)`,
+    `     d testing...`,
+    `     d                 pr`,
+    `     d                                     extproc('testing')`,
+    `     d msgInfo                      787a   const varying options(*varsize)`,
+    `     d tester          s                   like(ai_tester)`,
+    `     d system          s                   like(ai_system)`,
+    `     d fmtType         s                   like(ai_fmtType)`,
+    `     d TYPE_VAR_CHAR...`,
+    `     d                 c                   x'8004'`,
+    `      /free`,
+    ``,
+    `       *inlr = *on;`,
+    ``,
+    `       if (%parms() >= p_tester and %addr(ai_tester) <> *null);`,
+    `          tester = ai_tester;`,
+    `       endif;`,
+    ``,
+    ``,
+    `      //*==========================================================================================*`,
+    `      //* Program entry point                                                                      *`,
+    `      //*==========================================================================================*`,
+    ``,
+    `     d TESTING...`,
+    `     d                 pi`,
+    `     d  aio_test                  12345a         options(*varsize)`,
+    `     d  ai_lenFldInf                 10i 0 const`,
+    `     d  ai_format                     8a   const`,
+    `     d  ai_qFile                           const likeds(qObj_t)`,
+    `     d  ai_rcdFmt                    10a   const`,
+    `     d  ai_tester                     1a   const options(*nopass)`,
+    `     d  ai_system                    10a   const options(*nopass)`,
+    `     d  ai_fmtType                   10a   const options(*nopass)`,
+    ``,
+    `     d p_tester        c                   7`,
+    `     d p_system        c                   8`,
+    `     d p_fmtType       c                   9`,
+    ``,
+    `     d tester          s                   like(ai_tester)`,
+    `     d system          s                   like(ai_system)`,
+    `     d fmtType         s                   like(ai_fmtType)`,
+    ``,
+    ``,
+    `      //*==========================================================================================*`,
+    `      //* Main procedure                                                                           *`,
+    `      //*==========================================================================================*`,
+    `     p main...`,
+    `     p                 b`,
+    `     d                 pi`,
+    `     d  io_test                 12345a         options(*varsize)`,
+    `     p                 e`,
+  ];
+
+  const cache = await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: false });
+
+  const testingPr = cache.find(`testing`);
+  expect(testingPr.range.start).toBe(2);
+  expect(testingPr.range.end).toBe(5);
+
+  expect(cache.parameters.length).toBe(8);
+  expect(cache.parameters[0].name).toBe(`aio_test`);
+  expect(cache.parameters[0].range.start).toBe(26)
+  expect(cache.parameters[7].name).toBe(`ai_fmtType`);
+  expect(cache.parameters[7].range.start).toBe(33)
+
+  const mainProcedure = cache.find(`main`);
+  const procStart = mainProcedure.range.start;
+  const procEnd = mainProcedure.range.end;
+  expect(procEnd-procStart).toBe(4);
+
+  const constants = cache.constants;
+  expect(constants.length).toBe(4);
+
+  expect(constants[0].name).toBe(`TYPE_VAR_CHAR`);
+  expect(constants[0].range.start).toBe(9);
+  expect(constants[0].range.end).toBe(10);
+  expect(constants[0].keyword[`CONST`]).toBe(`x'8004'`);
+
+  expect(constants[1].name).toBe(`p_tester`);
+  expect(constants[1].range.start).toBe(35);
+  expect(constants[1].range.end).toBe(35);
+  expect(constants[1].keyword[`CONST`]).toBe(`7`);
+
+  expect(constants[2].name).toBe(`p_system`);
+  expect(constants[2].range.start).toBe(36);
+  expect(constants[2].range.end).toBe(36);
+
+  expect(constants[3].name).toBe(`p_fmtType`);
+  expect(constants[3].range.start).toBe(37);
+  expect(constants[3].range.end).toBe(37);
+  expect(constants[3].keyword[`CONST`]).toBe(`9`);
+});
+
+test('that symbols can be defined correctly', async () => {
+  const lines = [
+    ``,
+    `     D SAMPLEPG        Ds                  Qualified  `,
+    `       dcl-s myprogramText char(20);`,
+    `       dcl-s  sampleDcl               char(2);`,
+    `       dcl-enum ENUMTEST qualified;`,
+    `         CONSTANT1 value1;`,
+    `         CONSTANT2 value2;`,
+    `       end-enum;`,
+    `       `,
+    `       dcl-proc testing123 ;`,
+    `        dcl-pi *n ;`,
+    `        end-pi;`,
+    `         `,
+    `       end-proc;`,
+    `     `,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache.structs.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.procedures.length).toBe(1);
+});
+
+test('that mixed symbols can be defined correctly', async () => {
+  const lines = [
+    ``,
+    ``,
+    `     D SAMPLEPG        Ds                  Qualified`,
+    `     F TEST  `,
+    `       dcl-s myprogramText char(20);`,
+    `       dcl-s  sampleDcl               char(2);`,
+    `       dcl-enum ENUMTEST qualified;`,
+    `         CONSTANT1 value1;`,
+    `         CONSTANT2 value2;`,
+    `       end-enum;`,
+    `       `,
+    `       dcl-proc testing123 ;`,
+    `        dcl-pi *n ;`,
+    `        end-pi;`,
+    `         `,
+    `       end-proc;`,
+    `     `,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache.structs.length).toBe(1);
+  expect(cache.files.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.procedures.length).toBe(1);
 });
