@@ -341,7 +341,7 @@ export function parseISpec(lineNumber: number, lineIndex: number, content: strin
   }
 
   const getPart = (start: number, end: number, type?: string) => {
-    return calculateToken(lineNumber, lineIndex + start, content.substring(start-1, end).trimEnd(), type);
+    return calculateToken(lineNumber, lineIndex + (start-1), content.substring(start-1, end).trimEnd(), type);
   }
 
   switch (iType) {

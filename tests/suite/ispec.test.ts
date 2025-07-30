@@ -81,14 +81,14 @@ test('ispec range tests', async () => {
 
   const a = parseISpec(1, 0, lines[0]);
   expect(a).toBeDefined();
-
-  console.log(a);
-  console.log(lines[0].substring(a.name.range.start, a.name.range.end));
+  expect(a.name.value).toBe(`SRCPF`);
 
   expect(lines[0].substring(a.name.range.start, a.name.range.end)).toBe(`SRCPF`);
 
   const b = parseISpec(1, 0, lines[1]);
   expect(b).toBeDefined();
+  expect(b.fieldName.value).toBe(`WKLINE`);
+  expect(lines[1].substring(b.fieldName.range.start, b.fieldName.range.end)).toBe(`WKLINE`);
 })
 
 test('ispec file fields definitions', async () => {
