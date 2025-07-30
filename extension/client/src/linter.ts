@@ -52,6 +52,10 @@ export function initialise(context: ExtensionContext) {
 
                         const globalPath = Configuration.get<string>(Configuration.GLOBAL_LINT_CONFIG_PATH);
 
+			if (globalPath?.startsWith('/')) {
+			  globalPath = globalPath.substring(1);
+			}
+
                         if (globalPath) {
                                 try {
                                         const parts = connection.parserMemberPath(globalPath);
