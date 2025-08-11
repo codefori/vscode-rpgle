@@ -61,7 +61,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 					let currentDef: Declaration | undefined;
 
 					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
-						if ([`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
+						if (tokens[tokenIndex] === undefined || [`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
 							continue;
 						}
 
