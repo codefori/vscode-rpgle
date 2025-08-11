@@ -1,5 +1,5 @@
 import Declaration from './models/declaration';
-import { IRange } from './types';
+import { IRange, IRangeWithLine } from './types';
 import { SymbolRegister } from './models/cache';
 
 export interface Keywords {
@@ -68,7 +68,7 @@ export  interface DefinitionPosition {
 
 export interface Reference {
   uri: string;
-  offset: IRange;
+  offset: IRange|IRangeWithLine;
 }
 
 export interface IssueRange {
