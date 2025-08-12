@@ -159,6 +159,28 @@ export default class Parser {
     return tokens;
   }
 
+  static fromBlocksGetTokens(tokensWithBlocks: Token[], cursorIndex: number) {
+    let insideBlock: Token | undefined;
+
+    while (insideBlock = tokensWithBlocks.find(t => t.type === `block` && t.block && t.range.start <= cursorIndex && t.range.end >= cursorIndex)) {
+      tokensWithBlocks = insideBlock.block || [];
+    }
+
+    return tokensWithBlocks;
+  }
+
+  static getReference(tokens: Token[], cursorIndex: number): number|-1 {
+    let tokenIndex = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
+
+    let lastToken: Token|undefined;
+    while (tokens[tokenIndex] && [`block`, `word`, `dot`].includes(tokens[tokenIndex].type) && lastToken?.type !== tokens[tokenIndex].type && tokenIndex > 0) {
+      lastToken = tokens[tokenIndex];
+      tokenIndex--;
+    }
+
+    return tokenIndex;
+  }
+
   async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {

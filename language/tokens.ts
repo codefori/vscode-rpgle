@@ -472,7 +472,7 @@ export function createBlocks(tokens: Token[]) {
           block: createBlocks(newTokens),
           range: {
             line: tokens[start].range.line,
-            start: tokens[i].range.start,
+            start: tokens[start].range.start,
             end: tokens[i].range.end,
           }
         });

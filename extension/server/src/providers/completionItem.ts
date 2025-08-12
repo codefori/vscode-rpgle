@@ -8,6 +8,7 @@ import skipRules from './linter/skipRules';
 import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/parser';
+import { Token } from '../../../../language/types';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -46,17 +47,19 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
-				const tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? currentLine.substring(7) : ``, 0, 0, true);
+				const cursorIndex = handler.position.character;
+				let tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? ``.padEnd(7) + currentLine.substring(7) : ``, 0, 0, true);
 
 				if (tokens.length > 0) {
-					const cursorIndex = handler.position.character;
-					let tokenIndex = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
-					console.log(tokens);
-					console.log({ cPos: handler.position.character, tokenIndex });
+					
+					// We need to find the innermost block we are part of
+					tokens = Parser.fromBlocksGetTokens(tokens, cursorIndex);
 
-					while (tokens[tokenIndex] && [`block`, `word`, `dot`].includes(tokens[tokenIndex].type) && tokenIndex > 0) {
-						tokenIndex--;
-					}
+					// Remove any tokens after the cursor
+					tokens = tokens.filter(token => token.range.end <= cursorIndex);
+
+					// Get the possible variable we're referring to
+					let tokenIndex = Parser.getReference(tokens, cursorIndex);
 
 					let currentDef: Declaration | undefined;
 
