@@ -48,25 +48,18 @@ export default async function completionItemProvider(handler: CompletionParams):
 			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
 				const cursorIndex = handler.position.character;
-				let tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? currentLine.substring(7) : ``, 0, 0, true);
+				let tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? ``.padEnd(7) + currentLine.substring(7) : ``, 0, 0, true);
 
 				if (tokens.length > 0) {
 					
 					// We need to find the innermost block we are part of
-					let insideBlock: Token | undefined;
-					while (insideBlock = tokens.find(t => t.type === `block` && t.block && t.range.start <= cursorIndex && t.range.end >= cursorIndex)) {
-						tokens = insideBlock.block || [];
-					}
+					tokens = Parser.fromBlocksGetTokens(tokens, cursorIndex);
 
-					let tokenIndex = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
-					console.log(tokens);
-					console.log({ cPos: handler.position.character, tokenIndex });
+					// Remove any tokens after the cursor
+					tokens = tokens.filter(token => token.range.end <= cursorIndex);
 
-					let lastToken: Token|undefined;
-					while (tokens[tokenIndex] && [`block`, `word`, `dot`].includes(tokens[tokenIndex].type) && lastToken?.type !== tokens[tokenIndex].type && tokenIndex > 0) {
-						lastToken = tokens[tokenIndex];
-						tokenIndex--;
-					}
+					// Get the possible variable we're referring to
+					let tokenIndex = Parser.getReference(tokens, cursorIndex);
 
 					let currentDef: Declaration | undefined;
 
