@@ -1426,3 +1426,28 @@ test('incorrect range on prototypes and procedures (#412)', async () => {
   expect(procRange.start).toBeGreaterThan(prRange.end);
   expect(procRange.end).toBeGreaterThan(procRange.start);
 });
+
+test('missing subroutines #443', async () => {
+  const lines = [
+    `     C     PROCRC        BEGSR`,
+    `     C*`,
+    `     C                   ENDSR`,
+    `     C**************************`,
+    `     C     ADDSUB        BEGSR`,
+    `     C                   MOVE      #4XDSP        XHXDSP                         O/G LINE`,
+    `******* USE CLASS CODE FROM OVERRIDDEN CLASS!`,
+    `     C     LDACL         IFEQ      'B'`,
+    `     C                   ENDIF`,
+    `     C*`,
+    `     C                   ENDSR`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache).toBeDefined();
+
+  const subroutines = cache.subroutines;
+  expect(subroutines.length).toBe(2);
+  expect(subroutines[0].name).toBe('PROCRC');
+  expect(subroutines[1].name).toBe('ADDSUB');
+});

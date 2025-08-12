@@ -602,7 +602,7 @@ export default class Parser {
         lineIsFree = false;
         lineNumber += 1;
 
-        if (baseLine.startsWith(`**`)) {
+        if (baseLine.startsWith(`**`) && baseLine[2] !== `*`) {
           // Usually is **FREE
           if (lineNumber === 0) continue;
           // After compile time data, we're done
@@ -1484,8 +1484,7 @@ export default class Parser {
             }
 
             switch (cSpec.opcode && cSpec.opcode.value) {
-            case `BEGSR`:
-              
+            case `BEGSR`:  
               if (cSpec.factor1 && !scope.find(cSpec.factor1.value, `subroutine`)) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = cSpec.factor1.value;
