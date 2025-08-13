@@ -31,14 +31,6 @@ export default async function completionItemProvider(handler: CompletionParams):
 		if (doc) {
 			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
-			// If they're typing inside of a procedure, let's get the stuff from there too
-			const currentProcedure = doc.procedures.find((proc, index) =>
-				proc.range.start && proc.range.end &&
-				lineNumber >= proc.range.start &&
-				(lineNumber <= proc.range.end + 1 || index === doc.procedures.length - 1) &&
-				currentPath === proc.position.path
-			);
-
 			const currentLine = document.getText(Range.create(
 				handler.position.line,
 				0,
@@ -54,7 +46,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 				if (tokens.length > 0) {
 					
 					// We need to find the innermost block we are part of
-					tokens = Parser.fromBlocksGetTokens(tokens, cursorIndex);
+					tokens = Parser.fromBlocksGetTokens(tokens, cursorIndex).block;
 
 					// Remove any tokens after the cursor
 					tokens = tokens.filter(token => token.range.end <= cursorIndex);
@@ -85,6 +77,8 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 							if (currentDef) {
 								if (currentDef.type === `struct` && currentDef.keyword[`QUALIFIED`] === undefined) {
+									currentDef = undefined;
+								} else if (currentDef.type === `procedure`) {
 									currentDef = undefined;
 								}
 
@@ -284,6 +278,14 @@ export default async function completionItemProvider(handler: CompletionParams):
 					};
 
 					expandScope(doc);
+
+					// If they're typing inside of a procedure, let's get the stuff from there too
+					const currentProcedure = doc.procedures.find((proc, index) =>
+						proc.range.start && proc.range.end &&
+						lineNumber >= proc.range.start &&
+						(lineNumber <= proc.range.end + 1 || index === doc.procedures.length - 1) &&
+						currentPath === proc.position.path
+					);
 
 					if (currentProcedure) {
 						// If we have the entire scope, perfect

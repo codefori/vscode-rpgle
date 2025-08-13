@@ -14,7 +14,7 @@ export interface BuiltInFunction {
 }
 
 export function getBuiltInsForType(type: RpgleVariableType): BuiltInFunction[] {
-  return BuiltInFunctions.filter(func => func.parameters.some(param => param.type.includes(type)));
+  return BuiltInFunctions.filter(func => func.parameters.some(param => param.base && param.type.includes(type)));
 }
 
 export function getBuiltIn(name: string): BuiltInFunction | undefined {
