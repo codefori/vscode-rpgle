@@ -1,7 +1,7 @@
-import { Range, SignatureHelp, SignatureHelpParams } from "vscode-languageserver";
+import { Range, SignatureHelp, SignatureHelpParams, SignatureInformation } from "vscode-languageserver";
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Parser from "../../../../language/parser";
-import { getBuiltIn } from "./apis/bif";
+import { BuiltInFunctionParameter, getBuiltIn } from "./apis/bif";
 import Statement from "../../../../language/statement";
 
 export async function signatureHelpProvider(handler: SignatureHelpParams): Promise<SignatureHelp|undefined> {
@@ -33,16 +33,12 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
         // Remove any tokens after the cursor
         tokens = tokens.filter(token => token.range.end <= cursorIndex);
 
-        // Get the possible variable we're referring to
-
         // TODO: eventually support signatures from procedures
 
         if (referenceToken && referenceToken.type === `builtin` && referenceToken.value) {
           const builtIn = getBuiltIn(referenceToken.value);
           
           if (builtIn) {
-            const baseSignature = builtIn.parameters.filter(p => !p.optional);
-
             const parameterBlock = Statement.getParameters(tokens);
             let currentParameter = parameterBlock.findIndex(p => p.range.start <= cursorIndex && p.range.end >= cursorIndex);
 
@@ -50,17 +46,35 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
               currentParameter = parameterBlock.length > 0 ? parameterBlock.length-1 : 0;
             }
 
-            return {
-              activeSignature: 0,
-              activeParameter: currentParameter,
-              signatures: [{
-                label: `${builtIn.name}(${baseSignature.map(p => p.name + `: ${p.type.join(`|`)}`).join(", ")})`,
+            let signatures: SignatureInformation[] = []
+
+            const createSignature = (parms: BuiltInFunctionParameter[]): SignatureInformation => {
+              return {
+                label: `${builtIn.name}(${parms.map(p => p.name + `: ${p.type.join(`|`)}`).join(", ")})`,
                 activeParameter: currentParameter,
-                parameters: baseSignature.map(p => ({
+                parameters: parms.map(p => ({
                   label: `${p.name}: ${p.type.join(`|`)}`,
                   documentation: p.type.join(`, `)
                 }))
-              }]
+              };
+            }
+
+            let nextOptional = builtIn.parameters.findIndex(p => p.optional);
+            signatures.push(createSignature(nextOptional === -1 ? builtIn.parameters : builtIn.parameters.slice(0, nextOptional)));
+
+            if (nextOptional >= 0) {
+              // Optional parameter become additional signatures.
+              for (let i = nextOptional; i < builtIn.parameters.length; i++) {
+                signatures.push(createSignature(builtIn.parameters.slice(0, i+1)));
+              }
+            }
+
+            const activeSignature = signatures.findIndex(sig => sig.parameters && sig.parameters.length > currentParameter);
+
+            return {
+              activeSignature: activeSignature > -1 ? activeSignature : 0,
+              activeParameter: currentParameter,
+              signatures
             }
           }
         }
