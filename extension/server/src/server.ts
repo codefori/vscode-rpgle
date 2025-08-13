@@ -32,6 +32,7 @@ import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
 import genericCodeActionsProvider from './providers/codeActions';
 import { isLinterEnabled } from './providers/linter';
+import { signatureHelpProvider } from './providers/signatureHelp';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -79,6 +80,9 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.referencesProvider = true;
 		result.capabilities.implementationProvider = true;
 		result.capabilities.renameProvider = {prepareProvider: true};
+		result.capabilities.signatureHelpProvider = {
+			triggerCharacters: [`(`, `:`]
+		}
 	}
 
 	if (isLinterEnabled()) {
@@ -310,6 +314,7 @@ if (languageToolsEnabled) {
 	connection.onPrepareRename(renamePrepareProvider);
 	connection.onRenameRequest(renameRequestProvider);
 	connection.onCodeAction(genericCodeActionsProvider);
+	connection.onSignatureHelp(signatureHelpProvider);
 
 	// project specific
 	connection.onWorkspaceSymbol(workspaceSymbolProvider);
