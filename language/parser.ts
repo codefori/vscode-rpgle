@@ -170,15 +170,15 @@ export default class Parser {
   }
 
   static getReference(tokens: Token[], cursorIndex: number): number|-1 {
-    let tokenIndex = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
+    let checkNextToken = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
 
-    let lastToken: Token|undefined;
-    while (tokens[tokenIndex] && [`block`, `word`, `dot`].includes(tokens[tokenIndex].type) && lastToken?.type !== tokens[tokenIndex].type && tokenIndex > 0) {
-      lastToken = tokens[tokenIndex];
-      tokenIndex--;
+    let lastToken: number;
+    while (tokens[checkNextToken] && [`block`, `word`, `dot`].includes(tokens[checkNextToken].type) && tokens[lastToken]?.type !== tokens[checkNextToken].type && checkNextToken >= 0) {
+      lastToken = checkNextToken;
+      checkNextToken--;
     }
 
-    return tokenIndex;
+    return lastToken;
   }
 
   async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {

@@ -47,6 +47,8 @@ let projectEnabled = false;
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
 
+	console.log(capabilities.textDocument?.completion);
+
 	// Does the client support the `workspace/configuration` request?
 	// If not, we fall back using global settings.
 	hasConfigurationCapability = !!(
@@ -71,7 +73,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.documentSymbolProvider = true;
 		result.capabilities.definitionProvider = true;
 		result.capabilities.completionProvider = {
-			triggerCharacters: [`.`, `:`]
+			triggerCharacters: [`.`, `:`],
 		};
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;

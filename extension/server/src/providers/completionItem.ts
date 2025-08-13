@@ -1,5 +1,5 @@
 import path = require('path');
-import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
+import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
@@ -59,7 +59,8 @@ export default async function completionItemProvider(handler: CompletionParams):
 					tokens = tokens.filter(token => token.range.end <= cursorIndex);
 
 					// Get the possible variable we're referring to
-					let tokenIndex = Parser.getReference(tokens, cursorIndex);
+					const referenceStart = Parser.getReference(tokens, cursorIndex);
+					let tokenIndex = referenceStart;
 
 					let currentDef: Declaration | undefined;
 
@@ -78,18 +79,13 @@ export default async function completionItemProvider(handler: CompletionParams):
 							}
 
 						} else {
-							currentDef = [
-								// First we search the local procedure
-								currentProcedure && currentProcedure.scope ? currentProcedure.scope.parameters.find(parm => parm.name.toUpperCase() === word && parm.subItems.length > 0) : undefined,
-								currentProcedure && currentProcedure.scope ? currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === word && struct.keyword[`QUALIFIED`]) : undefined,
-								currentProcedure && currentProcedure.scope ? currentProcedure.scope.constants.find(struct => struct.subItems.length > 0 && struct.name.toUpperCase() === word) : undefined,
-	
-								// Then we search the globals
-								doc.structs.find(struct => struct.name.toUpperCase() === word && struct.keyword[`QUALIFIED`]),
-								doc.constants.find(constants => constants.subItems.length > 0 && constants.name.toUpperCase() === word)
-							].find(x => x); // find the first non-undefined item
+							currentDef = doc.findDefinition(lineNumber, word);
 
-							if (currentDef && currentDef.subItems.length > 0) {
+							if (currentDef) {
+								if (currentDef.type === `struct` && currentDef.keyword[`QUALIFIED`] === undefined) {
+									currentDef = undefined;
+								}
+
 								// All good!
 							} else {
 								currentDef = undefined;
@@ -97,15 +93,35 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 					}
 
-					if (currentDef && currentDef.subItems.length > 0) {
-						items.push(...currentDef.subItems.map(subItem => {
-							const item = CompletionItem.create(subItem.name);
-							item.kind = CompletionItemKind.Property;
-							item.insertText = subItem.name;
-							item.detail = prettyKeywords(subItem.keyword);
-							item.documentation = subItem.description + ` (${currentDef.name})`;
-							return item;
-						}));
+					if (currentDef) {
+						if (currentDef.subItems.length > 0) {
+							items.push(...currentDef.subItems.map(subItem => {
+								const item = CompletionItem.create(subItem.name);
+								item.kind = CompletionItemKind.Property;
+								item.insertText = subItem.name;
+								item.detail = prettyKeywords(subItem.keyword);
+								item.documentation = subItem.description + ` (${currentDef.name})`;
+								return item;
+							}));
+						}
+
+						const changeRange = Range.create(
+							handler.position.line,
+							tokens[referenceStart].range.start,
+							handler.position.line,
+							tokens[tokens.length-1].range.end
+						)
+
+						const refValue = tokens.slice(referenceStart, -1).map(token => token.value || ``).join(``);
+
+						const builtInFunction = CompletionItem.create(`subst`);
+						builtInFunction.kind = CompletionItemKind.Function;
+						builtInFunction.insertText = `%subst(${refValue}:\${1:start}:\${2:length})`;
+						builtInFunction.additionalTextEdits = [TextEdit.del(changeRange)];
+						builtInFunction.insertTextFormat = InsertTextFormat.Snippet;
+						builtInFunction.detail = `Built-in function`;
+						builtInFunction.documentation = `Substitutes a substring within a string`;
+						items.push(builtInFunction);
 					}
 				}
 			} else {
