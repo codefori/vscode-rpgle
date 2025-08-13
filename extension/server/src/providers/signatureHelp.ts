@@ -54,7 +54,7 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
                 activeParameter: currentParameter,
                 parameters: parms.map(p => ({
                   label: `${p.name}: ${p.type.join(`|`)}`,
-                  documentation: p.type.join(`, `)
+                  documentation: p.type.join(`, `) + (p.detail ? ` - ` + p.detail : ``)
                 }))
               };
             }
