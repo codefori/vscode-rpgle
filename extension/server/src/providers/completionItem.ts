@@ -131,14 +131,16 @@ export default async function completionItemProvider(handler: CompletionParams):
 							const refValue = currentLine.substring(tokens[referenceStart].range.start, tokens[tokens.length-1].range.start);
 
 							for (let func of usableFunctions) {
-								let builtInFunction = CompletionItem.create(func.name);
+								let builtInFunction = CompletionItem.create(func.name.substring(1));
 								builtInFunction.kind = CompletionItemKind.Function;
 
-								builtInFunction.insertText = `${func.name}(` + func.parameters.map((p, i) => {
-									if (i === 0) {
+								const requiredParms = func.parameters.filter(p => !p.optional);
+
+								builtInFunction.insertText = `${func.name}(` + requiredParms.map((p, i) => {
+									if (p.base) {
 										return refValue
 									} else {
-										return `\${${i}:${p.name}}`
+										return `\${${i+1}:${p.name}}`
 									}
 								}).join(`:`) + `)`;
 
