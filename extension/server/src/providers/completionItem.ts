@@ -130,6 +130,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 								const requiredParms = func.parameters.filter(p => !p.optional);
 
+								builtInFunction.additionalTextEdits = [TextEdit.del(changeRange)];
 								builtInFunction.insertText = `${func.name}(` + requiredParms.map((p, i) => {
 									if (p.base) {
 										return refValue
@@ -137,9 +138,11 @@ export default async function completionItemProvider(handler: CompletionParams):
 										return `\${${i+1}:${p.name}}`
 									}
 								}).join(`:`) + `)`;
-
-								builtInFunction.additionalTextEdits = [TextEdit.del(changeRange)];
 								builtInFunction.insertTextFormat = InsertTextFormat.Snippet;
+
+								// To trigger the signature information
+								builtInFunction.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
+
 								builtInFunction.detail = `Built-in function`;
 								items.push(builtInFunction);
 							}
