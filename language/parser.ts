@@ -173,7 +173,7 @@ export default class Parser {
     let checkNextToken = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
 
     let lastToken: number;
-    while (tokens[checkNextToken] && [`block`, `word`, `dot`].includes(tokens[checkNextToken].type) && tokens[lastToken]?.type !== tokens[checkNextToken].type && checkNextToken >= 0) {
+    while (tokens[checkNextToken] && [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) && tokens[lastToken]?.type !== tokens[checkNextToken].type && checkNextToken >= 0) {
       lastToken = checkNextToken;
       checkNextToken--;
     }

@@ -1,7 +1,7 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
-import Cache from '../../../../language/models/cache';
+import Cache, { RpgleVariableType } from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import * as ileExports from './apis';
 import skipRules from './linter/skipRules';
@@ -9,6 +9,7 @@ import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/parser';
 import { Token } from '../../../../language/types';
+import { getBuiltIn, getBuiltInsForType } from './apis/bif';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -62,7 +63,8 @@ export default async function completionItemProvider(handler: CompletionParams):
 					const referenceStart = Parser.getReference(tokens, cursorIndex);
 					let tokenIndex = referenceStart;
 
-					let currentDef: Declaration | undefined;
+					let currentDef: Declaration|undefined;
+					let onType: RpgleVariableType|undefined;
 
 					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
 						if (tokens[tokenIndex] === undefined || [`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
@@ -105,23 +107,47 @@ export default async function completionItemProvider(handler: CompletionParams):
 							}));
 						}
 
-						const changeRange = Range.create(
-							handler.position.line,
-							tokens[referenceStart].range.start,
-							handler.position.line,
-							tokens[tokens.length-1].range.end
-						)
+						const typeDetail = doc.resolveType(currentDef);
+						if (typeDetail.type) {
+							onType = typeDetail.type.name;
+						}
+					} else if (tokens[referenceStart].type === `builtin` && tokens[referenceStart].value) {
+						const builtIn = getBuiltIn(tokens[referenceStart].value);
+						if (builtIn) {
+							onType = builtIn.returnType;
+						}
+					}
 
-						const refValue = tokens.slice(referenceStart, -1).map(token => token.value || ``).join(``);
+					if (onType) {
+						const usableFunctions = getBuiltInsForType(onType);
+						if (usableFunctions.length > 0) {
+							const changeRange = Range.create(
+								handler.position.line,
+								tokens[referenceStart].range.start,
+								handler.position.line,
+								tokens[tokens.length-1].range.end
+							);
 
-						const builtInFunction = CompletionItem.create(`subst`);
-						builtInFunction.kind = CompletionItemKind.Function;
-						builtInFunction.insertText = `%subst(${refValue}:\${1:start}:\${2:length})`;
-						builtInFunction.additionalTextEdits = [TextEdit.del(changeRange)];
-						builtInFunction.insertTextFormat = InsertTextFormat.Snippet;
-						builtInFunction.detail = `Built-in function`;
-						builtInFunction.documentation = `Substitutes a substring within a string`;
-						items.push(builtInFunction);
+							const refValue = currentLine.substring(tokens[referenceStart].range.start, tokens[tokens.length-1].range.start);
+
+							for (let func of usableFunctions) {
+								let builtInFunction = CompletionItem.create(func.name);
+								builtInFunction.kind = CompletionItemKind.Function;
+
+								builtInFunction.insertText = `${func.name}(` + func.parameters.map((p, i) => {
+									if (i === 0) {
+										return refValue
+									} else {
+										return `\${${i}:${p.name}}`
+									}
+								}).join(`:`) + `)`;
+
+								builtInFunction.additionalTextEdits = [TextEdit.del(changeRange)];
+								builtInFunction.insertTextFormat = InsertTextFormat.Snippet;
+								builtInFunction.detail = `Built-in function`;
+								items.push(builtInFunction);
+							}
+						}
 					}
 				}
 			} else {
