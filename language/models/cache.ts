@@ -24,6 +24,32 @@ const newInds = () => {
 
 export type SymbolRegister = Map<string, Declaration[]>;
 
+export type RpglePrimitiveType = `string`|`number`|`datetime`;
+export function typeToPrimitive(rpgleType: RpgleVariableType): RpglePrimitiveType|undefined {
+  switch (rpgleType) {
+    case `char`:
+    case `varchar`:
+    case `ucs2`:
+    case `varucs2`:
+    case `vargraph`:
+      return `string`;
+
+    case `int`:
+    case `uns`:
+    case `packed`:
+    case `zoned`:
+    case `float`:
+      return `number`;
+
+    case `date`:
+    case `time`:
+    case `timestamp`:
+      return `datetime`;
+  }
+
+  return;
+}
+
 export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
 const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
 

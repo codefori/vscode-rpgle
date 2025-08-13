@@ -50,7 +50,7 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
 
             const createSignature = (parms: BuiltInFunctionParameter[]): SignatureInformation => {
               return {
-                label: `${builtIn.name}(${parms.map(p => p.name + `: ${p.type.join(`|`)}`).join(", ")})`,
+                label: `${builtIn.name}(${parms.map(p => p.name + `: ${p.type.join(`|`)}`).join(", ")}): ${builtIn.returnType}`,
                 activeParameter: currentParameter,
                 parameters: parms.map(p => ({
                   label: `${p.name}: ${p.type.join(`|`)}`,

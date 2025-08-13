@@ -1,8 +1,8 @@
-import { RpgleVariableType } from "../../../../../language/models/cache";
+import { RpglePrimitiveType, RpgleVariableType, typeToPrimitive } from "../../../../../language/models/cache";
 
 export interface BuiltInFunctionParameter {
   name: string;
-  type: RpgleVariableType[];
+  type: (RpgleVariableType|RpglePrimitiveType)[];
   optional?: boolean;
   base?: boolean;
 }
@@ -14,7 +14,10 @@ export interface BuiltInFunction {
 }
 
 export function getBuiltInsForType(type: RpgleVariableType): BuiltInFunction[] {
-  return BuiltInFunctions.filter(func => func.parameters.some(param => param.base && param.type.includes(type)));
+  const primitiveType = typeToPrimitive(type);
+  return BuiltInFunctions.filter(func => func.parameters.some(param => 
+    param.base && 
+    (param.type.includes(type) || (primitiveType && param.type.includes(primitiveType)))));
 }
 
 export function getBuiltIn(name: string): BuiltInFunction | undefined {
@@ -23,75 +26,75 @@ export function getBuiltIn(name: string): BuiltInFunction | undefined {
 
 const BuiltInFunctions: BuiltInFunction[] = [
   {name: `%subst`, returnType: `char`, parameters: [
-    { name: `string`, type: [`char`, `varchar`], base: true },
-    { name: `start`, type: [`int`, `uns`] },
-    { name: `length`, type: [`int`, `uns`], optional: true }
+    { name: `value`, type: [`string`], base: true },
+    { name: `start`, type: [`number`] },
+    { name: `length`, type: [`number`], optional: true }
   ]},
   {name: `%trim`, returnType: `char`, parameters: [
-    { name: `string`, type: [`char`, `varchar`], base: true },
+    { name: `value`, type: [`string`], base: true },
   ]},
   {name: `%trimr`, returnType: `char`, parameters: [
-    { name: `string`, type: [`char`, `varchar`], base: true },
+    { name: `value`, type: [`string`], base: true },
   ]},
   {name: `%triml`, returnType: `char`, parameters: [
-    { name: `string`, type: [`char`, `varchar`], base: true },
+    { name: `value`, type: [`string`], base: true },
   ]},
   {
     name: `%len`,
     returnType: `int`,
     parameters: [
-      { name: `string`, type: [`char`, `varchar`], base: true }
+      { name: `value`, type: [`string`], base: true }
     ]
   },
   {
     name: `%upper`,
     returnType: `char`,
     parameters: [
-      { name: `string`, type: [`char`, `varchar`], base: true },
+      { name: `value`, type: [`string`], base: true },
     ]
   },
   {
     name: `%lower`,
     returnType: `char`,
     parameters: [
-      { name: `string`, type: [`char`, `varchar`], base: true },
+      { name: `value`, type: [`string`], base: true },
     ]
   },
   {
     name: `%split`,
     returnType: `char`,
     parameters: [
-      { name: `string`, type: [`char`, `varchar`], base: true },
-      { name: `delimiter`, type: [`char`, `varchar`] }
+      { name: `value`, type: [`string`], base: true },
+      { name: `delimiter`, type: [`string`] }
     ]
   },
   {
     name: `%scanrpl`,
     returnType: `char`,
     parameters: [
-      { name: `search`, type: [`char`, `varchar`] },
-      { name: `replace`, type: [`char`, `varchar`] },
-      { name: `string`, type: [`char`, `varchar`], base: true },
+      { name: `search`, type: [`string`] },
+      { name: `replace`, type: [`string`] },
+      { name: `string`, type: [`string`], base: true },
     ]
   },
   {
     name: `%scan`,
     returnType: `int`,
     parameters: [
-      { name: `search`, type: [`char`, `varchar`] },
-      { name: `string`, type: [`char`, `varchar`], base: true },
-      { name: `startPosition`, type: [`int`, `uns`], optional: true },
-      { name: `length`, type: [`int`, `uns`], optional: true }
+      { name: `search`, type: [`string`] },
+      { name: `value`, type: [`string`], base: true },
+      { name: `startPosition`, type: [`number`], optional: true },
+      { name: `length`, type: [`number`], optional: true }
     ]
   },
   {
     name: `%scanr`,
     returnType: `int`,
     parameters: [
-      { name: `search`, type: [`char`, `varchar`] },
-      { name: `string`, type: [`char`, `varchar`], base: true },
-      { name: `startPosition`, type: [`int`, `uns`], optional: true },
-      { name: `length`, type: [`int`, `uns`], optional: true }
+      { name: `search`, type: [`string`] },
+      { name: `value`, type: [`string`], base: true },
+      { name: `startPosition`, type: [`number`], optional: true },
+      { name: `length`, type: [`number`], optional: true }
     ]
   }
 ]
