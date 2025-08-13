@@ -24,8 +24,10 @@ const newInds = () => {
 
 export type SymbolRegister = Map<string, Declaration[]>;
 
-export type RpglePrimitiveType = `string`|`number`|`datetime`;
-export function typeToPrimitive(rpgleType: RpgleVariableType): RpglePrimitiveType|undefined {
+export type RpglePrimitiveType = `string`|`number`|`datetime`|`special`;
+export type RpgleType = RpgleVariableType|RpglePrimitiveType|`any`;
+
+export function typeToPrimitive(rpgleType: RpgleType): RpglePrimitiveType|undefined {
   switch (rpgleType) {
     case `char`:
     case `varchar`:

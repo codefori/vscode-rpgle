@@ -1,7 +1,7 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
-import Cache, { RpgleVariableType } from '../../../../language/models/cache';
+import Cache, { RpgleType, RpgleVariableType } from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import * as ileExports from './apis';
 import skipRules from './linter/skipRules';
@@ -56,7 +56,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 					let tokenIndex = referenceStart;
 
 					let currentDef: Declaration|undefined;
-					let onType: RpgleVariableType|undefined;
+					let onType: RpgleType|undefined;
 
 					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
 						if (tokens[tokenIndex] === undefined || [`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
