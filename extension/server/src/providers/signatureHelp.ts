@@ -53,13 +53,35 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
 
             let signatures: SignatureInformation[] = []
 
+            const createTypeString = (parm: BuiltInFunctionParameter): string => {
+              let value = ``
+
+              if (parm.continuous) {
+                value += `...`
+              }
+
+              if (parm.isArray && parm.type.length > 1) {
+                value += `(`
+              }
+              value += parm.type.join(`|`)
+              if (parm.isArray && parm.type.length > 1) {
+                value += `)`
+              }
+
+              if (parm.isArray) {
+                value += `[]`
+              }
+
+              return value;
+            }
+
             const createSignature = (parms: BuiltInFunctionParameter[]): SignatureInformation => {
               return {
-                label: `${builtIn.name}(${parms.map(p => p.name + `: ${p.continuous ? `...` : ``}${p.type.join(`|`)}`).join(", ")}): ${builtIn.returnType}`,
+                label: `${builtIn.name}(${parms.map(p => p.name + `: ${createTypeString(p)}`).join(", ")}): ${builtIn.returnType}`,
                 activeParameter: currentParameter,
                 parameters: parms.map(p => ({
-                  label: `${p.name}: ${p.continuous ? `...` : ``}${p.type.join(`|`)}`,
-                  documentation: p.type.join(`, `) + (p.detail ? ` - ` + p.detail : ``)
+                  label: `${p.name}: ${createTypeString(p)}`,
+                  documentation: createTypeString(p) + (p.detail ? ` - ` + p.detail : ``)
                 }))
               };
             }
