@@ -47,6 +47,13 @@ const LookupParameters: IleFunctionParameter[] = [
 ]
 
 const BuiltInFunctions: IleFunction[] = [
+  {
+    name: `%alloc`,
+    returnType: `pointer`,
+    parameters: [
+      {name: `bytes`, type: [`number`]}
+    ]
+  },
   {name: `%subst`, returnType: `char`, parameters: [
     { name: `value`, type: [`string`], base: true },
     { name: `start`, type: [`number`] },
