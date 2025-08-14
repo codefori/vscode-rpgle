@@ -18,6 +18,19 @@ const completionKind = {
 
 const eol = `\n`;
 
+const builtInFunctionCompletionItems: CompletionItem[] = getBuiltIns().map(builtIn => {
+	const item = CompletionItem.create(builtIn.name);
+	item.filterText = builtIn.name.substring(1);
+	item.kind = CompletionItemKind.Function;
+	item.detail = builtIn.returnType || `void`;
+	item.documentation = `Built-in function`;
+	item.insertText = builtIn.name + `(\${1})`;
+	item.insertTextFormat = InsertTextFormat.Snippet;
+	item.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
+	item.sortText = item.filterText;
+	return item;
+});
+
 export default async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
 	const items: CompletionItem[] = [];
 	const lineNumber = handler.position.line;
@@ -391,18 +404,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 					// Showing the available built-in functions
 					//================================================
 
-					for (let builtIn of getBuiltIns()) {
-						const item = CompletionItem.create(builtIn.name);
-						item.filterText = builtIn.name.substring(1);
-						item.kind = CompletionItemKind.Function;
-						item.detail = builtIn.returnType || `void`;
-						item.documentation = `Built-in function`;
-						item.insertText = builtIn.name + `(\${1})`;
-						item.insertTextFormat = InsertTextFormat.Snippet;
-						item.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
-						item.sortText = item.filterText;
-						items.push(item);
-					}
+					items.push(...builtInFunctionCompletionItems);
 				}
 			}
 		}
