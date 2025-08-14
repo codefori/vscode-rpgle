@@ -3,7 +3,7 @@ import { RpglePrimitiveType, RpgleType, RpgleVariableType, typeToPrimitive } fro
 const RpgleDateFormats = [`*YMD`,`*DMY`,`*JUL`,`*JOBRUN`,`*CYMD`,`*CDMY`,`*CMDY`,`*ISO`,`*USA`,`*EUR`,`*JIS`,`*LONGJUL`,`*LONGJOBRUN`];
 const RpgleTimeUnits = [`*MSECONDS`, `*SECONDS`, `*MINUTES`, `*HOURS`, `*DAYS`, `*MONTHS`, `*YEARS`]; // TODO: add shorthard
 
-export interface BuiltInFunctionParameter {
+export interface IleFunctionParameter {
   name: string;
   type: RpgleType[];
   isArray?: boolean;
@@ -15,13 +15,13 @@ export interface BuiltInFunctionParameter {
   base?: boolean;
 }
 
-export interface BuiltInFunction {
+export interface IleFunction {
   name: string;
-  parameters: BuiltInFunctionParameter[]
+  parameters: IleFunctionParameter[]
   returnType?: RpgleType;
 }
 
-export function getBuiltInsForType(type: RpgleType, isArray: boolean): BuiltInFunction[] {
+export function getBuiltInsForType(type: RpgleType, isArray: boolean): IleFunction[] {
   const primitiveType = typeToPrimitive(type);
   return BuiltInFunctions.filter(func => func.parameters.some(param => 
     param.base && 
@@ -30,19 +30,19 @@ export function getBuiltInsForType(type: RpgleType, isArray: boolean): BuiltInFu
   ));
 }
 
-export function getBuiltIn(name: string): BuiltInFunction | undefined {
+export function getBuiltIn(name: string): IleFunction | undefined {
   return BuiltInFunctions.find(func => func.name.toLowerCase() === name.toLowerCase());
 }
 
-const StringOptions: BuiltInFunctionParameter = {name: `option`, type: [`special`], optional: true, detail: `*NATURAL, *STDCHARSIZE`};
-const LookupParameters: BuiltInFunctionParameter[] = [
+const StringOptions: IleFunctionParameter = {name: `option`, type: [`special`], optional: true, detail: `*NATURAL, *STDCHARSIZE`};
+const LookupParameters: IleFunctionParameter[] = [
   {name: `argument`, type: [`any`]},
   {name: `array`, type: [`any`], isArray: true, base: true},
   {name: `startIndex`, type: [`number`], optional: true},
   {name: `length`, type: [`number`], optional: true}
 ]
 
-const BuiltInFunctions: BuiltInFunction[] = [
+const BuiltInFunctions: IleFunction[] = [
   {name: `%subst`, returnType: `char`, parameters: [
     { name: `value`, type: [`string`], base: true },
     { name: `start`, type: [`number`] },

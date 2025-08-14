@@ -1,7 +1,7 @@
 import { Range, SignatureHelp, SignatureHelpParams, SignatureInformation } from "vscode-languageserver";
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Parser from "../../../../language/parser";
-import { BuiltInFunctionParameter, getBuiltIn } from "./apis/bif";
+import { IleFunctionParameter, getBuiltIn } from "./apis/bif";
 import Statement from "../../../../language/statement";
 
 export async function signatureHelpProvider(handler: SignatureHelpParams): Promise<SignatureHelp|undefined> {
@@ -53,7 +53,7 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
 
             let signatures: SignatureInformation[] = []
 
-            const createTypeString = (parm: BuiltInFunctionParameter): string => {
+            const createTypeString = (parm: IleFunctionParameter): string => {
               let value = ``
 
               if (parm.continuous) {
@@ -75,7 +75,7 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
               return value;
             }
 
-            const createSignature = (parms: BuiltInFunctionParameter[]): SignatureInformation => {
+            const createSignature = (parms: IleFunctionParameter[]): SignatureInformation => {
               return {
                 label: `${builtIn.name}(${parms.map(p => p.name + `: ${createTypeString(p)}`).join(", ")}): ${builtIn.returnType}`,
                 activeParameter: currentParameter,
