@@ -46,14 +46,19 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
               currentParameter = parameterBlock.length > 0 ? parameterBlock.length-1 : 0;
             }
 
+            // Support for continuous parameters
+            if (currentParameter >= builtIn.parameters.length) {
+              currentParameter = builtIn.parameters.length - 1;
+            }
+
             let signatures: SignatureInformation[] = []
 
             const createSignature = (parms: BuiltInFunctionParameter[]): SignatureInformation => {
               return {
-                label: `${builtIn.name}(${parms.map(p => p.name + `: ${p.type.join(`|`)}`).join(", ")}): ${builtIn.returnType}`,
+                label: `${builtIn.name}(${parms.map(p => p.name + `: ${p.continuous ? `...` : ``}${p.type.join(`|`)}`).join(", ")}): ${builtIn.returnType}`,
                 activeParameter: currentParameter,
                 parameters: parms.map(p => ({
-                  label: `${p.name}: ${p.type.join(`|`)}`,
+                  label: `${p.name}: ${p.continuous ? `...` : ``}${p.type.join(`|`)}`,
                   documentation: p.type.join(`, `) + (p.detail ? ` - ` + p.detail : ``)
                 }))
               };
