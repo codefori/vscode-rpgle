@@ -56,7 +56,6 @@ export default async function completionItemProvider(handler: CompletionParams):
 					let tokenIndex = referenceStart;
 
 					let currentDef: Declaration|undefined;
-					let onType: RpgleType|undefined;
 
 					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
 						if (tokens[tokenIndex] === undefined || [`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
@@ -89,6 +88,9 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 					}
 
+					let onType: RpgleType|undefined;
+					let onArray = false;
+
 					if (currentDef) {
 						if (currentDef.subItems.length > 0) {
 							items.push(...currentDef.subItems.map(subItem => {
@@ -104,6 +106,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						const typeDetail = doc.resolveType(currentDef);
 						if (typeDetail.type) {
 							onType = typeDetail.type.name;
+							onArray = typeDetail.type.isArray;
 						}
 					} else if (tokens[referenceStart].type === `builtin` && tokens[referenceStart].value) {
 						const builtIn = getBuiltIn(tokens[referenceStart].value);
@@ -113,7 +116,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 					}
 
 					if (onType) {
-						const usableFunctions = getBuiltInsForType(onType);
+						const usableFunctions = getBuiltInsForType(onType, onArray);
 						if (usableFunctions.length > 0) {
 							const changeRange = Range.create(
 								handler.position.line,

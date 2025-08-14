@@ -52,11 +52,11 @@ export function typeToPrimitive(rpgleType: RpgleType): RpglePrimitiveType|undefi
   return;
 }
 
-export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
-const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
+export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph` | `file`;
+const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`, `file`];
 
 export interface RpgleTypeDetail {
-  type?: { name: RpgleVariableType, value?: string };
+  type?: { name: RpgleVariableType, isArray: boolean, value?: string };
   reference?: Declaration;
 }
 
@@ -287,7 +287,10 @@ export default class Cache {
     let refName: string;
     let reference: Declaration | undefined;
 
-    if (typeof keywords[`LIKEDS`] === `string`) {
+    if (def.type === `file`) {
+      return { type: { name: `file`, isArray: false, value: def.name } };
+      
+    } else if (typeof keywords[`LIKEDS`] === `string`) {
       refName = (keywords[`LIKEDS`] as string).toUpperCase();
       reference = this.symbols.find(s => s.name.toUpperCase() === refName);
 
@@ -304,8 +307,9 @@ export default class Cache {
       return { reference };
     } else {
       const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
+      const isArray = keywords[`DIM`] ? true : false;
       if (type) {
-        return { type: { name: (type.toLowerCase() as RpgleVariableType), value: keywords[type] as string } };
+        return { type: { name: (type.toLowerCase() as RpgleVariableType), isArray, value: keywords[type] as string } };
       }
     }
 
