@@ -34,6 +34,10 @@ export function getBuiltIn(name: string): IleFunction | undefined {
   return BuiltInFunctions.find(func => func.name.toLowerCase() === name.toLowerCase());
 }
 
+export function getBuiltIns() {
+  return BuiltInFunctions;
+}
+
 const StringOptions: IleFunctionParameter = {name: `option`, type: [`special`], optional: true, detail: `*NATURAL, *STDCHARSIZE`};
 const LookupParameters: IleFunctionParameter[] = [
   {name: `argument`, type: [`any`]},

@@ -9,7 +9,7 @@ import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/parser';
 import { Token } from '../../../../language/types';
-import { getBuiltIn, getBuiltInsForType } from './apis/bif';
+import { getBuiltIn, getBuiltIns, getBuiltInsForType } from './apis/bif';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -38,8 +38,12 @@ export default async function completionItemProvider(handler: CompletionParams):
 				200
 			));
 
-			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
+
+				//================================================
+				// Logic for showing subfields (subitems) on symbols
+				//================================================
+
 				const cursorIndex = handler.position.character;
 				let tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? ``.padEnd(7) + currentLine.substring(7) : ``, 0, 0, true);
 
@@ -115,6 +119,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 					}
 
+					//================================================
+					// How about showing applicable built-in functions for a given type?
+					//================================================
+
 					if (onType) {
 						const usableFunctions = getBuiltInsForType(onType, onArray);
 						if (usableFunctions.length > 0) {
@@ -172,6 +180,11 @@ export default async function completionItemProvider(handler: CompletionParams):
 					items.push(...skipRules);
 
 				} else {
+
+					//================================================
+					// Content assist on existing symbols
+					//================================================
+
 					const expandScope = (localCache: Cache) => {
 						for (const subItem of localCache.parameters) {
 							const item = CompletionItem.create(subItem.name);
@@ -313,6 +326,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 					}
 
+					//================================================
+					// Auto-import logic 
+					//================================================
+
 					if (isFree) {
 						const isInclude = currentPath.toLowerCase().endsWith(`.rpgleinc`);
 						const insertAt = doc.getDefinitionBlockEnd(document.uri) + 1;
@@ -368,6 +385,23 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 							items.push(item);
 						})
+					}
+
+					//================================================
+					// Showing the available built-in functions
+					//================================================
+
+					for (let builtIn of getBuiltIns()) {
+						const item = CompletionItem.create(builtIn.name);
+						item.filterText = builtIn.name.substring(1);
+						item.kind = CompletionItemKind.Function;
+						item.detail = builtIn.returnType || `void`;
+						item.documentation = `Built-in function`;
+						item.insertText = builtIn.name + `(\${1})`;
+						item.insertTextFormat = InsertTextFormat.Snippet;
+						item.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
+						item.sortText = item.filterText;
+						items.push(item);
 					}
 				}
 			}
