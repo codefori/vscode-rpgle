@@ -84,7 +84,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						if (!word) break;
 
 						if (currentDef) {
-							if (currentDef.subItems && currentDef.subItems.length > 0) {
+							if (currentDef.type !== `procedure` && currentDef.subItems && currentDef.subItems.length > 0) {
 								currentDef = currentDef.subItems.find(subItem => subItem.name.toUpperCase() === word);
 							}
 
@@ -93,8 +93,6 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 							if (currentDef) {
 								if (currentDef.type === `struct` && currentDef.keyword[`QUALIFIED`] === undefined) {
-									currentDef = undefined;
-								} else if (currentDef.type === `procedure`) {
 									currentDef = undefined;
 								}
 
@@ -219,6 +217,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 							item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`;
 							item.detail = prettyKeywords(procedure.keyword);
 							item.documentation = procedure.description;
+
+							if (procedure.subItems.length > 0) {
+								item.command = { command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints` };
+							}
 							items.push(item);
 						}
 
