@@ -1,5 +1,5 @@
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
+import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Parser from "../../../../language/parser";
 import { URI } from 'vscode-uri';
 import { Keywords } from '../../../../language/parserTypes';
@@ -30,14 +30,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 					}
 
 					let markdown = ``;
-					let returnValue = `void`
-
-					let returnKeywords: Keywords = {
-						...symbol.keyword,
-					};
-					delete returnKeywords[`EXTPROC`];
-
-					if (Object.keys(returnKeywords).length > 0) returnValue = prettyKeywords(returnKeywords);
+					const returnValue = getReturnValue(symbol);
 
 					const returnTag = symbol.tags.find(tag => tag.tag === `return`);
 					const deprecatedTag = symbol.tags.find(tag => tag.tag === `deprecated`);

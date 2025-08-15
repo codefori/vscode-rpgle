@@ -10,6 +10,7 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 import Parser from '../../../../language/parser';
+import Declaration from '../../../../language/models/declaration';
 
 type Keywords = { [key: string]: string | boolean };
 
@@ -60,4 +61,16 @@ export function prettyKeywords(keywords: Keywords, filter: boolean = false): str
 			return undefined;
 		}
 	}).filter(k => k).join(` `);
+}
+
+export function getReturnValue(symbol: Declaration): string {
+  let returnValue = `void`
+
+  let returnKeywords: Keywords = {
+    ...symbol.keyword,
+  };
+  delete returnKeywords[`EXTPROC`];
+
+  if (Object.keys(returnKeywords).length > 0) returnValue = prettyKeywords(returnKeywords);
+  return returnValue;
 }
