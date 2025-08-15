@@ -24,11 +24,39 @@ const newInds = () => {
 
 export type SymbolRegister = Map<string, Declaration[]>;
 
-export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
-const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
+export type RpglePrimitiveType = `string`|`number`|`datetime`|`special`;
+export type RpgleType = RpgleVariableType|RpglePrimitiveType|`any`;
+
+export function typeToPrimitive(rpgleType: RpgleType): RpglePrimitiveType|undefined {
+  switch (rpgleType) {
+    case `char`:
+    case `varchar`:
+    case `ucs2`:
+    case `varucs2`:
+    case `vargraph`:
+      return `string`;
+
+    case `int`:
+    case `uns`:
+    case `packed`:
+    case `zoned`:
+    case `float`:
+      return `number`;
+
+    case `date`:
+    case `time`:
+    case `timestamp`:
+      return `datetime`;
+  }
+
+  return;
+}
+
+export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph` | `file`;
+const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`, `file`];
 
 export interface RpgleTypeDetail {
-  type?: { name: RpgleVariableType, value?: string };
+  type?: { name: RpgleVariableType, isArray: boolean, value?: string };
   reference?: Declaration;
 }
 
@@ -259,7 +287,10 @@ export default class Cache {
     let refName: string;
     let reference: Declaration | undefined;
 
-    if (typeof keywords[`LIKEDS`] === `string`) {
+    if (def.type === `file`) {
+      return { type: { name: `file`, isArray: false, value: def.name } };
+      
+    } else if (typeof keywords[`LIKEDS`] === `string`) {
       refName = (keywords[`LIKEDS`] as string).toUpperCase();
       reference = this.symbols.find(s => s.name.toUpperCase() === refName);
 
@@ -276,8 +307,9 @@ export default class Cache {
       return { reference };
     } else {
       const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
+      const isArray = keywords[`DIM`] ? true : false;
       if (type) {
-        return { type: { name: (type.toLowerCase() as RpgleVariableType), value: keywords[type] as string } };
+        return { type: { name: (type.toLowerCase() as RpgleVariableType), isArray, value: keywords[type] as string } };
       }
     }
 

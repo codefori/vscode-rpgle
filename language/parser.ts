@@ -159,26 +159,39 @@ export default class Parser {
     return tokens;
   }
 
-  static fromBlocksGetTokens(tokensWithBlocks: Token[], cursorIndex: number) {
+  static fromBlocksGetTokens(tokensWithBlocks: Token[], cursorIndex: number): {preToken?: Token, block: Token[]} {
+    let insideBlockIndex: number|undefined;
+    let preToken: Token|undefined;
     let insideBlock: Token | undefined;
 
-    while (insideBlock = tokensWithBlocks.find(t => t.type === `block` && t.block && t.range.start <= cursorIndex && t.range.end >= cursorIndex)) {
+    while ((insideBlockIndex = tokensWithBlocks.findIndex(t => t.type === `block` && t.block && t.range.start <= cursorIndex && t.range.end >= cursorIndex)) !== -1) {
+      insideBlock = tokensWithBlocks[insideBlockIndex];
+      preToken = tokensWithBlocks[insideBlockIndex - 1];
       tokensWithBlocks = insideBlock.block || [];
     }
 
-    return tokensWithBlocks;
+    return { preToken, block: tokensWithBlocks };
   }
 
   static getReference(tokens: Token[], cursorIndex: number): number|-1 {
-    let tokenIndex = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
+    let checkNextToken = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
 
-    let lastToken: Token|undefined;
-    while (tokens[tokenIndex] && [`block`, `word`, `dot`].includes(tokens[tokenIndex].type) && lastToken?.type !== tokens[tokenIndex].type && tokenIndex > 0) {
-      lastToken = tokens[tokenIndex];
-      tokenIndex--;
+    let lastToken: number;
+    while (
+      tokens[checkNextToken] && 
+      [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) && 
+      tokens[lastToken]?.type !== tokens[checkNextToken].type &&
+      checkNextToken >= 0
+
+    ) {
+      lastToken = checkNextToken;
+
+      if (tokens[lastToken].type === `builtin`) break;
+
+      checkNextToken--;
     }
 
-    return tokenIndex;
+    return lastToken;
   }
 
   async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {

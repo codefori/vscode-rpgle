@@ -32,6 +32,7 @@ import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
 import genericCodeActionsProvider from './providers/codeActions';
 import { isLinterEnabled } from './providers/linter';
+import { signatureHelpProvider } from './providers/signatureHelp';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -46,6 +47,8 @@ let projectEnabled = false;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
+
+	console.log(capabilities.textDocument?.completion);
 
 	// Does the client support the `workspace/configuration` request?
 	// If not, we fall back using global settings.
@@ -71,12 +74,15 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.documentSymbolProvider = true;
 		result.capabilities.definitionProvider = true;
 		result.capabilities.completionProvider = {
-			triggerCharacters: [`.`, `:`]
+			triggerCharacters: [`.`, `:`],
 		};
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
 		result.capabilities.implementationProvider = true;
 		result.capabilities.renameProvider = {prepareProvider: true};
+		result.capabilities.signatureHelpProvider = {
+			triggerCharacters: [`(`, `:`]
+		}
 	}
 
 	if (isLinterEnabled()) {
@@ -308,6 +314,7 @@ if (languageToolsEnabled) {
 	connection.onPrepareRename(renamePrepareProvider);
 	connection.onRenameRequest(renameRequestProvider);
 	connection.onCodeAction(genericCodeActionsProvider);
+	connection.onSignatureHelp(signatureHelpProvider);
 
 	// project specific
 	connection.onWorkspaceSymbol(workspaceSymbolProvider);
