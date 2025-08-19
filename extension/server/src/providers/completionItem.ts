@@ -70,6 +70,11 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					// Get the possible variable we're referring to
 					const referenceStart = Parser.getReference(tokens, cursorIndex);
+
+					if (referenceStart === undefined) {
+						return [];
+					}
+
 					let tokenIndex = referenceStart;
 
 					let currentDef: Declaration|undefined;
