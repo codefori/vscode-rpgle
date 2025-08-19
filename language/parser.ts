@@ -191,6 +191,8 @@ export default class Parser {
       checkNextToken--;
     }
 
+    if (lastToken === -1) return undefined;
+
     return lastToken;
   }
 
