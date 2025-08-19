@@ -192,7 +192,10 @@ export default class Parser {
     }
 
     if (lastToken === -1) return undefined;
-
+    if (!tokens[lastToken]) return undefined;
+    if (![`word`, `builtin`].includes(tokens[lastToken].type)) {
+      return undefined;
+    }
     return lastToken;
   }
 
