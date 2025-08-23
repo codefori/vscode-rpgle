@@ -1935,10 +1935,7 @@ test('that mixed symbols can be defined correctly', async () => {
   expect(cache.procedures.length).toBe(1);
 });
 
-test('range issue #453', async () => {
-  const testSource = path.join(__dirname, `..`, `rpgle`, `issue453.rpgle`);
-  // const contents = await readFile(testSource, 'utf-8');
-
+test('range issue #453 (snippet)', async () => {
   const lines = [
     `     D custName        S             10A`,
     `     D custName`,
@@ -1946,7 +1943,16 @@ test('range issue #453', async () => {
     `          dcl-ds custInfo EXTNAME('CUSTMAST') INZ;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(testSource, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+});
+
+test('range issue #453 (full source)', async () => {
+  const testSource = path.join(__dirname, `..`, `rpgle`, `issue453.rpgle`);
+  const contents = await readFile(testSource, 'utf-8');
+
+  const cache = await parser.getDocs(testSource, contents, { ignoreCache: true, withIncludes: false, collectReferences: true });
 
   expect(cache).toBeDefined();
 });
