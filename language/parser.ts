@@ -1688,8 +1688,15 @@ export default class Parser {
                 resetDefinition = true;
                 break;
               case `S`:
+
+                if (!currentNameToken) {
+                  // If we don't have a current name token
+                  // we cannot create a variable declaration (RNF3316)
+                  break;
+                }
+
                 currentItem = new Declaration(`variable`);
-                currentItem.name = currentNameToken?.value || NO_NAME;
+                currentItem.name = currentNameToken.value;
                 currentItem.keyword = {
                   ...dSpec.keywords,
                   ...prettyTypeFromToken(dSpec),

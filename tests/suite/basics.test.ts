@@ -3,6 +3,7 @@ import path from "path";
 import setupParser, { getFileContent } from "../parserSetup";
 import Linter from "../../language/linter";
 import { test, expect } from "vitest";
+import { readFile } from "fs/promises";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -1932,4 +1933,26 @@ test('that mixed symbols can be defined correctly', async () => {
   expect(cache.constants.length).toBe(1);
   expect(cache.variables.length).toBe(2);
   expect(cache.procedures.length).toBe(1);
+});
+
+test('range issue #453 (snippet)', async () => {
+  const lines = [
+    `     D custName        S             10A`,
+    `     D custName`,
+    `     D                 S             10A`,
+    `          dcl-ds custInfo EXTNAME('CUSTMAST') INZ;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+});
+
+test('range issue #453 (full source)', async () => {
+  const testSource = path.join(__dirname, `..`, `rpgle`, `issue453.rpgle`);
+  const contents = await readFile(testSource, 'utf-8');
+
+  const cache = await parser.getDocs(testSource, contents, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
 });
