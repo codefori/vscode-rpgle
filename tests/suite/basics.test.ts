@@ -1981,3 +1981,30 @@ test('**free after first line (#451)', async () => {
 
   expect(cache.find(`txtMsg`)).toBeDefined();
 });
+
+test('multi-line definition (#442)', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s myprogramText char(20);`,
+    ``,
+    `dcl-ds name qualified dim;`,
+    `end-ds;`,
+    ``,
+    `dcl-ds person qualified dim`,
+    `end-ds;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+
+  const name = cache.find(`name`);
+  expect(name).toBeDefined();
+  expect(name.range).toMatchObject({ start: 4, end: 5 });
+
+  const person = cache.find(`person`);
+  expect(person).toBeDefined();
+  console.log(person);
+  expect(person.range).toMatchObject({ start: 7, end: 8 });
+});

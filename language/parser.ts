@@ -155,7 +155,12 @@ export default class Parser {
     if (withBlocks) {
       tokens = createBlocks(tokens);
     }
-    
+
+    // Remove newlines
+    if (tokens.some(t => t.type === `newline`)) {
+      tokens = tokens.filter(t => t.type !== `newline`);
+    }
+
     return tokens;
   }
 
@@ -388,7 +393,6 @@ export default class Parser {
     //Now the real work
     const parseContent = async (fileUri: string, allContent: string) => {
       const EOL = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
-      const LINEEND = ``.padEnd(EOL.length);
       let lines = allContent.split(EOL);
 
       let postProcessingStatements: {[procedure: string]: Token[][]} = {'GLOBAL': []};
@@ -664,7 +668,7 @@ export default class Parser {
           if ([spec, comment].includes(`*`)) {
             if (currentStmtStart && currentStmtStart.content) {
               // Since we're in an extended statement (usually fixed exec), we still need to collect the lengths for the tokeniser
-              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+              currentStmtStart.content += ``.padEnd(baseLine.length) + EOL;
             }
 
             continue;
@@ -677,7 +681,7 @@ export default class Parser {
           } else if (comment === `+` && fixedExec && currentStmtStart.content) {
             // Fixed format EXEC SQL
             baseLine = ``.padEnd(7) + baseLine.substring(7);
-            currentStmtStart.content += baseLine + LINEEND;
+            currentStmtStart.content += baseLine + EOL;
             continue;
           } else {
             if (spec === ` `) {
@@ -714,7 +718,7 @@ export default class Parser {
             // if part of a continued statement to ensure positions are correct.
             // See issue_358_no_reference_2
             if (currentStmtStart && currentStmtStart.content) {
-              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+              currentStmtStart.content += ``.padEnd(baseLine.length) + EOL;
             }
             continue;
           };
@@ -736,7 +740,7 @@ export default class Parser {
                 currentStmtStart = {
                   line: lineNumber,
                   index: lineIndex,
-                  content: baseLine + LINEEND
+                  content: baseLine + EOL
                 }
                 continue;
               case '/END':
@@ -747,7 +751,7 @@ export default class Parser {
               case '/':
                 // Comments in SQL, usually free-format
                 if (parts[1] === `*` && currentStmtStart) {
-                  currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+                  currentStmtStart.content += ``.padEnd(baseLine.length) + EOL;
                   continue;
                 }
                 break;
@@ -755,7 +759,7 @@ export default class Parser {
                 // Maybe we're in a fixed exec statement, but a directive is being used.
                 // See test case references_21_fixed_exec1
                 if (fixedExec && currentStmtStart && currentStmtStart.content) {
-                  currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+                  currentStmtStart.content += ``.padEnd(baseLine.length) + EOL;
                   continue;
                 }
                 break;
@@ -853,7 +857,7 @@ export default class Parser {
             // This happens when we put a comment on a line which is part of one long statement.
             // See references_24_comment_in_statement
             if (currentStmtStart.content) {
-              currentStmtStart.content += ``.padEnd(baseLine.length) + LINEEND;
+              currentStmtStart.content += ``.padEnd(baseLine.length) + EOL;
             }
           } else {
             if (stripComment(line).endsWith(`;`)) {
@@ -875,7 +879,7 @@ export default class Parser {
               if (currentStmtStart.content.endsWith(`-`)) 
                 currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
 
-              currentStmtStart.content += LINEEND;
+              currentStmtStart.content += EOL;
 
               continue;
             }
@@ -1025,7 +1029,7 @@ export default class Parser {
                     lastItem.subItems.push(currentItem);
                   } else {
                     // Otherwise, we push as a new item
-                    currentItem.range.end = currentStmtStart.line;
+                    currentItem.range.end = tokens[tokens.length-1].range.line;
                     scope.addSymbol(currentItem);
                   }
                 } else {
