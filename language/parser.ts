@@ -427,7 +427,7 @@ export default class Parser {
       let lineNumber = -1;
       let lineIndex = 0;
 
-      let isFullyFree = lines[0].toUpperCase().startsWith(`**FREE`);
+      let isFullyFree = false;
       let lineIsFree = false;
 
       /** Used for handling multiline statements */
@@ -643,9 +643,17 @@ export default class Parser {
         lineNumber += 1;
 
         if (baseLine.startsWith(`**`) && baseLine[2] !== `*`) {
-          // Usually is **FREE
-          if (lineNumber === 0) continue;
-          // After compile time data, we're done
+          if (baseLine.toLowerCase() === `**free`) {
+            // **free only works when set on the first line
+            if (lineNumber === 0) {
+              isFullyFree = true;
+            }
+
+            // But it can be put on any other line and ignored.
+            continue;
+          }
+          
+          // If it's something else, we assume it's compile time data
           else break;
         }
 

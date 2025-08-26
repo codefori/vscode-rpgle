@@ -1956,3 +1956,28 @@ test('range issue #453 (full source)', async () => {
 
   expect(cache).toBeDefined();
 });
+
+test('**free after first line (#451)', async () => {
+  const lines = [
+    `       //**                                                           ***`,
+    ``,
+    `**FREE`,
+    `       //****************************************************************`,
+    `       //**    `,
+    ` `,
+    `       dcl-s txtMsg char(10);   `,
+    `                                                   `,
+    `       dcl-ds person;`,
+    `         name varchar(30);`,
+    `         age int(3);`,
+    `       end-Ds;`,
+    ``,
+    `       return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+
+  expect(cache.find(`txtMsg`)).toBeDefined();
+});
