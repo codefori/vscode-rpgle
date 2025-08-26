@@ -484,3 +484,9 @@ export function createBlocks(tokens: Token[]) {
 
   return tokens;
 }
+
+export function trimQuotes(input: string) {
+	if (input[0] === `'`) input = input.substring(1);
+	if (input[input.length - 1] === `'`) input = input.substring(0, input.length - 1);
+	return input;
+}
