@@ -4,6 +4,7 @@ import { documents, parser } from '.';
 import Cache from '../../../../language/models/cache';
 import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
+import Declaration from '../../../../language/models/declaration';
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[] | undefined> {
 	const uri = params.textDocument.uri;
@@ -25,6 +26,12 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 				const extractOption = getExtractProcedureAction(document, docs, range);
 				if (extractOption) {
 					actions.push(extractOption);
+				}
+
+				const exportedProcedures = docs.procedures.filter(proc => proc.keyword[`EXPORT`]);
+				if (exportedProcedures.length > 0) {
+					const generateOption = getGenerateBinderSourceAction(exportedProcedures);
+					actions.push(generateOption);
 				}
 
 				const linterActions = await getLinterCodeActions(docs, document, range);
@@ -245,4 +252,25 @@ export function getExtractProcedureAction(document: TextDocument, docs: Cache, r
 			return newAction;
 		}
 	}
+}
+
+export function getGenerateBinderSourceAction(exportedProcedures: Declaration[]): CodeAction {
+	const exportSymbols = exportedProcedures.map(proc => `  EXPORT SYMBOL('${proc.name.toUpperCase()}')`);
+
+	const binderSource = [
+		`STRPGMEXP PGMLVL(*CURRENT) SIGNATURE('V1')`,
+		...exportSymbols,
+		`ENDPGMEXP`
+	];
+
+	const newAction = CodeAction.create(`Generate binder source`, CodeActionKind.RefactorExtract);
+	newAction.command = {
+		title: 'Generate Binder Source',
+		command: 'vscode-rpgle.generateBinderSource',
+		arguments: [
+			binderSource.join('\n')
+		]
+	};
+
+	return newAction;
 }
