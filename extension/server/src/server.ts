@@ -323,21 +323,36 @@ if (languageToolsEnabled) {
 
 if (isLinterEnabled()) Linter.initialise(connection);
 
+// Debounce timers for document changes
+const documentChangeTimers: { [uri: string]: NodeJS.Timeout } = {};
+
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
-	parser.getDocs(
-		handler.document.uri,
-		handler.document.getText(),
-		{
-			withIncludes: true,
-			ignoreCache: true,
-			collectReferences: true
-		}
-	).then(cache => {
-		if (cache) {
-			Linter.refreshLinterDiagnostics(handler.document, cache);
-		}
-	});
+	const uri = handler.document.uri;
+
+	// Clear any existing timer for this document
+	if (documentChangeTimers[uri]) {
+		clearTimeout(documentChangeTimers[uri]);
+	}
+
+	// Set a new timer to parse after a short delay (500ms)
+	documentChangeTimers[uri] = setTimeout(() => {
+		delete documentChangeTimers[uri];
+
+		parser.getDocs(
+			uri,
+			handler.document.getText(),
+			{
+				withIncludes: true,
+				ignoreCache: true,
+				collectReferences: true
+			}
+		).then(cache => {
+			if (cache) {
+				Linter.refreshLinterDiagnostics(handler.document, cache);
+			}
+		});
+	}, 500);
 });
 
 // Make the text document manager listen on the connection
