@@ -203,7 +203,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// Resolving IFS path from member or streamfile
 
 				// IFS fetch
-				
+
 				if (cleanString.startsWith(`/`)) {
 					// Path from root
 					validUri = URI.from({
@@ -217,7 +217,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					//   - `${cleanString}.rpgleinc`
 					//   - `${cleanString}.rpgle`
 					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
-					
+
 					// Path from home directory?
 					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
 
@@ -295,7 +295,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		}
 
 	}
-	
+
 	fetchingInProgress[includeString] = false;
 
 	return {
@@ -323,21 +323,45 @@ if (languageToolsEnabled) {
 
 if (isLinterEnabled()) Linter.initialise(connection);
 
-// Debounce timers for document changes
-const documentChangeTimers: { [uri: string]: NodeJS.Timeout } = {};
+// Track parsing state for each document
+const documentParseState: {
+	[uri: string]: {
+		timer?: NodeJS.Timeout,
+		parseId: number,
+		parsing: boolean
+	}
+} = {};
 
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
 	const uri = handler.document.uri;
 
-	// Clear any existing timer for this document
-	if (documentChangeTimers[uri]) {
-		clearTimeout(documentChangeTimers[uri]);
+	// Initialize state if needed
+	if (!documentParseState[uri]) {
+		documentParseState[uri] = { parseId: 0, parsing: false };
 	}
 
-	// Set a new timer to parse after a short delay (500ms)
-	documentChangeTimers[uri] = setTimeout(() => {
-		delete documentChangeTimers[uri];
+	const state = documentParseState[uri];
+
+	// Clear any existing timer
+	if (state.timer) {
+		clearTimeout(state.timer);
+	}
+
+	// Increment parse ID to invalidate any in-flight parses
+	state.parseId++;
+	const currentParseId = state.parseId;
+
+	// Set a new timer to parse after a short delay
+	state.timer = setTimeout(() => {
+		delete state.timer;
+
+		// Skip if already parsing this document
+		if (state.parsing) {
+			return;
+		}
+
+		state.parsing = true;
 
 		parser.getDocs(
 			uri,
@@ -348,11 +372,17 @@ documents.onDidChangeContent(handler => {
 				collectReferences: true
 			}
 		).then(cache => {
-			if (cache) {
+			state.parsing = false;
+
+			// Only update diagnostics if this is still the latest parse
+			if (cache && currentParseId === state.parseId) {
 				Linter.refreshLinterDiagnostics(handler.document, cache);
 			}
+		}).catch(err => {
+			state.parsing = false;
+			console.error(`Error parsing ${uri}:`, err);
 		});
-	}, 500);
+	}, 300); // Reduced to 300ms for better responsiveness
 });
 
 // Make the text document manager listen on the connection
