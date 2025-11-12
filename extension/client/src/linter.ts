@@ -1,6 +1,7 @@
 import path = require('path');
 import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from 'vscode';
 import {getInstance} from './base';
+import * as Configuration from './configuration';
 
 import {DEFAULT_SCHEMA} from "./schemas/linter"
 
@@ -46,8 +47,34 @@ export function initialise(context: ExtensionContext) {
 				}
 
 			} else if (instance && instance.getConnection()) {
-				const connection = instance.getConnection();
-				const content = instance.getContent();
+                        const connection = instance.getConnection();
+                        const content = instance.getContent();
+
+                        let globalPath = Configuration.get<string>(Configuration.GLOBAL_LINT_CONFIG_PATH);
+
+			if (globalPath?.startsWith('/')) {
+			  globalPath = globalPath.substring(1);
+			}
+
+                        if (globalPath) {
+                                try {
+                                        const parts = connection.parserMemberPath(globalPath);
+                                        const existsRes = await connection.runCommand({
+                                                command: `CHKOBJ OBJ(${parts.library}/${parts.file}) OBJTYPE(*FILE) MBR(${parts.name})`,
+                                                noLibList: true
+                                        });
+
+                                        if (existsRes.code === 0) {
+                                                await commands.executeCommand(`code-for-ibmi.openEditable`, globalPath);
+                                        } else {
+                                                window.showErrorMessage(`Global lint config does not exist at ${globalPath}.`);
+                                        }
+                                } catch (e) {
+                                        console.log(e);
+                                        window.showErrorMessage(`Failed to open global lint configuration.`);
+                                }
+                                return;
+                        }
 
 				/** @type {"member"|"streamfile"} */
 				let type = `member`;
@@ -117,8 +144,22 @@ export function initialise(context: ExtensionContext) {
 					} else {
 						window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${configPath}?`, `Yes`, `No`).then
 							(async (value) => {
-								if (value === `Yes`) {
-									const jsonString = JSON.stringify(DEFAULT_SCHEMA, null, 2);
+                                                                if (value === `Yes`) {
+                                                                        let jsonString: string | undefined;
+
+                                                                        if (type === `member`) {
+                                                                                const globalPath = Configuration.get<string>(Configuration.GLOBAL_LINT_CONFIG_PATH);
+                                                                                if (globalPath) {
+                                                                                        try {
+                                                                                                const globalParts = connection.parserMemberPath(globalPath);
+                                                                                                jsonString = await content.downloadMemberContent(globalParts.library, globalParts.file, globalParts.name);
+                                                                                        } catch (e) {
+                                                                                                console.log(`Failed to load global lint config: ${e}`);
+                                                                                        }
+                                                                                }
+                                                                        }
+
+                                                                        if (!jsonString) jsonString = JSON.stringify(DEFAULT_SCHEMA, null, 2);
 
 									switch (type) {
 										case `member`:

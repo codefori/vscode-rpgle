@@ -1,18 +1,24 @@
 {
-	"extends": "../tsconfig.base.json",
-	"compilerOptions": {
-		"module": "commonjs",
-		"target": "es2020",
-		"outDir": "out",
-		"rootDir": "src",
-		"lib": [ "es2020" ],
-		"sourceMap": true,
-		"composite": true
-	},
-	"include": [
-		"src"
-	],
-	"exclude": [
-		"node_modules", ".vscode-test", "src/test"
-	]
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "outDir": "../../out/client",
+    "lib": ["ES2020"],
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": false,
+    "moduleResolution": "node",
+    "types": [],
+    "typeRoots": ["node_modules/@types"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "**/node_modules",
+    "**/vscode-ibmi-types/**/*",
+    "**/node-ssh/**/*"
+  ]
 }
