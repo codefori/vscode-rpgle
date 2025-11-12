@@ -141,12 +141,16 @@ let fetchingInProgress: { [fetchKey: string]: boolean } = {};
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
 	const uriPath = currentUri.path;
+	// Extract clean filename without query parameters
+	const parentFileName = (uriPath.split('/').pop() || stringUri).split('?')[0];
+	const fetchStartTime = Date.now();
 
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
 
 	if (!fetchingInProgress[includeString]) {
 		fetchingInProgress[includeString] = true;
+		logWithTimestamp(`Include fetch started: ${includeString} (from ${parentFileName})`);
 
 		// Right now we are resolving based on the base file schema.
 		// This is likely bad since you can include across file systems.
@@ -203,7 +207,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// Resolving IFS path from member or streamfile
 
 				// IFS fetch
-				
+
 				if (cleanString.startsWith(`/`)) {
 					// Path from root
 					validUri = URI.from({
@@ -217,7 +221,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					//   - `${cleanString}.rpgleinc`
 					//   - `${cleanString}.rpgle`
 					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
-					
+
 					// Path from home directory?
 					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
 
@@ -281,11 +285,13 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			}
 		}
 
-		fetchingInProgress[includeString] = false;
-
 		if (validUri) {
 			const validSource = await getFileRequest(validUri);
 			if (validSource) {
+				const duration = Date.now() - fetchStartTime;
+				const fileName = validUri.split('/').pop() || validUri;
+				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`);
+				fetchingInProgress[includeString] = false;
 				return {
 					found: true,
 					uri: validUri,
@@ -294,14 +300,20 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			}
 		}
 
+		const duration = Date.now() - fetchStartTime;
+		logWithTimestamp(`Include fetch completed: ${includeString} (${duration}ms, NOT FOUND)`);
+		fetchingInProgress[includeString] = false;
+		return {
+			found: false,
+			uri: validUri
+		};
+	} else {
+		logWithTimestamp(`Include fetch skipped: ${includeString} (already fetching)`);
+		return {
+			found: false,
+			uri: validUri
+		};
 	}
-	
-	fetchingInProgress[includeString] = false;
-
-	return {
-		found: false,
-		uri: validUri
-	};
 });
 
 if (languageToolsEnabled) {
@@ -323,21 +335,84 @@ if (languageToolsEnabled) {
 
 if (isLinterEnabled()) Linter.initialise(connection);
 
+// Helper function for timestamped logging
+function logWithTimestamp(message: string) {
+	const now = new Date();
+	const timestamp = now.toTimeString().split(' ')[0] + '.' + now.getMilliseconds().toString().padStart(3, '0');
+	console.log(`[${timestamp}] ${message}`);
+}
+
+// Track parsing state for each document
+const documentParseState: {
+	[uri: string]: {
+		timer?: NodeJS.Timeout,
+		parseId: number,
+		parseStartTime?: number
+	}
+} = {};
+
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
-	parser.getDocs(
-		handler.document.uri,
-		handler.document.getText(),
-		{
-			withIncludes: true,
-			ignoreCache: true,
-			collectReferences: true
-		}
-	).then(cache => {
-		if (cache) {
-			Linter.refreshLinterDiagnostics(handler.document, cache);
-		}
-	});
+	const uri = handler.document.uri;
+	// Extract clean filename without query parameters
+	const fileName = (uri.split('/').pop() || uri).split('?')[0];
+
+	// Initialize state if needed
+	if (!documentParseState[uri]) {
+		documentParseState[uri] = { parseId: 0 };
+	}
+
+	const state = documentParseState[uri];
+
+	// Clear any existing timer
+	if (state.timer) {
+		clearTimeout(state.timer);
+		logWithTimestamp(`Parse timer reset: ${fileName} (parseId: ${state.parseId + 1})`);
+	}
+
+	// Increment parse ID to invalidate any in-flight parses
+	state.parseId++;
+	const currentParseId = state.parseId;
+
+	// Set a new timer to parse after a short delay
+	state.timer = setTimeout(() => {
+		delete state.timer;
+
+		// Always start a new parse - don't wait for old ones to finish
+		// Old parses will be invalidated by the parseId check
+		// This allows max 2 concurrent parses per document
+
+		const parseStartTime = Date.now();
+		state.parseStartTime = parseStartTime;
+		logWithTimestamp(`Parse started: ${fileName} (parseId: ${currentParseId})`);
+
+		parser.getDocs(
+			uri,
+			handler.document.getText(),
+			{
+				withIncludes: true,
+				ignoreCache: true,
+				collectReferences: true
+			}
+		).then(cache => {
+			const duration = Date.now() - parseStartTime;
+			const isLatest = currentParseId === state.parseId;
+
+			// Only update diagnostics if this is still the latest parse
+			if (cache && isLatest) {
+				Linter.refreshLinterDiagnostics(handler.document, cache);
+				logWithTimestamp(`Parse completed: ${fileName} (parseId: ${currentParseId}, ${duration}ms, diagnostics updated)`);
+			} else if (cache) {
+				logWithTimestamp(`Parse completed: ${fileName} (parseId: ${currentParseId}, ${duration}ms, STALE - ignored)`);
+			} else {
+				logWithTimestamp(`Parse completed: ${fileName} (parseId: ${currentParseId}, ${duration}ms, no cache)`);
+			}
+		}).catch(err => {
+			const duration = Date.now() - parseStartTime;
+			logWithTimestamp(`Parse error: ${fileName} (parseId: ${currentParseId}, ${duration}ms)`);
+			console.error(`Error parsing ${uri}:`, err);
+		});
+	}, 300); // Reduced to 300ms for better responsiveness
 });
 
 // Make the text document manager listen on the connection
