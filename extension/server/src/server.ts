@@ -327,8 +327,7 @@ if (isLinterEnabled()) Linter.initialise(connection);
 const documentParseState: {
 	[uri: string]: {
 		timer?: NodeJS.Timeout,
-		parseId: number,
-		parsing: boolean
+		parseId: number
 	}
 } = {};
 
@@ -338,7 +337,7 @@ documents.onDidChangeContent(handler => {
 
 	// Initialize state if needed
 	if (!documentParseState[uri]) {
-		documentParseState[uri] = { parseId: 0, parsing: false };
+		documentParseState[uri] = { parseId: 0 };
 	}
 
 	const state = documentParseState[uri];
@@ -356,12 +355,9 @@ documents.onDidChangeContent(handler => {
 	state.timer = setTimeout(() => {
 		delete state.timer;
 
-		// Skip if already parsing this document
-		if (state.parsing) {
-			return;
-		}
-
-		state.parsing = true;
+		// Always start a new parse - don't wait for old ones to finish
+		// Old parses will be invalidated by the parseId check
+		// This allows max 2 concurrent parses per document
 
 		parser.getDocs(
 			uri,
@@ -372,14 +368,11 @@ documents.onDidChangeContent(handler => {
 				collectReferences: true
 			}
 		).then(cache => {
-			state.parsing = false;
-
 			// Only update diagnostics if this is still the latest parse
 			if (cache && currentParseId === state.parseId) {
 				Linter.refreshLinterDiagnostics(handler.document, cache);
 			}
 		}).catch(err => {
-			state.parsing = false;
 			console.error(`Error parsing ${uri}:`, err);
 		});
 	}, 300); // Reduced to 300ms for better responsiveness
