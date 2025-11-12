@@ -24,34 +24,63 @@ connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
 	watchedFilesChangeEvent.forEach(editEvent => editEvent(params));
 })
 
+function logWithTimestamp(message: string) {
+	const now = new Date();
+	const timestamp = now.toTimeString().split(' ')[0] + '.' + now.getMilliseconds().toString().padStart(3, '0');
+	console.log(`[${timestamp}] ${message}`);
+}
+
 export async function validateUri(stringUri: string, scheme = ``) {
+	const startTime = Date.now();
+
 	// First, check local cache
 	const possibleCachedFile = findFile(stringUri, scheme);
-	if (possibleCachedFile) return possibleCachedFile;
+	if (possibleCachedFile) {
+		const duration = Date.now() - startTime;
+		logWithTimestamp(`URI validation: ${stringUri} (${duration}ms, local cache)`);
+		return possibleCachedFile;
+	}
 
-	console.log(`Validating file from server: ${stringUri}`);
+	logWithTimestamp(`URI validation: ${stringUri} (requesting from server...)`);
 
 	// Then reach out to the extension to find it
 	const uri: string|undefined = await connection.sendRequest("getUri", stringUri);
-	if (uri) return uri; 
+	const duration = Date.now() - startTime;
 
+	if (uri) {
+		logWithTimestamp(`URI validation: ${stringUri} -> ${uri} (${duration}ms, server)`);
+		return uri;
+	}
+
+	logWithTimestamp(`URI validation: ${stringUri} (${duration}ms, NOT FOUND)`);
 	return;
 }
 
 export async function getFileRequest(uri: string) {
+	const startTime = Date.now();
+	const fileName = uri.split('/').pop() || uri;
+
 	// First, check if it's local
 	const localCacheDoc = documents.get(uri);
-	if (localCacheDoc) return localCacheDoc.getText();
+	if (localCacheDoc) {
+		const duration = Date.now() - startTime;
+		logWithTimestamp(`File fetch: ${fileName} (${duration}ms, local documents cache)`);
+		return localCacheDoc.getText();
+	}
 
-	console.log(`Fetching file from server: ${uri}`);
+	logWithTimestamp(`File fetch: ${fileName} (requesting from server...)`);
 
 	// If not, then grab it from remote
 	const body: string|undefined = await connection.sendRequest("getFile", uri);
+	const duration = Date.now() - startTime;
+
 	if (body) {
+		logWithTimestamp(`File fetch: ${fileName} (${duration}ms, ${body.length} bytes from server)`);
 		// TODO.. cache it?
-		return body; 
+		return body;
 	}
 
+	logWithTimestamp(`File fetch: ${fileName} (${duration}ms, NOT FOUND)`);
 	return;
 }
 
