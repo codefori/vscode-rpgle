@@ -203,7 +203,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// Resolving IFS path from member or streamfile
 
 				// IFS fetch
-				
+
 				if (cleanString.startsWith(`/`)) {
 					// Path from root
 					validUri = URI.from({
@@ -217,7 +217,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					//   - `${cleanString}.rpgleinc`
 					//   - `${cleanString}.rpgle`
 					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
-					
+
 					// Path from home directory?
 					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
 
@@ -295,7 +295,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		}
 
 	}
-	
+
 	fetchingInProgress[includeString] = false;
 
 	return {
@@ -324,8 +324,8 @@ if (languageToolsEnabled) {
 if (isLinterEnabled()) Linter.initialise(connection);
 
 // Always get latest stuff
-documents.onDidChangeContent(handler => {
-	parser.getDocs(
+documents.onDidChangeContent(async handler => {
+	const cache = await parser.getDocs(
 		handler.document.uri,
 		handler.document.getText(),
 		{
@@ -333,11 +333,21 @@ documents.onDidChangeContent(handler => {
 			ignoreCache: true,
 			collectReferences: true
 		}
-	).then(cache => {
+	);
+
+	if (cache) {
+		Linter.refreshLinterDiagnostics(handler.document, cache);
+	}
+
+	// When includes are changed, clear cache for any files that reference it
+	for (const [thePath, cache] of Object.entries(parser.parsedCache)) {
 		if (cache) {
-			Linter.refreshLinterDiagnostics(handler.document, cache);
+			const includePaths = cache.includes.map(include => include.toPath);
+			if (includePaths.includes(handler.document.uri)) {
+				parser.clearParsedCache(thePath);
+			}
 		}
-	});
+	}
 });
 
 // Make the text document manager listen on the connection
