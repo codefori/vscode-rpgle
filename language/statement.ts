@@ -11,7 +11,7 @@ export default class Statement {
 	getTokenByOffset(offset: number) {
 		const blockSearch = (tokens: Token[]): Token|undefined => {
 			const token = tokens.find(token => offset >= token.range.start && offset <= token.range.end);
-			
+
 			if (token?.type === `block` && token.block) {
 				return blockSearch(token.block);
 			}
@@ -32,15 +32,17 @@ export default class Statement {
 
     for (let i = 0; i < tokens.length; i++) {
       if (tokens[i].type === `seperator`) {
-        parameters.push({
-          type: `block`,
-          block: newBlock,
-          range: {
-            line: newBlock[0].range.line,
-            start: newBlock[0].range.start,
-            end: newBlock[newBlock.length-1].range.end,
-          }
-        });
+        if (newBlock.length > 0) {
+          parameters.push({
+            type: `block`,
+            block: newBlock,
+            range: {
+              line: newBlock[0].range.line,
+              start: newBlock[0].range.start,
+              end: newBlock[newBlock.length-1].range.end,
+            }
+          });
+       }
 
         newBlock = [tokens[i]];
       } else {
