@@ -2081,10 +2081,10 @@ test('statementGetParametersEmptyBlock', () => {
   // This should not throw an error - this was the bug!
   expect(() => Statement.getParameters(tokens1)).not.toThrow();
   const result1 = Statement.getParameters(tokens1);
-  // When there's only a separator with nothing before it, we skip it initially,
-  // then add it to newBlock. At the end, newBlock has the separator, so we add it.
-  expect(result1.length).toBe(1);
-  expect(result1[0].block).toEqual([tokens1[0]]);
+  // Should have two parameters (first is empty, second has separator)
+  expect(result1.length).toBe(2);
+  expect(result1[0].block?.length).toBe(0); // Empty first parameter
+  expect(result1[1].block?.length).toBe(1); // Separator in second parameter
 
   // Test case 2: Multiple separators with no content between them
   const tokens2: Token[] = [
@@ -2102,8 +2102,11 @@ test('statementGetParametersEmptyBlock', () => {
 
   expect(() => Statement.getParameters(tokens2)).not.toThrow();
   const result2 = Statement.getParameters(tokens2);
-  // Should have two parameters (first is empty/skipped, second has both separators)
-  expect(result2.length).toBe(2);
+  // Should have three parameters (first is empty, second/third have separators)
+  expect(result2.length).toBe(3);
+  expect(result2[0].block?.length).toBe(0); // Empty first parameter
+  expect(result2[1].block?.length).toBe(1); // First separator
+  expect(result2[2].block?.length).toBe(1); // Second separator
 
   // Test case 3: Normal case with content before separator
   const tokens3: Token[] = [

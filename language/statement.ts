@@ -42,7 +42,19 @@ export default class Statement {
               end: newBlock[newBlock.length-1].range.end,
             }
           });
-       }
+        } else {
+          // Handle empty parameter block (e.g., when separator is the first token)
+          // Create a range just before the separator position
+          parameters.push({
+            type: `block`,
+            block: newBlock,
+            range: {
+              line: tokens[i].range.line,
+              start: tokens[i].range.start - 1,
+              end: tokens[i].range.end - 1,
+            }
+          });
+        }
 
         newBlock = [tokens[i]];
       } else {
