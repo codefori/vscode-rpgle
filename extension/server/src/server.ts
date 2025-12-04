@@ -367,7 +367,9 @@ documents.onDidChangeContent(handler => {
 	// Clear any existing timer
 	if (state.timer) {
 		clearTimeout(state.timer);
-		logWithTimestamp(`Parse timer reset: ${fileName} (parseId: ${state.parseId + 1})`);
+		logWithTimestamp(`Debounce: Timer reset for ${fileName} (parseId: ${state.parseId + 1})`);
+	} else {
+		logWithTimestamp(`Debounce: Timer started for ${fileName} (300ms)`);
 	}
 
 	// Increment parse ID to invalidate any in-flight parses
@@ -377,6 +379,7 @@ documents.onDidChangeContent(handler => {
 	// Set a new timer to parse after a short delay
 	state.timer = setTimeout(() => {
 		delete state.timer;
+		logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`);
 
 		// Always start a new parse - don't wait for old ones to finish
 		// Old parses will be invalidated by the parseId check
