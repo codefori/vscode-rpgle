@@ -17,7 +17,7 @@ import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, getFileRequest, getObject as getObjectData, handleClientRequests, memberResolve, streamfileResolve, validateUri } from "./connection";
+import { connection, filesBeingFetchedForIncludes, getFileRequest, getObject as getObjectData, handleClientRequests, memberResolve, streamfileResolve, validateUri } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
@@ -286,7 +286,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		}
 
 		if (validUri) {
-			const validSource = await getFileRequest(validUri);
+			const validSource = await getFileRequest(validUri, true); // true = skip debounce for include files
 			if (validSource) {
 				const duration = Date.now() - fetchStartTime;
 				const fileName = validUri.split('/').pop() || validUri;
@@ -364,28 +364,31 @@ documents.onDidChangeContent(handler => {
 
 	const state = documentParseState[uri];
 	const isFirstOpen = state.parseId === 0;
+	const isIncludeFile = filesBeingFetchedForIncludes.has(uri);
 
 	// Increment parse ID to invalidate any in-flight parses
 	state.parseId++;
 	const currentParseId = state.parseId;
 
-	// For first open, parse immediately without debounce
-	// For edits, use debounce timer to batch rapid changes
-	const debounceDelay = isFirstOpen ? 0 : 300;
+	// Parse immediately without debounce for:
+	// - Include files (opened during getFileRequest with skipDebounce)
+	// - Main files on first open
+	// Use debounce timer for main files being edited
+	const debounceDelay = (isIncludeFile || isFirstOpen) ? 0 : 300;
 
 	// Clear any existing timer
 	if (state.timer) {
 		clearTimeout(state.timer);
 		logWithTimestamp(`Debounce: Timer reset for ${fileName} (parseId: ${currentParseId})`);
-	} else if (!isFirstOpen) {
+	} else if (!isFirstOpen && !isIncludeFile) {
 		logWithTimestamp(`Debounce: Timer started for ${fileName} (${debounceDelay}ms)`);
 	}
 
-	// Set a new timer to parse after delay (0ms for first open, 300ms for edits)
+	// Set a new timer to parse after delay (0ms for includes/first open, 300ms for edits)
 	state.timer = setTimeout(() => {
 		delete state.timer;
 
-		if (!isFirstOpen) {
+		if (!isFirstOpen && !isIncludeFile) {
 			logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`);
 		}
 

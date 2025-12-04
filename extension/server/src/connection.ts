@@ -56,7 +56,10 @@ export async function validateUri(stringUri: string, scheme = ``) {
 	return;
 }
 
-export async function getFileRequest(uri: string) {
+// Track include files being fetched (to skip debounce on open)
+export const filesBeingFetchedForIncludes = new Set<string>();
+
+export async function getFileRequest(uri: string, skipDebounce: boolean = false) {
 	const startTime = Date.now();
 	const fileName = uri.split('/').pop() || uri;
 
@@ -70,18 +73,30 @@ export async function getFileRequest(uri: string) {
 
 	logWithTimestamp(`File fetch: ${fileName} (requesting from server...)`);
 
-	// If not, then grab it from remote
-	const body: string|undefined = await connection.sendRequest("getFile", uri);
-	const duration = Date.now() - startTime;
-
-	if (body) {
-		logWithTimestamp(`File fetch: ${fileName} (${duration}ms, ${body.length} bytes from server)`);
-		// TODO.. cache it?
-		return body;
+	// If this is an include file fetch, track it to skip debounce
+	if (skipDebounce) {
+		filesBeingFetchedForIncludes.add(uri);
 	}
 
-	logWithTimestamp(`File fetch: ${fileName} (${duration}ms, NOT FOUND)`);
-	return;
+	try {
+		// If not, then grab it from remote
+		const body: string|undefined = await connection.sendRequest("getFile", uri);
+		const duration = Date.now() - startTime;
+
+		if (body) {
+			logWithTimestamp(`File fetch: ${fileName} (${duration}ms, ${body.length} bytes from server)`);
+			// TODO.. cache it?
+			return body;
+		}
+
+		logWithTimestamp(`File fetch: ${fileName} (${duration}ms, NOT FOUND)`);
+		return;
+	} finally {
+		// Always clean up tracking
+		if (skipDebounce) {
+			filesBeingFetchedForIncludes.delete(uri);
+		}
+	}
 }
 
 export let resolvedMembers: {[baseUri: string]: {[fileKey: string]: IBMiMember}} = {};
