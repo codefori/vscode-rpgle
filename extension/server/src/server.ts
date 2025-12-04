@@ -347,9 +347,73 @@ const documentParseState: {
 	[uri: string]: {
 		timer?: NodeJS.Timeout,
 		parseId: number,
-		parseStartTime?: number
+		parseStartTime?: number,
+		isParsing: boolean,
+		needsReparse: boolean
 	}
 } = {};
+
+// Execute a parse for a document
+function executeParse(uri: string, parseId: number, document: any) {
+	const fileName = (uri.split('/').pop() || uri).split('?')[0];
+	const state = documentParseState[uri];
+
+	if (!state) return;
+
+	// Mark parse as active
+	state.isParsing = true;
+	state.needsReparse = false;
+	const parseStartTime = Date.now();
+	state.parseStartTime = parseStartTime;
+	logWithTimestamp(`Parse started: ${fileName} (parseId: ${parseId})`);
+
+	parser.getDocs(
+		uri,
+		document.getText(),
+		{
+			withIncludes: true,
+			ignoreCache: true,
+			collectReferences: true
+		}
+	).then(cache => {
+		const duration = Date.now() - parseStartTime;
+		const isLatest = parseId === state.parseId;
+
+		// Mark parse as complete
+		state.isParsing = false;
+
+		// Only update diagnostics if this is still the latest parse
+		if (cache && isLatest) {
+			Linter.refreshLinterDiagnostics(document, cache);
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, diagnostics updated)`);
+		} else if (cache) {
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, STALE - ignored)`);
+		} else {
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, no cache)`);
+		}
+
+		// If a re-parse was queued while this parse was running, trigger it now
+		if (state.needsReparse) {
+			state.needsReparse = false;
+			const latestParseId = state.parseId;
+			logWithTimestamp(`Triggering queued re-parse for ${fileName} (parseId: ${latestParseId})`);
+			setTimeout(() => executeParse(uri, latestParseId, document), 0);
+		}
+	}).catch(err => {
+		const duration = Date.now() - parseStartTime;
+		state.isParsing = false;
+		logWithTimestamp(`Parse error: ${fileName} (parseId: ${parseId}, ${duration}ms)`);
+		console.error(`Error parsing ${uri}:`, err);
+
+		// If a re-parse was queued, trigger it even after an error
+		if (state.needsReparse) {
+			state.needsReparse = false;
+			const latestParseId = state.parseId;
+			logWithTimestamp(`Triggering queued re-parse after error for ${fileName} (parseId: ${latestParseId})`);
+			setTimeout(() => executeParse(uri, latestParseId, document), 0);
+		}
+	});
+}
 
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
@@ -359,7 +423,7 @@ documents.onDidChangeContent(handler => {
 
 	// Initialize state if needed
 	if (!documentParseState[uri]) {
-		documentParseState[uri] = { parseId: 0 };
+		documentParseState[uri] = { parseId: 0, isParsing: false, needsReparse: false };
 	}
 
 	const state = documentParseState[uri];
@@ -392,40 +456,16 @@ documents.onDidChangeContent(handler => {
 			logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`);
 		}
 
-		// Always start a new parse - don't wait for old ones to finish
-		// Old parses will be invalidated by the parseId check
-		// This allows max 2 concurrent parses per document
+		// Check if a parse is already running for this document
+		if (state.isParsing) {
+			// A parse is already active - queue a re-parse to run after it completes
+			state.needsReparse = true;
+			logWithTimestamp(`Parse queued: ${fileName} (parseId: ${currentParseId}, waiting for active parse to complete)`);
+			return;
+		}
 
-		const parseStartTime = Date.now();
-		state.parseStartTime = parseStartTime;
-		logWithTimestamp(`Parse started: ${fileName} (parseId: ${currentParseId})`);
-
-		parser.getDocs(
-			uri,
-			handler.document.getText(),
-			{
-				withIncludes: true,
-				ignoreCache: true,
-				collectReferences: true
-			}
-		).then(cache => {
-			const duration = Date.now() - parseStartTime;
-			const isLatest = currentParseId === state.parseId;
-
-			// Only update diagnostics if this is still the latest parse
-			if (cache && isLatest) {
-				Linter.refreshLinterDiagnostics(handler.document, cache);
-				logWithTimestamp(`Parse completed: ${fileName} (parseId: ${currentParseId}, ${duration}ms, diagnostics updated)`);
-			} else if (cache) {
-				logWithTimestamp(`Parse completed: ${fileName} (parseId: ${currentParseId}, ${duration}ms, STALE - ignored)`);
-			} else {
-				logWithTimestamp(`Parse completed: ${fileName} (parseId: ${currentParseId}, ${duration}ms, no cache)`);
-			}
-		}).catch(err => {
-			const duration = Date.now() - parseStartTime;
-			logWithTimestamp(`Parse error: ${fileName} (parseId: ${currentParseId}, ${duration}ms)`);
-			console.error(`Error parsing ${uri}:`, err);
-		});
+		// Execute the parse
+		executeParse(uri, currentParseId, handler.document);
 	}, debounceDelay); // 0ms for first open, 300ms for edits
 });
 
