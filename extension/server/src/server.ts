@@ -363,23 +363,31 @@ documents.onDidChangeContent(handler => {
 	}
 
 	const state = documentParseState[uri];
-
-	// Clear any existing timer
-	if (state.timer) {
-		clearTimeout(state.timer);
-		logWithTimestamp(`Debounce: Timer reset for ${fileName} (parseId: ${state.parseId + 1})`);
-	} else {
-		logWithTimestamp(`Debounce: Timer started for ${fileName} (300ms)`);
-	}
+	const isFirstOpen = state.parseId === 0;
 
 	// Increment parse ID to invalidate any in-flight parses
 	state.parseId++;
 	const currentParseId = state.parseId;
 
-	// Set a new timer to parse after a short delay
+	// For first open, parse immediately without debounce
+	// For edits, use debounce timer to batch rapid changes
+	const debounceDelay = isFirstOpen ? 0 : 300;
+
+	// Clear any existing timer
+	if (state.timer) {
+		clearTimeout(state.timer);
+		logWithTimestamp(`Debounce: Timer reset for ${fileName} (parseId: ${currentParseId})`);
+	} else if (!isFirstOpen) {
+		logWithTimestamp(`Debounce: Timer started for ${fileName} (${debounceDelay}ms)`);
+	}
+
+	// Set a new timer to parse after delay (0ms for first open, 300ms for edits)
 	state.timer = setTimeout(() => {
 		delete state.timer;
-		logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`);
+
+		if (!isFirstOpen) {
+			logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`);
+		}
 
 		// Always start a new parse - don't wait for old ones to finish
 		// Old parses will be invalidated by the parseId check
@@ -415,7 +423,7 @@ documents.onDidChangeContent(handler => {
 			logWithTimestamp(`Parse error: ${fileName} (parseId: ${currentParseId}, ${duration}ms)`);
 			console.error(`Error parsing ${uri}:`, err);
 		});
-	}, 300); // Reduced to 300ms for better responsiveness
+	}, debounceDelay); // 0ms for first open, 300ms for edits
 });
 
 // Make the text document manager listen on the connection
