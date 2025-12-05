@@ -775,9 +775,13 @@ export default class Parser {
               case `/INCLUDE`:
                 if (options.withIncludes && this.includeFileFetch && lineCanRun()) {
                   const includePath = Parser.getIncludeFromDirective(line);
-          
+
                   if (includePath) {
-                    const include = await this.includeFileFetch(workingUri, includePath);
+                    // Use fileUri (current file) instead of workingUri (root document) to ensure:
+                    // 1. Correct parent file is logged for nested includes
+                    // 2. Member/streamfile resolution caches are scoped per requesting file
+                    // 3. Workspace context resolution uses the actual requesting file
+                    const include = await this.includeFileFetch(fileUri, includePath);
                     if (include.found && include.uri) {
                       if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
                         scopes[0].includes.push({
