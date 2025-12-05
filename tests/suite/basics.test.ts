@@ -4,6 +4,8 @@ import setupParser, { getFileContent } from "../parserSetup";
 import Linter from "../../language/linter";
 import { test, expect } from "vitest";
 import { readFile } from "fs/promises";
+import Statement from "../../language/statement";
+import { Token } from "../../language/types";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -2007,4 +2009,127 @@ test('multi-line definition (#442)', async () => {
   expect(person).toBeDefined();
   console.log(person);
   expect(person.range).toMatchObject({ start: 7, end: 8 });
+});
+
+/**
+ * Test for signature help with colon parameter (issue #442)
+ * Ensures that getParameters handles empty parameter blocks correctly
+ * when a separator (colon) appears at the start of a parameter position
+ */
+test('signatureHelpWithColonParameter', async () => {
+  const lines = [
+    `**free`,
+    `%scan(:code);`
+  ].join(`\n`);
+
+  // This test ensures the parser doesn't crash when processing
+  // BIF calls with colon-prefixed parameters
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true });
+
+  // The main goal is to ensure parsing doesn't throw an error
+  expect(cache).toBeDefined();
+});
+
+/**
+ * Test for various edge cases with BIF parameters
+ * Ensures robust handling of different parameter patterns
+ */
+test('bifParameterEdgeCases', async () => {
+  // Test multiple colons and mixed parameters
+  const lines1 = [
+    `**free`,
+    `result = %scan(:searchString :sourceString);`
+  ].join(`\n`);
+
+  const cache1 = await parser.getDocs(uri, lines1, { ignoreCache: true });
+  expect(cache1).toBeDefined();
+
+  // Test with trailing colon
+  const lines2 = [
+    `**free`,
+    `result = %subst(:str :pos);`
+  ].join(`\n`);
+
+  const cache2 = await parser.getDocs(uri, lines2, { ignoreCache: true });
+  expect(cache2).toBeDefined();
+
+  // Test with multiple separators
+  const lines3 = [
+    `**free`,
+    `result = %xlate(:from :to :string);`
+  ].join(`\n`);
+
+  const cache3 = await parser.getDocs(uri, lines3, { ignoreCache: true });
+  expect(cache3).toBeDefined();
+});
+
+/**
+ * Unit test for Statement.getParameters with empty blocks (issue #442)
+ * This directly tests the fix for the bug where a separator at the start
+ * of a parameter position would cause an error
+ */
+test('statementGetParametersEmptyBlock', () => {
+  // Test case 1: Separator as first token (the bug scenario)
+  const tokens1: Token[] = [
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 0, end: 1 }
+    }
+  ];
+
+  // This should not throw an error - this was the bug!
+  expect(() => Statement.getParameters(tokens1)).not.toThrow();
+  const result1 = Statement.getParameters(tokens1);
+  // Should have two parameters (first is empty, second has separator)
+  expect(result1.length).toBe(2);
+  expect(result1[0].block?.length).toBe(0); // Empty first parameter
+  expect(result1[1].block?.length).toBe(1); // Separator in second parameter
+
+  // Test case 2: Multiple separators with no content between them
+  const tokens2: Token[] = [
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 0, end: 1 }
+    },
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 1, end: 2 }
+    }
+  ];
+
+  expect(() => Statement.getParameters(tokens2)).not.toThrow();
+  const result2 = Statement.getParameters(tokens2);
+  // Should have three parameters (first is empty, second/third have separators)
+  expect(result2.length).toBe(3);
+  expect(result2[0].block?.length).toBe(0); // Empty first parameter
+  expect(result2[1].block?.length).toBe(1); // First separator
+  expect(result2[2].block?.length).toBe(1); // Second separator
+
+  // Test case 3: Normal case with content before separator
+  const tokens3: Token[] = [
+    {
+      type: 'word',
+      value: 'code',
+      range: { line: 0, start: 0, end: 4 }
+    },
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 4, end: 5 }
+    },
+    {
+      type: 'word',
+      value: 'str',
+      range: { line: 0, start: 5, end: 8 }
+    }
+  ];
+
+  expect(() => Statement.getParameters(tokens3)).not.toThrow();
+  const result3 = Statement.getParameters(tokens3);
+  expect(result3.length).toBe(2);
+  expect(result3[0].block?.length).toBe(1); // Just 'code'
+  expect(result3[1].block?.length).toBe(2); // ':' and 'str'
 });
