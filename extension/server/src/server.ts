@@ -17,7 +17,7 @@ import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, filesBeingFetchedForIncludes, getFileRequest, getObject as getObjectData, handleClientRequests, memberResolve, streamfileResolve, validateUri } from "./connection";
+import { connection, filesBeingFetchedForIncludes, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
@@ -117,6 +117,8 @@ connection.onInitialize((params: InitializeParams) => {
 });
 
 connection.onInitialized(() => {
+	initializeLogLevel();
+
 	if (projectEnabled) {
 		Project.initialise();
 	}
@@ -150,7 +152,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 
 	if (!fetchingInProgress[includeString]) {
 		fetchingInProgress[includeString] = true;
-		logWithTimestamp(`Include fetch started: ${includeString} (from ${parentFileName})`);
+		logWithTimestamp(`Include fetch started: ${includeString} (from ${parentFileName})`, LogLevel.DEBUG);
 
 		// Right now we are resolving based on the base file schema.
 		// This is likely bad since you can include across file systems.
@@ -290,7 +292,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			if (validSource) {
 				const duration = Date.now() - fetchStartTime;
 				const fileName = validUri.split('/').pop() || validUri;
-				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`);
+				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`, LogLevel.INFO);
 				fetchingInProgress[includeString] = false;
 				return {
 					found: true,
@@ -301,14 +303,14 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		}
 
 		const duration = Date.now() - fetchStartTime;
-		logWithTimestamp(`Include fetch completed: ${includeString} (${duration}ms, NOT FOUND)`);
+		logWithTimestamp(`Include fetch completed: ${includeString} (${duration}ms, NOT FOUND)`, LogLevel.WARN);
 		fetchingInProgress[includeString] = false;
 		return {
 			found: false,
 			uri: validUri
 		};
 	} else {
-		logWithTimestamp(`Include fetch skipped: ${includeString} (already fetching)`);
+		logWithTimestamp(`Include fetch skipped: ${includeString} (already fetching)`, LogLevel.DEBUG);
 		return {
 			found: false,
 			uri: validUri
@@ -335,13 +337,6 @@ if (languageToolsEnabled) {
 
 if (isLinterEnabled()) Linter.initialise(connection);
 
-// Helper function for timestamped logging
-function logWithTimestamp(message: string) {
-	const now = new Date();
-	const timestamp = now.toTimeString().split(' ')[0] + '.' + now.getMilliseconds().toString().padStart(3, '0');
-	console.log(`[${timestamp}] ${message}`);
-}
-
 // Track parsing state for each document
 const documentParseState: {
 	[uri: string]: {
@@ -365,7 +360,7 @@ function executeParse(uri: string, parseId: number, document: any) {
 	state.needsReparse = false;
 	const parseStartTime = Date.now();
 	state.parseStartTime = parseStartTime;
-	logWithTimestamp(`Parse started: ${fileName} (parseId: ${parseId})`);
+	logWithTimestamp(`Parse started: ${fileName} (parseId: ${parseId})`, LogLevel.DEBUG);
 
 	parser.getDocs(
 		uri,
@@ -385,31 +380,31 @@ function executeParse(uri: string, parseId: number, document: any) {
 		// Only update diagnostics if this is still the latest parse
 		if (cache && isLatest) {
 			Linter.refreshLinterDiagnostics(document, cache);
-			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, diagnostics updated)`);
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, diagnostics updated)`, LogLevel.INFO);
 		} else if (cache) {
-			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, STALE - ignored)`);
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, STALE - ignored)`, LogLevel.DEBUG);
 		} else {
-			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, no cache)`);
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, no cache)`, LogLevel.DEBUG);
 		}
 
 		// If a re-parse was queued while this parse was running, trigger it now
 		if (state.needsReparse) {
 			state.needsReparse = false;
 			const latestParseId = state.parseId;
-			logWithTimestamp(`Triggering queued re-parse for ${fileName} (parseId: ${latestParseId})`);
+			logWithTimestamp(`Triggering queued re-parse for ${fileName} (parseId: ${latestParseId})`, LogLevel.DEBUG);
 			setTimeout(() => executeParse(uri, latestParseId, document), 0);
 		}
 	}).catch(err => {
 		const duration = Date.now() - parseStartTime;
 		state.isParsing = false;
-		logWithTimestamp(`Parse error: ${fileName} (parseId: ${parseId}, ${duration}ms)`);
+		logWithTimestamp(`Parse error: ${fileName} (parseId: ${parseId}, ${duration}ms)`, LogLevel.ERROR);
 		console.error(`Error parsing ${uri}:`, err);
 
 		// If a re-parse was queued, trigger it even after an error
 		if (state.needsReparse) {
 			state.needsReparse = false;
 			const latestParseId = state.parseId;
-			logWithTimestamp(`Triggering queued re-parse after error for ${fileName} (parseId: ${latestParseId})`);
+			logWithTimestamp(`Triggering queued re-parse after error for ${fileName} (parseId: ${latestParseId})`, LogLevel.DEBUG);
 			setTimeout(() => executeParse(uri, latestParseId, document), 0);
 		}
 	});
@@ -443,9 +438,9 @@ documents.onDidChangeContent(handler => {
 	// Clear any existing timer
 	if (state.timer) {
 		clearTimeout(state.timer);
-		logWithTimestamp(`Debounce: Timer reset for ${fileName} (parseId: ${currentParseId})`);
+		logWithTimestamp(`Debounce: Timer reset for ${fileName} (parseId: ${currentParseId})`, LogLevel.DEBUG);
 	} else if (!isFirstOpen && !isIncludeFile) {
-		logWithTimestamp(`Debounce: Timer started for ${fileName} (${debounceDelay}ms)`);
+		logWithTimestamp(`Debounce: Timer started for ${fileName} (${debounceDelay}ms)`, LogLevel.DEBUG);
 	}
 
 	// Set a new timer to parse after delay (0ms for includes/first open, 300ms for edits)
@@ -453,14 +448,14 @@ documents.onDidChangeContent(handler => {
 		delete state.timer;
 
 		if (!isFirstOpen && !isIncludeFile) {
-			logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`);
+			logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`, LogLevel.DEBUG);
 		}
 
 		// Check if a parse is already running for this document
 		if (state.isParsing) {
 			// A parse is already active - queue a re-parse to run after it completes
 			state.needsReparse = true;
-			logWithTimestamp(`Parse queued: ${fileName} (parseId: ${currentParseId}, waiting for active parse to complete)`);
+			logWithTimestamp(`Parse queued: ${fileName} (parseId: ${currentParseId}, waiting for active parse to complete)`, LogLevel.DEBUG);
 			return;
 		}
 
