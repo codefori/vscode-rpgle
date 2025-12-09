@@ -17,7 +17,7 @@ import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, filesBeingFetchedForIncludes, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp } from "./connection";
+import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
@@ -144,7 +144,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
 	const uriPath = currentUri.path;
 	// Extract clean filename without query parameters
-	const parentFileName = (uriPath.split('/').pop() || stringUri).split('?')[0];
+	const parentFileName = getDisplayName(stringUri);
 	const fetchStartTime = Date.now();
 
 	let cleanString: string | undefined;
@@ -291,7 +291,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			const validSource = await getFileRequest(validUri, true); // true = skip debounce for include files
 			if (validSource) {
 				const duration = Date.now() - fetchStartTime;
-				const fileName = validUri.split('/').pop() || validUri;
+				const fileName = getDisplayName(validUri);
 				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`, LogLevel.INFO);
 				fetchingInProgress[includeString] = false;
 				return {
@@ -350,7 +350,7 @@ const documentParseState: {
 
 // Execute a parse for a document
 function executeParse(uri: string, parseId: number, document: any) {
-	const fileName = (uri.split('/').pop() || uri).split('?')[0];
+	const fileName = getDisplayName(uri);
 	const state = documentParseState[uri];
 
 	if (!state) return;
@@ -414,7 +414,7 @@ function executeParse(uri: string, parseId: number, document: any) {
 documents.onDidChangeContent(handler => {
 	const uri = handler.document.uri;
 	// Extract clean filename without query parameters
-	const fileName = (uri.split('/').pop() || uri).split('?')[0];
+	const fileName = getDisplayName(uri);
 
 	// Initialize state if needed
 	if (!documentParseState[uri]) {

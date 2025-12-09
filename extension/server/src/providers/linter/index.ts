@@ -9,7 +9,7 @@ import Cache from '../../../../../language/models/cache';
 import documentFormattingProvider from './documentFormatting';
 
 import * as Project from "../project";
-import { connection, getFileRequest, getWorkingDirectory, resolvedMembers, resolvedStreamfiles, validateUri, watchedFilesChangeEvent } from '../../connection';
+import { connection, getDisplayName, getFileRequest, getWorkingDirectory, resolvedMembers, resolvedStreamfiles, validateUri, watchedFilesChangeEvent } from '../../connection';
 import { parseMemberUri } from '../../data';
 
 export let jsonCache: { [uri: string]: string } = {};

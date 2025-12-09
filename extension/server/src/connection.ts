@@ -24,6 +24,16 @@ connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
 	watchedFilesChangeEvent.forEach(editEvent => editEvent(params));
 })
 
+/**
+ * Extracts a clean, decoded filename from a URI for display in logs
+ * Handles URL encoding (e.g., %23 -> #) and removes query parameters
+ */
+export function getDisplayName(uri: string): string {
+	const withoutQuery = uri.split('?')[0];
+	const fileName = withoutQuery.split('/').pop() || uri;
+	return decodeURIComponent(fileName);
+}
+
 // Log level constants and names
 export const LogLevel = {
 	NONE: 0,
@@ -99,7 +109,7 @@ export const filesBeingFetchedForIncludes = new Set<string>();
 
 export async function getFileRequest(uri: string, skipDebounce: boolean = false) {
 	const startTime = Date.now();
-	const fileName = uri.split('/').pop() || uri;
+	const fileName = getDisplayName(uri);
 
 	// First, check if it's local
 	const localCacheDoc = documents.get(uri);
@@ -159,7 +169,8 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 		return cached;
 	}
 
-	logWithTimestamp(`Member resolve CACHE MISS: ${file}/${member} (baseUri=${normalizedBaseUri})`, LogLevel.DEBUG);
+	const baseFileName = getDisplayName(normalizedBaseUri);
+	logWithTimestamp(`Member resolve CACHE MISS: ${file}/${member} (baseUri=${baseFileName})`, LogLevel.DEBUG);
 
 	try {
 		const resolvedMember = await queue.add(() => {return connection.sendRequest("memberResolve", [member, file])}) as IBMiMember|undefined;
@@ -195,12 +206,12 @@ export async function streamfileResolve(baseUri: string, base: string[]): Promis
 	if (resolvedStreamfiles[normalizedBaseUri] && resolvedStreamfiles[normalizedBaseUri][baseString]) {
 		const cached = resolvedStreamfiles[normalizedBaseUri][baseString];
 		const duration = Date.now() - startTime;
-		const requestingFile = normalizedBaseUri.split('/').pop() || normalizedBaseUri;
+		const requestingFile = getDisplayName(normalizedBaseUri);
 		logWithTimestamp(`Streamfile resolve CACHE HIT: ${base[0]} (requesting: ${requestingFile}) -> ${cached} (${duration}ms)`, LogLevel.DEBUG);
 		return cached;
 	}
 
-	const requestingFile = normalizedBaseUri.split('/').pop() || normalizedBaseUri;
+	const requestingFile = getDisplayName(normalizedBaseUri);
 	logWithTimestamp(`Streamfile resolve CACHE MISS: ${base[0]} (requesting: ${requestingFile})`, LogLevel.DEBUG);
 
 	const workspace = await getWorkspaceFolder(baseUri);
