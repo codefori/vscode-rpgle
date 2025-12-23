@@ -1,9 +1,9 @@
 import Parser from "../parser";
 
 /**
- * @param {number} lineNumber 
- * @param {number} startingPos 
- * @param {string} value 
+ * @param {number} lineNumber
+ * @param {number} startingPos
+ * @param {string} value
  * @param {string} [type]
  * @returns {import("../types").Token|undefined}
  */
@@ -60,7 +60,7 @@ export function parseFLine(lineNumber, lineIndex, content) {
 }
 
 /**
- * @param {string} content 
+ * @param {string} content
  */
 export function parseCLine(lineNumber, lineIndex, content) {
   content = content.padEnd(80);
@@ -135,7 +135,7 @@ export function parsePLine(content, lineNumber, lineIndex) {
   if (name.endsWith(`...`)) {
     name = name.substring(0, name.length - 3);
   }
-  
+
   const longForm = content.substring(6).trimEnd();
   const potentialName = longForm.endsWith(`...`) ? calculateToken(lineNumber, lineIndex+6, longForm.substring(0, longForm.length - 3)) : undefined;
   const start = content[23].toUpperCase() === `B`;
@@ -163,8 +163,8 @@ export function prettyTypeFromToken(dSpec) {
 }
 
 /**
- * 
- * @param {{type: string, keywords: import("../parserTypes").Keywords, len: string, pos: string, decimals: string, field: string}} lineData 
+ *
+ * @param {{type: string, keywords: import("../parserTypes").Keywords, len: string, pos: string, decimals: string, field: string}} lineData
  * @returns {import("../parserTypes").Keywords}
  */
 export function getPrettyType(lineData) {
@@ -176,7 +176,7 @@ export function getPrettyType(lineData) {
   }
 
   if (!lineData.decimals) {
-    lineData.decimals = ``;
+    lineData.decimals = `0`;
   }
 
   switch (lineData.type.toUpperCase()) {
@@ -184,7 +184,7 @@ export function getPrettyType(lineData) {
     if (Number(lineData.keywords[`VARYING`]) >= 0) {
       outType = `Varchar`;
 	  // For VARCHAR, the field defined will have a 2-byte integer field appended to the beginning of it that will contain the length of the data that is valid in the data portion of the field
-      length -= 2;			  
+      length -= 2;
     } else {
       outType = `Char`;
     }
@@ -192,27 +192,27 @@ export function getPrettyType(lineData) {
     break;
   case `B`:
     if (lineData.pos != ``) {
-      // When using positions binary decimal is only 2 or 4 
+      // When using positions binary decimal is only 2 or 4
       // This equates to 4 or 9 in free
       if (Number(lineData.len) == 4) {
-        outType = `Bindec(9)`;
+        outType = `Bindec(9` + (lineData.decimals && lineData.decimals !== `0` ? `:` + lineData.decimals : ``) + `)`;
       } else {
-        outType = `Bindec(4)`;
-      }    
+        outType = `Bindec(4` + (lineData.decimals && lineData.decimals !== `0` ? `:` + lineData.decimals : ``) + `)`;
+      }
     } else {
       // Not using positions, then the length is correct
-      outType = `Bindec` + `(` + lineData.len + `)`;
+      outType = `Bindec` + `(` + lineData.len + (lineData.decimals && lineData.decimals !== `0` ? `:` + lineData.decimals : ``) + `)`;
     }
     break;
   case `C`:
     outType = `Ucs2` + `(` + lineData.len + `)`;
-    break;  
+    break;
   case `D`:
     outType = `Date`;
     break;
   case `L`:
     outType = `Date`;
-    break;		  
+    break;
   case `F`:
     outType = `Float` + `(` + lineData.len + `)`;
     break;
@@ -246,10 +246,10 @@ export function getPrettyType(lineData) {
     outType = `Ind`;
     break;
   case `P`:
-    outType = `Packed` + `(` + length + `:` + lineData.decimals + `)`;
+    outType = `Packed` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
     break;
   case `S`:
-    outType = `Zoned` + `(` + length + `:` + lineData.decimals + `)`;
+    outType = `Zoned` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
     break;
   case `T`:
     outType = `Time`;
@@ -274,7 +274,7 @@ export function getPrettyType(lineData) {
     break;
   case `Z`:
     outType = `Timestamp`;
-	  outType += `(` + length + `)`;										  
+	  outType += `(` + length + `)`;
     break;
   case `*`:
     outType = `Pointer`;
@@ -293,10 +293,10 @@ export function getPrettyType(lineData) {
       } else {
         if (lineData.field === ``) {
           // Means it's a subfield.
-          outType = `Zoned` + `(` + length + `:` + lineData.decimals + `)`;
+          outType = `Zoned` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
         } else {
           // Means it's a standalone.
-          outType = `Packed` + `(` + length + `:` + lineData.decimals + `)`;
+          outType = `Packed` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
         }
       }
     }
