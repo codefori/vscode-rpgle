@@ -3,6 +3,7 @@ import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywor
 import Parser from "../../../../language/parser";
 import { URI } from 'vscode-uri';
 import { Keywords } from '../../../../language/parserTypes';
+import Declaration from '../../../../language/models/declaration';
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover | undefined> {
 	const currentPath = params.textDocument.uri;
@@ -16,6 +17,49 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 			if (!word) return;
 
 			let symbol = doc.findDefinition(currentLine, word);
+
+			if (!symbol) {
+				// If findDefinition didn't find anything, check if this is a subfield access
+				// This handles both unqualified access (DS.FIELD) and qualified DS where FIELD
+				// is not found by the normal lookup
+
+				// First try: look back on the line for a parent structure (unqualified case)
+				const lineStart = document.getText(Range.create(currentLine, 0, currentLine, params.position.character));
+				const prevWordMatch = lineStart.match(/(\w+)\s*\.?\s*$/);
+				if (prevWordMatch) {
+					const prevWord = prevWordMatch[1];
+					const parentDef = doc.findDefinition(currentLine, prevWord);
+					if (parentDef && parentDef.subItems.length > 0) {
+						// Look for the subfield in the parent
+						symbol = parentDef.subItems.find(sub => sub.name.toUpperCase() === word.toUpperCase());
+					}
+				}
+
+				// Second try: search all structs/data structures (including qualified ones) for this subfield
+				if (!symbol) {
+					for (const struct of doc.symbols.filter(s => s.type === `struct`)) {
+						const subItem = struct.subItems.find(sub => sub.name.toUpperCase() === word.toUpperCase());
+						if (subItem) {
+							symbol = subItem;
+							break;
+						}
+					}
+				}
+
+				// Third try: search file record format fields
+				if (!symbol) {
+					for (const file of doc.symbols.filter(s => s.type === `file`)) {
+						for (const recordFormat of file.subItems) {
+							const subItem = recordFormat.subItems.find(sub => sub.name.toUpperCase() === word.toUpperCase());
+							if (subItem) {
+								symbol = subItem;
+								break;
+							}
+						}
+						if (symbol) break;
+					}
+				}
+			}
 
 			if (symbol) {
 				if (symbol.type === `procedure`) {
@@ -80,6 +124,24 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 					const refs = symbol.references.length;
 
 					let markdown = `\`${symbol.name} ${prettyKeywords(symbol.keyword)}\` (${refs} reference${refs === 1 ? `` : `s`})`;
+
+					// If this is a subfield, show parent structure context
+					if (symbol && symbol.type === `subitem`) {
+						// Find the parent structure
+						const parentStruct = doc.symbols.find(s => s.subItems.includes(symbol as Declaration));
+						if (parentStruct) {
+							const isQualified = parentStruct.keyword[`QUALIFIED`] === true;
+							const structName = parentStruct.name || `*UNNAMED`;
+							const qualifierText = isQualified ? `QUALIFIED` : `*UNQUALIFIED`;
+							markdown = `\`${structName}.${symbol.name} ${prettyKeywords(symbol.keyword)} ${qualifierText}\` (${refs} reference${refs === 1 ? `` : `s`})`;
+						}
+					}
+
+					// Add description if available
+					const descriptionTag = symbol.tags.find(tag => tag.tag === `description`);
+					if (descriptionTag) {
+						markdown += `\n\n${descriptionTag.content}`;
+					}
 
 					if (symbol.position && currentPath !== symbol.position.path) {
 						markdown += `\n\n*@file* \`${symbol.position.path}:${symbol.position.range.line + 1}\``;

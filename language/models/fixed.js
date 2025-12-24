@@ -159,7 +159,7 @@ export function prettyTypeFromToken(dSpec) {
     pos: dSpec.pos ? dSpec.pos.value : ``,
     decimals: dSpec.decimals ? dSpec.decimals.value : ``,
     field: dSpec.field ? dSpec.field.value : ``
-  })
+  });
 }
 
 /**
@@ -175,6 +175,8 @@ export function getPrettyType(lineData) {
     length = length - Number(lineData.pos) + 1;
   }
 
+  // Check if decimals were originally specified (before we set default)
+  const hasDecimals = lineData.decimals !== undefined && lineData.decimals !== null && lineData.decimals !== ``;
   if (!lineData.decimals) {
     lineData.decimals = `0`;
   }
@@ -280,10 +282,14 @@ export function getPrettyType(lineData) {
     outType = `Pointer`;
     break;
   case ``:
+    // When type is not specified, infer based on field type and decimals
+    // Standalone field (S): if decimals exist -> Packed, else -> Char
+    // Subfield (blank): if decimals exist -> Zoned, else -> Char
     if (lineData.field == `DS`) {
       outType = `lineData.Len(` + lineData.len + `)`;
     } else if (lineData.len != ``) {
-      if (lineData.decimals == ``) {
+      if (!hasDecimals) {
+        // No decimals: default to Char
         if (Number(lineData.keywords[`VARYING`]) >= 0) {
           outType = `Varchar`;
         } else {
@@ -291,11 +297,12 @@ export function getPrettyType(lineData) {
         }
         outType += `(` + length + `)`;
       } else {
+        // Has decimals: infer based on field type
         if (lineData.field === ``) {
-          // Means it's a subfield.
+          // Subfield: default to Zoned
           outType = `Zoned` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
         } else {
-          // Means it's a standalone.
+          // Standalone: default to Packed
           outType = `Packed` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
         }
       }
