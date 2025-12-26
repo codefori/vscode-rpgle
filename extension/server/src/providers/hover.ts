@@ -18,49 +18,6 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 
 			let symbol = doc.findDefinition(currentLine, word);
 
-			if (!symbol) {
-				// If findDefinition didn't find anything, check if this is a subfield access
-				// This handles both unqualified access (DS.FIELD) and qualified DS where FIELD
-				// is not found by the normal lookup
-
-				// First try: look back on the line for a parent structure (unqualified case)
-				const lineStart = document.getText(Range.create(currentLine, 0, currentLine, params.position.character));
-				const prevWordMatch = lineStart.match(/(\w+)\s*\.?\s*$/);
-				if (prevWordMatch) {
-					const prevWord = prevWordMatch[1];
-					const parentDef = doc.findDefinition(currentLine, prevWord);
-					if (parentDef && parentDef.subItems.length > 0) {
-						// Look for the subfield in the parent
-						symbol = parentDef.subItems.find(sub => sub.name.toUpperCase() === word.toUpperCase());
-					}
-				}
-
-				// Second try: search all structs/data structures (including qualified ones) for this subfield
-				if (!symbol) {
-					for (const struct of doc.symbols.filter(s => s.type === `struct`)) {
-						const subItem = struct.subItems.find(sub => sub.name.toUpperCase() === word.toUpperCase());
-						if (subItem) {
-							symbol = subItem;
-							break;
-						}
-					}
-				}
-
-				// Third try: search file record format fields
-				if (!symbol) {
-					for (const file of doc.symbols.filter(s => s.type === `file`)) {
-						for (const recordFormat of file.subItems) {
-							const subItem = recordFormat.subItems.find(sub => sub.name.toUpperCase() === word.toUpperCase());
-							if (subItem) {
-								symbol = subItem;
-								break;
-							}
-						}
-						if (symbol) break;
-					}
-				}
-			}
-
 			if (symbol) {
 				if (symbol.type === `procedure`) {
 
