@@ -108,7 +108,7 @@ export function parseDLine(lineNumber, lineIndex, content) {
   const pos = content.substr(25, 7);
   const len = content.substr(32, 7);
   const type = content.substr(39, 1);
-  const decimals = content.substr(40, 3);
+  const decimals = content.substr(40, 2);
   const field = content.substr(23, 2).toUpperCase();
   const keywords = content.substr(43);
   const keywordTokens = Parser.getTokens(keywords, lineNumber, lineIndex+43);
@@ -197,13 +197,13 @@ export function getPrettyType(lineData) {
       // When using positions binary decimal is only 2 or 4
       // This equates to 4 or 9 in free
       if (Number(lineData.len) == 4) {
-        outType = `Bindec(9` + (lineData.decimals && lineData.decimals !== `0` ? `:` + lineData.decimals : ``) + `)`;
+        outType = `Bindec(9` + (lineData.decimals ? `:` + lineData.decimals : ``) + `)`;
       } else {
-        outType = `Bindec(4` + (lineData.decimals && lineData.decimals !== `0` ? `:` + lineData.decimals : ``) + `)`;
+        outType = `Bindec(4` + (lineData.decimals ? `:` + lineData.decimals : ``) + `)`;
       }
     } else {
       // Not using positions, then the length is correct
-      outType = `Bindec` + `(` + lineData.len + (lineData.decimals && lineData.decimals !== `0` ? `:` + lineData.decimals : ``) + `)`;
+      outType = `Bindec` + `(` + lineData.len + (lineData.decimals ? `:` + lineData.decimals : ``) + `)`;
     }
     break;
   case `C`:
