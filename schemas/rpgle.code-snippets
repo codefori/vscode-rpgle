@@ -144,6 +144,15 @@
 		],
 		"description": "Create prototype for external program"
 	},
+	"procedure interface": {
+		"prefix": "dcl-pi",
+		"body": [
+			"dcl-pi *n ;",
+			"end-pi;",
+			"$0"
+		],
+		"description": "Create procedure interface"
+	},
 	"procedure": {
 		"prefix": "dcl-proc",
 		"body": [
