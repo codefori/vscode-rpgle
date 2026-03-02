@@ -805,7 +805,8 @@ export default class Parser {
                 let keywords = Parser.expandKeywords(expr);
 
                 if (typeof keywords[`DEFINED`] === `string`) {
-                  condition = definedMacros.includes(keywords[`DEFINED`]);
+                  // Keywords are not uppercased at this point, but defined macros are always uppercased, so we need to uppercase the keyword before checking.
+                  condition = definedMacros.includes(keywords[`DEFINED`].toUpperCase());
                 }
 
                 if (hasNot) condition = !condition;
