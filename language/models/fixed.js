@@ -150,7 +150,52 @@ export function parsePLine(content, lineNumber, lineIndex) {
     start
   };
 }
-
+/**
+ * Parse O-Spec (Output Specification) line
+ * @param {number} lineNumber
+ * @param {number} lineIndex
+ * @param {string} content
+ */
+export function parseOLine(lineNumber, lineIndex, content) {
+  content = content.padEnd(80);
+  
+  // O-Spec Column Layout (Fixed Format):
+  // 6: Spec type (O)
+  // 7-16: Filename (output file name)
+  // 17: Type (H=Header, D=Detail, T=Total, E=Exception)
+  // 18-20: Fetch overflow indicator (blank or OF)
+  // 21-29: Space/AND/OR indicators
+  // 30-43: Field name or constant (14 characters)
+  // 44: Edit code (B=Blank after)
+  // 45-46: Blank before (reserved)
+  // 47-51: End position (5 digits)
+  // 52: Data format (blank, 1-4, A-D, J-Q, Y, Z)
+  // 53-80: Constant or edit word
+  
+  const filename = content.substr(6, 10);      // Columns 7-16
+  const type = content.substr(16, 1);          // Column 17
+  const fetchOverflow = content.substr(17, 3); // Columns 18-20
+  const andOr = content.substr(20, 9);         // Columns 21-29
+  const fieldName = content.substr(29, 14);    // Columns 30-43
+  const blankAfter = content.substr(43, 1);    // Column 44
+  const editCodes = content.substr(44, 2);     // Columns 45-46
+  const endPosition = content.substr(46, 5);   // Columns 47-51
+  const dataFormat = content.substr(51, 1);    // Column 52
+  const constantOrEdit = content.substr(52, 28); // Columns 53-80
+  
+  return {
+    filename: calculateToken(lineNumber, lineIndex+6, filename),
+    type: calculateToken(lineNumber, lineIndex+16, type),
+    fetchOverflow: calculateToken(lineNumber, lineIndex+17, fetchOverflow),
+    andOr: calculateToken(lineNumber, lineIndex+20, andOr),
+    fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
+    blankAfter: calculateToken(lineNumber, lineIndex+43, blankAfter),
+    editCodes: calculateToken(lineNumber, lineIndex+44, editCodes),
+    endPosition: calculateToken(lineNumber, lineIndex+46, endPosition),
+    dataFormat: calculateToken(lineNumber, lineIndex+51, dataFormat),
+    constantOrEdit: calculateToken(lineNumber, lineIndex+52, constantOrEdit)
+  };
+}
 export function prettyTypeFromToken(dSpec) {
   return getPrettyType({
     type: dSpec.type ? dSpec.type.value : ``,

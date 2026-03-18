@@ -30,7 +30,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				.filter(subitem => subitem.position && subitem.position.path === currentPath)
 				.map(subitem => expandStruct(subitem));
 		}
-			
+
 		return parent;
 	}
 
@@ -57,15 +57,15 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 
 					if (proc.scope) {
 						procDef.children = proc.subItems
-						.filter(subitem => subitem.position && subitem.position.path === currentPath)
-						.map(subitem => DocumentSymbol.create(
-							subitem.name,
-							prettyKeywords(subitem.keyword),
-							SymbolKind.Property,
-							Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
-							Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
-						));
-						
+							.filter(subitem => subitem.position && subitem.position.path === currentPath)
+							.map(subitem => DocumentSymbol.create(
+								subitem.name,
+								prettyKeywords(subitem.keyword),
+								SymbolKind.Property,
+								Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
+								Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
+							));
+
 						procDef.children.push(...getScopeVars(proc.scope));
 					}
 
@@ -162,6 +162,18 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						});
 
 					currentScopeDefs.push(fileDef);
+				});
+			scope.outputs
+				.filter(output => output.position && output.position.path === currentPath && validRange(output))
+				.forEach(output => {
+					const outputDef = DocumentSymbol.create(
+						output.name,
+						prettyKeywords(output.keyword),
+						SymbolKind.String,  // or SymbolKind.Field
+						Range.create(output.range.start!, 0, output.range.end!, 0),
+						Range.create(output.range.start!, 0, output.range.end!, 0)
+					);
+					currentScopeDefs.push(outputDef);
 				});
 
 			scope.structs

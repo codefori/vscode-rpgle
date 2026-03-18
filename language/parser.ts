@@ -6,7 +6,7 @@ import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, parseOLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -41,7 +41,7 @@ export default class Parser {
     console.log(`Clearing cache of these files: ${Object.keys(this.tables).join(`, `)}`)
     this.tables = {};
   }
- 
+
   async fetchTable(name: string, keyVersion = ``, aliases?: boolean): Promise<Declaration[]> {
     if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
@@ -103,16 +103,16 @@ export default class Parser {
   }
 
   /**
-	 * @param {string} line 
-	 * @returns {string|undefined}
-	 */
+   * @param {string} line 
+   * @returns {string|undefined}
+   */
   static getIncludeFromDirective(line: string): string|undefined {
     if (line.indexOf(`*`) !== line.toLowerCase().indexOf(`*libl`)) return; // Likely comment
     if (line.trim().startsWith(`//`)) return; // Likely comment
 
     const upperLine = line.toUpperCase();
     let comment = -1;
-    
+
     let directivePosition = upperLine.indexOf(`/COPY `);
     // Search comment AFTER the directive
     comment = upperLine.indexOf(`//`, directivePosition);
@@ -126,7 +126,7 @@ export default class Parser {
     };
 
     let directiveValue: string|undefined;
-    
+
     if (directivePosition >= 0) {
       if (comment >= 0) {
         directiveValue = line.substring(directivePosition+directiveLength, comment).trim();
@@ -183,8 +183,8 @@ export default class Parser {
 
     let lastToken: number;
     while (
-      tokens[checkNextToken] && 
-      [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) && 
+      tokens[checkNextToken] &&
+      [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) &&
       tokens[lastToken]?.type !== tokens[checkNextToken].type &&
       checkNextToken >= 0
 
@@ -223,7 +223,7 @@ export default class Parser {
     scopes.push(new Cache());
 
     const getObjectName = (objectName: string, keywords: Keywords): string => {
-            
+
       // Check for external object
       const extFile = keywords[`EXTFILE`];
       if (extFile && typeof extFile === `string`) {
@@ -471,7 +471,7 @@ export default class Parser {
               break;
           }
         }
-        
+
         return inputLine;
       }
 
@@ -504,7 +504,7 @@ export default class Parser {
         unique: string
       }) => {
         const objectName = getObjectName(currentItem.name, fOptions.keyword);
-      
+
         // ========
         // First we do the work to set the subfields
         // ========
@@ -637,7 +637,7 @@ export default class Parser {
         if (li >= 1) {
           lineIndex += lines[li-1].length + EOL.length;
         }
-        
+
         const scope = scopes[scopes.length - 1];
 
         let baseLine = lines[li];
@@ -656,7 +656,7 @@ export default class Parser {
             // But it can be put on any other line and ignored.
             continue;
           }
-          
+
           // If it's something else, we assume it's compile time data
           else break;
         }
@@ -689,7 +689,7 @@ export default class Parser {
               baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
-            } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
+            } else if (![`D`, `P`, `C`, `F`, `H`, `O`].includes(spec)) {
               continue;
             }
           }
@@ -710,7 +710,7 @@ export default class Parser {
         let tokens: Token[] = [];
         let parts: string[];
         let partsLower: string[];
-        
+
         if (isFullyFree || lineIsFree) {
           // Free format!
           if (line.trim() === ``) {
@@ -771,79 +771,79 @@ export default class Parser {
               return;
             } else {
               switch (parts[0]) {
-              case `/COPY`:
-              case `/INCLUDE`:
-                if (options.withIncludes && this.includeFileFetch && lineCanRun()) {
-                  const includePath = Parser.getIncludeFromDirective(line);
-          
-                  if (includePath) {
-                    const include = await this.includeFileFetch(workingUri, includePath);
-                    if (include.found && include.uri) {
-                      if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
-                        scopes[0].includes.push({
-                          fromPath: fileUri,
-                          toPath: include.uri,
-                          line: lineNumber
-                        });
-                        
-                        try {
-                          await parseContent(include.uri, include.content);
-                        } catch (e) {
-                          console.log(`Error parsing include: ${include.uri}`);
-                          console.log(e);
+                case `/COPY`:
+                case `/INCLUDE`:
+                  if (options.withIncludes && this.includeFileFetch && lineCanRun()) {
+                    const includePath = Parser.getIncludeFromDirective(line);
+
+                    if (includePath) {
+                      const include = await this.includeFileFetch(workingUri, includePath);
+                      if (include.found && include.uri) {
+                        if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
+                          scopes[0].includes.push({
+                            fromPath: fileUri,
+                            toPath: include.uri,
+                            line: lineNumber
+                          });
+
+                          try {
+                            await parseContent(include.uri, include.content);
+                          } catch (e) {
+                            console.log(`Error parsing include: ${include.uri}`);
+                            console.log(e);
+                          }
                         }
                       }
                     }
                   }
-                }
-                continue;
-              case `/IF`:
-                // Not conditions can run
-                let condition = false;
-                let hasNot = (parts[1] === `NOT`);
-                let expr = tokens.slice(hasNot ? 2 : 1);
-                let keywords = Parser.expandKeywords(expr);
+                  continue;
+                case `/IF`:
+                  // Not conditions can run
+                  let condition = false;
+                  let hasNot = (parts[1] === `NOT`);
+                  let expr = tokens.slice(hasNot ? 2 : 1);
+                  let keywords = Parser.expandKeywords(expr);
 
-                if (typeof keywords[`DEFINED`] === `string`) {
-                  condition = definedMacros.includes(keywords[`DEFINED`]);
-                }
+                  if (typeof keywords[`DEFINED`] === `string`) {
+                    condition = definedMacros.includes(keywords[`DEFINED`]);
+                  }
 
-                if (hasNot) condition = !condition;
+                  if (hasNot) condition = !condition;
 
                 directIfScope.push({condition: condition});
-                continue;
-              case `/ELSE`:
-                if (directIfScope.length > 0) {
-                  directIfScope[directIfScope.length - 1].condition = !directIfScope[directIfScope.length - 1].condition;
-                }
-                continue;
-              case `/ELSEIF`:
-                if (directIfScope.length > 0) {
-                  directIfScope.pop();
+                  continue;
+                case `/ELSE`:
+                  if (directIfScope.length > 0) {
+                    directIfScope[directIfScope.length - 1].condition = !directIfScope[directIfScope.length - 1].condition;
+                  }
+                  continue;
+                case `/ELSEIF`:
+                  if (directIfScope.length > 0) {
+                    directIfScope.pop();
                   directIfScope.push({condition: false});
-                }
-                continue;
-              case `/ENDIF`:
-                if (directIfScope.length > 0) {
-                  directIfScope.pop();
-                }
-                continue;
-
-              case `/DEFINE`:
-                if (lineCanRun()) {
-                  definedMacros.push(parts[1]);
-                }
-
-                continue;
-              default:
-                if (line.startsWith(`/`)) {
+                  }
                   continue;
-                }
-                if (!lineCanRun()) {
-                  // Ignore lines inside the IF scope.
+                case `/ENDIF`:
+                  if (directIfScope.length > 0) {
+                    directIfScope.pop();
+                  }
                   continue;
-                }
-                break;
+
+                case `/DEFINE`:
+                  if (lineCanRun()) {
+                    definedMacros.push(parts[1]);
+                  }
+
+                  continue;
+                default:
+                  if (line.startsWith(`/`)) {
+                    continue;
+                  }
+                  if (!lineCanRun()) {
+                    // Ignore lines inside the IF scope.
+                    continue;
+                  }
+                  break;
               }
             }
           }
@@ -875,8 +875,8 @@ export default class Parser {
 
             } else if (!line.endsWith(`;`)) {
               currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
-              
-              if (currentStmtStart.content.endsWith(`-`)) 
+
+              if (currentStmtStart.content.endsWith(`-`))
                 currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
 
               currentStmtStart.content += EOL;
@@ -886,296 +886,306 @@ export default class Parser {
           }
 
           switch (parts[0]) {
-          case `CTL-OPT`:
-            globalKeyword.push(...parts.slice(1));
-            break;
+            case `CTL-OPT`:
+              globalKeyword.push(...parts.slice(1));
+              break;
 
-          case `DCL-F`:
-            if (currentItem === undefined) {
-              if (parts.length > 1) {
-                currentItem = new Declaration(`file`);
-                currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+            case `DCL-F`:
+              if (currentItem === undefined) {
+                if (parts.length > 1) {
+                  currentItem = new Declaration(`file`);
+                  currentItem.name = partsLower[1];
+                  currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
 
-                currentItem.position = {
-                  path: fileUri,
-                  range: tokens[1].range
-                };
+                  currentItem.position = {
+                    path: fileUri,
+                    range: tokens[1].range
+                  };
 
-                currentItem.range = {
-                  start: currentStmtStart.line,
-                  end: lineNumber
-                }
-
-                await handleFSpec(currentItem, {
-                  keyword: currentItem.keyword,
-                  unique: parts.length.toString()
-                });
-
-                scope.addSymbol(currentItem);
-                resetDefinition = true;
-              }
-            }
-            break;
-
-          case `DCL-C`:
-            if (currentItem === undefined) {
-              if (parts.length > 1) {
-                currentItem = new Declaration(`constant`);
-                currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2), true);
-
-                currentItem.position = {
-                  path: fileUri,
-                  range: tokens[1].range
-                };
-
-                currentItem.range = {
-                  start: currentStmtStart.line,
-                  end: lineNumber
-                };
-
-                scope.addSymbol(currentItem);
-                resetDefinition = true;
-              }
-            }
-            break;
-
-          case `DCL-S`:
-            if (parts.length > 1) {
-              currentItem = new Declaration(`variable`);
-              currentItem.name = partsLower[1];
-              currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-              currentItem.tags = currentTags;
-
-              currentItem.position = {
-                path: fileUri,
-                range: tokens[1].range
-              };
-
-              currentItem.range = {
-                start: currentStmtStart.line,
-                end: lineNumber
-              };
-
-              scope.addSymbol(currentItem);
-              resetDefinition = true;
-            }
-            break;
-
-          case `DCL-ENUM`:
-            if (parts.length > 1) {
-              currentItem = new Declaration(`constant`);
-              currentItem.name = partsLower[1];
-              currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-
-              currentItem.position = {
-                path: fileUri,
-                range: tokens[1].range
-              };
-
-              currentItem.range = {
-                start: currentStmtStart.line,
-                end: currentStmtStart.line
-              };
-
-              currentItem.readParms = true;
-
-              currentGroup = `constants`;
-
-              currentDescription = [];
-            }
-            break;
-
-          case `END-ENUM`:
-            if (currentItem && currentItem.type === `constant`) {
-              currentItem.range.end = currentStmtStart.line;
-              
-              scope.addSymbol(currentItem);
-
-              resetDefinition = true;
-            }
-            break;
-
-          case `DCL-DS`:
-            if (currentItem === undefined) {
-              if (parts.length > 1) {
-                currentItem = new Declaration(`struct`);
-                currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                currentItem.tags = currentTags;
-
-                currentItem.position = {
-                  path: fileUri,
-                  range: tokens[1].range
-                };
-
-                currentItem.range = {
-                  start: currentStmtStart.line,
-                  end: currentStmtStart.line
-                };
-
-                currentGroup = `structs`;
-
-                // Expand the LIKEDS value if there is one.
-                await expandDs(fileUri, tokens[1], currentItem);
-
-                // Does the keywords include a keyword that makes end-ds useless?
-                const singleLineDef = Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)));
-                if (singleLineDef) {
-                  if (dsScopes.length > 0) {
-                    // If we're already inside a dsScope, that means we need to add this item to the current definition
-                    let lastItem = dsScopes[dsScopes.length - 1];
-                    lastItem.subItems.push(currentItem);
-                  } else {
-                    // Otherwise, we push as a new item
-                    currentItem.range.end = tokens[tokens.length-1].range.line;
-                    scope.addSymbol(currentItem);
+                  currentItem.range = {
+                    start: currentStmtStart.line,
+                    end: lineNumber
                   }
-                } else {
-                  // If it's not a single line defintion, flag the item to keep adding new fields
-                  currentItem.readParms = true;
-                  dsScopes.push(currentItem);
-                }
 
-                resetDefinition = true;
+                  await handleFSpec(currentItem, {
+                    keyword: currentItem.keyword,
+                    unique: parts.length.toString()
+                  });
 
-                currentDescription = [];
-              }
-            }
-            break;
-
-          case `END-DS`:
-            if (dsScopes.length > 0) {
-              const currentDs = dsScopes[dsScopes.length - 1];
-              currentDs.range.end = currentStmtStart.line;
-            }
-
-            if (dsScopes.length === 1) {
-              scope.addSymbol(dsScopes.pop());
-            } else
-              if (dsScopes.length > 1) {
-                dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
-              }
-            break;
-        
-          case `DCL-PR`:
-            if (currentItem === undefined) {
-              if (parts.length > 1) {
-                currentGroup = `procedures`;
-                currentItem = new Declaration(`procedure`);
-                currentItem.name = partsLower[1];
-                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-                currentItem.tags = currentTags;
-
-                currentItem.position = {
-                  path: fileUri,
-                  range: tokens[1].range
-                };
-
-                currentItem.readParms = true;
-
-                currentItem.range = {
-                  start: currentStmtStart.line,
-                  end: currentStmtStart.line
-                };
-
-                // Does the keywords include a keyword that makes end-ds useless?
-                if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
-                  currentItem.range.end = currentStmtStart.line;
                   scope.addSymbol(currentItem);
                   resetDefinition = true;
                 }
-
-                currentDescription = [];
               }
-            }
-            break;
+              break;
 
-          case `END-PR`:
-            if (currentItem && currentItem.type === `procedure`) {
-              currentItem.range.end = currentStmtStart.line;
+            case `DCL-C`:
+              if (currentItem === undefined) {
+                if (parts.length > 1) {
+                  currentItem = new Declaration(`constant`);
+                  currentItem.name = partsLower[1];
+                  currentItem.keyword = Parser.expandKeywords(tokens.slice(2), true);
 
-              const isDefinedGlobally = scopes[0].findAll(currentItem.name).find(proc => proc.scope);
+                  currentItem.position = {
+                    path: fileUri,
+                    range: tokens[1].range
+                  };
 
-              // Don't re-add self. This can happens when `END-PR` is used in the wrong place.
-              if (!isDefinedGlobally) {
-                scope.addSymbol(currentItem);
-              }
+                  currentItem.range = {
+                    start: currentStmtStart.line,
+                    end: lineNumber
+                  };
 
-              resetDefinition = true;
-            }
-            break;
-        
-          case `DCL-PROC`:
-            if (parts.length > 1) {
-              currentItem = new Declaration(`procedure`);
-
-              currentProcName = partsLower[1];
-              currentItem.name = currentProcName;
-              currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
-              currentItem.tags = currentTags;
-
-              currentItem.position = {
-                path: fileUri,
-                range: tokens[1].range
-              };
-
-              currentItem.readParms = false;
-
-              currentItem.range = {
-                start: currentStmtStart.line,
-                end: currentStmtStart.line
-              };
-
-              currentItem.scope = new Cache(undefined, true);
-
-              scope.addSymbol(currentItem);
-              resetDefinition = true;
-
-              scopes.push(currentItem.scope);
-            }
-            break;
-
-          case `DCL-PI`:
-            //Procedures can only exist in the global scope.
-            if (parts.length > 0) {
-              if (currentProcName) {
-                currentGroup = `procedures`;
-                currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
-              } else {
-                currentItem = new Declaration(`struct`);
-                currentItem.name = PROGRAMPARMS_NAME;
-              }
-
-              if (currentItem) {
-                const endInline = tokens.findIndex(part => part.value.toUpperCase() === `END-PI`);
-
-                // Indicates that the PI starts and ends on the same line
-                if (endInline >= 0) { 
-                  tokens.splice(endInline, 1);
-                  currentItem.readParms = false;
+                  scope.addSymbol(currentItem);
                   resetDefinition = true;
                 }
+              }
+              break;
 
-                currentItem.keyword = {
-                  ...currentItem.keyword,
-                  ...Parser.expandKeywords(tokens.slice(2))
-                }
+            case `DCL-S`:
+              if (parts.length > 1) {
+                currentItem = new Declaration(`variable`);
+                currentItem.name = partsLower[1];
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+                currentItem.tags = currentTags;
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: tokens[1].range
+                };
+
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: lineNumber
+                };
+
+                scope.addSymbol(currentItem);
+                resetDefinition = true;
+              }
+              break;
+
+            case `DCL-ENUM`:
+              if (parts.length > 1) {
+                currentItem = new Declaration(`constant`);
+                currentItem.name = partsLower[1];
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: tokens[1].range
+                };
+
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
+                };
+
                 currentItem.readParms = true;
+
+                currentGroup = `constants`;
 
                 currentDescription = [];
               }
-            }
-            break;
+              break;
 
-          case `END-PI`:
-            //Procedures can only exist in the global scope.
-            if (currentProcName) {
-              currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
+            case `END-ENUM`:
+              if (currentItem && currentItem.type === `constant`) {
+                currentItem.range.end = currentStmtStart.line;
 
+                scope.addSymbol(currentItem);
+
+                resetDefinition = true;
+              }
+              break;
+
+            case `DCL-DS`:
+              if (currentItem === undefined) {
+                if (parts.length > 1) {
+                  currentItem = new Declaration(`struct`);
+                  currentItem.name = partsLower[1];
+                  currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+                  currentItem.tags = currentTags;
+
+                  currentItem.position = {
+                    path: fileUri,
+                    range: tokens[1].range
+                  };
+
+                  currentItem.range = {
+                    start: currentStmtStart.line,
+                    end: currentStmtStart.line
+                  };
+
+                  currentGroup = `structs`;
+
+                  // Expand the LIKEDS value if there is one.
+                  await expandDs(fileUri, tokens[1], currentItem);
+
+                  // Does the keywords include a keyword that makes end-ds useless?
+                  const singleLineDef = Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-DS`].some(trigger => keyword.startsWith(trigger)));
+                  if (singleLineDef) {
+                    if (dsScopes.length > 0) {
+                      // If we're already inside a dsScope, that means we need to add this item to the current definition
+                      let lastItem = dsScopes[dsScopes.length - 1];
+                      lastItem.subItems.push(currentItem);
+                    } else {
+                      // Otherwise, we push as a new item
+                    currentItem.range.end = tokens[tokens.length-1].range.line;
+                      scope.addSymbol(currentItem);
+                    }
+                  } else {
+                    // If it's not a single line defintion, flag the item to keep adding new fields
+                    currentItem.readParms = true;
+                    dsScopes.push(currentItem);
+                  }
+
+                  resetDefinition = true;
+
+                  currentDescription = [];
+                }
+              }
+              break;
+
+            case `END-DS`:
+              if (dsScopes.length > 0) {
+                const currentDs = dsScopes[dsScopes.length - 1];
+                currentDs.range.end = currentStmtStart.line;
+              }
+
+              if (dsScopes.length === 1) {
+                scope.addSymbol(dsScopes.pop());
+              } else
+                if (dsScopes.length > 1) {
+                  dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
+                }
+              break;
+
+            case `DCL-PR`:
+              if (currentItem === undefined) {
+                if (parts.length > 1) {
+                  currentGroup = `procedures`;
+                  currentItem = new Declaration(`procedure`);
+                  currentItem.name = partsLower[1];
+                  currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+                  currentItem.tags = currentTags;
+
+                  currentItem.position = {
+                    path: fileUri,
+                    range: tokens[1].range
+                  };
+
+                  currentItem.readParms = true;
+
+                  currentItem.range = {
+                    start: currentStmtStart.line,
+                    end: currentStmtStart.line
+                  };
+
+                  // Does the keywords include a keyword that makes end-ds useless?
+                  if (Object.keys(currentItem.keyword).some(keyword => oneLineTriggers[`DCL-PR`].some(trigger => keyword.startsWith(trigger)))) {
+                    currentItem.range.end = currentStmtStart.line;
+                    scope.addSymbol(currentItem);
+                    resetDefinition = true;
+                  }
+
+                  currentDescription = [];
+                }
+              }
+              break;
+
+            case `END-PR`:
               if (currentItem && currentItem.type === `procedure`) {
+                currentItem.range.end = currentStmtStart.line;
+
+                const isDefinedGlobally = scopes[0].findAll(currentItem.name).find(proc => proc.scope);
+
+                // Don't re-add self. This can happens when `END-PR` is used in the wrong place.
+                if (!isDefinedGlobally) {
+                  scope.addSymbol(currentItem);
+                }
+
+                resetDefinition = true;
+              }
+              break;
+
+            case `DCL-PROC`:
+              if (parts.length > 1) {
+                currentItem = new Declaration(`procedure`);
+
+                currentProcName = partsLower[1];
+                currentItem.name = currentProcName;
+                currentItem.keyword = Parser.expandKeywords(tokens.slice(2));
+                currentItem.tags = currentTags;
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: tokens[1].range
+                };
+
                 currentItem.readParms = false;
+
+                currentItem.range = {
+                  start: currentStmtStart.line,
+                  end: currentStmtStart.line
+                };
+
+                currentItem.scope = new Cache(undefined, true);
+
+                scope.addSymbol(currentItem);
+                resetDefinition = true;
+
+                scopes.push(currentItem.scope);
+              }
+              break;
+
+            case `DCL-PI`:
+              //Procedures can only exist in the global scope.
+              if (parts.length > 0) {
+                if (currentProcName) {
+                  currentGroup = `procedures`;
+                  currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
+                } else {
+                  currentItem = new Declaration(`struct`);
+                  currentItem.name = PROGRAMPARMS_NAME;
+                }
+
+                if (currentItem) {
+                  const endInline = tokens.findIndex(part => part.value.toUpperCase() === `END-PI`);
+
+                  // Indicates that the PI starts and ends on the same line
+                  if (endInline >= 0) {
+                    tokens.splice(endInline, 1);
+                    currentItem.readParms = false;
+                    resetDefinition = true;
+                  }
+
+                  currentItem.keyword = {
+                    ...currentItem.keyword,
+                    ...Parser.expandKeywords(tokens.slice(2))
+                  }
+                  currentItem.readParms = true;
+
+                  currentDescription = [];
+                }
+              }
+              break;
+
+            case `END-PI`:
+              //Procedures can only exist in the global scope.
+              if (currentProcName) {
+                currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
+
+                if (currentItem && currentItem.type === `procedure`) {
+                  currentItem.readParms = false;
+                  currentItem.subItems.forEach(subItem => {
+                    subItem.type = `parameter`;
+                    scope.addSymbol(subItem);
+                  });
+
+                  resetDefinition = true;
+                }
+              } else if (currentItem && currentItem.name === PROGRAMPARMS_NAME) {
+                // Assign this scopes parameters to the subitems of the program parameters struct
+
                 currentItem.subItems.forEach(subItem => {
                   subItem.type = `parameter`;
                   scope.addSymbol(subItem);
@@ -1183,257 +1193,247 @@ export default class Parser {
 
                 resetDefinition = true;
               }
-            } else if (currentItem && currentItem.name === PROGRAMPARMS_NAME) {
-              // Assign this scopes parameters to the subitems of the program parameters struct
-              
-              currentItem.subItems.forEach(subItem => {
-                subItem.type = `parameter`;
-                scope.addSymbol(subItem);
-              });
+              break;
 
-              resetDefinition = true;
-            }
-            break;
+            case `END-PROC`:
+              //Procedures can only exist in the global scope.
+              if (scopes.length > 1) {
+                // currentItem = scopes[0].symbols.find(proc => !proc.prototype && proc.name === currentProcName);
+                currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
 
-          case `END-PROC`:
-            //Procedures can only exist in the global scope.
-            if (scopes.length > 1) {
-              // currentItem = scopes[0].symbols.find(proc => !proc.prototype && proc.name === currentProcName);
-              currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
-
-              if (currentItem && currentItem.type === `procedure`) {
-                scopes.pop();
-                currentItem.range.end = currentStmtStart.line;
-                resetDefinition = true;
+                if (currentItem && currentItem.type === `procedure`) {
+                  scopes.pop();
+                  currentItem.range.end = currentStmtStart.line;
+                  resetDefinition = true;
+                }
               }
-            }
-            break;
+              break;
 
-          case `BEGSR`:
-            if (parts.length > 1) {
-              if (!scope.find(parts[1], `subroutine`)) {
-                currentItem = new Declaration(`subroutine`);
-                currentItem.name = partsLower[1];
+            case `BEGSR`:
+              if (parts.length > 1) {
+                if (!scope.find(parts[1], `subroutine`)) {
+                  currentItem = new Declaration(`subroutine`);
+                  currentItem.name = partsLower[1];
 		            currentItem.keyword = {'Subroutine': true};
 
-                currentItem.position = {
-                  path: fileUri,
-                  range: tokens[1].range
-                };
+                  currentItem.position = {
+                    path: fileUri,
+                    range: tokens[1].range
+                  };
 
-                currentItem.range = {
-                  start: currentStmtStart.line,
-                  end: currentStmtStart.line
-                };
+                  currentItem.range = {
+                    start: currentStmtStart.line,
+                    end: currentStmtStart.line
+                  };
 
-                currentDescription = [];
+                  currentDescription = [];
+                }
               }
-            }
-            break;
-    
-          case `ENDSR`:
-            if (currentItem && currentItem.type === `subroutine`) {
-              currentItem.range.end = currentStmtStart.line;
-              scope.addSymbol(currentItem);
-              resetDefinition = true;
-            }
-            break;
+              break;
 
-          case `EXEC`:
-            const pIncludes = (value) => {
-              return parts.some(p => p === value);
-            }
+            case `ENDSR`:
+              if (currentItem && currentItem.type === `subroutine`) {
+                currentItem.range.end = currentStmtStart.line;
+                scope.addSymbol(currentItem);
+                resetDefinition = true;
+              }
+              break;
 
-            const pIs = (part, value) => {
-              return part && part === value;
-            }
-
-            if (tokens.length > 2 && !pIncludes(`FETCH`)) {
-              // insert into XX.XX
-              // delete from xx.xx
-              // update xx.xx set
-              // select * into :x from xx.xx
-              // call xx.xx()
-              const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
-              const ignoredWords = [`FINAL`, `SET`];
-
-              const cleanupObjectRef = (index) => {
-                let nameIndex = index;
-                const result = {
-                  schema: undefined,
-                  name: partsLower[index],
-                  length: 1,
-                  nameToken: tokens[index]
-                }
-
-                const schemaSplit = [`.`, `/`].includes(parts[nameIndex + 1]);
-                if (schemaSplit) {
-                  result.schema = partsLower[index]
-                  result.name = partsLower[index + 2]
-                  result.length = 3;
-                  result.nameToken = tokens[index + 2];
-                  nameIndex += 2;
-                }
-
-                return result;
+            case `EXEC`:
+              const pIncludes = (value) => {
+                return parts.some(p => p === value);
               }
 
-              let isContinued = false;
+              const pIs = (part, value) => {
+                return part && part === value;
+              }
 
-              let ignoreCtes: string[] = [];
+              if (tokens.length > 2 && !pIncludes(`FETCH`)) {
+                // insert into XX.XX
+                // delete from xx.xx
+                // update xx.xx set
+                // select * into :x from xx.xx
+                // call xx.xx()
+                const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
+                const ignoredWords = [`FINAL`, `SET`];
 
-              if (pIncludes(`WITH`)) {
-                for (let index = 4; index < tokens.length; index++) {
+                const cleanupObjectRef = (index) => {
+                  let nameIndex = index;
+                  const result = {
+                    schema: undefined,
+                    name: partsLower[index],
+                    length: 1,
+                    nameToken: tokens[index]
+                  }
+
+                  const schemaSplit = [`.`, `/`].includes(parts[nameIndex + 1]);
+                  if (schemaSplit) {
+                    result.schema = partsLower[index]
+                    result.name = partsLower[index + 2]
+                    result.length = 3;
+                    result.nameToken = tokens[index + 2];
+                    nameIndex += 2;
+                  }
+
+                  return result;
+                }
+
+                let isContinued = false;
+
+                let ignoreCtes: string[] = [];
+
+                if (pIncludes(`WITH`)) {
+                  for (let index = 4; index < tokens.length; index++) {
                   if (pIs(parts[index], `AS`) && pIs(parts[index+1], `(`)) {
                     ignoreCtes.push(parts[index-1].toUpperCase());
+                    }
                   }
                 }
-              }
 
-              for (let index = 0; index < parts.length; index++) {
-                const part = parts[index];
-                let inBlock = preFileWords.includes(part);
+                for (let index = 0; index < parts.length; index++) {
+                  const part = parts[index];
+                  let inBlock = preFileWords.includes(part);
 
-                if (
-                  (inBlock || isContinued) &&  // If this is true, usually means next word is the object
+                  if (
+                    (inBlock || isContinued) &&  // If this is true, usually means next word is the object
                   (part === `INTO` ? parts[index-1] === `INSERT` : true) // INTO is special, as it can be used in both SELECT and INSERT
-                ) {
+                  ) {
                   if (index >= 0 && (index+1) < parts.length && tokens[index+1].type === `word` && !ignoredWords.includes(parts[index+1])) {
 
                     const qualifiedObjectPath = cleanupObjectRef(index+1);
 
-                    index += (qualifiedObjectPath.length);
+                      index += (qualifiedObjectPath.length);
 
                     isContinued = (parts[index+1] === `,`);
 
-                    if (qualifiedObjectPath.name && !ignoreCtes.includes(qualifiedObjectPath.name.toUpperCase())) {
-                      const currentSqlItem = new Declaration(`file`);
-                      currentSqlItem.name = qualifiedObjectPath.name;
+                      if (qualifiedObjectPath.name && !ignoreCtes.includes(qualifiedObjectPath.name.toUpperCase())) {
+                        const currentSqlItem = new Declaration(`file`);
+                        currentSqlItem.name = qualifiedObjectPath.name;
 
-                      if (currentSqlItem.name)
-                        currentSqlItem.keyword = {};
-                
-                      if (qualifiedObjectPath.schema) {
-                        currentSqlItem.tags.push({
-                          tag: `description`,
-                          content: qualifiedObjectPath.schema
-                        })
+                        if (currentSqlItem.name)
+                          currentSqlItem.keyword = {};
+
+                        if (qualifiedObjectPath.schema) {
+                          currentSqlItem.tags.push({
+                            tag: `description`,
+                            content: qualifiedObjectPath.schema
+                          })
+                        }
+
+                        currentSqlItem.position = {
+                          path: fileUri,
+                          range: qualifiedObjectPath.nameToken.range
+                        };
+
+                        scope.sqlReferences.push(currentSqlItem);
                       }
-                      
-                      currentSqlItem.position = {
-                        path: fileUri,
-                        range: qualifiedObjectPath.nameToken.range
-                      };
-      
-                      scope.sqlReferences.push(currentSqlItem);
                     }
                   }
-                }
-              };
-            }
-            break;
+                };
+              }
+              break;
 
-          case `///`:
-            docs = !docs;
-          
-            // When enabled
-            if (docs === true) {
-              currentTitle = undefined;
-              currentDescription = [];
-              currentTags = [];
-            }
-            break;
+            case `///`:
+              docs = !docs;
 
-          default:
-            if (lineIsComment) {
-              if (docs) {
-                const content = line.substring(2).trim();
-                if (content.length > 0) {
-                  if (content.startsWith(`@`)) {
-                    const lineData = content.substring(1).split(` `);
-                    currentTags.push({
-                      tag: lineData[0],
-                      content: lineData.slice(1).join(` `)
-                    });
-                  } else {
-                    if (currentTags.length > 0) {
-                      const lastTag = currentTags[currentTags.length - 1];
-                      lastTag.content += (lastTag.content.length === 0 ? `` : ` `) + content;
+              // When enabled
+              if (docs === true) {
+                currentTitle = undefined;
+                currentDescription = [];
+                currentTags = [];
+              }
+              break;
 
-                    } else if (!currentTags.some(tag => tag.tag === `title`)) {
+            default:
+              if (lineIsComment) {
+                if (docs) {
+                  const content = line.substring(2).trim();
+                  if (content.length > 0) {
+                    if (content.startsWith(`@`)) {
+                      const lineData = content.substring(1).split(` `);
                       currentTags.push({
-                        tag: `title`,
-                        content
+                        tag: lineData[0],
+                        content: lineData.slice(1).join(` `)
                       });
+                    } else {
+                      if (currentTags.length > 0) {
+                        const lastTag = currentTags[currentTags.length - 1];
+                        lastTag.content += (lastTag.content.length === 0 ? `` : ` `) + content;
 
-                      currentTags.push({
-                        tag: `description`,
-                        content: ``
-                      });
+                      } else if (!currentTags.some(tag => tag.tag === `title`)) {
+                        currentTags.push({
+                          tag: `title`,
+                          content
+                        });
 
+                        currentTags.push({
+                          tag: `description`,
+                          content: ``
+                        });
+
+                      }
                     }
                   }
+
+                } else {
+                  //Do nothing because it's a regular comment
                 }
 
               } else {
-                //Do nothing because it's a regular comment
-              }
-
-            } else {
-              if (!currentItem) {
-                if (dsScopes.length >= 1) {
-                  // We do this as there can be many levels to data structures in free format
-                  currentItem = dsScopes[dsScopes.length - 1];
-                }
-              }
-
-              if (currentItem && [`procedure`, `struct`, `constant`].includes(currentItem.type)) {
-                if (currentItem.readParms && parts.length > 0) {
-                  if (parts[0].startsWith(`DCL`)) {
-                    parts.slice(1);
-                    partsLower = partsLower.splice(1);
-                    tokens.splice(1);
+                if (!currentItem) {
+                  if (dsScopes.length >= 1) {
+                    // We do this as there can be many levels to data structures in free format
+                    currentItem = dsScopes[dsScopes.length - 1];
                   }
+                }
 
-                  currentSub = new Declaration(`subitem`);
-                  currentSub.name = (parts[0] === NO_NAME ? NO_NAME : partsLower[0]);
-                  currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
+                if (currentItem && [`procedure`, `struct`, `constant`].includes(currentItem.type)) {
+                  if (currentItem.readParms && parts.length > 0) {
+                    if (parts[0].startsWith(`DCL`)) {
+                      parts.slice(1);
+                      partsLower = partsLower.splice(1);
+                      tokens.splice(1);
+                    }
 
-                  currentSub.position = {
-                    path: fileUri,
-                    range: tokens[0].range
-                  };
+                    currentSub = new Declaration(`subitem`);
+                    currentSub.name = (parts[0] === NO_NAME ? NO_NAME : partsLower[0]);
+                    currentSub.keyword = Parser.expandKeywords(tokens.slice(1));
 
-                  currentSub.range = {
-                    start: currentStmtStart.line,
-                    end: lineNumber
-                  };
+                    currentSub.position = {
+                      path: fileUri,
+                      range: tokens[0].range
+                    };
 
-                  // Add comments from the tags
-                  if (currentItem.type === `procedure`) {
-                    const paramTags = currentItem.tags.filter(tag => tag.tag === `param`);
-                    const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
-                    if (paramTag) {
-                      currentSub.tags = [{
-                        tag: `description`,
-                        content: paramTag.content
-                      }];
+                    currentSub.range = {
+                      start: currentStmtStart.line,
+                      end: lineNumber
+                    };
+
+                    // Add comments from the tags
+                    if (currentItem.type === `procedure`) {
+                      const paramTags = currentItem.tags.filter(tag => tag.tag === `param`);
+                      const paramTag = paramTags.length > currentItem.subItems.length ? paramTags[currentItem.subItems.length] : undefined;
+                      if (paramTag) {
+                        currentSub.tags = [{
+                          tag: `description`,
+                          content: paramTag.content
+                        }];
+                      }
+                    }
+
+                    // If the parameter has likeds, add the subitems to make it a struct.
+                    await expandDs(fileUri, tokens[0], currentSub);
+
+                    currentItem.subItems.push(currentSub);
+                    currentSub = undefined;
+
+                    if (currentItem.type === `struct` && currentItem.name !== PROGRAMPARMS_NAME) {
+                      resetDefinition = true;
                     }
                   }
-
-                  // If the parameter has likeds, add the subitems to make it a struct.
-                  await expandDs(fileUri, tokens[0], currentSub);
-
-                  currentItem.subItems.push(currentSub);
-                  currentSub = undefined;
-
-                  if (currentItem.type === `struct` && currentItem.name !== PROGRAMPARMS_NAME) {
-                    resetDefinition = true;
-                  }
                 }
               }
-            }
-            break;
+              break;
           }
 
         } else {
@@ -1444,450 +1444,489 @@ export default class Parser {
           }
 
           switch (spec) {
-          case `H`:
-            globalKeyword.push(line.substring(6));
-            break;
+            case `H`:
+              globalKeyword.push(line.substring(6));
+              break;
 
-          case `F`:
-            const fSpec = parseFLine(lineNumber, lineIndex, line);
+            case `F`:
+              const fSpec = parseFLine(lineNumber, lineIndex, line);
 
-            if (fSpec.name) {
-              currentItem = new Declaration(`file`);
-              currentItem.name = fSpec.name.value;
-              currentItem.keyword = fSpec.keywords;
+              if (fSpec.name) {
+                currentItem = new Declaration(`file`);
+                currentItem.name = fSpec.name.value;
+                currentItem.keyword = fSpec.keywords;
 
-              currentItem.position = {
-                path: fileUri,
-                range: fSpec.name.range
-              };
-
-              currentItem.range.start = lineNumber;
-              currentItem.range.end = lineNumber;
-			  
-              await handleFSpec(currentItem, {
-                keyword: fSpec.keywords,
-                unique: line.length.toString()
-              });
-
-              scope.addSymbol(currentItem);
-            } else {
-              // currentItem = scope.symbols[scope.symbols.length-1];
-              if (currentItem) {
-                currentItem.range.end = lineNumber;
-                currentItem.keyword = {
-                  ...fSpec.keywords,
-                  ...currentItem.keyword,
+                currentItem.position = {
+                  path: fileUri,
+                  range: fSpec.name.range
                 };
 
-                // We have to run this after the keyword is set
+                currentItem.range.start = lineNumber;
+                currentItem.range.end = lineNumber;
+
                 await handleFSpec(currentItem, {
                   keyword: fSpec.keywords,
                   unique: line.length.toString()
                 });
+
+                scope.addSymbol(currentItem);
+              } else {
+                // currentItem = scope.symbols[scope.symbols.length-1];
+                if (currentItem) {
+                  currentItem.range.end = lineNumber;
+                  currentItem.keyword = {
+                    ...fSpec.keywords,
+                    ...currentItem.keyword,
+                  };
+
+                  // We have to run this after the keyword is set
+                  await handleFSpec(currentItem, {
+                    keyword: fSpec.keywords,
+                    unique: line.length.toString()
+                  });
+                }
               }
-            }
-            
-            break;
 
-          case `C`:
-            const cSpec = parseCLine(lineNumber, lineIndex, line);
+              break;
 
-            tokens = [cSpec.clIndicator, cSpec.indicator, cSpec.ind1, cSpec.ind2, cSpec.ind3];
+            case `C`:
+              const cSpec = parseCLine(lineNumber, lineIndex, line);
 
-            const fromToken = (token?: Token) => {
-              return token ? Parser.lineTokens(token.value, lineNumber, token.range.start) : [];
-            };
+              tokens = [cSpec.clIndicator, cSpec.indicator, cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
-            if (cSpec.opcode && ALLOWS_EXTENDED.includes(cSpec.opcode.value) && !cSpec.factor1 && cSpec.extended) {
-              tokens.push(...fromToken(cSpec.extended));
-            } else if (!cSpec.factor1 && !cSpec.opcode && cSpec.extended) {
-              tokens.push(...fromToken(cSpec.extended));
-            } else {
-              tokens.push(
-                ...fromToken(cSpec.factor1),
-                ...fromToken(cSpec.factor2),
-                ...fromToken(cSpec.result),
-              );
+              const fromToken = (token?: Token) => {
+                return token ? Parser.lineTokens(token.value, lineNumber, token.range.start) : [];
+              };
 
-              if (cSpec.result && cSpec.fieldLength) {
-                // This means we need to dynamically define this field
-                const fieldName = cSpec.result.value;
-                // Don't redefine this field.
-                if (!scopes[0].findDefinition(lineNumber, fieldName)) {
-                  const fieldLength = parseInt(cSpec.fieldLength.value);
-                  const decimals = cSpec.fieldDecimals ? parseInt(cSpec.fieldDecimals.value) : undefined;
+              if (cSpec.opcode && ALLOWS_EXTENDED.includes(cSpec.opcode.value) && !cSpec.factor1 && cSpec.extended) {
+                tokens.push(...fromToken(cSpec.extended));
+              } else if (!cSpec.factor1 && !cSpec.opcode && cSpec.extended) {
+                tokens.push(...fromToken(cSpec.extended));
+              } else {
+                tokens.push(
+                  ...fromToken(cSpec.factor1),
+                  ...fromToken(cSpec.factor2),
+                  ...fromToken(cSpec.result),
+                );
+
+                if (cSpec.result && cSpec.fieldLength) {
+                  // This means we need to dynamically define this field
+                  const fieldName = cSpec.result.value;
+                  // Don't redefine this field.
+                  if (!scopes[0].findDefinition(lineNumber, fieldName)) {
+                    const fieldLength = parseInt(cSpec.fieldLength.value);
+                    const decimals = cSpec.fieldDecimals ? parseInt(cSpec.fieldDecimals.value) : undefined;
                   const type = decimals !== undefined ? `PACKED`: `CHAR`;
 
-                  currentSub = new Declaration(`variable`);
-                  currentSub.name = fieldName;
+                    currentSub = new Declaration(`variable`);
+                    currentSub.name = fieldName;
                   currentSub.keyword = {[type]: `${fieldLength}${decimals !== undefined ? `:${decimals}` : ``}`};
-                  currentSub.position = {
-                    path: fileUri,
-                    range: cSpec.result.range
-                  };
-                  currentSub.range = {
-                    start: lineNumber,
-                    end: lineNumber
-                  };
+                    currentSub.position = {
+                      path: fileUri,
+                      range: cSpec.result.range
+                    };
+                    currentSub.range = {
+                      start: lineNumber,
+                      end: lineNumber
+                    };
 
-                  scope.addSymbol(currentSub);
+                    scope.addSymbol(currentSub);
+                  }
                 }
               }
-            }
 
-            switch (cSpec.opcode && cSpec.opcode.value) {
-            case `BEGSR`:  
-              if (cSpec.factor1 && !scope.find(cSpec.factor1.value, `subroutine`)) {
-                currentItem = new Declaration(`subroutine`);
-                currentItem.name = cSpec.factor1.value;
+              switch (cSpec.opcode && cSpec.opcode.value) {
+                case `BEGSR`:
+                  if (cSpec.factor1 && !scope.find(cSpec.factor1.value, `subroutine`)) {
+                    currentItem = new Declaration(`subroutine`);
+                    currentItem.name = cSpec.factor1.value;
                 currentItem.keyword = {'Subroutine': true};
-  
-                currentItem.position = {
-                  path: fileUri,
-                  range: cSpec.factor1.range
-                };
-  
-                currentItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
-                };
-  
-                currentDescription = [];
-              }
-              break;
 
-            case `ENDSR`:
-              if (currentItem && currentItem.type === `subroutine`) {
-                currentItem.range.end = lineNumber;
-                scope.addSymbol(currentItem);
-                resetDefinition = true;
-              }
-              break;
-          
-            case `CALL`:
-              const callItem = new Declaration(`procedure`);
-              if (cSpec.factor2) {
-                const f2Value = cSpec.factor2.value;
-                callItem.name = (f2Value.startsWith(`'`) && f2Value.endsWith(`'`) ? f2Value.substring(1, f2Value.length-1) : f2Value);
-                callItem.keyword = {'CALL': true}
-                callItem.tags = currentTags;
+                    currentItem.position = {
+                      path: fileUri,
+                      range: cSpec.factor1.range
+                    };
 
-                callItem.position = {
-                  path: fileUri,
-                  range: cSpec.factor2.range
-                };
+                    currentItem.range = {
+                      start: lineNumber,
+                      end: lineNumber
+                    };
 
-                callItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
-                };
+                    currentDescription = [];
+                  }
+                  break;
 
-                scope.addSymbol(callItem);
-              }
-              break;
-
-            case `TAG`:
-              const tagItem = new Declaration(`tag`);
-              if (cSpec.factor1) {
-                tagItem.name = cSpec.factor1.value;
-                tagItem.position = {
-                  path: fileUri,
-                  range: cSpec.factor1.range
-                };
-
-                tagItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
-                };
-
-                scope.addSymbol(tagItem);
-              }
-              break;
-            }
-
-            break;
-          case `P`:
-            const pSpec = parsePLine(line, lineNumber, lineIndex);
-
-            if (pSpec.potentialName) {
-              pushPotentialNameToken(pSpec.potentialName);
-              
-              tokens = [pSpec.potentialName];
-            } else {
-              if (pSpec.start) {
-                tokens = [...pSpec.keywordsRaw, pSpec.name];
-
-                if (pSpec.name && pSpec.name.value.length > 0) {
-                  pushPotentialNameToken(pSpec.name);
-                }
-
-                const currentNameToken = getPotentialNameToken();
-
-                if (currentNameToken) {
-                  currentItem = new Declaration(`procedure`);
-
-                  currentProcName = currentNameToken.value;
-                  currentItem.name = currentProcName;
-                  currentItem.keyword = pSpec.keywords;
-
-                  currentItem.position = {
-                    path: fileUri,
-                    range: currentNameToken.range
-                  };
-
-                  currentItem.range = {
-                    start: currentNameToken.range.line,
-                    end: currentNameToken.range.line
-                  };
-
-                  currentItem.scope = new Cache(undefined, true);
-
-                  scope.addSymbol(currentItem);
-                  resetDefinition = true;
-
-                  scopes.push(currentItem.scope);
-                }
-              } else {
-                if (scopes.length > 1) {
-                  //Procedures can only exist in the global scope.
-                  currentItem = scopes[0].find(currentProcName);
-
-                  if (currentItem && currentItem.type === `procedure`) {
-                    scopes.pop();
+                case `ENDSR`:
+                  if (currentItem && currentItem.type === `subroutine`) {
                     currentItem.range.end = lineNumber;
+                    scope.addSymbol(currentItem);
                     resetDefinition = true;
                   }
-                }
-              }
-            }
-            break;
-
-          case `D`:
-            const dSpec = parseDLine(lineNumber, lineIndex, line);
-
-            if (dSpec.potentialName) {
-              pushPotentialNameToken(dSpec.potentialName);
-              tokens = [dSpec.potentialName];
-              continue;
-            } else {
-
-              if (dSpec.name && dSpec.name.value.length > 0) {
-                pushPotentialNameToken(dSpec.name);
-              }
-
-              tokens = [dSpec.field, ...dSpec.keywordsRaw, dSpec.name];
-
-              const currentNameToken = getPotentialNameToken();
-
-              switch (dSpec.field && dSpec.field.value) {
-              case `C`:
-                currentItem = new Declaration(`constant`);
-                currentItem.name = currentNameToken?.value || NO_NAME;
-                currentItem.keyword = dSpec.keywords || {};
-                  
-                // TODO: line number might be different with ...?
-                currentItem.position = {
-                  path: fileUri,
-                  range: dSpec.field.range
-                };
-
-                currentItem.range = {
-                  start: currentNameToken.range.line,
-                  end: currentItem.position.range.line
-                };
-    
-                scope.addSymbol(currentItem);
-                resetDefinition = true;
-                break;
-              case `S`:
-
-                if (!currentNameToken) {
-                  // If we don't have a current name token
-                  // we cannot create a variable declaration (RNF3316)
                   break;
-                }
 
-                currentItem = new Declaration(`variable`);
-                currentItem.name = currentNameToken.value;
-                currentItem.keyword = {
-                  ...dSpec.keywords,
-                  ...prettyTypeFromToken(dSpec),
-                }
+                case `CALL`:
+                  const callItem = new Declaration(`procedure`);
+                  if (cSpec.factor2) {
+                    const f2Value = cSpec.factor2.value;
+                callItem.name = (f2Value.startsWith(`'`) && f2Value.endsWith(`'`) ? f2Value.substring(1, f2Value.length-1) : f2Value);
+                callItem.keyword = {'CALL': true}
+                    callItem.tags = currentTags;
 
-                // TODO: line number might be different with ...?
-                currentItem.position = {
-                  path: fileUri,
-                  range: currentNameToken.range
-                };
+                    callItem.position = {
+                      path: fileUri,
+                      range: cSpec.factor2.range
+                    };
 
-                currentItem.range = {
-                  start: currentNameToken.range.line,
-                  end: currentItem.position.range.line
-                };
+                    callItem.range = {
+                      start: lineNumber,
+                      end: lineNumber
+                    };
 
-                scope.addSymbol(currentItem);
-                resetDefinition = true;
-                break;
-
-              case `DS`:
-                currentItem = new Declaration(`struct`);
-                currentItem.name = currentNameToken?.value || NO_NAME;
-                currentItem.keyword = dSpec.keywords;
-
-                currentItem.position = {
-                  path: fileUri,
-                  range: currentNameToken?.range || dSpec.field.range
-                };
-
-                currentItem.range = {
-                  start: currentItem.position.range.line,
-                  end: currentItem.position.range.line
-                };
-
-                expandDs(fileUri, currentNameToken, currentItem);
-
-                currentGroup = `structs`;
-                scope.addSymbol(currentItem);
-                resetDefinition = true;
-                break;
-
-              case `PR`:
-                currentItem = new Declaration(`procedure`);
-                currentItem.name = currentNameToken?.value || NO_NAME;
-                currentItem.keyword = {
-                  ...prettyTypeFromToken(dSpec),
-                  ...dSpec.keywords
-                }
-
-                currentItem.position = {
-                  path: fileUri,
-                  range: getPotentialNameToken().range
-                };
-
-                currentItem.range = {
-                  start: currentItem.position.range.line,
-                  end: currentItem.position.range.line
-                };
-
-                currentGroup = `procedures`;
-                scope.addSymbol(currentItem);
-                currentDescription = [];
-                break;
-
-              case `PI`:
-                //Procedures can only exist in the global scope.
-                if (currentProcName) {
-                  currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
-
-                  currentGroup = `procedures`;
-                  if (currentItem) {
-                    currentItem.keyword = {
-                      ...currentItem.keyword,
-                      ...prettyTypeFromToken(dSpec),
-                      ...dSpec.keywords
-                    }
+                    scope.addSymbol(callItem);
                   }
-                } else {
-                  currentGroup = `parameters`;
-                }
-                break;
+                  break;
 
-              default:
-                // No type, must be either a struct subfield OR a parameter
-                if (!currentItem) {
-                  switch (currentGroup) {
-                  case `structs`:
-                  case `procedures`:
-                    // We have to do this backwards lookup to find the definition
-                    // because in fixed format, currentItem is not defined. So
-                    // we go find the latest procedure/structure defined
-                    let validScope;
-                    for (let i = scopes.length - 1; i >= 0; i--) {
-                      validScope = scopes[i];
-                      if (validScope[currentGroup].length > 0) break;
-                    }
-                  
-                    currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
-                    break;
+                case `TAG`:
+                  const tagItem = new Declaration(`tag`);
+                  if (cSpec.factor1) {
+                    tagItem.name = cSpec.factor1.value;
+                    tagItem.position = {
+                      path: fileUri,
+                      range: cSpec.factor1.range
+                    };
 
-                  case `parameters`:
-                    currentItem = new Declaration(`struct`);
-                    currentItem.name = PROGRAMPARMS_NAME;
-                    break;
+                    tagItem.range = {
+                      start: lineNumber,
+                      end: lineNumber
+                    };
+
+                    scope.addSymbol(tagItem);
                   }
-                }
+                  break;
+              }
 
-                if (currentItem) {
-                  const isProgramParameter = currentItem.name === PROGRAMPARMS_NAME;
+              break;
+            case `P`:
+              const pSpec = parsePLine(line, lineNumber, lineIndex);
 
-                  // This happens when it's a blank parm.
-                  const baseToken = dSpec.type || dSpec.len;
-                  if (!potentialName && baseToken) {
-                    pushPotentialNameToken({
-                      ...baseToken,
-                      value: NO_NAME
-                    });
+              if (pSpec.potentialName) {
+                pushPotentialNameToken(pSpec.potentialName);
+
+                tokens = [pSpec.potentialName];
+              } else {
+                if (pSpec.start) {
+                  tokens = [...pSpec.keywordsRaw, pSpec.name];
+
+                  if (pSpec.name && pSpec.name.value.length > 0) {
+                    pushPotentialNameToken(pSpec.name);
                   }
 
                   const currentNameToken = getPotentialNameToken();
 
-                  if (potentialName) {
-                    currentSub = new Declaration(isProgramParameter ? `parameter` : `subitem`);
-                    currentSub.name = currentNameToken?.value || NO_NAME;
-                    currentSub.keyword = {
+                  if (currentNameToken) {
+                    currentItem = new Declaration(`procedure`);
+
+                    currentProcName = currentNameToken.value;
+                    currentItem.name = currentProcName;
+                    currentItem.keyword = pSpec.keywords;
+
+                    currentItem.position = {
+                      path: fileUri,
+                      range: currentNameToken.range
+                    };
+
+                    currentItem.range = {
+                      start: currentNameToken.range.line,
+                      end: currentNameToken.range.line
+                    };
+
+                    currentItem.scope = new Cache(undefined, true);
+
+                    scope.addSymbol(currentItem);
+                    resetDefinition = true;
+
+                    scopes.push(currentItem.scope);
+                  }
+                } else {
+                  if (scopes.length > 1) {
+                    //Procedures can only exist in the global scope.
+                    currentItem = scopes[0].find(currentProcName);
+
+                    if (currentItem && currentItem.type === `procedure`) {
+                      scopes.pop();
+                      currentItem.range.end = lineNumber;
+                      resetDefinition = true;
+                    }
+                  }
+                }
+              }
+              break;
+
+            case `D`:
+              const dSpec = parseDLine(lineNumber, lineIndex, line);
+
+              if (dSpec.potentialName) {
+                pushPotentialNameToken(dSpec.potentialName);
+                tokens = [dSpec.potentialName];
+                continue;
+              } else {
+
+                if (dSpec.name && dSpec.name.value.length > 0) {
+                  pushPotentialNameToken(dSpec.name);
+                }
+
+                tokens = [dSpec.field, ...dSpec.keywordsRaw, dSpec.name];
+
+                const currentNameToken = getPotentialNameToken();
+
+                switch (dSpec.field && dSpec.field.value) {
+                  case `C`:
+                    currentItem = new Declaration(`constant`);
+                    currentItem.name = currentNameToken?.value || NO_NAME;
+                    currentItem.keyword = dSpec.keywords || {};
+
+                    // TODO: line number might be different with ...?
+                    currentItem.position = {
+                      path: fileUri,
+                      range: dSpec.field.range
+                    };
+
+                    currentItem.range = {
+                      start: currentNameToken.range.line,
+                      end: currentItem.position.range.line
+                    };
+
+                    scope.addSymbol(currentItem);
+                    resetDefinition = true;
+                    break;
+                  case `S`:
+
+                    if (!currentNameToken) {
+                      // If we don't have a current name token
+                      // we cannot create a variable declaration (RNF3316)
+                      break;
+                    }
+
+                    currentItem = new Declaration(`variable`);
+                    currentItem.name = currentNameToken.value;
+                    currentItem.keyword = {
+                      ...dSpec.keywords,
+                      ...prettyTypeFromToken(dSpec),
+                    }
+
+                    // TODO: line number might be different with ...?
+                    currentItem.position = {
+                      path: fileUri,
+                      range: currentNameToken.range
+                    };
+
+                    currentItem.range = {
+                      start: currentNameToken.range.line,
+                      end: currentItem.position.range.line
+                    };
+
+                    scope.addSymbol(currentItem);
+                    resetDefinition = true;
+                    break;
+
+                  case `DS`:
+                    currentItem = new Declaration(`struct`);
+                    currentItem.name = currentNameToken?.value || NO_NAME;
+                    currentItem.keyword = dSpec.keywords;
+
+                    currentItem.position = {
+                      path: fileUri,
+                      range: currentNameToken?.range || dSpec.field.range
+                    };
+
+                    currentItem.range = {
+                      start: currentItem.position.range.line,
+                      end: currentItem.position.range.line
+                    };
+
+                    expandDs(fileUri, currentNameToken, currentItem);
+
+                    currentGroup = `structs`;
+                    scope.addSymbol(currentItem);
+                    resetDefinition = true;
+                    break;
+
+                  case `PR`:
+                    currentItem = new Declaration(`procedure`);
+                    currentItem.name = currentNameToken?.value || NO_NAME;
+                    currentItem.keyword = {
                       ...prettyTypeFromToken(dSpec),
                       ...dSpec.keywords
                     }
 
-                    currentSub.position = {
+                    currentItem.position = {
                       path: fileUri,
-                      range: currentNameToken?.range
+                      range: getPotentialNameToken().range
                     };
 
-                    currentSub.range = {
-                      start: lineNumber,
-                      end: lineNumber
-                    }
+                    currentItem.range = {
+                      start: currentItem.position.range.line,
+                      end: currentItem.position.range.line
+                    };
 
-                    // If the parameter has likeds, add the subitems to make it a struct.
-                    await expandDs(fileUri, currentNameToken, currentSub);
+                    currentGroup = `procedures`;
+                    scope.addSymbol(currentItem);
+                    currentDescription = [];
+                    break;
 
-                    if (isProgramParameter) {
-                      scope.addSymbol(currentSub);
-                    } else {
-                      currentItem.subItems.push(currentSub);
-                    }
-                    currentSub = undefined;
+                  case `PI`:
+                    //Procedures can only exist in the global scope.
+                    if (currentProcName) {
+                      currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
 
-                    resetDefinition = true;
-                  } else {
-                    if (currentItem) {
-                      if (currentItem.subItems.length > 0) {
-                        currentItem.subItems[currentItem.subItems.length - 1].keyword = {
-                          ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
-                          ...prettyTypeFromToken(dSpec),
-                          ...dSpec.keywords
-                        };
-
-                        currentItem.subItems[currentItem.subItems.length - 1].range.end = lineNumber;
-                      } else {
+                      currentGroup = `procedures`;
+                      if (currentItem) {
                         currentItem.keyword = {
                           ...currentItem.keyword,
+                          ...prettyTypeFromToken(dSpec),
+                          ...dSpec.keywords
+                        }
+                      }
+                    } else {
+                      currentGroup = `parameters`;
+                    }
+                    break;
+
+                  default:
+                    // No type, must be either a struct subfield OR a parameter
+                    if (!currentItem) {
+                      switch (currentGroup) {
+                        case `structs`:
+                        case `procedures`:
+                          // We have to do this backwards lookup to find the definition
+                          // because in fixed format, currentItem is not defined. So
+                          // we go find the latest procedure/structure defined
+                          let validScope;
+                          for (let i = scopes.length - 1; i >= 0; i--) {
+                            validScope = scopes[i];
+                            if (validScope[currentGroup].length > 0) break;
+                          }
+
+                          currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
+                          break;
+
+                        case `parameters`:
+                          currentItem = new Declaration(`struct`);
+                          currentItem.name = PROGRAMPARMS_NAME;
+                          break;
+                      }
+                    }
+
+                    if (currentItem) {
+                      const isProgramParameter = currentItem.name === PROGRAMPARMS_NAME;
+
+                      // This happens when it's a blank parm.
+                      const baseToken = dSpec.type || dSpec.len;
+                      if (!potentialName && baseToken) {
+                        pushPotentialNameToken({
+                          ...baseToken,
+                          value: NO_NAME
+                        });
+                      }
+
+                      const currentNameToken = getPotentialNameToken();
+
+                      if (potentialName) {
+                        currentSub = new Declaration(isProgramParameter ? `parameter` : `subitem`);
+                        currentSub.name = currentNameToken?.value || NO_NAME;
+                        currentSub.keyword = {
+                          ...prettyTypeFromToken(dSpec),
                           ...dSpec.keywords
                         }
 
-                      }
-                    }
-                  }
+                        currentSub.position = {
+                          path: fileUri,
+                          range: currentNameToken?.range
+                        };
 
-                  currentItem.range.end = lineNumber;
+                        currentSub.range = {
+                          start: lineNumber,
+                          end: lineNumber
+                        }
+
+                        // If the parameter has likeds, add the subitems to make it a struct.
+                        await expandDs(fileUri, currentNameToken, currentSub);
+
+                        if (isProgramParameter) {
+                          scope.addSymbol(currentSub);
+                        } else {
+                          currentItem.subItems.push(currentSub);
+                        }
+                        currentSub = undefined;
+
+                        resetDefinition = true;
+                      } else {
+                        if (currentItem) {
+                          if (currentItem.subItems.length > 0) {
+                            currentItem.subItems[currentItem.subItems.length - 1].keyword = {
+                              ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
+                              ...prettyTypeFromToken(dSpec),
+                              ...dSpec.keywords
+                            };
+
+                            currentItem.subItems[currentItem.subItems.length - 1].range.end = lineNumber;
+                          } else {
+                            currentItem.keyword = {
+                              ...currentItem.keyword,
+                              ...dSpec.keywords
+                            }
+
+                          }
+                        }
+                      }
+
+                      currentItem.range.end = lineNumber;
+                    }
+                    break;
                 }
-                break;
+
+                potentialName = undefined;
               }
-            
-              potentialName = undefined;
-            }
-            break;
+              break;
+
+            case `O`:
+              const oSpec = parseOLine(lineNumber, lineIndex, line);
+
+              // Create output specification declaration
+              if (oSpec.filename || oSpec.fieldName) {
+                currentItem = new Declaration(`output`);
+                
+                // Set the name to fieldName if available, otherwise use filename
+                currentItem.name = oSpec.fieldName?.value || oSpec.filename?.value || '';
+
+                // Store O-Spec details
+                currentItem.keyword = {
+                  filename: oSpec.filename?.value || '',
+                  type: oSpec.type?.value || '',
+                  fetchOverflow: oSpec.fetchOverflow?.value || '',
+                  andOr: oSpec.andOr?.value || '',
+                  fieldName: oSpec.fieldName?.value || '',
+                  blankAfter: oSpec.blankAfter?.value || '',
+                  editCodes: oSpec.editCodes?.value || '',
+                  endPosition: oSpec.endPosition?.value || '',
+                  dataFormat: oSpec.dataFormat?.value || '',
+                  constantOrEdit: oSpec.constantOrEdit?.value || ''
+                };
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: oSpec.fieldName?.range || oSpec.filename?.range
+                };
+
+                currentItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+
+                scope.addSymbol(currentItem);
+                resetDefinition = true;
+              }
+              break;
           }
         }
 
@@ -1899,7 +1938,7 @@ export default class Parser {
 
         if (resetDefinition) {
           potentialName = undefined;
-          
+
           currentItem = undefined;
           currentTitle = undefined;
           currentDescription = [];
@@ -1929,7 +1968,7 @@ export default class Parser {
   static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
     if (Array.isArray(content) && typeof content[0] === `string`) {
       return Parser.lineTokens(content.join(` `), lineNumber, baseIndex);
-    } else 
+    } else
       if (typeof content === `string`) {
         return Parser.lineTokens(content, lineNumber, baseIndex);
       } else {
@@ -1953,7 +1992,7 @@ export default class Parser {
               if (!keyvalues[`CONST`]) {
                 keyvalues[`CONST`] = ``;
               }
-              
+
               keyvalues[`CONST`] += keywordParts[i].value;
             } else {
               keyvalues[keywordParts[i].value.toUpperCase()] = true;
