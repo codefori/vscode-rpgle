@@ -177,7 +177,7 @@ function updateRuler(editor = window.activeTextEditor) {
                 before: {
                   contentText: positionsData.outline,
                   color: new ThemeColor(`editorLineNumber.foreground`),
-                  margin: `-1.4em 0 0 0`,
+                  textDecoration: `none; position: absolute; top: -1.4em; background-color: var(--vscode-editor-background); width: 100vw;`,
                 }
               }
             },
