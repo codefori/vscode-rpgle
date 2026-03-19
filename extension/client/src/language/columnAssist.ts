@@ -13,11 +13,7 @@ const notCurrentArea = window.createTextEditorDecorationType({
   border: `1px solid grey`,
 });
 
-const outlineBar = window.createTextEditorDecorationType({
-  backgroundColor: new ThemeColor(`editor.background`),
-  isWholeLine: true,
-  opacity: `0`,
-});
+const outlineBar = window.createTextEditorDecorationType({});
 
 let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || false
 let currentEditorLine = -1;
@@ -27,7 +23,7 @@ import { SpecFieldDef, SpecFieldValue, SpecRulers, specs } from '../schemas/spec
 const getAreasForLine = (line: string, index: number) => {
   if (line.length < 6) return undefined;
   if (line[6] === `*`) return undefined;
-  
+
   const specLetter = line[5].toUpperCase();
   if (specs[specLetter]) {
     const specification = specs[specLetter];
@@ -47,7 +43,7 @@ function documentIsFree(document: TextDocument) {
     const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
     return line === `**FREE`;
   }
-  
+
   return false;
 }
 
@@ -59,12 +55,12 @@ export function registerColumnAssist(context: ExtensionContext) {
         const document = editor.document;
 
         if (document.languageId === `rpgle`) {
-          if (!documentIsFree(document)) { 
+          if (!documentIsFree(document)) {
             const lineNumber = editor.selection.start.line;
             const positionIndex = editor.selection.start.character;
 
             const positionsData = await promptLine(
-              document.getText(new Range(lineNumber, 0, lineNumber, 100)), 
+              document.getText(new Range(lineNumber, 0, lineNumber, 100)),
               positionIndex
             );
 
@@ -82,7 +78,7 @@ export function registerColumnAssist(context: ExtensionContext) {
 
     commands.registerCommand(`vscode-rpgle.assist.toggleFixedRuler`, async () => {
       rulerEnabled = !rulerEnabled;
-      
+
       if (rulerEnabled) {
         updateRuler();
       } else {
@@ -115,7 +111,7 @@ function moveFromPosition(direction: "left"|"right", editor = window.activeTextE
     const positionIndex = editor.selection.start.character;
 
     const positionsData = getAreasForLine(
-      document.getText(new Range(lineNumber, 0, lineNumber, 100)), 
+      document.getText(new Range(lineNumber, 0, lineNumber, 100)),
       positionIndex
     );
 
@@ -149,7 +145,7 @@ function updateRuler(editor = window.activeTextEditor) {
         const positionIndex = editor.selection.start.character;
 
         const positionsData = getAreasForLine(
-          document.getText(new Range(lineNumber, 0, lineNumber, 100)), 
+          document.getText(new Range(lineNumber, 0, lineNumber, 100)),
           positionIndex
         );
 
@@ -171,22 +167,21 @@ function updateRuler(editor = window.activeTextEditor) {
               })
             }
           });
-          
+
           editor.setDecorations(notCurrentArea, decorations);
 
-          if (currentEditorLine !== lineNumber && lineNumber >= 1) {
-            editor.setDecorations(outlineBar, [
-              {
-                range: new Range(lineNumber-1, 0, lineNumber-1, 80),
-                renderOptions: {
-                  before: {
-                    contentText: positionsData.outline,
-                    color: new ThemeColor(`editorLineNumber.foreground`),
-                  }
+          editor.setDecorations(outlineBar, [
+            {
+              range: new Range(lineNumber, 0, lineNumber, 0),
+              renderOptions: {
+                before: {
+                  contentText: positionsData.outline,
+                  color: new ThemeColor(`editorLineNumber.foreground`),
+                  margin: `-1.4em 0 0 0`,
                 }
-              },
-            ]);
-          }
+              }
+            },
+          ]);
 
           clear = false;
         }
@@ -229,7 +224,7 @@ async function promptLine (line: string, _index: number): Promise<string|undefin
   if (line.length < 6) return undefined;
   if (line[6] === `*`) return undefined;
   line = line.padEnd(80);
-  
+
   const specLetter = line[5].toUpperCase();
   if (specs[specLetter]) {
     const specification = specs[specLetter];
