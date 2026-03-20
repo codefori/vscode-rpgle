@@ -674,3 +674,54 @@ test('test copy with *libl', async () => {
   const valueB = Parser.getIncludeFromDirective(`/copy *libl/qrpgleref,stufh`);
   expect(valueB).toBe(`*libl/qrpgleref,stufh`);
 });
+
+test('/IF DEFINED - uppercase', async () => {
+  const lines = [
+    `**FREE`,
+    `/DEFINE MYMACRO`,
+    `/IF NOT DEFINED(MYMACRO)`,
+    `Dcl-S Var1 char(10);`,
+    `/ELSE`,
+    `Dcl-S Var2 char(10);`,
+    `/ENDIF`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  expect(cache.variables.length).toBe(1);
+  expect(cache.variables[0].name).toBe('Var2');
+});
+
+test('/IF DEFINED - lowercase', async () => {
+  const lines = [
+    `**FREE`,
+    `/define mymacro`,
+    `/if not defined(mymacro)`,
+    `Dcl-S Var1 char(10);`,
+    `/else`,
+    `Dcl-S Var2 char(10);`,
+    `/endif`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  expect(cache.variables.length).toBe(1);
+  expect(cache.variables[0].name).toBe('Var2');
+});
+
+test('/IF DEFINED with Not - mixed case', async () => {
+  const lines = [
+    `**FREE`,
+    `/DEFINE MYMACRO`,
+    `/IF Not DEFINED(MYMACRO)`,
+    `Dcl-S Var1 char(10);`,
+    `/ELSE`,
+    `Dcl-S Var2 char(10);`,
+    `/ENDIF`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  expect(cache.variables.length).toBe(1);
+  expect(cache.variables[0].name).toBe('Var2');
+});
