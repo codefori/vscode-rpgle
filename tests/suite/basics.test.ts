@@ -37,7 +37,7 @@ test('vitestTest2', async () => {
 
   expect(cache.variables.length).toBe(2);
   expect(cache.variables[0].position.range.line).toBe(1);
-  expect(cache.variables[1].position.range.line).toBe(3); 
+  expect(cache.variables[1].position.range.line).toBe(3);
 });
 
 test('vitestTest3', async () => {
@@ -230,7 +230,7 @@ test('vitestTest7_fixed', async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.procedures.length).toBe(2);
-  
+
   expect(cache.procedures[0].name).toBe(`GetArtDesc`);
   expect(cache.procedures[0].subItems.length).toBe(1);
   expect(cache.procedures[0].prototype).toBeTruthy();
@@ -1428,6 +1428,69 @@ test('keywords over multiple lines', async () => {
   expect(error.keyword[`LIKE`]).toBe(`TError`);
 });
 
+test('BINDEC with decimal positions', async () => {
+  const lines = [
+    `       Dcl-DS testDS;`,
+    `         field1 Bindec(5:2);`,
+    `         field2 Bindec(9:3);`,
+    `         field3 Bindec(4);`,
+    `       End-DS;`,
+    ``,
+    `       Dcl-S standalone_bindec Bindec(7:2);`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.structs.length).toBe(1);
+  const testDS = cache.find(`testDS`);
+  expect(testDS.subItems.length).toBe(3);
+
+  const field1 = testDS.subItems[0];
+  expect(field1.name).toBe(`field1`);
+  expect(field1.keyword[`BINDEC`]).toBe(`5:2`);
+
+  const field2 = testDS.subItems[1];
+  expect(field2.name).toBe(`field2`);
+  expect(field2.keyword[`BINDEC`]).toBe(`9:3`);
+
+  const field3 = testDS.subItems[2];
+  expect(field3.name).toBe(`field3`);
+  expect(field3.keyword[`BINDEC`]).toBe(`4`);
+
+  const standalone = cache.find(`standalone_bindec`);
+  expect(standalone.name).toBe(`standalone_bindec`);
+  expect(standalone.keyword[`BINDEC`]).toBe(`7:2`);
+});
+
+test('BINDEC with decimal positions - fixed format', async () => {
+  const lines = [
+    `     D BIN40           S              4B 0`,
+    `     D BIN90           S              9B 0`,
+    `     D BIN43           S              4B 3`,
+    `     D BIN92           S              9B 2`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.variables.length).toBe(4);
+
+  const bin40 = cache.find(`BIN40`);
+  expect(bin40.name).toBe(`BIN40`);
+  expect(bin40.keyword[`BINDEC`]).toBe(`4:0`);
+
+  const bin90 = cache.find(`BIN90`);
+  expect(bin90.name).toBe(`BIN90`);
+  expect(bin90.keyword[`BINDEC`]).toBe(`9:0`);
+
+  const bin43 = cache.find(`BIN43`);
+  expect(bin43.name).toBe(`BIN43`);
+  expect(bin43.keyword[`BINDEC`]).toBe(`4:3`);
+
+  const bin92 = cache.find(`BIN92`);
+  expect(bin92.name).toBe(`BIN92`);
+  expect(bin92.keyword[`BINDEC`]).toBe(`9:2`);
+});
+
 test(`const keyword check`, async () => {
   const lines = [
     ``,
@@ -1634,7 +1697,7 @@ test('fixed-format c spec', async () => {
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
   expect(cache.constants.length).toBe(0);
   expect(cache.procedures.length).toBe(2);
-  
+
   expect(cache.procedures[0].name).toBe(`UpdArt`);
   expect(cache.procedures[0].prototype).toBeTruthy();
   expect(cache.procedures[0].subItems.length).toBe(2);
