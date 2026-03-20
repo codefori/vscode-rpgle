@@ -22,7 +22,7 @@ import { SpecFieldDef, SpecFieldValue, SpecRulers, specs } from '../schemas/spec
 
 const getAreasForLine = (line: string, index: number) => {
   if (line.length < 6) return undefined;
-  if (line[6] === `*`) return undefined;
+  if (line[6] === `*` || line[6] === `/`) return undefined;
 
   const specLetter = line[5].toUpperCase();
   if (specs[specLetter]) {
@@ -33,6 +33,12 @@ const getAreasForLine = (line: string, index: number) => {
     return {
       specification,
       active,
+      outline: SpecRulers[specLetter]
+    };
+  } else if (SpecRulers[specLetter]) {
+    return {
+      specification: [] as SpecFieldDef[],
+      active: -1,
       outline: SpecRulers[specLetter]
     };
   }
