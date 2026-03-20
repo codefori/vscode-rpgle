@@ -159,19 +159,6 @@ export function parsePLine(content, lineNumber, lineIndex) {
 export function parseOLine(lineNumber, lineIndex, content) {
   content = content.padEnd(80);
   
-  // O-Spec Column Layout (Fixed Format):
-  // 6: Spec type (O)
-  // 7-16: Filename (output file name)
-  // 17: Type (H=Header, D=Detail, T=Total, E=Exception)
-  // 18-20: Fetch overflow indicator (blank or OF)
-  // 21-29: Space/AND/OR indicators
-  // 30-43: Field name or constant (14 characters)
-  // 44: Edit code (B=Blank after)
-  // 45-46: Blank before (reserved)
-  // 47-51: End position (5 digits)
-  // 52: Data format (blank, 1-4, A-D, J-Q, Y, Z)
-  // 53-80: Constant or edit word
-  
   const filename = content.substr(6, 10);      // Columns 7-16
   const type = content.substr(16, 1);          // Column 17
   const fetchOverflow = content.substr(17, 3); // Columns 18-20
