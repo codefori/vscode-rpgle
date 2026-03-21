@@ -1,9 +1,14 @@
-import { commands, ExtensionContext, Uri, window } from "vscode";
+import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
 import { clearTableCache, getCache } from "./requests";
 import { LanguageClient } from "vscode-languageclient/node";
 
 export function registerCommands(context: ExtensionContext, client: LanguageClient) {
   context.subscriptions.push(
+    commands.registerCommand(`vscode-rpgle.generateBinderSource`, async (content: string) => {
+      const document = await workspace.openTextDocument({ language: `bnd`, content: content });
+      await window.showTextDocument(document, ViewColumn.Beside);
+    }),
+
     commands.registerCommand(`vscode-rpgle.server.reloadCache`, () => {
       clearTableCache(client);
     }),
