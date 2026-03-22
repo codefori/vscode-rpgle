@@ -1,12 +1,12 @@
 /* eslint-disable no-case-declarations */
 
-import { ALLOWS_EXTENDED, createBlocks, tokenise } from "./tokens";
+import { ALLOWS_EXTENDED, createBlocks, tokenise, trimQuotes } from "./tokens";
 
 import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -41,7 +41,7 @@ export default class Parser {
     console.log(`Clearing cache of these files: ${Object.keys(this.tables).join(`, `)}`)
     this.tables = {};
   }
- 
+
   async fetchTable(name: string, keyVersion = ``, aliases?: boolean): Promise<Declaration[]> {
     if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
@@ -89,21 +89,21 @@ export default class Parser {
   }
 
   /**
-   * @param {string} path 
+   * @param {string} path
    */
   clearParsedCache(path) {
     this.parsedCache[path] = undefined;
   }
 
   /**
-   * @param {string} path 
+   * @param {string} path
    */
   getParsedCache(path) {
     return this.parsedCache[path];
   }
 
   /**
-	 * @param {string} line 
+	 * @param {string} line
 	 * @returns {string|undefined}
 	 */
   static getIncludeFromDirective(line: string): string|undefined {
@@ -112,7 +112,7 @@ export default class Parser {
 
     const upperLine = line.toUpperCase();
     let comment = -1;
-    
+
     let directivePosition = upperLine.indexOf(`/COPY `);
     // Search comment AFTER the directive
     comment = upperLine.indexOf(`//`, directivePosition);
@@ -126,7 +126,7 @@ export default class Parser {
     };
 
     let directiveValue: string|undefined;
-    
+
     if (directivePosition >= 0) {
       if (comment >= 0) {
         directiveValue = line.substring(directivePosition+directiveLength, comment).trim();
@@ -183,8 +183,8 @@ export default class Parser {
 
     let lastToken: number;
     while (
-      tokens[checkNextToken] && 
-      [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) && 
+      tokens[checkNextToken] &&
+      [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) &&
       tokens[lastToken]?.type !== tokens[checkNextToken].type &&
       checkNextToken >= 0
 
@@ -223,7 +223,7 @@ export default class Parser {
     scopes.push(new Cache());
 
     const getObjectName = (objectName: string, keywords: Keywords): string => {
-            
+
       // Check for external object
       const extFile = keywords[`EXTFILE`];
       if (extFile && typeof extFile === `string`) {
@@ -471,7 +471,7 @@ export default class Parser {
               break;
           }
         }
-        
+
         return inputLine;
       }
 
@@ -504,7 +504,7 @@ export default class Parser {
         unique: string
       }) => {
         const objectName = getObjectName(currentItem.name, fOptions.keyword);
-      
+
         // ========
         // First we do the work to set the subfields
         // ========
@@ -542,7 +542,7 @@ export default class Parser {
 
         const qualified = fOptions.keyword[`QUALIFIED`] === true;
         const prefixKeyword = fOptions.keyword[`PREFIX`];
-        const prefix = prefixKeyword && typeof prefixKeyword === `string` ? prefixKeyword.toUpperCase() : ``;
+        const prefix = prefixKeyword && typeof prefixKeyword === `string` ? trimQuotes(prefixKeyword.toUpperCase()) : ``;
 
         for (const recordFormat of currentItem.subItems) {
           if (renames[recordFormat.name.toUpperCase()]) {
@@ -637,7 +637,7 @@ export default class Parser {
         if (li >= 1) {
           lineIndex += lines[li-1].length + EOL.length;
         }
-        
+
         const scope = scopes[scopes.length - 1];
 
         let baseLine = lines[li];
@@ -656,7 +656,7 @@ export default class Parser {
             // But it can be put on any other line and ignored.
             continue;
           }
-          
+
           // If it's something else, we assume it's compile time data
           else break;
         }
@@ -689,7 +689,7 @@ export default class Parser {
               baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
-            } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
+            } else if (![`D`, `I`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
             }
           }
@@ -710,7 +710,7 @@ export default class Parser {
         let tokens: Token[] = [];
         let parts: string[];
         let partsLower: string[];
-        
+
         if (isFullyFree || lineIsFree) {
           // Free format!
           if (line.trim() === ``) {
@@ -775,7 +775,7 @@ export default class Parser {
               case `/INCLUDE`:
                 if (options.withIncludes && this.includeFileFetch && lineCanRun()) {
                   const includePath = Parser.getIncludeFromDirective(line);
-          
+
                   if (includePath) {
                     const include = await this.includeFileFetch(workingUri, includePath);
                     if (include.found && include.uri) {
@@ -785,7 +785,7 @@ export default class Parser {
                           toPath: include.uri,
                           line: lineNumber
                         });
-                        
+
                         try {
                           await parseContent(include.uri, include.content);
                         } catch (e) {
@@ -876,8 +876,8 @@ export default class Parser {
 
             } else if (!line.endsWith(`;`)) {
               currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
-              
-              if (currentStmtStart.content.endsWith(`-`)) 
+
+              if (currentStmtStart.content.endsWith(`-`))
                 currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
 
               currentStmtStart.content += EOL;
@@ -991,7 +991,7 @@ export default class Parser {
           case `END-ENUM`:
             if (currentItem && currentItem.type === `constant`) {
               currentItem.range.end = currentStmtStart.line;
-              
+
               scope.addSymbol(currentItem);
 
               resetDefinition = true;
@@ -1059,7 +1059,7 @@ export default class Parser {
                 dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
               }
             break;
-        
+
           case `DCL-PR`:
             if (currentItem === undefined) {
               if (parts.length > 1) {
@@ -1107,7 +1107,7 @@ export default class Parser {
               resetDefinition = true;
             }
             break;
-        
+
           case `DCL-PROC`:
             if (parts.length > 1) {
               currentItem = new Declaration(`procedure`);
@@ -1153,7 +1153,7 @@ export default class Parser {
                 const endInline = tokens.findIndex(part => part.value.toUpperCase() === `END-PI`);
 
                 // Indicates that the PI starts and ends on the same line
-                if (endInline >= 0) { 
+                if (endInline >= 0) {
                   tokens.splice(endInline, 1);
                   currentItem.readParms = false;
                   resetDefinition = true;
@@ -1186,7 +1186,7 @@ export default class Parser {
               }
             } else if (currentItem && currentItem.name === PROGRAMPARMS_NAME) {
               // Assign this scopes parameters to the subitems of the program parameters struct
-              
+
               currentItem.subItems.forEach(subItem => {
                 subItem.type = `parameter`;
                 scope.addSymbol(subItem);
@@ -1231,7 +1231,7 @@ export default class Parser {
               }
             }
             break;
-    
+
           case `ENDSR`:
             if (currentItem && currentItem.type === `subroutine`) {
               currentItem.range.end = currentStmtStart.line;
@@ -1313,19 +1313,19 @@ export default class Parser {
 
                       if (currentSqlItem.name)
                         currentSqlItem.keyword = {};
-                
+
                       if (qualifiedObjectPath.schema) {
                         currentSqlItem.tags.push({
                           tag: `description`,
                           content: qualifiedObjectPath.schema
                         })
                       }
-                      
+
                       currentSqlItem.position = {
                         path: fileUri,
                         range: qualifiedObjectPath.nameToken.range
                       };
-      
+
                       scope.sqlReferences.push(currentSqlItem);
                     }
                   }
@@ -1336,7 +1336,7 @@ export default class Parser {
 
           case `///`:
             docs = !docs;
-          
+
             // When enabled
             if (docs === true) {
               currentTitle = undefined;
@@ -1464,7 +1464,7 @@ export default class Parser {
 
               currentItem.range.start = lineNumber;
               currentItem.range.end = lineNumber;
-			  
+
               await handleFSpec(currentItem, {
                 keyword: fSpec.keywords,
                 unique: line.length.toString()
@@ -1487,7 +1487,128 @@ export default class Parser {
                 });
               }
             }
-            
+
+            break;
+
+          case `I`:
+            const iSpec = parseISpec(lineNumber, lineIndex, line);
+
+            switch (iSpec.iType) {
+              case `continuationRecord`:
+                // Continuation record lines (blank file name, non-blank sequencing cols 17-18)
+                // are alternate indicator sets for the same physical record — nothing to do.
+                break;
+
+              case `programRecord`:
+              case `externalRecord`:
+                tokens = [iSpec.name, iSpec.recordIdentifyingIndicator];
+                currentItem = new Declaration(`input`);
+                currentItem.name = iSpec.name.value;
+                currentItem.keyword = {
+                  type: iSpec.iType === `programRecord` ? `program` : `external`
+                };
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: iSpec.name.range
+                };
+
+                currentItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+
+                scope.addSymbol(currentItem);
+
+                break;
+
+              case `programField`:
+                if (!currentItem) {
+                  break;
+                }
+
+                tokens = [
+                  iSpec.fieldName,
+                  iSpec.controlLevel,
+                  iSpec.matchingFields,
+                  iSpec.fieldRecordRelation,
+                  ...iSpec.fieldIndicators
+                ];
+
+                // TODO: generate a type for this
+                let lookup = scope.find(iSpec.fieldName.value, undefined);
+
+                // This means the lookup is part of a struct
+                if (lookup && lookup.type === `subitem` && iSpec.dataFormat === undefined) {
+                  // So we assign it a default type if there isn't one
+                  iSpec.dataFormat = {
+                    type: `word`,
+                    value: iSpec.decimalPositions ? `S` : `A`,
+                    range: {start: 35, end: 37, line: lineNumber}
+                  };
+                }
+
+                const definedDataType = prettyTypeFromISpecTokens(iSpec);
+
+                if (lookup) {
+                  // TODO: does definedDataType match to lookup?
+                  if (Object.keys(lookup.keyword).length === 0) {
+                    lookup.keyword = definedDataType;
+                    // console.log({name: lookup.name, definedDataType});
+                  } else {
+                    // console.log({name: lookup.name, lookupKeyword: lookup.keyword, definedDataType});
+                  }
+
+                  currentItem.subItems.push(lookup);
+                } else {
+                  currentSub = new Declaration(`subitem`);
+                  currentSub.name = iSpec.fieldName.value;
+                  currentSub.keyword = definedDataType;
+                  currentSub.position = {
+                    path: fileUri,
+                    range: iSpec.fieldName.range
+                  };
+                  currentSub.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  currentItem.subItems.push(currentSub);
+                }
+
+                currentItem.range.end = lineNumber;
+
+                break;
+
+              case `externalField`:
+                if (!currentItem) {
+                  break;
+                }
+
+                tokens = [
+                  iSpec.externalName,
+                  iSpec.fieldName,
+                  iSpec.controlLevel,
+                  iSpec.matchingFields,
+                  ...iSpec.fieldIndicators
+                ];
+                if (iSpec.externalName) {
+                  // Generate a type for this
+                  let lookup = scope.find(iSpec.externalName.value, undefined, true);
+                  if (lookup) {
+                    lookup.name = iSpec.fieldName.value;
+                    currentItem.subItems.push(lookup);
+                    currentItem.range.end = lineNumber;
+                  }
+                } else {
+                  let lookup = scope.find(iSpec.fieldName.value, undefined, true);
+                  if (lookup) {
+                    currentItem.subItems.push(lookup);
+                    currentItem.range.end = lineNumber;
+                  }
+                }
+                break;
+            }
             break;
 
           case `C`:
@@ -1537,22 +1658,22 @@ export default class Parser {
             }
 
             switch (cSpec.opcode && cSpec.opcode.value) {
-            case `BEGSR`:  
+            case `BEGSR`:
               if (cSpec.factor1 && !scope.find(cSpec.factor1.value, `subroutine`)) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = cSpec.factor1.value;
                 currentItem.keyword = {'Subroutine': true};
-  
+
                 currentItem.position = {
                   path: fileUri,
                   range: cSpec.factor1.range
                 };
-  
+
                 currentItem.range = {
                   start: lineNumber,
                   end: lineNumber
                 };
-  
+
                 currentDescription = [];
               }
               break;
@@ -1564,7 +1685,7 @@ export default class Parser {
                 resetDefinition = true;
               }
               break;
-          
+
             case `CALL`:
               const callItem = new Declaration(`procedure`);
               if (cSpec.factor2) {
@@ -1612,7 +1733,7 @@ export default class Parser {
 
             if (pSpec.potentialName) {
               pushPotentialNameToken(pSpec.potentialName);
-              
+
               tokens = [pSpec.potentialName];
             } else {
               if (pSpec.start) {
@@ -1685,7 +1806,7 @@ export default class Parser {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = dSpec.keywords || {};
-                  
+
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: fileUri,
@@ -1696,7 +1817,7 @@ export default class Parser {
                   start: currentNameToken.range.line,
                   end: currentItem.position.range.line
                 };
-    
+
                 scope.addSymbol(currentItem);
                 resetDefinition = true;
                 break;
@@ -1712,7 +1833,7 @@ export default class Parser {
                 currentItem.name = currentNameToken.value;
                 currentItem.keyword = {
                   ...dSpec.keywords,
-                  ...prettyTypeFromToken(dSpec),
+                  ...prettyTypeFromDSpecTokens(dSpec),
                 }
 
                 // TODO: line number might be different with ...?
@@ -1756,7 +1877,7 @@ export default class Parser {
                 currentItem = new Declaration(`procedure`);
                 currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = {
-                  ...prettyTypeFromToken(dSpec),
+                  ...prettyTypeFromDSpecTokens(dSpec),
                   ...dSpec.keywords
                 }
 
@@ -1784,7 +1905,7 @@ export default class Parser {
                   if (currentItem) {
                     currentItem.keyword = {
                       ...currentItem.keyword,
-                      ...prettyTypeFromToken(dSpec),
+                      ...prettyTypeFromDSpecTokens(dSpec),
                       ...dSpec.keywords
                     }
                   }
@@ -1807,7 +1928,7 @@ export default class Parser {
                       validScope = scopes[i];
                       if (validScope[currentGroup].length > 0) break;
                     }
-                  
+
                     currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
                     break;
 
@@ -1836,7 +1957,7 @@ export default class Parser {
                     currentSub = new Declaration(isProgramParameter ? `parameter` : `subitem`);
                     currentSub.name = currentNameToken?.value || NO_NAME;
                     currentSub.keyword = {
-                      ...prettyTypeFromToken(dSpec),
+                      ...prettyTypeFromDSpecTokens(dSpec),
                       ...dSpec.keywords
                     }
 
@@ -1866,7 +1987,7 @@ export default class Parser {
                       if (currentItem.subItems.length > 0) {
                         currentItem.subItems[currentItem.subItems.length - 1].keyword = {
                           ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
-                          ...prettyTypeFromToken(dSpec),
+                          ...prettyTypeFromDSpecTokens(dSpec),
                           ...dSpec.keywords
                         };
 
@@ -1885,7 +2006,7 @@ export default class Parser {
                 }
                 break;
               }
-            
+
               potentialName = undefined;
             }
             break;
@@ -1900,7 +2021,7 @@ export default class Parser {
 
         if (resetDefinition) {
           potentialName = undefined;
-          
+
           currentItem = undefined;
           currentTitle = undefined;
           currentDescription = [];
@@ -1930,7 +2051,7 @@ export default class Parser {
   static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
     if (Array.isArray(content) && typeof content[0] === `string`) {
       return Parser.lineTokens(content.join(` `), lineNumber, baseIndex);
-    } else 
+    } else
       if (typeof content === `string`) {
         return Parser.lineTokens(content, lineNumber, baseIndex);
       } else {
@@ -1954,7 +2075,7 @@ export default class Parser {
               if (!keyvalues[`CONST`]) {
                 keyvalues[`CONST`] = ``;
               }
-              
+
               keyvalues[`CONST`] += keywordParts[i].value;
             } else {
               keyvalues[keywordParts[i].value.toUpperCase()] = true;
