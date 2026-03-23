@@ -3,8 +3,6 @@
 All notable changes to the "vscode-rpgle" extension can be found in the
 [Releases](https://github.com/codefori/vscode-rpgle/releases) section of the GitHub repository.
 
-## [Unreleased]
-
 ### Added
 
 - **Input specification (`I` spec) parsing** (fixed-format RPG IV): the parser now recognises and processes all four I spec sub-types — `programRecord`, `programField`, `externalRecord`, and `externalField`.
@@ -16,6 +14,10 @@ All notable changes to the "vscode-rpgle" extension can be found in the
 - Test fixtures for `QRPGLESRC` and `QCBBLESRC` physical files (`tests/tables/qrpglesrc.ts`, `tests/tables/qcbblesrc.ts`).
 - Test suite `tests/suite/ispec.test.ts` covering I spec rename/prefix handling, column-position range maths, and program-described file field definitions.
 - The popup Hover, Go-to-Definition, and Find-All-References now work for symbols defined on Input specs, subject to the same fixed-format limitations that already existed for F, D, and C specs: because `getWordRangeAtPosition` is not spec/column aware, `hover` does not trigger when the cursor is positioned on a name that is immediately adjacent to a non-space character (e.g. the spec-type letter `D` in col 6 with the name starting in column 7, or a decimal-position digit in col 48 of an I spec and the field name immediately after it.) It is a future objective to enhance this feature.
+
+### Fixed
+
+- **Linter diagnostics not clearing when `**FREE` is removed**: previously, if a source file was opened as `**FREE` (activating the linter) and `**FREE` was later removed or the file was re-opened without it, stale linter diagnostics persisted indefinitely. `refreshLinterDiagnostics` now explicitly sends an empty diagnostics notification when the file is not `**FREE`, clearing any previously published warnings.
 
 ### Changed
 
