@@ -1893,11 +1893,11 @@ export default class Parser {
               const oSpec = parseOLine(lineNumber, lineIndex, line);
 
               // Create output specification declaration
-              if (oSpec.filename || oSpec.fieldName) {
+              if (oSpec.filename || oSpec.fieldName || oSpec.constantOrEdit) {
                 currentItem = new Declaration(`output`);
                 
-                // Set the name to fieldName if available, otherwise use filename
-                currentItem.name = oSpec.fieldName?.value || oSpec.filename?.value || '';
+                // Set the name to fieldName if available, otherwise use filename or constant
+                currentItem.name = oSpec.fieldName?.value || oSpec.filename?.value || oSpec.constantOrEdit?.value || '';
 
                 // Store O-Spec details
                 currentItem.keyword = {
@@ -1915,7 +1915,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  range: oSpec.fieldName?.range || oSpec.filename?.range
+                  range: oSpec.fieldName?.range || oSpec.filename?.range || oSpec.constantOrEdit?.range
                 };
 
                 currentItem.range = {
