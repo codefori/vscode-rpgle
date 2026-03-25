@@ -1,6 +1,7 @@
 import { FoldingRange, FoldingRangeParams, FoldingRangeKind } from 'vscode-languageserver';
 import { documents } from '.';
 import Document from '../../../../language/document';
+import { isInSqlBlock, isInCommentOrString } from '../utils/sqlDetection';
 
 // Defines opening and closing keywords for code blocks
 interface BlockPair {
@@ -52,15 +53,20 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
   regex.lastIndex = 0;
   
   while ((match = regex.exec(text)) !== null) {
-    // Skip matches inside comments
-    if (!isInComment(text, match.index)) {
-      const line = document.positionAt(match.index).line;
-      matches.push({
-        offset: match.index,
-        word: match[0].toLowerCase(),
-        line: line
-      });
-    }
+    const matchWord = match[0].toLowerCase();
+    
+    // Skip matches inside comments or strings
+    if (isInCommentOrString(text, match.index)) continue;
+    
+    // Skip SELECT if inside SQL block
+    if (matchWord === 'select' && isInSqlBlock(text, match.index)) continue;
+    
+    const line = document.positionAt(match.index).line;
+    matches.push({
+      offset: match.index,
+      word: matchWord,
+      line: line
+    });
   }
 
   // Track open blocks using a stack
@@ -116,36 +122,4 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
   }
 
   return foldingRanges;
-}
-
-// Check if a position is inside a comment or string
-function isInComment(text: string, offset: number): boolean {
-  // Find the start of the line
-  let lineStart = offset;
-  while (lineStart > 0 && text[lineStart - 1] !== '\n' && text[lineStart - 1] !== '\r') {
-    lineStart--;
-  }
-  
-  // Extract line content before the offset
-  const lineBeforeOffset = text.substring(lineStart, offset);
-  
-  // Check if there's a comment marker before this position
-  const commentIndex = lineBeforeOffset.indexOf('//');
-  if (commentIndex !== -1) {
-    return true;
-  }
-  
-  // Check if the offset is inside a string delimited by single quotes
-  let inString = false;
-  for (let i = 0; i < lineBeforeOffset.length; i++) {
-    if (lineBeforeOffset[i] === "'") {
-      inString = !inString;
-    }
-  }
-  
-  if (inString) {
-    return true;
-  }
-  
-  return false;
 }

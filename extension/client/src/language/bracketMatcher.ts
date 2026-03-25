@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { isInSqlBlock, isInCommentOrString } from '../utils/sqlDetection';
 
 // Defines block structure with opening, closing, and optional middle keywords
 interface BracketPair {
@@ -92,6 +93,18 @@ function updateDecorations(editor: vscode.TextEditor) {
   }
 
   const word = document.getText(wordRange).toLowerCase();
+  
+  // Check if we're clicking on SELECT inside an SQL block
+  if (word === 'select') {
+    const text = document.getText();
+    const offset = document.offsetAt(position);
+    if (isInSqlBlock(text, offset)) {
+      // Don't highlight SELECT inside SQL blocks
+      editor.setDecorations(decorationType, []);
+      currentBlockInfo = undefined;
+      return;
+    }
+  }
   
   // Find matching bracket pair
   const matchingPair = findMatchingPair(word);
@@ -193,14 +206,19 @@ function findAllRelatedKeywords(
   let match;
   regex.lastIndex = 0;
   while ((match = regex.exec(text)) !== null) {
-    // Skip matches inside comments
-    if (!isInComment(text, match.index)) {
-      allMatches.push({
-        offset: match.index,
-        word: match[0].toLowerCase(),
-        length: match[0].length
-      });
-    }
+    const matchWord = match[0].toLowerCase();
+    
+    // Skip matches inside comments or strings
+    if (isInCommentOrString(text, match.index)) continue;
+    
+    // Skip SELECT if inside SQL block
+    if (matchWord === 'select' && isInSqlBlock(text, match.index)) continue;
+    
+    allMatches.push({
+      offset: match.index,
+      word: matchWord,
+      length: match[0].length
+    });
   }
   
   // Find index of current match
@@ -339,38 +357,6 @@ function findMatchingOpen(
   }
   
   return -1;
-}
-
-// Check if a position is inside a comment or string
-function isInComment(text: string, offset: number): boolean {
-  // Find the start of the line
-  let lineStart = offset;
-  while (lineStart > 0 && text[lineStart - 1] !== '\n' && text[lineStart - 1] !== '\r') {
-    lineStart--;
-  }
-  
-  // Extract line content before the offset
-  const lineBeforeOffset = text.substring(lineStart, offset);
-  
-  // Check if there's a comment marker before this position
-  const commentIndex = lineBeforeOffset.indexOf('//');
-  if (commentIndex !== -1) {
-    return true;
-  }
-  
-  // Check if the offset is inside a string delimited by single quotes
-  let inString = false;
-  for (let i = 0; i < lineBeforeOffset.length; i++) {
-    if (lineBeforeOffset[i] === "'") {
-      inString = !inString;
-    }
-  }
-  
-  if (inString) {
-    return true;
-  }
-  
-  return false;
 }
 
 export function deactivateBracketMatcher() {

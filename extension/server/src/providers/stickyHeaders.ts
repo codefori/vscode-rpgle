@@ -1,6 +1,7 @@
 import { DocumentSymbolParams, DocumentSymbol, SymbolKind } from 'vscode-languageserver';
 import { documents } from '.';
 import Document from '../../../../language/document';
+import { isInSqlBlock, isInCommentOrString } from '../utils/sqlDetection';
 
 // Provides sticky header context for RPGLE code blocks
 export default function stickyHeadersProvider(params: DocumentSymbolParams): DocumentSymbol[] {
@@ -40,6 +41,12 @@ export default function stickyHeadersProvider(params: DocumentSymbolParams): Doc
         if (isInString(line, match.index)) continue;
         
         const keyword = match[1].toLowerCase();
+        
+        // Skip SELECT if it's inside an SQL block
+        if (keyword === 'select' && isInSqlBlock(text, document.offsetAt({ line: lineNum, character: match.index }))) {
+          continue;
+        }
+        
         const name = match[2] || '';
         
         // Build display name
