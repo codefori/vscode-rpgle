@@ -16,6 +16,8 @@ import definitionProvider from './providers/definition';
 import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
+import foldingRangeProvider from './providers/foldingRange';
+import stickyHeadersProvider from './providers/stickyHeaders';
 
 import { connection, getFileRequest, getObject as getObjectData, handleClientRequests, memberResolve, streamfileResolve, validateUri } from "./connection";
 import * as Linter from './providers/linter';
@@ -82,7 +84,8 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.renameProvider = {prepareProvider: true};
 		result.capabilities.signatureHelpProvider = {
 			triggerCharacters: [`(`, `:`]
-		}
+		};
+		result.capabilities.foldingRangeProvider = true;
 	}
 
 	if (isLinterEnabled()) {
@@ -315,6 +318,8 @@ if (languageToolsEnabled) {
 	connection.onRenameRequest(renameRequestProvider);
 	connection.onCodeAction(genericCodeActionsProvider);
 	connection.onSignatureHelp(signatureHelpProvider);
+	connection.onFoldingRanges(foldingRangeProvider);
+	connection.onDocumentSymbol(stickyHeadersProvider);
 
 	// project specific
 	connection.onWorkspaceSymbol(workspaceSymbolProvider);
