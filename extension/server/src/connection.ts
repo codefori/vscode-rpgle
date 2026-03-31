@@ -152,25 +152,23 @@ export async function getFileRequest(uri: string, skipDebounce: boolean = false)
 	}
 }
 
-export let resolvedMembers: {[baseUri: string]: {[fileKey: string]: IBMiMember}} = {};
-export let resolvedStreamfiles: {[baseUri: string]: {[fileKey: string]: string}} = {};
+// Global caches - not scoped per file since library list is connection-level
+export let resolvedMembers: {[fileKey: string]: IBMiMember} = {};
+export let resolvedStreamfiles: {[fileKey: string]: string} = {};
 
 export async function memberResolve(baseUri: string, member: string, file: string): Promise<IBMiMember|undefined> {
-	// Normalize baseUri by removing query parameters to ensure consistent cache keys
-	const normalizedBaseUri = baseUri.split('?')[0];
 	const fileKey = file+member;
 	const startTime = Date.now();
 
-	// Check cache
-	if (resolvedMembers[normalizedBaseUri] && resolvedMembers[normalizedBaseUri][fileKey]) {
-		const cached = resolvedMembers[normalizedBaseUri][fileKey];
+	// Check global cache
+	if (resolvedMembers[fileKey]) {
+		const cached = resolvedMembers[fileKey];
 		const duration = Date.now() - startTime;
 		logWithTimestamp(`Member resolve CACHE HIT: ${file}/${member} -> ${cached.library}/${cached.file}/${cached.name} (${duration}ms)`, LogLevel.DEBUG);
 		return cached;
 	}
 
-	const baseFileName = getDisplayName(normalizedBaseUri);
-	logWithTimestamp(`Member resolve CACHE MISS: ${file}/${member} (baseUri=${baseFileName})`, LogLevel.DEBUG);
+	logWithTimestamp(`Member resolve CACHE MISS: ${file}/${member}`, LogLevel.DEBUG);
 
 	try {
 		const resolvedMember = await queue.add(() => {return connection.sendRequest("memberResolve", [member, file])}) as IBMiMember|undefined;
@@ -179,8 +177,8 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 		if (resolvedMember) {
 			logWithTimestamp(`Member resolve SUCCESS: ${file}/${member} -> ${resolvedMember.library}/${resolvedMember.file}/${resolvedMember.name} (${duration}ms)`, LogLevel.DEBUG);
 
-			if (!resolvedMembers[normalizedBaseUri]) resolvedMembers[normalizedBaseUri] = {};
-			resolvedMembers[normalizedBaseUri][fileKey] = resolvedMember;
+			// Store in global cache
+			resolvedMembers[fileKey] = resolvedMember;
 		} else {
 			logWithTimestamp(`Member resolve NOT FOUND: ${file}/${member} (${duration}ms)`, LogLevel.WARN);
 		}
@@ -197,22 +195,18 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 }
 
 export async function streamfileResolve(baseUri: string, base: string[]): Promise<string|undefined> {
-	// Normalize baseUri by removing query parameters to ensure consistent cache keys
-	const normalizedBaseUri = baseUri.split('?')[0];
 	const baseString = base.join(`-`);
 	const startTime = Date.now();
 
-	// Check cache
-	if (resolvedStreamfiles[normalizedBaseUri] && resolvedStreamfiles[normalizedBaseUri][baseString]) {
-		const cached = resolvedStreamfiles[normalizedBaseUri][baseString];
+	// Check global cache
+	if (resolvedStreamfiles[baseString]) {
+		const cached = resolvedStreamfiles[baseString];
 		const duration = Date.now() - startTime;
-		const requestingFile = getDisplayName(normalizedBaseUri);
-		logWithTimestamp(`Streamfile resolve CACHE HIT: ${base[0]} (requesting: ${requestingFile}) -> ${cached} (${duration}ms)`, LogLevel.DEBUG);
+		logWithTimestamp(`Streamfile resolve CACHE HIT: ${base[0]} -> ${cached} (${duration}ms)`, LogLevel.DEBUG);
 		return cached;
 	}
 
-	const requestingFile = getDisplayName(normalizedBaseUri);
-	logWithTimestamp(`Streamfile resolve CACHE MISS: ${base[0]} (requesting: ${requestingFile})`, LogLevel.DEBUG);
+	logWithTimestamp(`Streamfile resolve CACHE MISS: ${base[0]}`, LogLevel.DEBUG);
 
 	const workspace = await getWorkspaceFolder(baseUri);
 
@@ -223,18 +217,18 @@ export async function streamfileResolve(baseUri: string, base: string[]): Promis
 		const duration = Date.now() - startTime;
 
 		if (resolvedPath) {
-			logWithTimestamp(`Streamfile resolve SUCCESS: ${base[0]} (requesting: ${requestingFile}) -> ${resolvedPath} (${duration}ms)`, LogLevel.DEBUG);
+			logWithTimestamp(`Streamfile resolve SUCCESS: ${base[0]} -> ${resolvedPath} (${duration}ms)`, LogLevel.DEBUG);
 
-			if (!resolvedStreamfiles[normalizedBaseUri]) resolvedStreamfiles[normalizedBaseUri] = {};
-			resolvedStreamfiles[normalizedBaseUri][baseString] = resolvedPath;
+			// Store in global cache
+			resolvedStreamfiles[baseString] = resolvedPath;
 		} else {
-			logWithTimestamp(`Streamfile resolve NOT FOUND: ${base[0]} (requesting: ${requestingFile}) (${duration}ms)`, LogLevel.WARN);
+			logWithTimestamp(`Streamfile resolve NOT FOUND: ${base[0]} (${duration}ms)`, LogLevel.WARN);
 		}
 
 		return resolvedPath;
 	} catch (e) {
 		const duration = Date.now() - startTime;
-		logWithTimestamp(`Streamfile resolve ERROR: ${base[0]} (requesting: ${requestingFile}) (${duration}ms)`, LogLevel.ERROR);
+		logWithTimestamp(`Streamfile resolve ERROR: ${base[0]} (${duration}ms)`, LogLevel.ERROR);
 		console.log(JSON.stringify({baseUri, base, paths}));
 		console.log(e);
 	}
