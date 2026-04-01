@@ -2,10 +2,12 @@ export type SpecFieldValue = {value: string, text: string};
 export type SpecFieldDef = {id: string, name: string, start: number, end: number, values?: SpecFieldValue[], padStart?: boolean}
 
 export const SpecRulers: {[spec: string]: string} = {
-  C: `.....CL0N01Factor1+++++++Opcode&ExtFactor2+++++++Result++++++++Len++D+HiLoEq`,
-  D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords++++++++++++++++++++`,
-  F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords++++++++++++++++++++`,
-  P: `.....PName+++++++++++..T...................Keywords++++++++++++++++++++`
+  C: `.....CL0N01Factor1+++++++Opcode&ExtFactor2+++++++Result++++++++Len++D+HiLoEq....`,
+  D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords+++++++++++++++++++++++++++++`,
+  F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords+++++++++++++++++++++++++++++`,
+  I: `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
+  O: `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.Constant/Editword/DateFormat`,
+  P: `.....PName+++++++++++..T...................Keywords+++++++++++++++++++++++++++++`
 }
 
 export const specs: {[spec: string]: SpecFieldDef[]} = {

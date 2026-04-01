@@ -316,6 +316,13 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			uri: validUri
 		};
 	}
+
+	fetchingInProgress[includeString] = false;
+
+	return {
+		found: false,
+		uri: validUri
+	};
 });
 
 if (languageToolsEnabled) {
@@ -380,6 +387,17 @@ function executeParse(uri: string, parseId: number, document: any) {
 		// Only update diagnostics if this is still the latest parse
 		if (cache && isLatest) {
 			Linter.refreshLinterDiagnostics(document, cache);
+
+			// When includes are changed, clear cache for any files that reference it
+			for (const [thePath, cache] of Object.entries(parser.parsedCache)) {
+				if (cache) {
+					const includePaths = cache.includes.map(include => include.toPath);
+					if (includePaths.includes(document.uri)) {
+						parser.clearParsedCache(thePath);
+					}
+				}
+			}
+
 			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, diagnostics updated)`, LogLevel.INFO);
 		} else if (cache) {
 			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, STALE - ignored)`, LogLevel.DEBUG);
