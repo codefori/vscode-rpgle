@@ -21,7 +21,6 @@ import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileReques
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
-import { getPrettyType } from '../../../language/models/fixed';
 
 import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
@@ -316,13 +315,6 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			uri: validUri
 		};
 	}
-
-	fetchingInProgress[includeString] = false;
-
-	return {
-		found: false,
-		uri: validUri
-	};
 });
 
 if (languageToolsEnabled) {
