@@ -256,6 +256,9 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 			connection.sendDiagnostics({ uri: document.uri, diagnostics: [...indentDiags, ...generalDiags] });
 		}
 		return detail;
+	} else if (updateDiagnostics) {
+		// File is no longer **FREE — clear any previously published linter diagnostics for this URI
+		connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
 	}
 }
 
