@@ -9,7 +9,7 @@ import Cache from '../../../../../language/models/cache';
 import documentFormattingProvider from './documentFormatting';
 
 import * as Project from "../project";
-import { connection, getFileRequest, getWorkingDirectory, resolvedMembers, resolvedStreamfiles, validateUri, watchedFilesChangeEvent } from '../../connection';
+import { connection, getDisplayName, getFileRequest, getWorkingDirectory, validateUri, watchedFilesChangeEvent } from '../../connection';
 import { parseMemberUri } from '../../data';
 
 export let jsonCache: { [uri: string]: string } = {};
@@ -77,10 +77,10 @@ export function initialise(connection: _Connection) {
 		}
 	})
 
-	documents.onDidClose(async e => {
-		const uriString = e.document.uri;
-		resolvedMembers[uriString] = {};
-		resolvedStreamfiles[uriString] = {};
+	documents.onDidClose(async () => {
+		// Note: We no longer clear resolvedMembers/resolvedStreamfiles here
+		// since they are now global caches that should persist across file closes.
+		// They will be cleared when the connection is reset or library list changes.
 	})
 }
 
