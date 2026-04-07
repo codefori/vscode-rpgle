@@ -17,12 +17,19 @@ const outlineBar = window.createTextEditorDecorationType({});
 
 let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || false
 let currentEditorLine = -1;
+// Tracks the last RPG fixed-format editor that had the ruler painted, so it can
+// be cleared when focus moves to a webview (e.g. Ctrl+Shift+F4 prompter) or to
+// a non-RPG file, where onDidChangeTextEditorSelection never fires.
+let lastRpgleEditor: import('vscode').TextEditor | undefined = undefined;
 
 import { SpecFieldDef, SpecFieldValue, SpecRulers, specs } from '../schemas/specs';
 
 const getAreasForLine = (line: string, index: number) => {
   if (line.length < 6) return undefined;
-  if (line[6] === `*` || line[6] === `/`) return undefined;
+  // Skip comments (*), compiler directives (/), and legacy embedded SQL continuation lines (+).
+  // A `+` in column 7 marks a C spec SQL continuation (e.g. `C+ FROM qiws.qcustcdt;`)
+  // and should never trigger the spec ruler.
+  if (line[6] === `*` || line[6] === `/` || line[6] === `+`) return undefined;
 
   const specLetter = line[5].toUpperCase();
   if (specs[specLetter]) {
@@ -107,6 +114,19 @@ export function registerColumnAssist(context: ExtensionContext) {
         clearRulers(editor);
       }
     }),
+
+    // Clear the ruler when the active editor changes (e.g. focus moves to a
+    // webview panel such as the Ctrl+Shift+F4 Column Assistant, or to a
+    // different file). onDidChangeTextEditorSelection does not fire in those
+    // cases, so the ruler would otherwise remain painted indefinitely.
+    window.onDidChangeActiveTextEditor(newEditor => {
+      if (lastRpgleEditor && newEditor !== lastRpgleEditor) {
+        clearRulers(lastRpgleEditor);
+      }
+      if (newEditor && rulerEnabled) {
+        updateRuler(newEditor);
+      }
+    }),
   )
 }
 
@@ -183,7 +203,10 @@ function updateRuler(editor = window.activeTextEditor) {
                 before: {
                   contentText: positionsData.outline,
                   color: new ThemeColor(`editorLineNumber.foreground`),
-                  textDecoration: `none; position: absolute; top: -1.4em; background-color: var(--vscode-editor-background); width: 100vw;`,
+                  // width is capped at 80ch (the fixed-format source width) so the
+                  // opaque background does not paint over the Source Change Date
+                  // columns that IBM i source physical files carry beyond column 80.
+                  textDecoration: `none; position: absolute; top: -1.4em; background-color: var(--vscode-editor-background); width: 80ch;`,
                 }
               }
             },
@@ -193,6 +216,7 @@ function updateRuler(editor = window.activeTextEditor) {
         }
 
         currentEditorLine = lineNumber;
+        lastRpgleEditor = editor;
       }
     }
   }
@@ -207,6 +231,9 @@ function clearRulers(editor = window.activeTextEditor) {
     editor.setDecorations(currentArea, []);
     editor.setDecorations(notCurrentArea, []);
     editor.setDecorations(outlineBar, []);
+  }
+  if (editor === lastRpgleEditor) {
+    lastRpgleEditor = undefined;
   }
 }
 
