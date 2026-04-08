@@ -56,6 +56,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 		const blockSymbols: DocumentSymbol[] = [];
 		const blockPatterns = [
 			{ pattern: /\b(if|ifeq|ifne|ifgt|iflt|ifge|ifle)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\/(if)\b/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(dow|doweq|downe|dowgt|dowlt|dowge|dowle)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(dou|doueq|doune|dougt|doult|douge|doule)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(do)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
@@ -92,9 +93,19 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 					const name = match[2] || '';
 					
 					// Build display name
-					let displayName = keyword.toUpperCase();
+					// Check if this is a directive (starts with /)
+					const isDirective = match[0].startsWith('/');
+					let displayName = isDirective ? `/${keyword.toUpperCase()}` : keyword.toUpperCase();
+					
 					if (name) {
 						displayName += ` ${name}`;
+					} else if (isDirective) {
+						// For directives, extract condition from the full line
+						const matchEnd = match.index + match[0].length;
+						const restOfLine = line.substring(matchEnd).trim();
+						if (restOfLine) {
+							displayName += ` ${restOfLine}`;
+						}
 					} else if (match[0].length > keyword.length) {
 						const condition = match[0].substring(keyword.length).trim();
 						if (condition && condition !== ';') {
