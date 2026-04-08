@@ -2,6 +2,8 @@ import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-
 import { documents, parser, prettyKeywords } from '.';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
+import Document from '../../../../language/document';
+import { isInSqlBlock } from '../utils/sqlDetection';
 
 export default async function documentSymbolProvider(handler: DocumentSymbolParams): Promise<DocumentSymbol[]> {
 	const currentPath = handler.textDocument.uri;
@@ -34,8 +36,85 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 		return parent;
 	}
 
+	// Helper functions for detecting code blocks
+	const isCommentLine = (line: string): boolean => {
+		const trimmed = line.trim();
+		return trimmed.startsWith('//') || trimmed.startsWith('*');
+	};
+
+	const isInString = (line: string, position: number): boolean => {
+		let inString = false;
+		for (let i = 0; i < position; i++) {
+			if (line[i] === "'") {
+				inString = !inString;
+			}
+		}
+		return inString;
+	};
+
+	const getCodeBlockSymbols = (text: string, startLine: number, endLine: number): DocumentSymbol[] => {
+		const blockSymbols: DocumentSymbol[] = [];
+		const blockPatterns = [
+			{ pattern: /\b(if)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(dow|dou)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(for|for-each)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(select)\b/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(monitor)\b/gi, kind: SymbolKind.Null },
+		];
+
+		const lines = text.split('\n');
+		
+		for (let lineNum = startLine; lineNum <= endLine && lineNum < lines.length; lineNum++) {
+			const line = lines[lineNum];
+			
+			if (isCommentLine(line)) continue;
+
+			for (const { pattern, kind } of blockPatterns) {
+				pattern.lastIndex = 0;
+				const match = pattern.exec(line);
+				
+				if (match) {
+					if (isInString(line, match.index)) continue;
+					
+					const keyword = match[1].toLowerCase();
+					
+					// Skip SELECT if it's inside an SQL block
+					if (keyword === 'select' && document && isInSqlBlock(text, document.offsetAt({ line: lineNum, character: match.index }))) {
+						continue;
+					}
+					
+					const name = match[2] || '';
+					
+					// Build display name
+					let displayName = keyword.toUpperCase();
+					if (name) {
+						displayName += ` ${name}`;
+					} else if (match[0].length > keyword.length) {
+						const condition = match[0].substring(keyword.length).trim();
+						if (condition && condition !== ';') {
+							displayName += ` ${condition.replace(/;$/, '')}`;
+						}
+					}
+
+					blockSymbols.push(DocumentSymbol.create(
+						displayName,
+						undefined,
+						kind,
+						Range.create(lineNum, 0, lineNum, line.length),
+						Range.create(lineNum, 0, lineNum, line.length)
+					));
+					
+					break;
+				}
+			}
+		}
+
+		return blockSymbols;
+	};
+
 	if (document) {
 		const doc = await parser.getDocs(currentPath, document.getText());
+		const text = document.getText();
 
 		/**
 		 * @param {Cache} scope
@@ -52,9 +131,9 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						prettyKeywords(proc.keyword),
 						proc.prototype ? SymbolKind.Interface : SymbolKind.Function,
 						Range.create(proc.range.start!, 0, proc.range.end!, 0),
-						Range.create(proc.range.start!, 0, proc.range.end!, 0),
+						Range.create(proc.range.start!, 0, proc.range.start!, 0),
 					);
-
+	
 					if (proc.scope) {
 						procDef.children = proc.subItems
 						.filter(subitem => subitem.position && subitem.position.path === currentPath)
@@ -67,8 +146,12 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						));
 						
 						procDef.children.push(...getScopeVars(proc.scope));
+						
+						// Add code block symbols (IF, DOW, FOR, etc.) as children
+						const blockSymbols = getCodeBlockSymbols(text, proc.range.start!, proc.range.end!);
+						procDef.children.push(...blockSymbols);
 					}
-
+	
 					currentScopeDefs.push(procDef);
 				});
 
