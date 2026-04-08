@@ -55,11 +55,17 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 	const getCodeBlockSymbols = (text: string, startLine: number, endLine: number): DocumentSymbol[] => {
 		const blockSymbols: DocumentSymbol[] = [];
 		const blockPatterns = [
-			{ pattern: /\b(if)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
-			{ pattern: /\b(dow|dou)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(if|ifeq|ifne|ifgt|iflt|ifge|ifle)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(dow|doweq|downe|dowgt|dowlt|dowge|dowle)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(dou|doueq|doune|dougt|doult|douge|doule)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(do)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(for|for-each)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(select)\b/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(monitor)\b/gi, kind: SymbolKind.Null },
+			{ pattern: /\b(dcl-ds)\s+(\w+)/gi, kind: SymbolKind.Struct },
+			{ pattern: /\b(dcl-pi)\s+(\w+)/gi, kind: SymbolKind.Interface },
+			{ pattern: /\b(dcl-enum)\s+(\w+)/gi, kind: SymbolKind.Enum },
+			{ pattern: /\b(casxx|caseq|casne|casgt|caslt|casge|casle)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
 		];
 
 		const lines = text.split('\n');

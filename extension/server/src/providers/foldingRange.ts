@@ -11,9 +11,10 @@ interface BlockPair {
 
 // RPGLE block structures that can be folded
 const RPGLE_BLOCK_PAIRS: BlockPair[] = [
-  { open: ['if'], close: ['endif'] },
-  { open: ['dow'], close: ['enddo'] },
-  { open: ['dou'], close: ['enddo'] },
+  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif'] },
+  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo'] },
+  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo'] },
+  { open: ['do'], close: ['enddo'] },
   { open: ['for', 'for-each'], close: ['endfor'] },
   { open: ['select'], close: ['endsl'] },
   { open: ['monitor'], close: ['endmon'] },
@@ -22,7 +23,8 @@ const RPGLE_BLOCK_PAIRS: BlockPair[] = [
   { open: ['dcl-pr'], close: ['end-pr'] },
   { open: ['dcl-pi'], close: ['end-pi'] },
   { open: ['dcl-enum'], close: ['end-enum'] },
-  { open: ['begsr'], close: ['endsr'] }
+  { open: ['begsr'], close: ['endsr'] },
+  { open: ['casxx', 'caseq', 'casne', 'casgt', 'caslt', 'casge', 'casle'], close: ['endcs'] },
 ];
 
 // Provides folding ranges for RPGLE code blocks

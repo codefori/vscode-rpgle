@@ -10,18 +10,20 @@ interface BracketPair {
 
 // RPGLE block structures for bracket matching
 const RPGLE_BRACKET_PAIRS: BracketPair[] = [
-  { open: ['if'], close: ['endif'], middle: ['else', 'elseif'] },
-  { open: ['dow'], close: ['enddo'] },
-  { open: ['dou'], close: ['enddo'] },
+  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif'], middle: ['else', 'elseif'] },
+  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo'] },
+  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo'] },
+  { open: ['do'], close: ['enddo'] },
   { open: ['for', 'for-each'], close: ['endfor'] },
-  { open: ['select'], close: ['endsl'], middle: ['when', 'when-is', 'when-in', 'other'] },
+  { open: ['select'], close: ['endsl'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
   { open: ['monitor'], close: ['endmon'], middle: ['on-error', 'on-excp'] },
   { open: ['dcl-proc'], close: ['end-proc'] },
   { open: ['dcl-ds'], close: ['end-ds'] },
   { open: ['dcl-pr'], close: ['end-pr'] },
   { open: ['dcl-pi'], close: ['end-pi'] },
   { open: ['dcl-enum'], close: ['end-enum'] },
-  { open: ['begsr'], close: ['endsr'] }
+  { open: ['begsr'], close: ['endsr'] },
+  { open: ['casxx', 'caseq', 'casne', 'casgt', 'caslt', 'casge', 'casle'], close: ['endcs'] },
 ];
 
 // Highlight style for matched brackets
