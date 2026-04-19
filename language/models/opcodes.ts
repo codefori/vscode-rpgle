@@ -16,6 +16,7 @@ export default [
 	`DUMP1`,
 	`ELSE`,
 	`ELSEIF`,
+	`END`,
 	`ENDDO`,
 	`ENDFOR`,
 	`ENDIF`,
