@@ -11,11 +11,11 @@ interface BlockPair {
 
 // RPGLE block structures that can be folded
 const RPGLE_BLOCK_PAIRS: BlockPair[] = [
-  { open: ['if'], close: ['endif'] },
-  { open: ['dow'], close: ['enddo'] },
-  { open: ['dou'], close: ['enddo'] },
-  { open: ['for', 'for-each'], close: ['endfor'] },
-  { open: ['select'], close: ['endsl'] },
+  { open: ['if'], close: ['endif', 'end'] },
+  { open: ['dow'], close: ['enddo', 'end'] },
+  { open: ['dou'], close: ['enddo', 'end'] },
+  { open: ['for', 'for-each'], close: ['endfor', 'end'] },
+  { open: ['select'], close: ['endsl', 'end'] },
   { open: ['monitor'], close: ['endmon'] },
   { open: ['dcl-proc'], close: ['end-proc'] },
   { open: ['dcl-ds'], close: ['end-ds'] },
@@ -98,24 +98,51 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
       });
     } else if (pair.close.includes(current.word)) {
       // Closing keyword - find matching opener in stack
-      for (let j = stack.length - 1; j >= 0; j--) {
-        if (stack[j].pair === pair) {
-          const openBlock = stack[j];
-          
-          // Create folding range only if block spans multiple lines
-          if (current.line > openBlock.startLine) {
-            foldingRanges.push(FoldingRange.create(
-              openBlock.startLine,
-              current.line,
-              undefined,
-              undefined,
-              FoldingRangeKind.Region
-            ));
+      // Special handling for 'END' - it can close any compatible block
+      if (current.word === 'end') {
+        // Find the most recent block that can be closed by 'END'
+        for (let j = stack.length - 1; j >= 0; j--) {
+          // Check if 'END' is a valid closer for this block
+          if (stack[j].pair.close.includes('end')) {
+            const openBlock = stack[j];
+            
+            // Create folding range only if block spans multiple lines
+            if (current.line > openBlock.startLine) {
+              foldingRanges.push(FoldingRange.create(
+                openBlock.startLine,
+                current.line,
+                undefined,
+                undefined,
+                FoldingRangeKind.Region
+              ));
+            }
+            
+            // Remove matched block from stack
+            stack.splice(j, 1);
+            break;
           }
-          
-          // Remove matched block from stack
-          stack.splice(j, 1);
-          break;
+        }
+      } else {
+        // Specific closing keyword (endif, enddo, etc.) - match exact pair
+        for (let j = stack.length - 1; j >= 0; j--) {
+          if (stack[j].pair === pair) {
+            const openBlock = stack[j];
+            
+            // Create folding range only if block spans multiple lines
+            if (current.line > openBlock.startLine) {
+              foldingRanges.push(FoldingRange.create(
+                openBlock.startLine,
+                current.line,
+                undefined,
+                undefined,
+                FoldingRangeKind.Region
+              ));
+            }
+            
+            // Remove matched block from stack
+            stack.splice(j, 1);
+            break;
+          }
         }
       }
     }
