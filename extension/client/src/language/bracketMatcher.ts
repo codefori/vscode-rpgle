@@ -10,18 +10,20 @@ interface BracketPair {
 
 // RPGLE block structures for bracket matching
 const RPGLE_BRACKET_PAIRS: BracketPair[] = [
-  { open: ['if'], close: ['endif', 'end'], middle: ['else', 'elseif'] },
-  { open: ['dow'], close: ['enddo', 'end'] },
-  { open: ['dou'], close: ['enddo', 'end'] },
-  { open: ['for', 'for-each'], close: ['endfor', 'end'] },
-  { open: ['select'], close: ['endsl', 'end'], middle: ['when', 'when-is', 'when-in', 'other'] },
+  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif','end'], middle: ['else', 'elseif'] },
+  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo','end'] },
+  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo','end'] },
+  { open: ['do'], close: ['enddo','end'] },
+  { open: ['for', 'for-each'], close: ['endfor','end'] },
+  { open: ['select'], close: ['endsl','end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
   { open: ['monitor'], close: ['endmon'], middle: ['on-error', 'on-excp'] },
   { open: ['dcl-proc'], close: ['end-proc'] },
   { open: ['dcl-ds'], close: ['end-ds'] },
   { open: ['dcl-pr'], close: ['end-pr'] },
   { open: ['dcl-pi'], close: ['end-pi'] },
   { open: ['dcl-enum'], close: ['end-enum'] },
-  { open: ['begsr'], close: ['endsr'] }
+  { open: ['begsr'], close: ['endsr'] },
+  { open: ['casxx', 'caseq', 'casne', 'casgt', 'caslt', 'casge', 'casle'], close: ['endcs'] },
 ];
 
 // Highlight style for matched brackets
