@@ -111,11 +111,14 @@ function updateDecorations(editor: vscode.TextEditor) {
   }
   
   // Find matching bracket pair
-  // Special handling for 'END' - need to determine which pair it belongs to
+  // Special handling for closing keywords that can close multiple block types
   let matchingPair: BracketPair | undefined;
   
-  if (word === 'end') {
-    // For END, we need to find which block it actually closes
+  // Check if this is a closing keyword
+  const isClosingKeyword = RPGLE_BRACKET_PAIRS.some(p => p.close.includes(word));
+  
+  if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
+    // For END and ENDDO, we need to find which block it actually closes
     const text = document.getText();
     const allMatches = findAllMatches(text, document);
     const currentOffset = document.offsetAt(wordRange.start);
@@ -130,8 +133,8 @@ function updateDecorations(editor: vscode.TextEditor) {
     }
     
     if (currentIndex !== -1) {
-      // Use findMatchingOpen to determine which block this END closes
-      const openIndex = findMatchingOpenForEnd(allMatches, currentIndex);
+      // Use findMatchingOpenForClosing to determine which block this closes
+      const openIndex = findMatchingOpenForClosing(allMatches, currentIndex, word);
       if (openIndex !== -1) {
         const openWord = allMatches[openIndex].word;
         matchingPair = RPGLE_BRACKET_PAIRS.find(p => p.open.includes(openWord));
@@ -262,10 +265,19 @@ function findMatchingOpenForEnd(
   matches: { offset: number; word: string; length: number }[],
   endIndex: number
 ): number {
+  return findMatchingOpenForClosing(matches, endIndex, 'end');
+}
+
+// Helper function for finding the opening block for any closing keyword
+function findMatchingOpenForClosing(
+  matches: { offset: number; word: string; length: number }[],
+  closeIndex: number,
+  closingWord: string
+): number {
   // Build a stack to track all open blocks
   const stack: { index: number; pair: BracketPair }[] = [];
   
-  for (let i = 0; i < endIndex; i++) {
+  for (let i = 0; i < closeIndex; i++) {
     const word = matches[i].word;
     
     // Check if this word opens any block
@@ -275,11 +287,28 @@ function findMatchingOpenForEnd(
     }
     
     // Check if this word closes a block
-    const closingPair = RPGLE_BRACKET_PAIRS.find(p => p.close.includes(word));
-    if (closingPair) {
-      // Remove the most recent matching open block from stack
+    // Special handling for shared closers like 'end' and 'enddo'
+    if (word === 'end') {
+      // Find the most recent block that can be closed by 'END'
       for (let j = stack.length - 1; j >= 0; j--) {
-        if (stack[j].pair === closingPair) {
+        if (stack[j].pair.close.includes('end')) {
+          stack.splice(j, 1);
+          break;
+        }
+      }
+    } else if (word === 'enddo') {
+      // Find the most recent block that can be closed by 'ENDDO' (DOW, DOU, or DO)
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].pair.close.includes('enddo')) {
+          stack.splice(j, 1);
+          break;
+        }
+      }
+    } else {
+      // Other specific closers (endif, endfor, endsl, etc.)
+      // Find the most recent block that can be closed by this keyword
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].pair.close.includes(word)) {
           stack.splice(j, 1);
           break;
         }
@@ -287,9 +316,9 @@ function findMatchingOpenForEnd(
     }
   }
   
-  // Find the most recent unclosed block that can be closed by 'END'
+  // Find the most recent unclosed block that can be closed by the closing word
   for (let j = stack.length - 1; j >= 0; j--) {
-    if (stack[j].pair.close.includes('end')) {
+    if (stack[j].pair.close.includes(closingWord)) {
       return stack[j].index;
     }
   }
@@ -432,19 +461,16 @@ function findMatchingClose(
       }
     } else {
       // Specific closing keyword (endif, enddo, etc.)
-      const closingPair = RPGLE_BRACKET_PAIRS.find(p => p.close.includes(word));
-      if (closingPair) {
-        // Find the most recent block of this type
-        for (let j = stack.length - 1; j >= 0; j--) {
-          if (stack[j] === closingPair) {
-            if (j === 0) {
-              // This closes our target block
-              return i;
-            }
-            // Remove this block from stack
-            stack.splice(j, 1);
-            break;
+      // Find the most recent block that can be closed by this keyword
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].close.includes(word)) {
+          if (j === 0) {
+            // This closes our target block
+            return i;
           }
+          // Remove this block from stack
+          stack.splice(j, 1);
+          break;
         }
       }
     }
@@ -476,14 +502,11 @@ function findMatchingOpen(
       }
       
       // Check if this word closes a block
-      const closingPair = RPGLE_BRACKET_PAIRS.find(p => p.close.includes(word));
-      if (closingPair) {
-        // Remove the most recent matching open block from stack
-        for (let j = stack.length - 1; j >= 0; j--) {
-          if (stack[j].pair === closingPair) {
-            stack.splice(j, 1);
-            break;
-          }
+      // Find the most recent block that can be closed by this keyword
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].pair.close.includes(word)) {
+          stack.splice(j, 1);
+          break;
         }
       }
     }
