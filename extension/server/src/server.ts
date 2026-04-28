@@ -140,7 +140,7 @@ let fetchingInProgress: { [fetchKey: string]: boolean } = {};
 
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
-	const uriPath = currentUri.path;
+	const uriPath = currentUri.fsPath;
 
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
