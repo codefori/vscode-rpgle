@@ -140,7 +140,7 @@ let fetchingInProgress: { [fetchKey: string]: boolean } = {};
 
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
-	const uriPath = currentUri.path;
+	const uriPath = currentUri.fsPath;
 
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
@@ -166,7 +166,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				const workspaceFolders = await connection.workspace.getWorkspaceFolders();
 				let workspaceFolder: WorkspaceFolder | undefined;
 				if (workspaceFolders) {
-					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).path))
+					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).fsPath))
 				}
 
 				if (Project.isEnabled) {
@@ -176,7 +176,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				} else {
 					// Because project mode is disabled, likely due to the large workspace, we don't search
 					if (workspaceFolder) {
-						cleanString = path.posix.join(URI.parse(workspaceFolder.uri).path, cleanString)
+						cleanString = path.posix.join(URI.parse(workspaceFolder.uri).fsPath, cleanString)
 					}
 
 					validUri = existsSync(cleanString) ?

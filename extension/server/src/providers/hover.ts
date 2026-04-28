@@ -125,17 +125,15 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 						const foundUri = URI.parse(include.uri);
 
 						if (foundUri.scheme === `member`) {
-							const lastIndex = foundUri.path.lastIndexOf(`.`);
+							const lastIndex = foundUri.fsPath.lastIndexOf(`.`);
 							if (lastIndex >= 0) {
-								displayName = foundUri.path.substring(0, lastIndex);
+								displayName = foundUri.fsPath.substring(0, lastIndex);
 							} else {
-								displayName = foundUri.path;
+								displayName = foundUri.fsPath;
 							}
 
-							if (displayName.startsWith(`/`)) displayName = displayName.substring(1);
-
 						} else {
-							displayName = foundUri.path;
+							displayName = foundUri.fsPath;
 						}
 					}
 
