@@ -23,7 +23,7 @@ export function buildRequestHandlers(client: LanguageClient) {
 			return doc.uri.toString();
 		} else
 			if (uri.scheme === `file`) {
-				const basename = path.basename(uri.path);
+				const basename = path.basename(uri.fsPath);
 				const [possibleFile] = await workspace.findFiles(`**/${basename}`, `**/.git`, 1);
 				if (possibleFile) {
 					return possibleFile.toString();

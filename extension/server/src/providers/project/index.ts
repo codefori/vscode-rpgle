@@ -35,7 +35,14 @@ export async function initialise() {
 						case `.rpgleh`:
 							loadLocalFile(fileEvent.uri);
 
-							currentIncludes = [];
+							// Invalidate only the workspace that owns this include file
+							getWorkspaceFolder(fileEvent.uri).then(ws => {
+								if (ws) {
+									delete currentIncludesPerWorkspace[ws.uri];
+								} else {
+									currentIncludesPerWorkspace = {};
+								}
+							});
 							break;
 						case `.json`:
 							if (pathData.base === `iproj.json`) {
@@ -156,24 +163,27 @@ export async function getTextDoc(uri: string): Promise<TextDocument | undefined>
 	return;
 }
 
-let currentIncludes: PossibleInclude[] = [];
+let currentIncludesPerWorkspace: {[workspaceUri: string]: PossibleInclude[]} = {};
 
 export async function getIncludes(baseUri: string) {
 	const workspace = await getWorkspaceFolder(baseUri);
 	if (workspace) {
-		const workspacePath = URI.parse(workspace?.uri).path;
+		const workspaceUri = workspace.uri;
+		const workspacePath = URI.parse(workspaceUri).path;
 
-		if (!currentIncludes || currentIncludes && currentIncludes.length === 0) {
-			currentIncludes = glob.sync(`**/*.{rpgleinc,rpgleh}`, {
+		if (!currentIncludesPerWorkspace[workspaceUri] || currentIncludesPerWorkspace[workspaceUri].length === 0) {
+			currentIncludesPerWorkspace[workspaceUri] = glob.sync(`**/*.{rpgleinc,rpgleh}`, {
 				cwd: workspacePath,
 				nocase: true,
 				absolute: true
 			}).map(truePath => ({
 				uri: URI.file(truePath).toString(),
 				relative: path.relative(workspacePath, truePath)
-			}))
+			}));
 		}
+
+		return currentIncludesPerWorkspace[workspaceUri];
 	}
 
-	return currentIncludes;
+	return [];
 }

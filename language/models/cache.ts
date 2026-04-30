@@ -3,7 +3,7 @@ import { IRange } from "../types";
 import Declaration, { DeclarationType } from "./declaration";
 
 const DEFAULT_INDICATORS = [
-  ...Array(98).keys(), 
+  ...Array(98).keys(),
   `LR`, `KL`, `MR`,
   `L1`, `L2`, `L3`, `L4`, `L5`, `L6`, `L7`, `L8`, `L9`,
   `U1`, `U2`, `U3`, `U4`, `U5`, `U6`, `U7`, `U8`,
@@ -140,7 +140,7 @@ export default class Cache {
   get parameters() {
     return this.symbols.filter(s => s.type === `parameter`);
   }
-  
+
   addSymbol(symbol: Declaration) {
     const name = symbol.name.toUpperCase();
     if (this.symbolRegister.has(name)) {
@@ -181,7 +181,8 @@ export default class Cache {
         // Scan symbols in reverse to determine the most recently defined
         const symbol = symbols[i];
         if (specificType && symbol.type !== specificType) {
-          return undefined;
+          // Type mismatch — keep scanning for a matching type instead of failing early
+          continue;
         }
 
         if (symbol.name.toUpperCase() === name) {
@@ -289,7 +290,7 @@ export default class Cache {
 
     if (def.type === `file`) {
       return { type: { name: `file`, isArray: false, value: def.name } };
-      
+
     } else if (typeof keywords[`LIKEDS`] === `string`) {
       refName = (keywords[`LIKEDS`] as string).toUpperCase();
       reference = this.symbols.find(s => s.name.toUpperCase() === refName);
@@ -316,7 +317,7 @@ export default class Cache {
     return {};
   }
 
-  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {  
+  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
     for (const def of scope.symbols) {
       let possibleRef: boolean;
 
