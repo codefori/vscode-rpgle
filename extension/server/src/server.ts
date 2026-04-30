@@ -176,14 +176,11 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				} else {
 					// Because project mode is disabled, likely due to the large workspace, we don't search
 					if (workspaceFolder) {
-						cleanString = path.posix.join(URI.parse(workspaceFolder.uri).fsPath, cleanString)
+						cleanString = path.join(URI.parse(workspaceFolder.uri).fsPath, cleanString)
 					}
 
 					validUri = existsSync(cleanString) ?
-						URI.from({
-							scheme: currentUri.scheme,
-							path: cleanString
-						}).toString()
+						URI.file(cleanString).toString()
 						: undefined;
 				}
 
