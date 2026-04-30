@@ -96,6 +96,13 @@
 				"icon": "$(refresh)"
 			},
 			{
+				"command": "vscode-rpgle.server.clearAllCache",
+				"title": "Clear All Caches",
+				"category": "RPGLE",
+				"enablement": "code-for-ibmi:connected",
+				"icon": "$(trash)"
+			},
+			{
 				"command": "vscode-rpgle.assist.moveLeft",
 				"title": "Move Left",
 				"category": "RPGLE Fixed-Format",
@@ -147,6 +154,11 @@
 			"view/title": [
 				{
 					"command": "vscode-rpgle.server.reloadCache",
+					"group": "navigation",
+					"when": "view == outline"
+				},
+				{
+					"command": "vscode-rpgle.server.clearAllCache",
 					"group": "navigation",
 					"when": "view == outline"
 				}

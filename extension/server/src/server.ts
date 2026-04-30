@@ -161,6 +161,22 @@ let includeCacheTTL = 5 * 60 * 1000;    // 5 minutes default
 let includeCacheMaxSize = 500;
 let resolvedIncludeCache: Map<string, {result: {found: boolean, uri?: string, content?: string}, fetched: number}> = new Map();
 
+function clearAllCaches() {
+	parser.clearTableCache();
+
+	for (const uri of Object.keys(parser.parsedCache)) {
+		parser.clearParsedCache(uri);
+	}
+
+	resolvedIncludeCache.clear();
+	fetchingInProgress = {};
+	CacheMetrics.reset();
+}
+
+connection.onRequest(`clearAllCache`, () => {
+	clearAllCaches();
+});
+
 parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 	const fetchKey = `${stringUri}::${includeString}`;
 	const now = Date.now();
@@ -334,7 +350,9 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 		resolvedIncludeCache.set(fetchKey, { result, fetched: Date.now() });
 		if (resolvedIncludeCache.size > includeCacheMaxSize) {
 			const oldestKey = resolvedIncludeCache.keys().next().value;
-			resolvedIncludeCache.delete(oldestKey);
+			if (oldestKey) {
+				resolvedIncludeCache.delete(oldestKey);
+			}
 		}
 
 		return result;

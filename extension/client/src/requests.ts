@@ -183,6 +183,10 @@ export function clearTableCache(client: LanguageClient) {
 	client.sendRequest(`clearTableCache`);
 }
 
+export function clearAllCache(client: LanguageClient) {
+	client.sendRequest(`clearAllCache`);
+}
+
 export function getCache(client: LanguageClient, uri: Uri): Promise<any> {
 	return client.sendRequest(`getCache`, uri.toString());
 }
