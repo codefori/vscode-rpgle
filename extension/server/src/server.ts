@@ -27,6 +27,7 @@ import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
+import { resolveWorkspaceIncludePath } from './includeResolver';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
@@ -176,12 +177,12 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				} else {
 					// Because project mode is disabled, likely due to the large workspace, we don't search
 					if (workspaceFolder) {
-						cleanString = path.join(URI.parse(workspaceFolder.uri).fsPath, cleanString)
+						const resolved = resolveWorkspaceIncludePath(workspaceFolder.uri, cleanString);
+						cleanString = resolved.absolutePath;
+						validUri = existsSync(cleanString) ? resolved.fileUri : undefined;
+					} else {
+						validUri = existsSync(cleanString) ? URI.file(cleanString).toString() : undefined;
 					}
-
-					validUri = existsSync(cleanString) ?
-						URI.file(cleanString).toString()
-						: undefined;
 				}
 
 				if (!validUri) {
