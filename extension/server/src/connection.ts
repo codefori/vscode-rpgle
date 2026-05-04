@@ -25,7 +25,6 @@ const queue = new PQueue();
  * Tuning knobs — controlled via VS Code settings (vscode-rpgle.cache.*):
  *   remoteFileTTL      — how long a remote file body is considered fresh (ms)
  *   remoteFileMaxSize  — maximum number of remote file bodies kept in memory
- * Defaults match the "normal" mode; aggressiveMode raises both.
  */
 export let remoteFileTTL = 5 * 60 * 1000;    // 5 minutes default
 export let remoteFileMaxSize = 200;

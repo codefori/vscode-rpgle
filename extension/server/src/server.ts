@@ -51,14 +51,14 @@ connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
 
 	// Apply cache settings passed from the VS Code client as initializationOptions
-	const opts = params.initializationOptions as {aggressiveMode?: boolean, fileTTLSeconds?: number, fileMaxEntries?: number} | undefined;
+	const opts = params.initializationOptions as { fileTTLSeconds?: number, fileMaxEntries?: number} | undefined;
 	if (opts) {
-		const ttlMs = (opts.fileTTLSeconds ?? (opts.aggressiveMode ? 1800 : 300)) * 1000;
-		const maxEntries = opts.fileMaxEntries ?? (opts.aggressiveMode ? 500 : 200);
+		const ttlMs = (opts.fileTTLSeconds ?? 300) * 1000;
+		const maxEntries = opts.fileMaxEntries ?? 200;
 		applyRemoteCacheSettings(ttlMs, maxEntries);
 		includeCacheTTL = ttlMs;
 		includeCacheMaxSize = maxEntries * 2;
-		console.log(`Cache settings applied: TTL=${ttlMs}ms, max=${maxEntries} (aggressive=${opts.aggressiveMode})`);
+		console.log(`Cache settings applied: TTL=${ttlMs}ms, max=${maxEntries} `);
 	}
 
 	console.log(capabilities.textDocument?.completion);
@@ -258,7 +258,6 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// Resolving IFS path from member or streamfile
 
 				// IFS fetch
-
 				if (cleanString.startsWith(`/`)) {
 					// Path from root
 					validUri = URI.from({
@@ -268,7 +267,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 
 				} else {
 					// Search for the include with common extensions
-					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
+					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`, `${cleanString}.sqlrplge`];
 
 					// Path from home directory?
 					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);

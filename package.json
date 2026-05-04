@@ -89,18 +89,17 @@
 				"enablement": "editorLangId == rpgle"
 			},
 			{
-				"command": "vscode-rpgle.server.reloadCache",
-				"title": "RPGLE: Reload Cache",
-				"category": "RPGLE",
-				"enablement": "code-for-ibmi:connected",
-				"icon": "$(refresh)"
-			},
-			{
-				"command": "vscode-rpgle.server.clearAllCache",
+				"command": "vscode-rpgle.server.clearCache",
 				"title": "Clear All Caches",
 				"category": "RPGLE",
-				"enablement": "code-for-ibmi:connected",
 				"icon": "$(trash)"
+			},
+			{
+				"command": "vscode-rpgle.server.viewCacheStats",
+				"title": "View Cache Statistics",
+				"category": "RPGLE",
+				"enablement": "code-for-ibmi:connected",
+				"icon": "$(graph)"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveLeft",
@@ -159,6 +158,11 @@
 				},
 				{
 					"command": "vscode-rpgle.server.clearAllCache",
+					"group": "navigation",
+					"when": "view == outline"
+				},
+				{
+					"command": "vscode-rpgle.server.viewCacheStats",
 					"group": "navigation",
 					"when": "view == outline"
 				}

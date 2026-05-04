@@ -187,6 +187,16 @@ export function clearAllCache(client: LanguageClient) {
 	client.sendRequest(`clearAllCache`);
 }
 
+export interface CacheMetricsResponse {
+	parsed: { hits: number, misses: number };
+	table: { hits: number, misses: number };
+	include: { hits: number, misses: number };
+}
+
+export function getCacheMetrics(client: LanguageClient): Promise<CacheMetricsResponse> {
+	return client.sendRequest(`getCacheMetrics`);
+}
+
 export function getCache(client: LanguageClient, uri: Uri): Promise<any> {
 	return client.sendRequest(`getCache`, uri.toString());
 }
