@@ -15,13 +15,52 @@ const HALF_HOUR = (30 * 60 * 1000);
 
 export type tablePromise = (name: string, aliases?: boolean) => Promise<Declaration[]>;
 export type includeFilePromise = (baseFile: string, includeString: string) => Promise<{found: boolean, uri?: string, content?: string}>;
-export type TableDetail = {[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}};
+export type TableDetail = {[name: string]: {fetched: number, fetchingPromise?: Promise<Declaration[]>, recordFormats: Declaration[]}};
 export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean};
+
+/**
+ * Lightweight cache instrumentation. Enable with CacheMetrics.enabled = true.
+ * Tracks hits/misses for parsed document cache, table cache, and include fetches.
+ */
+export class CacheMetrics {
+  static enabled = false;
+  static parsedHits = 0;
+  static parsedMisses = 0;
+  static tableHits = 0;
+  static tableMisses = 0;
+  static includeHits = 0;
+  static includeMisses = 0;
+
+  static log(event: string, key: string) {
+    if (CacheMetrics.enabled) {
+      console.log(`[cache] ${event} key=${key}`);
+    }
+  }
+
+  static reset() {
+    CacheMetrics.parsedHits = 0;
+    CacheMetrics.parsedMisses = 0;
+    CacheMetrics.tableHits = 0;
+    CacheMetrics.tableMisses = 0;
+    CacheMetrics.includeHits = 0;
+    CacheMetrics.includeMisses = 0;
+  }
+
+  static summary() {
+    return {
+      parsed: { hits: CacheMetrics.parsedHits, misses: CacheMetrics.parsedMisses },
+      table: { hits: CacheMetrics.tableHits, misses: CacheMetrics.tableMisses },
+      include: { hits: CacheMetrics.includeHits, misses: CacheMetrics.includeMisses },
+    };
+  }
+}
 
 const PROGRAMPARMS_NAME = `PROGRAMPARMS`;
 
 export default class Parser {
   parsedCache: {[thePath: string]: Cache} = {};
+  /** Reverse dependency index: maps an include URI to the set of file URIs that include it */
+  private includesDependents: Map<string, Set<string>> = new Map();
   tables: TableDetail = {};
   tableFetch: tablePromise|undefined;
   includeFileFetch: includeFilePromise|undefined;
@@ -41,7 +80,7 @@ export default class Parser {
     console.log(`Clearing cache of these files: ${Object.keys(this.tables).join(`, `)}`)
     this.tables = {};
   }
- 
+
   async fetchTable(name: string, keyVersion = ``, aliases?: boolean): Promise<Declaration[]> {
     if (name === undefined || (name && name.trim() === ``)) return [];
     if (!this.tableFetch) return [];
@@ -50,60 +89,87 @@ export default class Parser {
     const now = Date.now();
 
     if (this.tables[existingVersion]) {
-      // We use this to make sure we aren't running this all over the place
-      if (this.tables[existingVersion].fetching) return [];
+      // Deduplicate concurrent fetches — await the shared in-flight Promise
+      if (this.tables[existingVersion].fetchingPromise) {
+        const defs = await this.tables[existingVersion].fetchingPromise;
+        return (defs || []).map(d => d.clone());
+      }
 
       // If we still have a cached version, let's use that
       if (now <= (this.tables[existingVersion].fetched + HALF_HOUR)) {
+        CacheMetrics.tableHits++;
+        CacheMetrics.log(`table-hit`, table);
         return this.tables[existingVersion].recordFormats.map(d => d.clone());
       }
     }
 
-    this.tables[existingVersion] = {
-      fetching: true,
-      fetched: 0,
-      recordFormats: []
-    };
+    CacheMetrics.tableMisses++;
+    CacheMetrics.log(`table-miss`, table);
 
-    let newDefs: Declaration[];
+    // Capture tableFetch in a local so it is accessible inside the async closure
+    const tableFetch = this.tableFetch;
 
-    try {
-      newDefs = await this.tableFetch(table, aliases);
-
-      this.tables[existingVersion] = {
-        fetched: now,
-        recordFormats: newDefs
-      };
-    } catch (e) {
-      // Failed. Don't fetch it again
-      this.tables[existingVersion] = {
-        fetched: now,
-        recordFormats: []
-      };
-      newDefs = [];
+    // Initialise the entry so concurrent callers can find the fetchingPromise
+    if (!this.tables[existingVersion]) {
+      this.tables[existingVersion] = { fetched: 0, recordFormats: [] };
     }
 
-    this.tables[existingVersion].fetching = false;
+    const fetchPromise: Promise<Declaration[]> = (async () => {
+      try {
+        const newDefs = await tableFetch(table, aliases);
+        this.tables[existingVersion] = { fetched: Date.now(), recordFormats: newDefs };
+        return newDefs;
+      } catch (e) {
+        // Failed. Don't fetch it again for a short while
+        this.tables[existingVersion] = { fetched: Date.now(), recordFormats: [] };
+        return [];
+      } finally {
+        this.tables[existingVersion].fetchingPromise = undefined;
+      }
+    })();
 
+    this.tables[existingVersion].fetchingPromise = fetchPromise;
+
+    const newDefs = await fetchPromise;
     return newDefs.map(d => d.clone());
   }
 
   /**
-   * @param {string} path 
+   * @param {string} path
    */
   clearParsedCache(path) {
-    this.parsedCache[path] = undefined;
+    // Remove from reverse dependency index entries
+    const cache = this.parsedCache[path];
+    if (cache) {
+      for (const inc of cache.includes) {
+        if (inc.toPath) {
+          const dependents = this.includesDependents.get(inc.toPath);
+          if (dependents) {
+            dependents.delete(path);
+            if (dependents.size === 0) this.includesDependents.delete(inc.toPath);
+          }
+        }
+      }
+    }
+    delete this.parsedCache[path];
   }
 
   /**
-   * @param {string} path 
+   * Returns all file URIs that (directly) include the given URI.
+   */
+  getDependents(includeUri: string): string[] {
+    return Array.from(this.includesDependents.get(includeUri) ?? []);
+  }
+
+  /**
+   * @param {string} path
    */
   getParsedCache(path) {
     return this.parsedCache[path];
   }
 
   /**
-	 * @param {string} line 
+	 * @param {string} line
 	 * @returns {string|undefined}
 	 */
   static getIncludeFromDirective(line: string): string|undefined {
@@ -112,7 +178,7 @@ export default class Parser {
 
     const upperLine = line.toUpperCase();
     let comment = -1;
-    
+
     let directivePosition = upperLine.indexOf(`/COPY `);
     // Search comment AFTER the directive
     comment = upperLine.indexOf(`//`, directivePosition);
@@ -126,7 +192,7 @@ export default class Parser {
     };
 
     let directiveValue: string|undefined;
-    
+
     if (directivePosition >= 0) {
       if (comment >= 0) {
         directiveValue = line.substring(directivePosition+directiveLength, comment).trim();
@@ -183,8 +249,8 @@ export default class Parser {
 
     let lastToken: number;
     while (
-      tokens[checkNextToken] && 
-      [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) && 
+      tokens[checkNextToken] &&
+      [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) &&
       tokens[lastToken]?.type !== tokens[checkNextToken].type &&
       checkNextToken >= 0
 
@@ -207,8 +273,12 @@ export default class Parser {
   async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
+      CacheMetrics.parsedHits++;
+      CacheMetrics.log(`parsed-hit`, workingUri);
       return existingCache;
     }
+    CacheMetrics.parsedMisses++;
+    CacheMetrics.log(`parsed-miss`, workingUri);
 
     if (baseContent === undefined) return null;
 
@@ -223,7 +293,7 @@ export default class Parser {
     scopes.push(new Cache());
 
     const getObjectName = (objectName: string, keywords: Keywords): string => {
-            
+
       // Check for external object
       const extFile = keywords[`EXTFILE`];
       if (extFile && typeof extFile === `string`) {
@@ -471,7 +541,7 @@ export default class Parser {
               break;
           }
         }
-        
+
         return inputLine;
       }
 
@@ -504,7 +574,7 @@ export default class Parser {
         unique: string
       }) => {
         const objectName = getObjectName(currentItem.name, fOptions.keyword);
-      
+
         // ========
         // First we do the work to set the subfields
         // ========
@@ -637,7 +707,7 @@ export default class Parser {
         if (li >= 1) {
           lineIndex += lines[li-1].length + EOL.length;
         }
-        
+
         const scope = scopes[scopes.length - 1];
 
         let baseLine = lines[li];
@@ -656,7 +726,7 @@ export default class Parser {
             // But it can be put on any other line and ignored.
             continue;
           }
-          
+
           // If it's something else, we assume it's compile time data
           else break;
         }
@@ -710,7 +780,7 @@ export default class Parser {
         let tokens: Token[] = [];
         let parts: string[];
         let partsLower: string[];
-        
+
         if (isFullyFree || lineIsFree) {
           // Free format!
           if (line.trim() === ``) {
@@ -775,7 +845,7 @@ export default class Parser {
               case `/INCLUDE`:
                 if (options.withIncludes && this.includeFileFetch && lineCanRun()) {
                   const includePath = Parser.getIncludeFromDirective(line);
-          
+
                   if (includePath) {
                     const include = await this.includeFileFetch(workingUri, includePath);
                     if (include.found && include.uri) {
@@ -785,7 +855,7 @@ export default class Parser {
                           toPath: include.uri,
                           line: lineNumber
                         });
-                        
+
                         try {
                           await parseContent(include.uri, include.content);
                         } catch (e) {
@@ -876,8 +946,8 @@ export default class Parser {
 
             } else if (!line.endsWith(`;`)) {
               currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
-              
-              if (currentStmtStart.content.endsWith(`-`)) 
+
+              if (currentStmtStart.content.endsWith(`-`))
                 currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
 
               currentStmtStart.content += EOL;
@@ -991,7 +1061,7 @@ export default class Parser {
           case `END-ENUM`:
             if (currentItem && currentItem.type === `constant`) {
               currentItem.range.end = currentStmtStart.line;
-              
+
               scope.addSymbol(currentItem);
 
               resetDefinition = true;
@@ -1059,7 +1129,7 @@ export default class Parser {
                 dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
               }
             break;
-        
+
           case `DCL-PR`:
             if (currentItem === undefined) {
               if (parts.length > 1) {
@@ -1107,7 +1177,7 @@ export default class Parser {
               resetDefinition = true;
             }
             break;
-        
+
           case `DCL-PROC`:
             if (parts.length > 1) {
               currentItem = new Declaration(`procedure`);
@@ -1153,7 +1223,7 @@ export default class Parser {
                 const endInline = tokens.findIndex(part => part.value.toUpperCase() === `END-PI`);
 
                 // Indicates that the PI starts and ends on the same line
-                if (endInline >= 0) { 
+                if (endInline >= 0) {
                   tokens.splice(endInline, 1);
                   currentItem.readParms = false;
                   resetDefinition = true;
@@ -1186,7 +1256,7 @@ export default class Parser {
               }
             } else if (currentItem && currentItem.name === PROGRAMPARMS_NAME) {
               // Assign this scopes parameters to the subitems of the program parameters struct
-              
+
               currentItem.subItems.forEach(subItem => {
                 subItem.type = `parameter`;
                 scope.addSymbol(subItem);
@@ -1231,7 +1301,7 @@ export default class Parser {
               }
             }
             break;
-    
+
           case `ENDSR`:
             if (currentItem && currentItem.type === `subroutine`) {
               currentItem.range.end = currentStmtStart.line;
@@ -1313,19 +1383,19 @@ export default class Parser {
 
                       if (currentSqlItem.name)
                         currentSqlItem.keyword = {};
-                
+
                       if (qualifiedObjectPath.schema) {
                         currentSqlItem.tags.push({
                           tag: `description`,
                           content: qualifiedObjectPath.schema
                         })
                       }
-                      
+
                       currentSqlItem.position = {
                         path: fileUri,
                         range: qualifiedObjectPath.nameToken.range
                       };
-      
+
                       scope.sqlReferences.push(currentSqlItem);
                     }
                   }
@@ -1336,7 +1406,7 @@ export default class Parser {
 
           case `///`:
             docs = !docs;
-          
+
             // When enabled
             if (docs === true) {
               currentTitle = undefined;
@@ -1464,7 +1534,7 @@ export default class Parser {
 
               currentItem.range.start = lineNumber;
               currentItem.range.end = lineNumber;
-			  
+
               await handleFSpec(currentItem, {
                 keyword: fSpec.keywords,
                 unique: line.length.toString()
@@ -1487,7 +1557,7 @@ export default class Parser {
                 });
               }
             }
-            
+
             break;
 
           case `C`:
@@ -1537,22 +1607,22 @@ export default class Parser {
             }
 
             switch (cSpec.opcode && cSpec.opcode.value) {
-            case `BEGSR`:  
+            case `BEGSR`:
               if (cSpec.factor1 && !scope.find(cSpec.factor1.value, `subroutine`)) {
                 currentItem = new Declaration(`subroutine`);
                 currentItem.name = cSpec.factor1.value;
                 currentItem.keyword = {'Subroutine': true};
-  
+
                 currentItem.position = {
                   path: fileUri,
                   range: cSpec.factor1.range
                 };
-  
+
                 currentItem.range = {
                   start: lineNumber,
                   end: lineNumber
                 };
-  
+
                 currentDescription = [];
               }
               break;
@@ -1564,7 +1634,7 @@ export default class Parser {
                 resetDefinition = true;
               }
               break;
-          
+
             case `CALL`:
               const callItem = new Declaration(`procedure`);
               if (cSpec.factor2) {
@@ -1612,7 +1682,7 @@ export default class Parser {
 
             if (pSpec.potentialName) {
               pushPotentialNameToken(pSpec.potentialName);
-              
+
               tokens = [pSpec.potentialName];
             } else {
               if (pSpec.start) {
@@ -1685,7 +1755,7 @@ export default class Parser {
                 currentItem = new Declaration(`constant`);
                 currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = dSpec.keywords || {};
-                  
+
                 // TODO: line number might be different with ...?
                 currentItem.position = {
                   path: fileUri,
@@ -1696,7 +1766,7 @@ export default class Parser {
                   start: currentNameToken.range.line,
                   end: currentItem.position.range.line
                 };
-    
+
                 scope.addSymbol(currentItem);
                 resetDefinition = true;
                 break;
@@ -1807,7 +1877,7 @@ export default class Parser {
                       validScope = scopes[i];
                       if (validScope[currentGroup].length > 0) break;
                     }
-                  
+
                     currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
                     break;
 
@@ -1885,7 +1955,7 @@ export default class Parser {
                 }
                 break;
               }
-            
+
               potentialName = undefined;
             }
             break;
@@ -1900,7 +1970,7 @@ export default class Parser {
 
         if (resetDefinition) {
           potentialName = undefined;
-          
+
           currentItem = undefined;
           currentTitle = undefined;
           currentDescription = [];
@@ -1924,13 +1994,23 @@ export default class Parser {
 
     this.parsedCache[workingUri] = parsedData;
 
+    // Update reverse dependency index so invalidation is O(dependents) not O(all cached)
+    for (const inc of parsedData.includes) {
+      if (inc.toPath) {
+        if (!this.includesDependents.has(inc.toPath)) {
+          this.includesDependents.set(inc.toPath, new Set());
+        }
+        this.includesDependents.get(inc.toPath)!.add(workingUri);
+      }
+    }
+
     return parsedData;
   }
 
   static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
     if (Array.isArray(content) && typeof content[0] === `string`) {
       return Parser.lineTokens(content.join(` `), lineNumber, baseIndex);
-    } else 
+    } else
       if (typeof content === `string`) {
         return Parser.lineTokens(content, lineNumber, baseIndex);
       } else {
@@ -1954,7 +2034,7 @@ export default class Parser {
               if (!keyvalues[`CONST`]) {
                 keyvalues[`CONST`] = ``;
               }
-              
+
               keyvalues[`CONST`] += keywordParts[i].value;
             } else {
               keyvalues[keywordParts[i].value.toUpperCase()] = true;

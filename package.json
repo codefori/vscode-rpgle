@@ -40,6 +40,18 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Whether to show the fixed-format ruler by default."
+				},
+				"vscode-rpgle.cache.fileTTLSeconds": {
+					"type": "number",
+					"default": 300,
+					"minimum": 10,
+					"description": "How long (in seconds) remote file content and resolved include results are kept in the cache before a fresh fetch is made."
+				},
+				"vscode-rpgle.cache.fileMaxEntries": {
+					"type": "number",
+					"default": 200,
+					"minimum": 10,
+					"description": "Maximum number of remote file content entries kept in memory. If the cache exceeds this size, the least recently used entries will be dropped. Setting this to a low value can help reduce memory usage, but may cause more frequent fetching of remote content, which can impact performance."
 				}
 			}
 		},
@@ -77,11 +89,17 @@
 				"enablement": "editorLangId == rpgle"
 			},
 			{
-				"command": "vscode-rpgle.server.reloadCache",
-				"title": "RPGLE: Reload Cache",
+				"command": "vscode-rpgle.server.clearCache",
+				"title": "Clear All Caches",
+				"category": "RPGLE",
+				"icon": "$(trash)"
+			},
+			{
+				"command": "vscode-rpgle.server.viewCacheStats",
+				"title": "View Cache Statistics",
 				"category": "RPGLE",
 				"enablement": "code-for-ibmi:connected",
-				"icon": "$(refresh)"
+				"icon": "$(graph)"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveLeft",
@@ -135,6 +153,16 @@
 			"view/title": [
 				{
 					"command": "vscode-rpgle.server.reloadCache",
+					"group": "navigation",
+					"when": "view == outline"
+				},
+				{
+					"command": "vscode-rpgle.server.clearAllCache",
+					"group": "navigation",
+					"when": "view == outline"
+				},
+				{
+					"command": "vscode-rpgle.server.viewCacheStats",
 					"group": "navigation",
 					"when": "view == outline"
 				}
