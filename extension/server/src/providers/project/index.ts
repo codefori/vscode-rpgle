@@ -97,9 +97,7 @@ async function loadWorkspace() {
 		}));
 
 		if (uris.length < projectFileLimit) {
-			for (const uri of uris) {
-				await loadLocalFile(uri);
-			}
+			await Promise.all(uris.map(uri => loadLocalFile(uri)));
 		} else {
 			console.log(`Disabling project mode for large project. Found ${uris.length} files, limit is ${projectFileLimit}.`);
 			isEnabled = false;

@@ -9,7 +9,7 @@ import Cache from '../../../../../language/models/cache';
 import documentFormattingProvider from './documentFormatting';
 
 import * as Project from "../project";
-import { connection, getFileRequest, getWorkingDirectory, resolvedMembers, resolvedStreamfiles, validateUri, watchedFilesChangeEvent } from '../../connection';
+import { connection, getFileRequest, getWorkingDirectory, getWorkspaceFolder, resolvedMembers, resolvedStreamfiles, validateUri, watchedFilesChangeEvent } from '../../connection';
 import { parseMemberUri } from '../../data';
 
 export let jsonCache: { [uri: string]: string } = {};
@@ -37,6 +37,7 @@ export function initialise(connection: _Connection) {
 				}
 
 				boundLintConfig = {};
+				workspaceLintConfigCache = {};
 
 				runLinter = true;
 			}
@@ -69,10 +70,11 @@ export function initialise(connection: _Connection) {
 		const uri = URI.parse(uriString);
 
 		// If we open a new RPGLE file that is remote
-		// we need to refresh the lint config so we can 
+		// we need to refresh the lint config so we can
 		// make sure it's the latest.
 		if ([`member`, `streamfile`].includes(uri.scheme)) {
 			boundLintConfig = {};
+			workspaceLintConfigCache = {};
 			jsonCache = {}
 		}
 	})
@@ -86,7 +88,7 @@ export function initialise(connection: _Connection) {
 
 export function calculateOffset(document: TextDocument, error: IssueRange) {
 	const offset = error.offset;
-	
+
 	return Range.create(
 		document.positionAt(error.offset.start),
 		document.positionAt(error.offset.end)
@@ -99,6 +101,9 @@ enum ResolvedState {
 };
 
 let boundLintConfig: {[workingUri: string]: {resolved: ResolvedState, uri: string}} = {};
+// Workspace-level cache stores the in-flight/resolved promise so concurrent
+// parallel loads (Promise.all) share one validateUri call per workspace folder.
+let workspaceLintConfigCache: {[workspaceFolderUri: string]: Promise<string | undefined>} = {};
 
 export async function getLintConfigUri(workingUri: string) {
 	const uri = URI.parse(workingUri);
@@ -128,7 +133,7 @@ export async function getLintConfigUri(workingUri: string) {
 			if (jsonCache[cleanString]) return cleanString;
 			cleanString = await validateUri(cleanString);
 			break;
-		
+
 		case `streamfile`:
 			const workingDir = await getWorkingDirectory();
 			if (workingDir) {
@@ -136,13 +141,18 @@ export async function getLintConfigUri(workingUri: string) {
 					scheme: `streamfile`,
 					path: path.posix.join(workingDir, `.vscode`, `rpglint.json`)
 				}).toString();
-				
+
 				cleanString = await validateUri(cleanString, uri.scheme);
 			}
 			break;
 
 		case `file`:
-			cleanString = await validateUri(`rpglint.json`, uri.scheme);
+			const workspace = await getWorkspaceFolder(workingUri);
+			const workspaceKey = workspace ? workspace.uri : `__root__`;
+			if (!workspaceLintConfigCache[workspaceKey]) {
+				workspaceLintConfigCache[workspaceKey] = validateUri(`rpglint.json`, uri.scheme);
+			}
+			cleanString = await workspaceLintConfigCache[workspaceKey];
 			break;
 	}
 
@@ -207,7 +217,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 
 		// Turn on for SQLRunner suggestions
 		options.SQLRunner = true;
-		
+
 		options.StringLiteralDupe = true;
 
 		try {
