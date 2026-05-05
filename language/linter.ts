@@ -116,7 +116,13 @@ export default class Linter {
     const selectBlocks: SelectBlock[] = [];
 
     const stringLiterals: { value: string, list: { line: number, offset: IRange }[] }[] = [];
-
+    const skippedRanges: { start: number, end: number, line: number }[] = [];
+    const isOffsetInSkippedRanges = (offset: IRange) => skippedRanges.some(r => !(offset.end < r.start || offset.start > r.end));
+    const pushErrorifNotSkipped = (error: IssueRange) => {
+      if (!isOffsetInSkippedRanges(error.offset)) {
+        errors.push(error);
+      }
+    };
     let directiveScope = 0;
     let currentRule = skipRules.none;
 
@@ -127,6 +133,12 @@ export default class Linter {
       const statement = docStatement.tokens.some(t => t.type === `newline`) ? docStatement.tokens.filter(t => t.type !== `newline`) : docStatement.tokens;
       lineNumber = docStatement.range.line;
       currentIndent = docStatement.indent;
+
+      // If previous comment set the rule to skip single, mark this whole statement
+      // as skipped so all errors are suppressed for it.
+      if (currentRule === skipRules.single) {
+        skippedRanges.push({ start: docStatement.range.start, end: docStatement.range.end, line: lineNumber });
+      }
 
       if (currentIndent >= 0) {
         skipIndentCheck = false;
@@ -140,7 +152,7 @@ export default class Linter {
               const startSpaces = comment.search(/\S/);
 
               if (startSpaces === 0) {
-                errors.push({
+                pushErrorifNotSkipped({
                   offset: { start: statement[0].range.start, end: statement[0].range.start + 2 },
                   type: `PrettyComments`,
                   newValue: `// `,
@@ -220,7 +232,7 @@ export default class Linter {
                           const pathValue = path.value.substring(1, path.value.length - 1).trim().toUpperCase();
                           const possibleValue = (data.availableIncludes && data.availableIncludes.length > 0) ? data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase())) : undefined;
 
-                          errors.push({
+                          pushErrorifNotSkipped({
                             offset: { start: path.range.start, end: path.range.end + path.value.length },
                             type: `IncludeMustBeRelative`,
                             newValue: possibleValue ? `'${possibleValue}'` : undefined
@@ -231,7 +243,7 @@ export default class Linter {
 
                           if (pathValue.startsWith(`/`) === true) {
                             // Bad. Path must not be absolute.
-                            errors.push({
+                            pushErrorifNotSkipped({
                               offset: { start: path.range.start, end: path.range.end },
                               type: `IncludeMustBeRelative`
                             });
@@ -242,7 +254,7 @@ export default class Linter {
                                 // This means there was a possible match
                                 if (pathValue !== possibleValue) {
                                   // But if they're not the same, offer a fix
-                                  errors.push({
+                                  pushErrorifNotSkipped({
                                     offset: { start: path.range.start, end: path.range.end },
                                     type: `IncludeMustBeRelative`,
                                     newValue: `'${possibleValue}'`
@@ -266,7 +278,7 @@ export default class Linter {
                             // This means there was a possible match
                             if (pathValue !== possibleValue) {
                               // But if they're not the same, offer a fix
-                              errors.push({
+                              pushErrorifNotSkipped({
                                 offset: { start: statement[1].range.start, end: statement[3].range.end },
                                 type: `IncludeMustBeRelative`,
                                 newValue: `'${possibleValue}'`
@@ -278,7 +290,7 @@ export default class Linter {
 
                       } else {
                         // /INCLUDE or /COPY is way to long.
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `IncludeMustBeRelative`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -293,7 +305,7 @@ export default class Linter {
                         correctValue = value.toLowerCase();
                       }
                       if (correctValue !== correctDirective) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           offset: statement[0].range,
                           type: `CopybookDirective`,
                           newValue: correctDirective
@@ -305,7 +317,7 @@ export default class Linter {
 
                 if (rules.DirectiveCase === `lower`) {
                   if (value !== value.toLowerCase()) {
-                    errors.push({
+                    pushErrorifNotSkipped({
                       offset: statement[0].range,
                       type: `DirectiveCase`,
                       newValue: value.toLowerCase()
@@ -315,7 +327,7 @@ export default class Linter {
 
                 if (rules.DirectiveCase === `upper`) {
                   if (value !== value.toUpperCase()) {
-                    errors.push({
+                    pushErrorifNotSkipped({
                       offset: statement[0].range,
                       type: `DirectiveCase`,
                       newValue: value.toUpperCase()
@@ -340,7 +352,7 @@ export default class Linter {
                         break;
                     }
                     if (statement[0].value !== expected) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `SpecificCasing`,
                         newValue: expected
@@ -352,7 +364,7 @@ export default class Linter {
                 value = statement[1].value;
 
                 if (value.match(/^\d/)) {
-                  errors.push({
+                  pushErrorifNotSkipped({
                     offset: { start: statement[1].range.start, end: statement[1].range.end },
                     type: `InvalidDeclareNumber`,
                   });
@@ -361,7 +373,7 @@ export default class Linter {
                 switch (statement[0].value.toUpperCase()) {
                   case `BEGSR`:
                     if (inSubroutine) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `UnexpectedEnd`,
                       });
@@ -371,14 +383,14 @@ export default class Linter {
 
                     if (inProcedure) {
                       if (rules.NoLocalSubroutines) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `NoLocalSubroutines`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
                       }
                     } else {
                       if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           offset: statement[0].range,
                           type: `NoGlobalSubroutines`
                         });
@@ -387,7 +399,7 @@ export default class Linter {
                     break;
                   case `DCL-PROC`:
                     if (inSubroutine || inProcedure) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `UnexpectedEnd`,
                       });
@@ -401,7 +413,7 @@ export default class Linter {
                       const procDef = globalProcs.find(def => def.name.toUpperCase() === value.toUpperCase());
                       if (procDef) {
                         if (!procDef.tags.some(tag => tag.tag === `description`)) {
-                          errors.push({
+                          pushErrorifNotSkipped({
                             type: `RequiresProcedureDescription`,
                             offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                           });
@@ -412,7 +424,7 @@ export default class Linter {
                   case `DCL-C`:
                     if (rules.UppercaseConstants) {
                       if (value !== value.toUpperCase()) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           offset: { start: statement[1].range.start, end: statement[1].range.end },
                           type: `UppercaseConstants`,
                           newValue: value.toUpperCase()
@@ -437,7 +449,7 @@ export default class Linter {
 
                           const keywordValue = statement.find((part, index) => index > extIndex && part.type === `word`);
                           if (keywordValue) {
-                            errors.push({
+                            pushErrorifNotSkipped({
                               offset: { start: keywordValue.range.start, end: keywordValue.range.end },
                               type: `NoExtProgramVariable`
                             });
@@ -446,7 +458,7 @@ export default class Linter {
 
                       } else if (rules.PrototypeCheck) {
                         // Not EXTPROC / EXTPGM found. Likely don't need this PR if it's for local procedure.
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `PrototypeCheck`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -461,7 +473,7 @@ export default class Linter {
                   case `DCL-DS`:
                     if (rules.NoOCCURS) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `NoOCCURS`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -470,7 +482,7 @@ export default class Linter {
 
                     if (rules.QualifiedCheck) {
                       if (!statement.some(part => part.value && [`LIKEDS`, `LIKEREC`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `QualifiedCheck`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -479,7 +491,7 @@ export default class Linter {
 
                     if (rules.BlankStructNamesCheck) {
                       if (statement.some(part => part.type === `special` && part.value.toUpperCase() === `*N`)) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `BlankStructNamesCheck`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -488,7 +500,7 @@ export default class Linter {
 
                     if (rules.NoCTDATA) {
                       if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value.toUpperCase()))) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `NoCTDATA`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -508,7 +520,7 @@ export default class Linter {
                       if (statement[1] && statement[1].value) {
                         const name = statement[1].value.toUpperCase();
                         if (!opcodes.includes(name)) {
-                          errors.push({
+                          pushErrorifNotSkipped({
                             offset: { start: statement[0].range.start, end: statement[0].range.end + 1 },
                             type: `UselessOperationCheck`,
                           });
@@ -536,7 +548,7 @@ export default class Linter {
                         break;
                     }
                     if (statement[0].value !== expected) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `SpecificCasing`,
                         newValue: expected
@@ -549,15 +561,15 @@ export default class Linter {
                   case `ENDSR`:
                     if (inProcedure === undefined && inSubroutine) {
                       if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           offset: statement[0].range,
                           type: `NoGlobalSubroutines`
                         });
                       }
                     }
 
-                    if (!inSubroutine) {
-                      errors.push({
+                    if (!inSubroutine ) {
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `UnexpectedEnd`,
                       });
@@ -573,7 +585,7 @@ export default class Linter {
 
                   case `END-PROC`:
                     if (inProcedure === undefined || inSubroutine) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `UnexpectedEnd`,
                       });
@@ -584,7 +596,7 @@ export default class Linter {
                   case `END-PR`:
                   case `END-PI`:
                     if (inPrototype === false) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `UnexpectedEnd`,
                       });
@@ -611,7 +623,7 @@ export default class Linter {
                         break;
                     }
                     if (statement[0].value !== expected) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: statement[0].range,
                         type: `SpecificCasing`,
                         newValue: expected
@@ -625,7 +637,7 @@ export default class Linter {
                   case `CALLP`:
                     if (statement[1] && statement[1].type !== `openbracket`) {
                       if (rules.UselessOperationCheck) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           offset: { start: statement[0].range.start, end: statement[0].range.end + 1 },
                           type: `UselessOperationCheck`,
                         });
@@ -634,7 +646,7 @@ export default class Linter {
                     break;
                   case `LEAVESR`:
                     if (rules.NoGlobalSubroutines && !inProcedure) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         type: `NoGlobalSubroutines`,
                         offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                       });
@@ -644,7 +656,7 @@ export default class Linter {
                     if (rules.NoGlobalSubroutines) {
                       if (statement.length === 2) {
                         if (globalScope.subroutines.find(sub => sub.name.toUpperCase() === statement[1].value.toUpperCase())) {
-                          errors.push({
+                          pushErrorifNotSkipped({
                             type: `NoGlobalSubroutines`,
                             offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                           });
@@ -662,7 +674,7 @@ export default class Linter {
                       const allIndex = statement.findIndex(part => part.value && part.value === `*`);
                       if (selectIndex >= 0) {
                         if (selectIndex + 1 === allIndex) {
-                          errors.push({
+                          pushErrorifNotSkipped({
                             offset: statementOffset,
                             type: `NoSELECTAll`,
                           });
@@ -672,7 +684,7 @@ export default class Linter {
 
                     if (rules.NoSQLJoins) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `NoSQLJoins`,
                           offset: statementOffset
                         });
@@ -685,7 +697,7 @@ export default class Linter {
 
                       if (executeIndex >= 0) {
                         if (executeIndex + 1 === immediateIndex) {
-                          errors.push({
+                          pushErrorifNotSkipped({
                             type: `NoExecuteImmediate`,
                             offset: statementOffset
                           });
@@ -698,7 +710,7 @@ export default class Linter {
                         if (part.type === `word` && currentScope.findDefinition(lineNumber, part.value)) {
                           const prior = statement[index - 1];
                           if (prior && ![`dot`, `seperator`].includes(prior.type)) {
-                            errors.push({
+                            pushErrorifNotSkipped({
                               offset: part.range,
                               type: `SQLHostVarCheck`,
                               newValue: `:${part.value}`
@@ -712,7 +724,7 @@ export default class Linter {
                       // For running SQL statements
                       const validStatements = [`declare`, `with`, `select`, `merge`, `update`].includes(statement.find((t, i) => i >= 2 && t.type !== `newline`)?.value.toLowerCase());
                       if (validStatements) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `SQLRunner`,
                           offset: statementOffset,
                           newValue: data.content.substring(statementOffset.start, statementOffset.end)
@@ -738,7 +750,7 @@ export default class Linter {
                     if (selectBlocks.length > 0) {
                       const latestSelect = selectBlocks.pop();
                       if (rules.RequireOtherBlock && latestSelect && !latestSelect.otherBlockExists) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `RequireOtherBlock`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -754,7 +766,7 @@ export default class Linter {
                     if (rules.ForceOptionalParens) {
                       const lastStatement = statement[statement.length - 1];
                       if (lastStatement && statement[1] &&(statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`)) {
-                        errors.push({
+                        pushErrorifNotSkipped({
                           type: `ForceOptionalParens`,
                           offset: { start: statement[1].range.start, end: statement[statement.length - 1].range.end }
                         });
@@ -790,7 +802,7 @@ export default class Linter {
                             break;
                         }
                         if (part.value !== expected) {
-                          errors.push({
+                          pushErrorifNotSkipped({
                             offset: part.range,
                             type: `SpecificCasing`,
                             newValue: expected
@@ -807,7 +819,7 @@ export default class Linter {
                       if (inProcedure && !inPrototype) {
                         const existingVariable = globalScope.variables.find(variable => variable.name.toUpperCase() === upperName);
                         if (existingVariable) {
-                          errors.push({
+                          pushErrorifNotSkipped({
                             offset: part.range,
                             type: `NoGlobalsInProcedures`,
                           });
@@ -836,7 +848,7 @@ export default class Linter {
                           }
 
                           if (requiresBlock) {
-                            errors.push({
+                            pushErrorifNotSkipped({
                               offset: part.range,
                               type: `RequiresParameter`,
                             });
@@ -848,7 +860,7 @@ export default class Linter {
 
                   case `string`:
                     if (part.value.substring(1, part.value.length - 1).trim() === `` && rules.RequireBlankSpecial && !isEmbeddedSQL) {
-                      errors.push({
+                      pushErrorifNotSkipped({
                         offset: part.range,
                         type: `RequireBlankSpecial`,
                         newValue: `*BLANK`
@@ -962,7 +974,7 @@ export default class Linter {
         if (literal.list.length >= literalMinimum) {
           literal.list.forEach(location => {
             const possibleConst = globalScope.findConstByValue(location.line, literal.value);
-            errors.push({
+            pushErrorifNotSkipped({
               offset: location.offset,
               type: `StringLiteralDupe`,
               newValue: possibleConst ? possibleConst.name : undefined
@@ -993,7 +1005,7 @@ export default class Linter {
             if (rules.NoExternalTo.includes(callLoc)) {
               const possibleStatement = doc.getStatementByLine(localDef.position.range.line);
               if (possibleStatement) {
-                errors.push({
+                pushErrorifNotSkipped({
                   type: `NoExternalTo`,
                   offset: { start: possibleStatement.range.start, end: possibleStatement.range.end },
                 });
@@ -1010,7 +1022,7 @@ export default class Linter {
           if (def.references.length <= 1) {
             const possibleStatement = doc.getStatementByLine(def.position.range.line);
             if (possibleStatement) {
-              errors.push({
+              pushErrorifNotSkipped({
                 type: `NoUnreferenced`,
                 offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
               });
@@ -1025,7 +1037,7 @@ export default class Linter {
               if (!errors.some(e => e.offset.start === ref.offset.start)) { //This is required because LIKEDS shares subfields
                 const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
                 if (contentPosition !== def.name) {
-                  errors.push({
+                  pushErrorifNotSkipped({
                     type: `IncorrectVariableCase`,
                     offset: { start: ref.offset.start, end: ref.offset.end },
                     newValue: def.name
