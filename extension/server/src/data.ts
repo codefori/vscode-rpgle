@@ -16,6 +16,22 @@ export function parseMemberUri(path: string): {asp?: string, library?: string, f
 	}
 };
 
+function getAliasNames(row: any): string[] {
+	const aliasKeys = Object.keys(row)
+		.filter(key => key === `WHALIS` || /^WHALI\d+$/.test(key))
+		.sort((a, b) => {
+			const aNum = a === `WHALIS` ? 0 : Number(a.replace(`WHALI`, ``));
+			const bNum = b === `WHALIS` ? 0 : Number(b.replace(`WHALI`, ``));
+			return aNum - bNum;
+		});
+
+	return aliasKeys
+		.map(key => row[key])
+		.filter((value): value is string => typeof value === `string`)
+		.map(value => value.trim())
+		.filter(value => value.length > 0);
+}
+
 export function dspffdToRecordFormats(data: any, aliases = false): Declaration[] {
 	let recordFormats: {[name: string]: Declaration} = {};
 
@@ -23,17 +39,26 @@ export function dspffdToRecordFormats(data: any, aliases = false): Declaration[]
 		const {
 			WHNAME: formatName,
 			WHFLDT: type,
-			WHFLDB: strLength, 
+			WHFLDB: strLength,
 			WHFLDD: digits,
 			WHFLDP: decimals,
 			WHFTXT: text,
 		} = row;
 
-		const aliasName: string|undefined = row.WHALIS ? row.WHALIS.trim() : undefined;
-		const name = aliases ? aliasName || row.WHFLDE : row.WHFLDE;
+		const aliasNames = getAliasNames(row);
+		const systemName = (row.WHFLDE as string).trim();
+		const names: string[] = [];
 
-		if (name.trim() === ``) return;
-		if (name.startsWith(`*`)) return;
+		if (aliases && aliasNames.length > 0) {
+			for (const alias of aliasNames) {
+				if (alias !== systemName && !names.includes(alias)) {
+					names.push(alias);
+				}
+			}
+		}
+		names.push(systemName);
+
+		if (names.some(n => n === `` || n.startsWith(`*`))) return;
 
 		let recordFormat;
 		if (recordFormats[formatName]) {
@@ -44,13 +69,10 @@ export function dspffdToRecordFormats(data: any, aliases = false): Declaration[]
 			recordFormats[formatName] = recordFormat;
 		}
 
-		const currentSubfield = new Declaration(`subitem`);
-		currentSubfield.name = name;
 		let keywords: {[key: string]: string|true} = {};
-
 		if (row.WHVARL === `Y`) keywords[`VARYING`] = true;
 
-		currentSubfield.keyword = getPrettyType({
+		const keywordValue = getPrettyType({
 			type,
 			len: digits === 0 ? strLength : digits,
 			decimals: decimals,
@@ -58,10 +80,14 @@ export function dspffdToRecordFormats(data: any, aliases = false): Declaration[]
 			field: ``,
 			pos: ``
 		});
-		
-		currentSubfield.tags.push({tag: `description`, content: text.trim()});
 
-		recordFormat.subItems.push(currentSubfield);
+		for (const name of names) {
+			const currentSubfield = new Declaration(`subitem`);
+			currentSubfield.name = name;
+			currentSubfield.keyword = keywordValue;
+			currentSubfield.tags.push({tag: `description`, content: text.trim()});
+			recordFormat.subItems.push(currentSubfield);
+		}
 	});
 
 	return Object.values(recordFormats);
