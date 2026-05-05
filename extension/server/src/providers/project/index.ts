@@ -10,6 +10,8 @@ import { glob } from "glob";
 import * as path from "path";
 import { TextDocument } from 'vscode-languageserver-textdocument';
 const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
+const defaultProjectFileLimit = 1000;
+const projectFileLimitSetting = `projectFileLimit`;
 
 export let includePath: {[workspaceUri: string]: string[]} = {};
 
@@ -55,6 +57,7 @@ export async function initialise() {
 
 async function loadWorkspace() {
 	const workspaces = await connection.workspace.getWorkspaceFolders();
+	const projectFileLimit = await getProjectFileLimit();
 
 	if (workspaces) {
 		let uris: string[] = [];
@@ -93,15 +96,26 @@ async function loadWorkspace() {
 			}
 		}));
 
-		if (uris.length < 1000) {
-			for (const uri of uris) {
-				await loadLocalFile(uri);
-			}
+		if (uris.length < projectFileLimit) {
+			await Promise.all(uris.map(uri => loadLocalFile(uri)));
 		} else {
-			console.log(`Disabling project mode for large project.`);
+			console.log(`Disabling project mode for large project. Found ${uris.length} files, limit is ${projectFileLimit}.`);
 			isEnabled = false;
 		}
 	}
+}
+
+async function getProjectFileLimit() {
+	try {
+		const settings = await connection.workspace.getConfiguration(`vscode-rpgle`);
+		const configuredLimit = settings[projectFileLimitSetting];
+
+		if (Number.isInteger(configuredLimit) && configuredLimit > 0) {
+			return configuredLimit;
+		}
+	} catch (e) {}
+
+	return defaultProjectFileLimit;
 }
 
 async function updateIProj(uri: string) {
