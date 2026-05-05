@@ -6,7 +6,7 @@ import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, parseOLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -689,7 +689,7 @@ export default class Parser {
               baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
-            } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
+            } else if (![`D`, `P`, `C`, `F`, `H`, `O`].includes(spec)) {
               continue;
             }
           }
@@ -1889,6 +1889,45 @@ export default class Parser {
               potentialName = undefined;
             }
             break;
+
+            case `O`:
+              const oSpec = parseOLine(lineNumber, lineIndex, line);
+
+              // Create output specification declaration
+              if (oSpec.filename || oSpec.fieldName || oSpec.constantOrEdit) {
+                currentItem = new Declaration(`output`);
+                
+                // Set the name to fieldName if available, otherwise use filename or constant
+                currentItem.name = oSpec.fieldName?.value || oSpec.filename?.value || oSpec.constantOrEdit?.value || '';
+
+                // Store O-Spec details
+                currentItem.keyword = {
+                  filename: oSpec.filename?.value || '',
+                  type: oSpec.type?.value || '',
+                  fetchOverflow: oSpec.fetchOverflow?.value || '',
+                  andOr: oSpec.andOr?.value || '',
+                  fieldName: oSpec.fieldName?.value || '',
+                  blankAfter: oSpec.blankAfter?.value || '',
+                  editCodes: oSpec.editCodes?.value || '',
+                  endPosition: oSpec.endPosition?.value || '',
+                  dataFormat: oSpec.dataFormat?.value || '',
+                  constantOrEdit: oSpec.constantOrEdit?.value || ''
+                };
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: oSpec.fieldName?.range || oSpec.filename?.range || oSpec.constantOrEdit?.range
+                };
+
+                currentItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+
+                scope.addSymbol(currentItem);
+                resetDefinition = true;
+              }
+              break;
           }
         }
 
