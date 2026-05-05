@@ -163,6 +163,18 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 
 					currentScopeDefs.push(fileDef);
 				});
+			scope.outputs
+				.filter(output => output.position && output.position.path === currentPath && validRange(output))
+				.forEach(output => {
+					const outputDef = DocumentSymbol.create(
+						output.name,
+						prettyKeywords(output.keyword),
+						SymbolKind.String,  // or SymbolKind.Field
+						Range.create(output.range.start!, 0, output.range.end!, 0),
+						Range.create(output.range.start!, 0, output.range.end!, 0)
+					);
+					currentScopeDefs.push(outputDef);
+				});
 
 			scope.structs
 				.filter(struct => struct.position && struct.position.path === currentPath && validRange(struct))
