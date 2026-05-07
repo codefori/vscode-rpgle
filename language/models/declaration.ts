@@ -3,7 +3,7 @@ import { Keywords, Reference } from "../parserTypes";
 import { IRangeWithLine } from "../types";
 import Cache from "./cache";
 
-export type DeclarationType = "parameter"|"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag"|"indicator";
+export type DeclarationType = "parameter"|"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag"|"indicator"|"input";
 
 export default class Declaration {
   name: string = ``;
@@ -34,7 +34,7 @@ export default class Declaration {
     }
 
     clone.subItems = this.subItems.map(subItem => subItem.clone());
-    
+
     clone.range = {
       start: this.range.start,
       end: this.range.end

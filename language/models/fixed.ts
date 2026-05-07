@@ -1,13 +1,8 @@
 import Parser from "../parser";
+import { Keywords } from "../parserTypes";
+import { Token } from "../types";
 
-/**
- * @param {number} lineNumber
- * @param {number} startingPos
- * @param {string} value
- * @param {string} [type]
- * @returns {import("../types").Token|undefined}
- */
-function calculateToken(lineNumber, startingPos, value, type) {
+function calculateToken(lineNumber: number, startingPos: number, value: string, type?: string): Token | undefined {
   let resultValue = value.trim();
 
   if (resultValue === ``) {
@@ -41,12 +36,7 @@ function calculateToken(lineNumber, startingPos, value, type) {
   }
 }
 
-/**
- * @param {number} lineNumber
- * @param {number} lineIndex
- * @param {string} content
- */
-export function parseFLine(lineNumber, lineIndex, content) {
+export function parseFLine(lineNumber: number, lineIndex: number, content: string) {
   const name = content.substr(6, 10); //File name
   // const type = content.substr(16, 1).toUpperCase(); // I, U, O, C
   // const field = content.substr(33, 1).toUpperCase(); //KEYED
@@ -59,10 +49,7 @@ export function parseFLine(lineNumber, lineIndex, content) {
   };
 }
 
-/**
- * @param {string} content
- */
-export function parseCLine(lineNumber, lineIndex, content) {
+export function parseCLine(lineNumber: number, lineIndex: number, content: string) {
   content = content.padEnd(80);
   const clIndicator = content.substr(7, 8).toUpperCase();
   const indicator = content.substr(9, 11);
@@ -97,10 +84,7 @@ export function parseCLine(lineNumber, lineIndex, content) {
   };
 }
 
-/**
- * @param {string} content
- */
-export function parseDLine(lineNumber, lineIndex, content) {
+export function parseDLine(lineNumber: number, lineIndex: number, content: string) {
   content = content.padEnd(80);
   const longForm = content.substring(6).trimEnd();
   const potentialName = longForm.endsWith(`...`) ? calculateToken(lineNumber, lineIndex+6, longForm.substring(0, longForm.length - 3)) : undefined;
@@ -126,10 +110,7 @@ export function parseDLine(lineNumber, lineIndex, content) {
   };
 }
 
-/**
- * @param {string} content
- */
-export function parsePLine(content, lineNumber, lineIndex) {
+export function parsePLine(content: string, lineNumber: number, lineIndex: number) {
   content = content.padEnd(80);
   let name = content.substr(6, 16).trimEnd();
   if (name.endsWith(`...`)) {
@@ -151,7 +132,7 @@ export function parsePLine(content, lineNumber, lineIndex) {
   };
 }
 
-export function prettyTypeFromToken(dSpec) {
+export function prettyTypeFromDSpecTokens(dSpec) {
   return getPrettyType({
     type: dSpec.type ? dSpec.type.value : ``,
     keywords: dSpec.keywords,
@@ -162,12 +143,18 @@ export function prettyTypeFromToken(dSpec) {
   });
 }
 
-/**
- *
- * @param {{type: string, keywords: import("../parserTypes").Keywords, len: string, pos: string, decimals: string, field: string}} lineData
- * @returns {import("../parserTypes").Keywords}
- */
-export function getPrettyType(lineData) {
+export function prettyTypeFromISpecTokens(iSpec) {
+  return getPrettyType({
+    type: iSpec.dataFormat ? iSpec.dataFormat.value : ``,
+    keywords: {},
+    len: iSpec.length ? iSpec.length.value : ``,
+    pos: iSpec.fieldLocation ? iSpec.fieldLocation.value : ``,
+    decimals: iSpec.decimalPositions ? iSpec.decimalPositions.value : ``,
+    field: ``
+  })
+}
+
+export function getPrettyType(lineData: {type: string, keywords: Keywords, len: string, pos: string, decimals: string, field: string}): Keywords {
   let outType = ``;
   let length = Number(lineData.len);
 
@@ -175,7 +162,6 @@ export function getPrettyType(lineData) {
     length = length - Number(lineData.pos) + 1;
   }
 
-  // Check if decimals were originally specified (before we set default)
   const hasDecimals = lineData.decimals !== undefined && lineData.decimals !== null && lineData.decimals !== ``;
   if (!lineData.decimals) {
     lineData.decimals = `0`;
@@ -185,7 +171,6 @@ export function getPrettyType(lineData) {
   case `A`:
     if (Number(lineData.keywords[`VARYING`]) >= 0) {
       outType = `Varchar`;
-	  // For VARCHAR, the field defined will have a 2-byte integer field appended to the beginning of it that will contain the length of the data that is valid in the data portion of the field
       length -= 2;
     } else {
       outType = `Char`;
@@ -194,15 +179,12 @@ export function getPrettyType(lineData) {
     break;
   case `B`:
     if (lineData.pos != ``) {
-      // When using positions binary decimal is only 2 or 4
-      // This equates to 4 or 9 in free
       if (Number(lineData.len) == 4) {
         outType = `Bindec(9` + (lineData.decimals ? `:` + lineData.decimals : ``) + `)`;
       } else {
         outType = `Bindec(4` + (lineData.decimals ? `:` + lineData.decimals : ``) + `)`;
       }
     } else {
-      // Not using positions, then the length is correct
       outType = `Bindec` + `(` + lineData.len + (lineData.decimals ? `:` + lineData.decimals : ``) + `)`;
     }
     break;
@@ -276,20 +258,16 @@ export function getPrettyType(lineData) {
     break;
   case `Z`:
     outType = `Timestamp`;
-	  outType += `(` + length + `)`;
+    outType += `(` + length + `)`;
     break;
   case `*`:
     outType = `Pointer`;
     break;
   case ``:
-    // When type is not specified, infer based on field type and decimals
-    // Standalone field (S): if decimals exist -> Packed, else -> Char
-    // Subfield (blank): if decimals exist -> Zoned, else -> Char
     if (lineData.field == `DS`) {
       outType = `lineData.Len(` + lineData.len + `)`;
     } else if (lineData.len != ``) {
       if (!hasDecimals) {
-        // No decimals: default to Char
         if (Number(lineData.keywords[`VARYING`]) >= 0) {
           outType = `Varchar`;
         } else {
@@ -297,12 +275,9 @@ export function getPrettyType(lineData) {
         }
         outType += `(` + length + `)`;
       } else {
-        // Has decimals: infer based on field type
         if (lineData.field === ``) {
-          // Subfield: default to Zoned
           outType = `Zoned` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
         } else {
-          // Standalone: default to Packed
           outType = `Packed` + `(` + length + `:` + (lineData.decimals || `0`) + `)`;
         }
       }
@@ -311,4 +286,88 @@ export function getPrettyType(lineData) {
   }
 
   return Parser.expandKeywords(Parser.getTokens(outType));
+}
+
+// https://www.ibm.com/docs/fr/i/7.4.0?topic=specifications-input
+export function parseISpec(lineNumber: number, lineIndex: number, content: string) {
+  content = content.padEnd(80);
+  let iType: "programRecord"|"programField"|"externalRecord"|"externalField"|undefined;
+
+  const name = content.substring(6, 16).trimEnd();
+
+  if (name) {
+    const externalReserved = content.substring(15, 20).trim();
+    if (externalReserved) {
+      iType = `programRecord`;
+    } else {
+      iType = `externalRecord`;
+    }
+  } else {
+    const sequencingIndicator = content.substring(16, 18).trim();
+    if (sequencingIndicator) {
+      return { iType: `continuationRecord` as const };
+    }
+
+    const externalName = content.substring(20, 30).trim();
+    if (externalName) {
+      iType = `externalField`;
+    } else {
+      iType = `programField`;
+    }
+  }
+
+  const getPart = (start: number, end: number, type?: string) => {
+    return calculateToken(lineNumber, lineIndex + (start-1), content.substring(start-1, end).trimEnd(), type);
+  }
+
+  switch (iType) {
+    case `programRecord`:
+      return {
+        iType,
+        name: getPart(7, 16),
+        logicalRelationship: getPart(16, 18),
+        sequence: getPart(18, 19),
+        number: getPart(19, 20),
+        option: getPart(20, 21),
+        recordIdentifyingIndicator: getPart(21, 23, `special-ind`)
+      }
+    case `programField`:
+      return {
+        iType,
+        dataAttributes: getPart(31, 34),
+        dateTimeSeparator: getPart(35, 36),
+        dataFormat: getPart(36, 37),
+        fieldLocation: getPart(37, 41),
+        length: getPart(42, 46),
+        decimalPositions: getPart(47, 48),
+        fieldName: getPart(49, 62),
+        controlLevel: getPart(63, 64, `special-ind`),
+        matchingFields: getPart(65, 66, `special-ind`),
+        fieldRecordRelation: getPart(67, 68, `special-ind`),
+        fieldIndicators: [
+          getPart(69, 70, `special-ind`),
+          getPart(71, 72, `special-ind`),
+          getPart(73, 74, `special-ind`)
+        ]
+      }
+    case `externalRecord`:
+      return {
+        iType,
+        name: getPart(7, 16),
+        recordIdentifyingIndicator: getPart(21, 22, `special-ind`),
+      };
+    case `externalField`:
+      return {
+        iType,
+        externalName: getPart(21, 30),
+        fieldName: getPart(49, 62),
+        controlLevel: getPart(63, 64, `special-ind`),
+        matchingFields: getPart(65, 66, `special-ind`),
+        fieldIndicators: [
+          getPart(69, 70, `special-ind`),
+          getPart(71, 72, `special-ind`),
+          getPart(73, 74, `special-ind`)
+        ]
+      };
+  }
 }

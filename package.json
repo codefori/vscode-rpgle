@@ -52,6 +52,25 @@
 					"default": 200,
 					"minimum": 10,
 					"description": "Maximum number of remote file content entries kept in memory. If the cache exceeds this size, the least recently used entries will be dropped. Setting this to a low value can help reduce memory usage, but may cause more frequent fetching of remote content, which can impact performance."
+				},
+				"vscode-rpgle.logLevel": {
+					"type": "string",
+					"default": "info",
+					"enum": [
+						"none",
+						"error",
+						"warn",
+						"info",
+						"debug"
+					],
+					"enumDescriptions": [
+						"No logging",
+						"Only errors",
+						"Errors and warnings",
+						"Errors, warnings, and info (default)",
+						"All messages including debug output"
+					],
+					"description": "Controls the verbosity of RPGLE language server logging output."
 				}
 			}
 		},

@@ -1,12 +1,12 @@
 /* eslint-disable no-case-declarations */
 
-import { ALLOWS_EXTENDED, createBlocks, tokenise } from "./tokens";
+import { ALLOWS_EXTENDED, createBlocks, tokenise, trimQuotes } from "./tokens";
 
 import Cache from "./models/cache";
 import Declaration from "./models/declaration";
 
 import oneLineTriggers from "./models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromToken } from "./models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -506,6 +506,8 @@ export default class Parser {
 
       /** Used for handling multiline statements */
       let currentStmtStart: {content?: string, line: number, index: number}|undefined;
+      /** True when the previous continuation line ended with `...` (direct concat, trim next line) */
+      let dotsConcat = false;
 
       let directIfScope: {condition: boolean}[] = [];
 
@@ -612,7 +614,7 @@ export default class Parser {
 
         const qualified = fOptions.keyword[`QUALIFIED`] === true;
         const prefixKeyword = fOptions.keyword[`PREFIX`];
-        const prefix = prefixKeyword && typeof prefixKeyword === `string` ? prefixKeyword.toUpperCase() : ``;
+        const prefix = prefixKeyword && typeof prefixKeyword === `string` ? trimQuotes(prefixKeyword.toUpperCase()) : ``;
 
         for (const recordFormat of currentItem.subItems) {
           if (renames[recordFormat.name.toUpperCase()]) {
@@ -717,7 +719,7 @@ export default class Parser {
         lineNumber += 1;
 
         if (baseLine.startsWith(`**`) && baseLine[2] !== `*`) {
-          if (baseLine.toLowerCase() === `**free`) {
+          if (baseLine.toLowerCase().startsWith(`**free`)) {
             // **free only works when set on the first line
             if (lineNumber === 0) {
               isFullyFree = true;
@@ -759,7 +761,7 @@ export default class Parser {
               baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
-            } else if (![`D`, `P`, `C`, `F`, `H`].includes(spec)) {
+            } else if (![`D`, `I`, `P`, `C`, `F`, `H`].includes(spec)) {
               continue;
             }
           }
@@ -847,7 +849,11 @@ export default class Parser {
                   const includePath = Parser.getIncludeFromDirective(line);
 
                   if (includePath) {
-                    const include = await this.includeFileFetch(workingUri, includePath);
+                    // Use fileUri (current file) instead of workingUri (root document) to ensure:
+                    // 1. Correct parent file is logged for nested includes
+                    // 2. Member/streamfile resolution caches are scoped per requesting file
+                    // 3. Workspace context resolution uses the actual requesting file
+                    const include = await this.includeFileFetch(fileUri, includePath);
                     if (include.found && include.uri) {
                       if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
                         scopes[0].includes.push({
@@ -935,7 +941,11 @@ export default class Parser {
 
               if (currentStmtStart.content) {
                 // This means the line is just part of the end of the last statement as well.
-                line = currentStmtStart.content + getValidStatement(baseLine);
+                // If the previous continuation line ended with `...`, trim leading whitespace
+                // from this line so the name/expression segments join correctly.
+                const validStmt = getValidStatement(baseLine);
+                line = currentStmtStart.content + (dotsConcat ? validStmt.trimStart() : validStmt);
+                dotsConcat = false;
 
                 tokens = Parser.lineTokens(line, currentStmtStart.line, currentStmtStart.index);
                 partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
@@ -945,12 +955,23 @@ export default class Parser {
               }
 
             } else if (!line.endsWith(`;`)) {
-              currentStmtStart.content = (currentStmtStart.content || ``) + baseLine;
+              // If the previous line ended with `...`, trim leading whitespace before appending.
+              const trimmedBase = dotsConcat ? baseLine.trimStart() : baseLine;
+              dotsConcat = false;
 
-              if (currentStmtStart.content.endsWith(`-`))
+              currentStmtStart.content = (currentStmtStart.content || ``) + trimmedBase;
+
+              if (currentStmtStart.content.endsWith(`-`)) {
                 currentStmtStart.content = currentStmtStart.content.substring(0, currentStmtStart.content.length - 1) + ` `;
-
-              currentStmtStart.content += EOL;
+                currentStmtStart.content += EOL;
+              } else if (currentStmtStart.content.trimEnd().endsWith(`...`)) {
+                // Strip `...` and directly concatenate the next line (no EOL separator).
+                // This matches the IBM i RPG IV free-format continuation rule.
+                currentStmtStart.content = currentStmtStart.content.trimEnd().slice(0, -3);
+                dotsConcat = true;
+              } else {
+                currentStmtStart.content += EOL;
+              }
 
               continue;
             }
@@ -1557,7 +1578,127 @@ export default class Parser {
                 });
               }
             }
+            break;
 
+          case `I`:
+            const iSpec = parseISpec(lineNumber, lineIndex, line);
+
+            switch (iSpec.iType) {
+              case `continuationRecord`:
+                // Continuation record lines (blank file name, non-blank sequencing cols 17-18)
+                // are alternate indicator sets for the same physical record — nothing to do.
+                break;
+
+              case `programRecord`:
+              case `externalRecord`:
+                tokens = [iSpec.name, iSpec.recordIdentifyingIndicator];
+                currentItem = new Declaration(`input`);
+                currentItem.name = iSpec.name.value;
+                currentItem.keyword = {
+                  type: iSpec.iType === `programRecord` ? `program` : `external`
+                };
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: iSpec.name.range
+                };
+
+                currentItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+
+                scope.addSymbol(currentItem);
+
+                break;
+
+              case `programField`:
+                if (!currentItem) {
+                  break;
+                }
+
+                tokens = [
+                  iSpec.fieldName,
+                  iSpec.controlLevel,
+                  iSpec.matchingFields,
+                  iSpec.fieldRecordRelation,
+                  ...iSpec.fieldIndicators
+                ];
+
+                // TODO: generate a type for this
+                let lookup = scope.find(iSpec.fieldName.value, undefined);
+
+                // This means the lookup is part of a struct
+                if (lookup && lookup.type === `subitem` && iSpec.dataFormat === undefined) {
+                  // So we assign it a default type if there isn't one
+                  iSpec.dataFormat = {
+                    type: `word`,
+                    value: iSpec.decimalPositions ? `S` : `A`,
+                    range: {start: 35, end: 37, line: lineNumber}
+                  };
+                }
+
+                const definedDataType = prettyTypeFromISpecTokens(iSpec);
+
+                if (lookup) {
+                  // TODO: does definedDataType match to lookup?
+                  if (Object.keys(lookup.keyword).length === 0) {
+                    lookup.keyword = definedDataType;
+                    // console.log({name: lookup.name, definedDataType});
+                  } else {
+                    // console.log({name: lookup.name, lookupKeyword: lookup.keyword, definedDataType});
+                  }
+
+                  currentItem.subItems.push(lookup);
+                } else {
+                  currentSub = new Declaration(`subitem`);
+                  currentSub.name = iSpec.fieldName.value;
+                  currentSub.keyword = definedDataType;
+                  currentSub.position = {
+                    path: fileUri,
+                    range: iSpec.fieldName.range
+                  };
+                  currentSub.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  currentItem.subItems.push(currentSub);
+                }
+
+                currentItem.range.end = lineNumber;
+
+                break;
+
+              case `externalField`:
+                if (!currentItem) {
+                  break;
+                }
+
+                tokens = [
+                  iSpec.externalName,
+                  iSpec.fieldName,
+                  iSpec.controlLevel,
+                  iSpec.matchingFields,
+                  ...iSpec.fieldIndicators
+                ];
+                if (iSpec.externalName) {
+                  // Generate a type for this
+                  let lookup = scope.find(iSpec.externalName.value, undefined, true);
+                  if (lookup) {
+                    lookup.name = iSpec.fieldName.value;
+                    currentItem.subItems.push(lookup);
+                    currentItem.range.end = lineNumber;
+                  }
+                } else {
+                  let lookup = scope.find(iSpec.fieldName.value, undefined, true);
+                  if (lookup) {
+                    currentItem.subItems.push(lookup);
+                    currentItem.range.end = lineNumber;
+                  }
+                }
+                break;
+            }
             break;
 
           case `C`:
@@ -1782,7 +1923,7 @@ export default class Parser {
                 currentItem.name = currentNameToken.value;
                 currentItem.keyword = {
                   ...dSpec.keywords,
-                  ...prettyTypeFromToken(dSpec),
+                  ...prettyTypeFromDSpecTokens(dSpec),
                 }
 
                 // TODO: line number might be different with ...?
@@ -1826,7 +1967,7 @@ export default class Parser {
                 currentItem = new Declaration(`procedure`);
                 currentItem.name = currentNameToken?.value || NO_NAME;
                 currentItem.keyword = {
-                  ...prettyTypeFromToken(dSpec),
+                  ...prettyTypeFromDSpecTokens(dSpec),
                   ...dSpec.keywords
                 }
 
@@ -1854,7 +1995,7 @@ export default class Parser {
                   if (currentItem) {
                     currentItem.keyword = {
                       ...currentItem.keyword,
-                      ...prettyTypeFromToken(dSpec),
+                      ...prettyTypeFromDSpecTokens(dSpec),
                       ...dSpec.keywords
                     }
                   }
@@ -1906,7 +2047,7 @@ export default class Parser {
                     currentSub = new Declaration(isProgramParameter ? `parameter` : `subitem`);
                     currentSub.name = currentNameToken?.value || NO_NAME;
                     currentSub.keyword = {
-                      ...prettyTypeFromToken(dSpec),
+                      ...prettyTypeFromDSpecTokens(dSpec),
                       ...dSpec.keywords
                     }
 
@@ -1936,7 +2077,7 @@ export default class Parser {
                       if (currentItem.subItems.length > 0) {
                         currentItem.subItems[currentItem.subItems.length - 1].keyword = {
                           ...currentItem.subItems[currentItem.subItems.length - 1].keyword,
-                          ...prettyTypeFromToken(dSpec),
+                          ...prettyTypeFromDSpecTokens(dSpec),
                           ...dSpec.keywords
                         };
 
