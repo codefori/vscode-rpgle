@@ -40,6 +40,19 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Whether to show the fixed-format ruler by default."
+				},
+				"vscode-rpgle.logLevel": {
+					"type": "string",
+					"default": "info",
+					"enum": ["none", "error", "warn", "info", "debug"],
+					"enumDescriptions": [
+						"No logging",
+						"Only errors",
+						"Errors and warnings",
+						"Errors, warnings, and info (default)",
+						"All messages including debug output"
+					],
+					"description": "Controls the verbosity of RPGLE language server logging output."
 				}
 			}
 		},

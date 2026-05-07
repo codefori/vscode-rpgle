@@ -6,7 +6,7 @@ export const SpecRulers: {[spec: string]: string} = {
   D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords+++++++++++++++++++++++++++++`,
   F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords+++++++++++++++++++++++++++++`,
   I: `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
-  O: `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.Constant/Editword/DateFormat`,
+  O: `.....OFilename++DF..N01N02N03Name++++++B++A++Sb+Sa+.Constant/Editword+++++++++++`,
   P: `.....PName+++++++++++..T...................Keywords+++++++++++++++++++++++++++++`
 }
 
