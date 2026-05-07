@@ -14,6 +14,6 @@
 	"devDependencies": {
 		"@halcyontech/vscode-ibmi-types": "^2.15.3",
 		"@types/vscode": "^1.63.0",
-		"@vscode/test-electron": "^2.1.2"
+		"@vscode/test-electron": "^2.5.2"
 	}
 }
