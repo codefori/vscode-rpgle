@@ -17,6 +17,8 @@ export let jsonCache: { [uri: string]: string } = {};
 let parsedLintCache: { [uri: string]: Rules } = {};
 /** In-flight fetch promises — deduplicates concurrent getLintOptions calls for the same URI */
 let lintFetchInProgress: { [uri: string]: Promise<string | undefined> } = {};
+/** In-flight validateUri promises — deduplicates concurrent getLintConfigUri calls */
+let lintConfigUriInProgress: { [key: string]: Promise<string | undefined> } = {};
 
 export function isLinterEnabled() {
 	return true;
@@ -42,6 +44,7 @@ export function initialise(connection: _Connection) {
 				}
 
 				boundLintConfig = {};
+				lintConfigUriInProgress = {};
 
 				runLinter = true;
 			}
@@ -78,6 +81,7 @@ export function initialise(connection: _Connection) {
 		// make sure it's the latest.
 		if ([`member`, `streamfile`].includes(uri.scheme)) {
 			boundLintConfig = {};
+			lintConfigUriInProgress = {};
 			jsonCache = {};
 			parsedLintCache = {};
 		}
@@ -116,6 +120,10 @@ export async function getLintConfigUri(workingUri: string) {
 		return cached.resolved === ResolvedState.Found ? cached.uri : undefined;
 	}
 
+	// Compute a scheme-level dedup key so that concurrent calls for different
+	// documents of the same scheme share one in-flight validateUri call.
+	let dedupKey: string | undefined;
+
 	switch (uri.scheme) {
 		case `member`:
 			const memberPath = parseMemberUri(uri.path);
@@ -132,7 +140,13 @@ export async function getLintConfigUri(workingUri: string) {
 			}).toString();
 
 			if (jsonCache[cleanString]) return cleanString;
-			cleanString = await validateUri(cleanString);
+			dedupKey = cleanString;
+			if (!lintConfigUriInProgress[dedupKey]) {
+				lintConfigUriInProgress[dedupKey] = validateUri(cleanString).finally(() => {
+					delete lintConfigUriInProgress[dedupKey!];
+				});
+			}
+			cleanString = await lintConfigUriInProgress[dedupKey];
 			break;
 
 		case `streamfile`:
@@ -143,12 +157,24 @@ export async function getLintConfigUri(workingUri: string) {
 					path: path.posix.join(workingDir, `.vscode`, `rpglint.json`)
 				}).toString();
 
-				cleanString = await validateUri(cleanString, uri.scheme);
+				dedupKey = cleanString;
+				if (!lintConfigUriInProgress[dedupKey]) {
+					lintConfigUriInProgress[dedupKey] = validateUri(cleanString, uri.scheme).finally(() => {
+						delete lintConfigUriInProgress[dedupKey!];
+					});
+				}
+				cleanString = await lintConfigUriInProgress[dedupKey];
 			}
 			break;
 
 		case `file`:
-			cleanString = await validateUri(`rpglint.json`, uri.scheme);
+			dedupKey = `file:rpglint.json`;
+			if (!lintConfigUriInProgress[dedupKey]) {
+				lintConfigUriInProgress[dedupKey] = validateUri(`rpglint.json`, uri.scheme).finally(() => {
+					delete lintConfigUriInProgress[dedupKey!];
+				});
+			}
+			cleanString = await lintConfigUriInProgress[dedupKey];
 			break;
 	}
 
