@@ -148,6 +148,103 @@ test('skip3', async () => {
   expect(errors.length).toBe(1);
 })
 
+test('skip_errors_string_literal_dupe', async () => {
+  const lines = [
+    `**free`,
+    `dcl-s xxField1 char(1);`,
+    ``,
+    `// @rpglint-skip`,
+    `dsply 'hello' + 'hello';`,
+    ``,
+    `dsply 'hello' + 'hello';`,
+    ``,
+    `return`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    StringLiteralDupe: true
+  }, cache);
+
+  // The first occurrence is skipped by @rpglint-skip
+  // The second occurrence should report 2 errors (two 'hello' literals appear there)
+  expect(errors.length).toBe(2);
+})
+
+test('skip_errors_variable_case', async () => {
+  const lines = [
+    `**free`,
+    `dcl-s myVar char(10);`,
+    ``,
+    `// @rpglint-skip`,
+    `myvar = 'first';`,
+    ``,
+    `myvar = 'second';`,
+    ``,
+    `return`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  // The first occurrence is skipped by @rpglint-skip
+  // The second occurrence should report an error
+  expect(errors.length).toBe(1);
+  expect(errors[0].type).toBe('IncorrectVariableCase');
+  expect(errors[0].newValue).toBe('myVar');
+})
+
+test('skip_all_errors_variable_case', async () => {
+  const lines = [
+    `**free`,
+    `dcl-s myVar char(10);`,
+    ``,
+    `// @rpglint-skip`,
+    `myvar = 'first';`,
+    ``,
+    `// @rpglint-skip`,
+    `myvar = 'second';`,
+    ``,
+    `return`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  // The first occurrence is skipped by @rpglint-skip
+  // The second occurrence should report an error
+  expect(errors.length).toBe(0);
+})
+
+test('skip_if_clause', async () => {
+  const lines = [
+    `**free`,
+    `dcl-s myVar char(10);`,
+    ``,
+    `// @rpglint-skip`,
+    `if (myvar = 'none');`,
+      `myvar = 'first';`,
+    `endif;`,
+    ``,
+    `return`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    IncorrectVariableCase: true
+  }, cache);
+
+  // The first occurrence, inside the if clause, is skipped by @rpglint-skip but not the hole content of the if clause
+  // The second occurrence should report an error
+  expect(errors.length).toBe(1);
+  expect(errors[0].type).toBe('IncorrectVariableCase');
+  expect(errors[0].newValue).toBe('myVar');
+})
+
 test('eof1', async () => {
   const lines = [
     `     D UPPERCASE       PR          4096    Varying`,
