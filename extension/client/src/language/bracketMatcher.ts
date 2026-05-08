@@ -110,6 +110,18 @@ function updateDecorations(editor: vscode.TextEditor) {
     }
   }
   
+  // Check if we're clicking on FOR inside an SQL block
+  if (word === 'for') {
+    const text = document.getText();
+    const offset = document.offsetAt(position);
+    if (isInSqlBlock(text, offset)) {
+      // Don't highlight FOR inside SQL blocks
+      editor.setDecorations(decorationType, []);
+      currentBlockInfo = undefined;
+      return;
+    }
+  }
+  
   // Find matching bracket pair
   // Special handling for closing keywords that can close multiple block types
   let matchingPair: BracketPair | undefined;
@@ -249,6 +261,9 @@ function findAllMatches(text: string, document: vscode.TextDocument): { offset: 
     
     // Skip SELECT if inside SQL block
     if (matchWord === 'select' && isInSqlBlock(text, match.index)) continue;
+    
+    // Skip FOR if inside SQL block
+    if (matchWord === 'for' && isInSqlBlock(text, match.index)) continue;
     
     matches.push({
       offset: match.index,
