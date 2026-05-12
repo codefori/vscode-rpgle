@@ -1,6 +1,5 @@
-import path from "path";
+import { expect, test } from "vitest";
 import setupParser from "../parserSetup";
-import { test, expect } from "vitest";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
