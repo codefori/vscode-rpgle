@@ -29,7 +29,6 @@
 	],
 	"activationEvents": [
 		"onLanguage:rpgle",
-		"onLanguage:rpg",
 		"onCommand:workbench.action.showAllSymbols"
 	],
 	"main": "./out/extension",
@@ -82,13 +81,13 @@
 				"command": "vscode-rpgle.assist.launchUI",
 				"title": "Launch Column Assistant",
 				"category": "RPGLE",
-				"enablement": "editorLangId == rpgle || editorLangId == rpg"
+				"enablement": "editorLangId == rpgle"
 			},
 			{
 				"command": "vscode-rpgle.assist.toggleFixedRuler",
 				"title": "Toggle Inline Editor Helper",
 				"category": "RPGLE",
-				"enablement": "editorLangId == rpgle || editorLangId == rpg"
+				"enablement": "editorLangId == rpgle"
 			},
 			{
 				"command": "vscode-rpgle.server.reloadCache",
@@ -102,14 +101,14 @@
 				"title": "Move Left",
 				"category": "RPGLE Fixed-Format",
 				"icon": "$(arrow-left)",
-				"when": "editorLangId == rpgle || editorLangId == rpg"
+				"when": "editorLangId == rpgle"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveRight",
 				"title": "Move Right",
 				"category": "RPGLE Fixed-Format",
 				"icon": "$(arrow-right)",
-				"when": "editorLangId == rpgle || editorLangId == rpg"
+				"when": "editorLangId == rpgle"
 			}
 		],
 		"keybindings": [
@@ -117,25 +116,25 @@
 				"command": "vscode-rpgle.assist.launchUI",
 				"key": "ctrl+shift+f4",
 				"mac": "cmd+shift+f4",
-				"when": "editorLangId == rpgle || editorLangId == rpg"
+				"when": "editorLangId == rpgle"
 			},
 			{
 				"command": "vscode-rpgle.assist.toggleFixedRuler",
 				"key": "shift+f4",
 				"mac": "shift+f4",
-				"when": "editorLangId == rpgle || editorLangId == rpg"
+				"when": "editorLangId == rpgle"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveLeft",
 				"key": "ctrl+[",
 				"mac": "ctrl+[",
-				"when": "editorLangId == rpgle || editorLangId == rpg"
+				"when": "editorLangId == rpgle"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveRight",
 				"key": "ctrl+]",
 				"mac": "ctrl+]",
-				"when": "editorLangId == rpgle || editorLangId == rpg"
+				"when": "editorLangId == rpgle"
 			}
 		],
 		"menus": {

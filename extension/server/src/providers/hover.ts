@@ -1,8 +1,8 @@
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
 import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywords } from '.';
-import Parser from '../../../../language/ile/parser';
+import Parser from "../../../../language/parser";
 import { URI } from 'vscode-uri';
-import { Keywords } from '../../../../language/ile/parserTypes';
+import { Keywords } from '../../../../language/parserTypes';
 import Declaration from '../../../../language/models/declaration';
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover | undefined> {

@@ -18,32 +18,28 @@ const outlineBar = window.createTextEditorDecorationType({});
 let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || false
 let currentEditorLine = -1;
 
-import { SpecFieldDef, SpecFieldValue, SpecRulers, specs, opmSpecs, opmSpecRulers } from '../schemas/specs';
+import { SpecFieldDef, SpecFieldValue, SpecRulers, specs } from '../schemas/specs';
 
-const getAreasForLine = (line: string, index: number, languageId: string = 'rpgle') => {
+const getAreasForLine = (line: string, index: number) => {
   if (line.length < 6) return undefined;
   if (line[6] === `*` || line[6] === `/`) return undefined;
 
-  // Use OPM specs for .rpg files, ILE specs for .rpgle files
-  const specDefinitions = languageId === 'rpg' ? opmSpecs : specs;
-  const rulerDefinitions = languageId === 'rpg' ? opmSpecRulers : SpecRulers;
-
   const specLetter = line[5].toUpperCase();
-  if (specDefinitions[specLetter]) {
-    const specification = specDefinitions[specLetter];
+  if (specs[specLetter]) {
+    const specification = specs[specLetter];
 
     const active = specification.findIndex((box: any) => index >= box.start && index <= box.end);
 
     return {
       specification,
       active,
-      outline: rulerDefinitions[specLetter]
+      outline: SpecRulers[specLetter]
     };
-  } else if (rulerDefinitions[specLetter]) {
+  } else if (SpecRulers[specLetter]) {
     return {
       specification: [] as SpecFieldDef[],
       active: -1,
-      outline: rulerDefinitions[specLetter]
+      outline: SpecRulers[specLetter]
     };
   }
 }
@@ -52,9 +48,6 @@ function documentIsFree(document: TextDocument) {
   if (document.languageId === `rpgle`) {
     const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
     return line === `**FREE`;
-  } else if (document.languageId === `rpg`) {
-    // OPM RPG is always fixed-format
-    return false;
   }
 
   return false;
@@ -67,15 +60,14 @@ export function registerColumnAssist(context: ExtensionContext) {
       if (editor) {
         const document = editor.document;
 
-        if (document.languageId === `rpgle` || document.languageId === `rpg`) {
+        if (document.languageId === `rpgle`) {
           if (!documentIsFree(document)) {
             const lineNumber = editor.selection.start.line;
             const positionIndex = editor.selection.start.character;
 
             const positionsData = await promptLine(
               document.getText(new Range(lineNumber, 0, lineNumber, 100)),
-              positionIndex,
-              document.languageId
+              positionIndex
             );
 
             if (positionsData) {
@@ -119,15 +111,14 @@ export function registerColumnAssist(context: ExtensionContext) {
 }
 
 function moveFromPosition(direction: "left"|"right", editor = window.activeTextEditor) {
-  if (editor && (editor.document.languageId === `rpgle` || editor.document.languageId === `rpg`) && !documentIsFree(editor.document)) {
+  if (editor && editor.document.languageId === `rpgle` && !documentIsFree(editor.document)) {
     const document = editor.document;
     const lineNumber = editor.selection.start.line;
     const positionIndex = editor.selection.start.character;
 
     const positionsData = getAreasForLine(
       document.getText(new Range(lineNumber, 0, lineNumber, 100)),
-      positionIndex,
-      document.languageId
+      positionIndex
     );
 
     if (positionsData) {
@@ -154,15 +145,14 @@ function updateRuler(editor = window.activeTextEditor) {
 
   if (editor) {
     const document = editor.document;
-    if (document.languageId === `rpgle` || document.languageId === `rpg`) {
+    if (document.languageId === `rpgle`) {
       if (!documentIsFree(document)) {
         const lineNumber = editor.selection.start.line;
         const positionIndex = editor.selection.start.character;
 
         const positionsData = getAreasForLine(
           document.getText(new Range(lineNumber, 0, lineNumber, 100)),
-          positionIndex,
-          document.languageId
+          positionIndex
         );
 
         if (positionsData) {
@@ -228,7 +218,7 @@ interface FieldBox {
   maxLength?: number
 }
 
-async function promptLine (line: string, _index: number, languageId: string = 'rpgle'): Promise<string|undefined> {
+async function promptLine (line: string, _index: number): Promise<string|undefined> {
   const base = loadBase();
 
   if (!base) {
@@ -241,12 +231,9 @@ async function promptLine (line: string, _index: number, languageId: string = 'r
   if (line[6] === `*`) return undefined;
   line = line.padEnd(80);
 
-  // Use OPM specs for .rpg files, ILE specs for .rpgle files
-  const specDefinitions = languageId === 'rpg' ? opmSpecs : specs;
-
   const specLetter = line[5].toUpperCase();
-  if (specDefinitions[specLetter]) {
-    const specification = specDefinitions[specLetter];
+  if (specs[specLetter]) {
+    const specification = specs[specLetter];
 
     let parts: FieldBox[] = [];
 

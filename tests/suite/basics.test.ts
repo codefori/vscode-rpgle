@@ -1,11 +1,11 @@
 
 import path from "path";
 import setupParser, { getFileContent } from "../parserSetup";
-import Linter from "../../language/ile/linter";
+import Linter from "../../language/linter";
 import { test, expect } from "vitest";
 import { readFile } from "fs/promises";
-import Statement from "../../language/ile/statement";
-import { Token } from "../../language/ile/types";
+import Statement from "../../language/statement";
+import { Token } from "../../language/types";
 
 const parser = setupParser();
 const uri = `source.rpgle`;

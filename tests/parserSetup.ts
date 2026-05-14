@@ -1,4 +1,4 @@
-import Parser from '../language/ile/parser';
+import Parser from '../language/parser';
 
 import glob from "glob";
 import path from 'path';

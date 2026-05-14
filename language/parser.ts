@@ -2,11 +2,11 @@
 
 import { ALLOWS_EXTENDED, createBlocks, tokenise, trimQuotes } from "./tokens";
 
-import Cache from "../models/cache";
-import Declaration from "../models/declaration";
+import Cache from "./models/cache";
+import Declaration from "./models/declaration";
 
-import oneLineTriggers from "../models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "../models/fixed";
+import oneLineTriggers from "./models/oneLineTriggers";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "./models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
