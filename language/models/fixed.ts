@@ -1,4 +1,4 @@
-import Parser from "../parser";
+import Parser from "../ile/parser";
 import { Keywords } from "../parserTypes";
 import { Token } from "../types";
 

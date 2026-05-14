@@ -50,9 +50,10 @@ export function activate(context: ExtensionContext) {
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
-		// Register the server for plain text documents
+		// Register the server for both ILE and OPM RPG documents.
 		documentSelector: [
 			{ language: 'rpgle' },
+			{ language: 'rpg' },
 		],
 		synchronize: {
 			fileEvents: [
@@ -104,9 +105,6 @@ export function activate(context: ExtensionContext) {
 	context.subscriptions.push(getServerImplementationProvider());
 	context.subscriptions.push(setLanguageSettings());
 	// context.subscriptions.push(...initBuilder(client));
-
-
-	console.log(`started`);
 }
 
 export function deactivate(): Thenable<void> | undefined {

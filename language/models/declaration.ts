@@ -1,9 +1,9 @@
 
 import { Keywords, Reference } from "../parserTypes";
-import { IRangeWithLine } from "../types";
+import { IRangeWithLine } from "../ile/types";
 import Cache from "./cache";
 
-export type DeclarationType = "parameter"|"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag"|"indicator"|"input"|"output";
+export type DeclarationType = "parameter"|"procedure"|"subroutine"|"file"|"struct"|"subitem"|"variable"|"constant"|"tag"|"indicator"|"input"|"call"|"plist"|"klist"|"output";
 
 export default class Declaration {
   name: string = ``;

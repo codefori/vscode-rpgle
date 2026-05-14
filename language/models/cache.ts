@@ -1,6 +1,6 @@
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
-import { trimQuotes } from "../tokens";
-import { IRange } from "../types";
+import { trimQuotes } from "../ile/tokens";
+import { IRange } from "../ile/types";
 import Declaration, { DeclarationType } from "./declaration";
 
 const DEFAULT_INDICATORS = [
@@ -65,6 +65,7 @@ export default class Cache {
   keyword: Keywords;
   sqlReferences: Declaration[];
   includes: IncludeStatement[];
+  parseTree?: { [fileUri: string]: any[] };
   private symbolRegister: SymbolRegister;
 
   constructor(cache: CacheProps = {}, isProcedure: boolean = false) {
@@ -84,6 +85,7 @@ export default class Cache {
 
     this.sqlReferences = cache.sqlReferences || [];
     this.includes = cache.includes || [];
+    this.parseTree = cache.parseTree || {};
   }
 
   private symbolCache: Declaration[] | undefined;

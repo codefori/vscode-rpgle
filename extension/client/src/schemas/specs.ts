@@ -8,6 +8,7 @@ export const SpecRulers: {[spec: string]: string} = {
   I: `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
   O: `.....OFilename++DF..N01N02N03Name++++++B++A++Sb+Sa+.Constant/Editword+++++++++++`,
   P: `.....PName+++++++++++..T...................Keywords+++++++++++++++++++++++++++++`
+  // E, H specs are OPM-only - see opmSpecRulers below
 }
 
 export const specs: {[spec: string]: SpecFieldDef[]} = {
@@ -79,6 +80,7 @@ export const specs: {[spec: string]: SpecFieldDef[]} = {
       end: 75
     }
   ],
+  // Note: C-spec above is for RPGLE (ILE). OPM RPG III has different columns - see opmSpecs below
 
   D: [
     {start: 6, end: 20, name: `Name`, id: `name`},
@@ -152,9 +154,155 @@ export const specs: {[spec: string]: SpecFieldDef[]} = {
     {start: 35, end: 41, name: `Device`, id: `device`},
     {start: 43, end: 79, name: `Keywords`, id: `keywords`}
   ],
+  // E, H, I, O specs are OPM-only or have significant differences - see opmSpecs below
   P: [
     {start: 6, end: 20, name: `Name`, id: `name`},
     {start: 23, end: 23, name: `Begin/End Procedure`, id: `proc`},
     {start: 43, end: 79, name: `Keywords`, id: `keywords`}
   ]
+};
+
+// OPM RPG III specific spec definitions (different column positions than RPGLE)
+export const opmSpecs: {[spec: string]: SpecFieldDef[]} = {
+  C: [
+    {
+      id: `controlLevel`,
+      name: `Control Level`,
+      start: 6,
+      end: 7,
+    },
+    {
+      id: `indicators`,
+      name: `Indicators`,
+      start: 8,
+      end: 16,
+    },
+    {
+      id: `factor1`,
+      name: `Factor 1`,
+      start: 17,
+      end: 26
+    },
+    {
+      id: `operation`,
+      name: `Operation`,
+      start: 27,
+      end: 31
+    },
+    {
+      id: `factor2`,
+      name: `Factor 2`,
+      start: 32,
+      end: 41
+    },
+    {
+      id: `result`,
+      name: `Result Field`,
+      start: 42,
+      end: 47
+    },
+    {
+      id: `fieldLength`,
+      name: `Field Length`,
+      start: 48,
+      end: 50
+    },
+    {
+      id: `decimalPositions`,
+      name: `Decimal Positions`,
+      start: 51,
+      end: 51
+    },
+    {
+      id: `extender`,
+      name: `Operation Extender`,
+      start: 52,
+      end: 52
+    },
+    {
+      id: `resultingIndicatorsA`,
+      name: `Resulting Indicator`,
+      start: 53,
+      end: 54
+    },
+    {
+      id: `resultingIndicatorsB`,
+      name: `Resulting Indicator`,
+      start: 55,
+      end: 56
+    },
+    {
+      id: `resultingIndicatorsC`,
+      name: `Resulting Indicator`,
+      start: 57,
+      end: 58
+    }
+  ],
+  F: [
+    {start: 6, end: 13, name: `File Name`, id: `fileName`},
+    {start: 14, end: 14, name: `File Type`, id: `fileType`},
+    {start: 15, end: 15, name: `File Designation`, id: `fileDesignation`},
+    {start: 16, end: 16, name: `End of File`, id: `endOfFile`},
+    {start: 17, end: 17, name: `Sequence`, id: `sequence`},
+    {start: 18, end: 18, name: `File Format`, id: `fileFormat`},
+    {start: 19, end: 22, name: `Block Length`, id: `blockLength`},
+    {start: 23, end: 26, name: `Record Length`, id: `recordLength`},
+    {start: 27, end: 27, name: `Mode of Processing`, id: `modeOfProcessing`},
+    {start: 28, end: 30, name: `Length of Key`, id: `keyLength`},
+    {start: 31, end: 31, name: `Record Address Type`, id: `addressType`},
+    {start: 32, end: 32, name: `File Organization`, id: `fileOrg`},
+    {start: 33, end: 37, name: `Overflow Indicator`, id: `overflowInd`},
+    {start: 38, end: 42, name: `Key Field Starting Location`, id: `keyFieldStart`},
+    {start: 43, end: 46, name: `File Addition`, id: `fileAddition`},
+    {start: 47, end: 51, name: `Symbolic Device`, id: `device`},
+    {start: 52, end: 57, name: `Reserved`, id: `reserved1`},
+    {start: 58, end: 59, name: `Continuation Lines`, id: `continuation`}
+  ],
+  E: [
+    {start: 6, end: 13, name: `From Filename/Array`, id: `fromFile`},
+    {start: 14, end: 24, name: `To Filename/Array`, id: `toFile`},
+    {start: 25, end: 26, name: `Extension Code`, id: `extCode`},
+    {start: 27, end: 29, name: `Entries per Record`, id: `entriesPerRecord`, padStart: true},
+    {start: 30, end: 33, name: `Entries per Array`, id: `entriesPerArray`, padStart: true},
+    {start: 34, end: 42, name: `Reserved`, id: `reserved`}
+  ],
+  H: [
+    {start: 6, end: 73, name: `Control Options`, id: `options`}
+  ],
+  I: [
+    {start: 6, end: 13, name: `Filename/Structure`, id: `fileName`},
+    {start: 14, end: 15, name: `Sequence`, id: `sequence`},
+    {start: 16, end: 16, name: `Number`, id: `number`},
+    {start: 17, end: 17, name: `Option`, id: `option`},
+    {start: 18, end: 19, name: `Record ID Indicator`, id: `recId`},
+    {start: 20, end: 29, name: `External Field/Name`, id: `externalField`},
+    {start: 30, end: 41, name: `Position/From-To`, id: `position`},
+    {start: 42, end: 42, name: `Data Format`, id: `dataFormat`},
+    {start: 43, end: 46, name: `From Position`, id: `fromPos`, padStart: true},
+    {start: 47, end: 50, name: `To Position`, id: `toPos`, padStart: true},
+    {start: 51, end: 51, name: `Decimal Positions`, id: `decimals`},
+    {start: 52, end: 57, name: `Field Name`, id: `fieldName`}
+  ],
+  O: [
+    {start: 6, end: 13, name: `Filename`, id: `fileName`},
+    {start: 14, end: 15, name: `Type/Logical Relation`, id: `type`},
+    {start: 16, end: 17, name: `Record Addition/Deletion`, id: `addDel`},
+    {start: 18, end: 29, name: `Output Indicators`, id: `outputInds`},
+    {start: 31, end: 36, name: `Field Name/EXCPT`, id: `fieldName`},
+    {start: 37, end: 37, name: `Edit Code`, id: `editCode`},
+    {start: 38, end: 38, name: `Blank After`, id: `blankAfter`},
+    {start: 39, end: 42, name: `End Position`, id: `endPos`, padStart: true},
+    {start: 43, end: 43, name: `Data Format`, id: `dataFormat`},
+    {start: 44, end: 69, name: `Constant/Edit Word`, id: `constant`}
+  ]
+};
+
+// OPM RPG III rulers (different from RPGLE)
+export const opmSpecRulers: {[spec: string]: string} = {
+  C: `.....CL0N01N02N03Factor1+++OpcdeFactor2+++Result+++LenDXHiLoEq........`,
+  E: `.....EFromfile++To-file+++++XxNEnLEnAlternating...........`,
+  F: `.....FFilename+IPEASFBBBBLLLLLLLMKAAAAAASSSSSKKKKKSSSSS++CC`,
+  H: `.....H.........................................................Keywords`,
+  I: `.....IFilename+SqNODataarea+++++++++PDPFROMT0DField+++++++++++++++....`,
+  O: `.....OFilename+DTAAIndIndIndField++++EBPAAADCONSTANT/EDITWORD+++++++...`
 };

@@ -11,7 +11,7 @@ import {
 } from 'vscode-languageserver/node';
 
 import documentSymbolProvider from './providers/documentSymbols';
-import { documents, parser } from './providers';
+import { documents, getParser, opmParser, parser } from './providers';
 import definitionProvider from './providers/definition';
 import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
@@ -26,6 +26,7 @@ import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
+import { resolveWorkspaceIncludePath } from './includeResolver';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
@@ -125,23 +126,26 @@ connection.onInitialized(() => {
 	handleClientRequests();
 });
 
-parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration[]> => {
+const tableFetch = async (table: string, aliases = false): Promise<Declaration[]> => {
 	if (!languageToolsEnabled) return [];
 
-	console.log(`Server is resolving ${table}`);
+
 
 	const data = await getObjectData(table);
 
-	console.log(`Resolved ${table} and got ${data.length} rows.`);
+
 
 	return dspffdToRecordFormats(data, aliases);
-});
+};
+
+parser.setTableFetch(tableFetch);
+opmParser.setTableFetch(tableFetch);
 
 let fetchingInProgress: { [fetchKey: string]: boolean } = {};
 
-parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
+const includeFileFetch = async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
-	const uriPath = currentUri.path;
+	const uriPath = currentUri.fsPath;
 	// Extract clean filename without query parameters
 	const parentFileName = getDisplayName(stringUri);
 	const fetchStartTime = Date.now();
@@ -171,7 +175,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				const workspaceFolders = await connection.workspace.getWorkspaceFolders();
 				let workspaceFolder: WorkspaceFolder | undefined;
 				if (workspaceFolders) {
-					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).path))
+					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).fsPath))
 				}
 
 				if (Project.isEnabled) {
@@ -181,15 +185,12 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				} else {
 					// Because project mode is disabled, likely due to the large workspace, we don't search
 					if (workspaceFolder) {
-						cleanString = path.posix.join(URI.parse(workspaceFolder.uri).path, cleanString)
+						const resolved = resolveWorkspaceIncludePath(workspaceFolder.uri, cleanString);
+						cleanString = resolved.absolutePath;
+						validUri = existsSync(cleanString) ? resolved.fileUri : undefined;
+					} else {
+						validUri = existsSync(cleanString) ? URI.file(cleanString).toString() : undefined;
 					}
-
-					validUri = existsSync(cleanString) ?
-						URI.from({
-							scheme: currentUri.scheme,
-							path: cleanString
-						}).toString()
-						: undefined;
 				}
 
 				if (!validUri) {
@@ -315,7 +316,10 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			uri: validUri
 		};
 	}
-});
+};
+
+parser.setIncludeFileFetch(includeFileFetch);
+opmParser.setIncludeFileFetch(includeFileFetch);
 
 if (languageToolsEnabled) {
 	// regular language stuff
@@ -361,7 +365,11 @@ function executeParse(uri: string, parseId: number, document: any) {
 	state.parseStartTime = parseStartTime;
 	logWithTimestamp(`Parse started: ${fileName} (parseId: ${parseId})`, LogLevel.DEBUG);
 
-	parser.getDocs(
+
+	const activeParser = getParser(uri);
+
+
+	activeParser.getDocs(
 		uri,
 		document.getText(),
 		{

@@ -1,6 +1,6 @@
-import Declaration from './models/declaration';
+import Declaration from '../models/declaration';
 import { IRange, IRangeWithLine } from './types';
-import { SymbolRegister } from './models/cache';
+import { SymbolRegister } from '../models/cache';
 
 export interface Keywords {
   [keyword: string]: string|true;
@@ -17,6 +17,7 @@ export interface CacheProps {
   symbolRegister?: SymbolRegister;
   sqlReferences?: Declaration[];
   includes?: IncludeStatement[];
+  parseTree?: { [fileUri: string]: any[] };
 }
 
 export interface Rules {

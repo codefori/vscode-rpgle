@@ -1,8 +1,8 @@
 import { Range, SignatureHelp, SignatureHelpParams, SignatureInformation } from "vscode-languageserver";
 import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywords } from '.';
-import Parser from "../../../../language/parser";
+import Parser from "../../../../language/ile/parser";
 import { IleFunction, IleFunctionParameter, getBuiltIn } from "./apis/bif";
-import Statement from "../../../../language/statement";
+import Statement from "../../../../language/ile/statement";
 import Cache, { RpgleType } from "../../../../language/models/cache";
 
 export async function signatureHelpProvider(handler: SignatureHelpParams): Promise<SignatureHelp | undefined> {

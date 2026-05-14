@@ -1,0 +1,20 @@
+      *%METADATA
+      * %TEXT Error Structure for System Calls
+      *%EMETADATA
+     I*
+     I* System Error Handler Structure:
+     I*
+     I$SYSER      DS
+     I* Bytes available for error info; controls error processing:
+     I*   0 = no error info wanted (exceptions will occur)
+     I*  >0 = error info will be returned in this structure
+     I I            80                    B   1   40$ESIZ
+     I* Bytes returned; actual length of error info returned:
+     I I            80                    B   5   80$ELEN
+     I* Message identifier for error:
+     I                                        9  15 $EMID
+     I* Reserved area
+     I                                       16  16 $ERSV
+     I* Error detail message text:
+     I                                       17  96 $EMSG
+     I*

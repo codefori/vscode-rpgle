@@ -1,8 +1,8 @@
 import path from "path";
 import setupParser from "../parserSetup";
-import Linter from "../../language/linter";
+import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
-import Parser from "../../language/parser";
+import Parser from "../../language/ile/parser";
 
 const parser = setupParser();
 const uri = `source.rpgle`;

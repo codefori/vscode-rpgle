@@ -3,8 +3,8 @@ import { CodeAction, CodeActionKind, Diagnostic, DiagnosticSeverity, DidChangeWa
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { documents, parser } from '..';
-import { IssueRange, Rules } from '../../../../../language/parserTypes';
-import Linter from '../../../../../language/linter';
+import { IssueRange, Rules } from '../../../../../language/ile/parserTypes';
+import Linter from '../../../../../language/ile/linter';
 import Cache from '../../../../../language/models/cache';
 import documentFormattingProvider from './documentFormatting';
 

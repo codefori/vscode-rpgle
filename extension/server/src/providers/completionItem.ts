@@ -7,7 +7,7 @@ import * as ileExports from './apis';
 import skipRules from './linter/skipRules';
 import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
-import Parser from '../../../../language/parser';
+import Parser from '../../../../language/ile/parser';
 import { Token } from '../../../../language/types';
 import { getBuiltIn, getBuiltIns, getBuiltInsForType } from './apis/bif';
 

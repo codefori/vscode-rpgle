@@ -1,6 +1,6 @@
 
 import setupParser from "../parserSetup";
-import Linter from "../../language/linter";
+import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
 
 const parser = setupParser();

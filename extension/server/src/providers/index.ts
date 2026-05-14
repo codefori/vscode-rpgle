@@ -9,8 +9,10 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import Parser from '../../../../language/parser';
+import Parser from '../../../../language/ile/parser';
+import { OpmParser } from '../../../../language/opm/parser';
 import Declaration from '../../../../language/models/declaration';
+import { ParserFactory, IParser } from '../../../../language/parserFactory';
 
 type Keywords = { [key: string]: string | boolean };
 
@@ -21,7 +23,18 @@ export function findFile(fileString: string, scheme = ``) {
 	return documents.keys().find(fileUri => fileUri.includes(fileString) && fileUri.startsWith(`${scheme}:`));
 }
 
+// Parser instances reused across requests so logging and caches show the real flow.
 export const parser = new Parser();
+export const opmParser = new OpmParser();
+
+/**
+ * Get appropriate parser based on file extension
+ * @param uri File URI
+ * @returns Parser instance (OPM or ILE)
+ */
+export function getParser(uri: string): IParser {
+	return ParserFactory.isOpmFile(uri) ? opmParser : parser;
+}
 
 const wordMatch = /[\w\#\$@]/;
 

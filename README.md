@@ -2,12 +2,12 @@
 
 <img src="https://github.com/codefori/vscode-rpgle/blob/main/media/logo.png?raw=true" height="180px" align="right">
 
-Adds functionality to assist in writing accurate, readable and consistent RPGLE, including:
+Adds functionality to assist in writing accurate, readable and consistent RPG language code, including:
 
 - Content assist
 - Outline view
 - Linter, including indentation checking and reformatting (`**FREE` only)
-- Column assist for fixed-format RPGLE.
+- Column assist for fixed-format RPGLE and OPM RPG
 
 Depends on the Code for IBM i extension due to source code living on the remote system when developing with source members.
 
@@ -33,6 +33,16 @@ To run debug the extension and server, from the VS Code debugger:
 1. Debug 'Launch Client'
 2. Debug 'Attach to Server'
 
+## Testing
+
+The test suite covers both RPG language variants:
+
+- **ILE RPG tests**: `tests/suite/*.test.ts`
+- **OPM RPG tests**: `tests/suite/opm/*.test.ts`
+  - Specification parsing (`specs.test.ts`)
+  - Symbol resolution and scoping (`scope.test.ts`)
+  - Real-world OPM fixtures (`tests/fixtures/opm/*.rpg`)
+
 # Previous contributors
 
 Thanks so much to everyone [who has contributed](https://github.com/codefori/vscode-rpgle/graphs/contributors).
@@ -47,3 +57,4 @@ Thanks so much to everyone [who has contributed](https://github.com/codefori/vsc
 - [@wright4i](https://github.com/wright4i)
 - [@SanjulaGanepola](https://github.com/SanjulaGanepola)
 - [@bobcozzi](https://github.com/bobcozzi)
+- [@Mohammed-Yaseen-Ali-2081](https://github.com/Mohammed-Yaseen-Ali-2081)

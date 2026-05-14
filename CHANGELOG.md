@@ -3,9 +3,63 @@
 All notable changes to the "vscode-rpgle" extension can be found in the
 [Releases](https://github.com/codefori/vscode-rpgle/releases) section of the GitHub repository.
 
-### Added
+## [Unreleased]
 
-- **Input specification (`I` spec) parsing** (fixed-format RPG IV): the parser now recognises and processes all four I spec sub-types — `programRecord`, `programField`, `externalRecord`, and `externalField`.
+### Added - OPM RPG Language Support
+
+- **OPM (Original Program Model) RPG Parser**: Full support for legacy OPM RPG language
+  - New [`OpmParser`](language/opm/parser.ts) class for fixed-format specification parsing
+  - Complete specification type support: Control (H), File (F), Extension (E), Input (I), Calculation (C), and Output (O) specs
+  - [`parseSpecification()`](language/opm/specs.ts) function with typed specification objects for all OPM spec types
+  - Symbol extraction for: files, data structures, variables, constants, subroutines, PLISTs, KLISTs, and CALL statements
+  - External file format resolution via table fetch (EXTNAME support)
+  - Include file processing (`/COPY` directive support)
+  - Embedded SQL recognition and aggregation
+  - Local Data Area (LDA) marker detection (`**`) to stop parsing at compile-time data
+
+- **Dual Parser Architecture**
+  - [`ParserFactory`](language/parserFactory.ts) class for intelligent parser routing based on RPG language variant
+  - Reorganized ILE parser to [`language/ile/`](language/ile/) subdirectory for clean separation
+  - Common [`IParser`](language/parserFactory.ts:12-18) interface implemented by both parsers
+  - Shared table fetch and include file resolution between OPM and ILE parsers
+  - Dynamic parser selection in language server based on RPG language variant
+
+- **Language Server Integration**
+  - VS Code language activation for OPM RPG via `onLanguage:rpg` event
+  - All providers updated to use appropriate parser:
+    - Completions, hover, definitions, references, rename, signature help
+    - Document symbols (outline view)
+    - Code actions and linting
+  - Unified cache model shared between both parsers
+
+- **Comprehensive Test Suite**
+  - [`tests/suite/opm/scope.test.ts`](tests/suite/opm/scope.test.ts) - 8 parser integration tests covering real-world OPM scenarios
+  - [`tests/suite/opm/specs.test.ts`](tests/suite/opm/specs.test.ts) - Specification parsing validation tests
+  - 7 OPM test fixtures covering various patterns: data structures, file operations, subroutines, PLISTs, KLISTs, edge cases
+  - Test coverage for: symbol resolution, external formats, multi-line C-specs, constants, LDA boundaries
+
+### Changed - OPM RPG Language Support
+
+- **Column Assistant and Fixed-Format Tools now support both RPG language variants**:
+  - All commands (`Shift+F4`, `Ctrl+Shift+F4`, `Ctrl+[`, `Ctrl+]`) now work with both ILE RPG and OPM RPG
+  - Added **OPM-specific spec definitions** (`opmSpecs` and `opmSpecRulers`) in [`specs.ts`](extension/client/src/schemas/specs.ts) with correct RPG III column positions
+  - Column Assistant automatically uses correct spec definitions based on RPG language variant
+  - **OPM specs supported**: H-spec (Control), E-spec (Extension), F-spec (File), I-spec (Input), C-spec (Calculation), O-spec (Output)
+  - **Critical fix**: OPM and ILE have **different column positions** for specs (e.g., C-spec Factor1 is 18-27 in OPM vs 12-25 in ILE)
+  - Updated `documentIsFree()` to recognize OPM as always fixed-format
+  - Language ID checks updated throughout [`columnAssist.ts`](extension/client/src/language/columnAssist.ts) and [`package.json`](package.json)
+- Folder structure reorganized for dual-parser architecture:
+  - ILE parser moved from `language/*.ts` to `language/ile/*.ts`
+  - OPM parser added in `language/opm/` directory
+  - Shared models remain in `language/models/`
+- All language server providers now use `getParser(uri)` for dynamic parser selection
+- Extension now supports both ILE RPG (`.rpgle`/`.sqlrpgle`) and OPM RPG (`.rpg`/`.sqlrpg`) language variants
+
+
+
+### Added - Previous ILE RPG Enhancements
+
+- **Input specification (`I` spec) parsing** (fixed-format ILE RPG): the parser now recognises and processes all four I spec sub-types — `programRecord`, `programField`, `externalRecord`, and `externalField`.
 - New `parseISpec()` and `prettyTypeFromISpecTokens()` functions in `language/models/fixed.ts` for decoding fixed-format I spec column layout.
 - New `trimQuotes()` utility exported from `language/tokens.ts`.
 - `cache.inputs` getter — returns all `Declaration` objects whose type is `"input"`, mirroring the existing `cache.structs`, `cache.files`, etc. accessors.
