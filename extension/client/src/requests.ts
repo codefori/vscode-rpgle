@@ -154,7 +154,7 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 				const outfileRes: any = await connection.runCommand({
 					environment: `ile`,
-					command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
+					command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
 				});
 
 				console.log(outfileRes);
@@ -167,7 +167,7 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 					connection.runCommand({
 						environment: `ile`,
-						command: `DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
+						command: `QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
 					});
 
 					return data;
