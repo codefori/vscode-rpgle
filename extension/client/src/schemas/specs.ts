@@ -155,6 +155,26 @@ export const specs: {[spec: string]: SpecFieldDef[]} = {
     {start: 43, end: 79, name: `Keywords`, id: `keywords`}
   ],
   // E, H, I, O specs are OPM-only or have significant differences - see opmSpecs below
+  O: [
+    // OAnd: AND/OR continuation line
+    {start: 0, end: 5, name: `Sequence Number`, id: `seqNum`},
+    {start: 6, end: 6, name: `Comment`, id: `comment`},
+    {start: 6, end: 15, name: `AND/OR Keyword`, id: `andOrKeyword`},
+    {start: 16, end: 18, name: `Indicator 1`, id: `indicator1`},
+    {start: 19, end: 20, name: `Indicator 2`, id: `indicator2`},
+    {start: 21, end: 23, name: `Indicator 3`, id: `indicator3`},
+    {start: 24, end: 26, name: `Fetch Overflow Indicator`, id: `fetchOverflow1`},
+    {start: 27, end: 29, name: `EXCEPT Name`, id: `exceptName`},
+    // OF: Program-described field
+    {start: 30, end: 43, name: `Field Name`, id: `fieldName`},
+    {start: 44, end: 44, name: `Edit Code`, id: `editCode`},
+    {start: 45, end: 46, name: `Blank After (B)`, id: `blankAfter`},
+    {start: 47, end: 51, name: `End Position`, id: `endPosition`, padStart: true},
+    {start: 52, end: 52, name: `Data Format`, id: `dataFormat`},
+    {start: 53, end: 79, name: `Constant/Edit Word`, id: `constantOrEdit`},
+    // OFC: Field constant continuation
+    // OXF: Externally-described field
+  ],
   P: [
     {start: 6, end: 20, name: `Name`, id: `name`},
     {start: 23, end: 23, name: `Begin/End Procedure`, id: `proc`},
@@ -284,6 +304,7 @@ export const opmSpecs: {[spec: string]: SpecFieldDef[]} = {
     {start: 52, end: 57, name: `Field Name`, id: `fieldName`}
   ],
   O: [
+    {start: 6, end: 6, name: `Comment`, id: `comment`},
     {start: 6, end: 13, name: `Filename`, id: `fileName`},
     {start: 14, end: 15, name: `Type/Logical Relation`, id: `type`},
     {start: 16, end: 17, name: `Record Addition/Deletion`, id: `addDel`},
