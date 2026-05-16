@@ -36,18 +36,23 @@
 		"configuration": {
 			"title": "RPGLE language tools",
 			"properties": {
-                                "vscode-rpgle.rulerEnabledByDefault": {
-                                        "type": "boolean",
-                                        "default": true,
-                                        "description": "Whether to show the fixed-format ruler by default."
-                                },
-                                "vscode-rpgle.globalLintConfigPath": {
-                                        "type": "string",
-                                        "default": "",
-                                        "description": "QSYS.LIB path for global RPGLINT.JSON."
-                                }
-                        }
-                },
+				"vscode-rpgle.rulerEnabledByDefault": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to show the fixed-format ruler by default."
+				},
+				"vscode-rpgle.globalLintConfigPath": {
+					"type": "string",
+					"default": "",
+					"description": "QSYS.LIB path for global RPGLINT.JSON."
+				},
+				"vscode-rpgle.lintIgnoreLibraries": {
+					"type": "string",
+					"default": "",
+					"description": "RPGLE linter ignore libraries, separated by semicolon."
+				}
+			}
+		},
 		"snippets": [
 			{
 				"path": "./schemas/rpgle.code-snippets",

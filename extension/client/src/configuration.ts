@@ -7,4 +7,5 @@ export function get<T>(prop: string) {
 
 export const RULER_ENABLED_BY_DEFAULT = `rulerEnabledByDefault`;
 export const GLOBAL_LINT_CONFIG_PATH = `globalLintConfigPath`;
+export const LINT_IGNORE_LIBRARIES = `lintIgnoreLibraries`;
 export const projectFilesGlob = `**/*.{rpgle,RPGLE,sqlrpgle,SQLRPGLE,rpgleinc,RPGLEINC}`;
