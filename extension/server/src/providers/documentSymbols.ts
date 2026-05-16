@@ -1,5 +1,5 @@
 import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-languageserver';
-import { documents, parser, prettyKeywords } from '.';
+import { documents, parser, prettyKeywords, getParser } from '.';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 
@@ -30,12 +30,14 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				.filter(subitem => subitem.position && subitem.position.path === currentPath)
 				.map(subitem => expandStruct(subitem));
 		}
-			
+
 		return parent;
 	}
 
 	if (document) {
-		const doc = await parser.getDocs(currentPath, document.getText());
+		// Get appropriate parser based on file extension
+		const fileParser = getParser(currentPath);
+		const doc = await fileParser.getDocs(currentPath, document.getText());
 
 		/**
 		 * @param {Cache} scope
@@ -65,7 +67,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 							Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
 							Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
 						));
-						
+
 						procDef.children.push(...getScopeVars(proc.scope));
 					}
 
@@ -97,21 +99,22 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			scope.constants
 				.filter(constant => constant.position && constant.position.path === currentPath)
 				.forEach(def => {
+					const isEnum = def.subItems && def.subItems.length > 0;
 					const constantDef = DocumentSymbol.create(
 						def.name,
 						prettyKeywords(def.keyword),
-						SymbolKind.Constant,
+						isEnum ? SymbolKind.Enum : SymbolKind.Constant,
 						Range.create(def.range.start!, 0, def.range.end!, 0),
 						Range.create(def.range.start!, 0, def.range.end!, 0)
 					);
 
-					if (def.subItems.length > 0) {
+					if (isEnum) {
 						constantDef.children = def.subItems
 							.filter(subitem => subitem.position && subitem.position.path === currentPath)
 							.map(subitem => DocumentSymbol.create(
 								subitem.name,
 								prettyKeywords(subitem.keyword),
-								SymbolKind.Property,
+								SymbolKind.EnumMember,
 								Range.create(subitem.range.start!, 0, subitem.range.start!, 0),
 								Range.create(subitem.range.end!, 0, subitem.range.end!, 0)
 							));
@@ -168,6 +171,30 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 				.filter(struct => struct.position && struct.position.path === currentPath && validRange(struct))
 				.forEach(struct => {
 					currentScopeDefs.push(expandStruct(struct));
+				});
+
+			scope.inputs
+				.filter(input => input.position && input.position.path === currentPath && validRange(input))
+				.forEach(input => {
+					const inputSymbol = DocumentSymbol.create(
+						input.name,
+						prettyKeywords(input.keyword),
+						SymbolKind.Interface,
+						Range.create(input.range.start!, 0, input.range.end!, 0),
+						Range.create(input.range.start!, 0, input.range.end!, 0)
+					);
+
+					inputSymbol.children = input.subItems
+						.filter(subitem => subitem.position && subitem.position.path === currentPath && validRange(subitem))
+						.map(subitem => DocumentSymbol.create(
+							subitem.name,
+							prettyKeywords(subitem.keyword),
+							SymbolKind.Property,
+							Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
+							Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
+						));
+
+					currentScopeDefs.push(inputSymbol);
 				});
 
 			return currentScopeDefs;

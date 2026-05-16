@@ -1,8 +1,11 @@
 
 import path from "path";
 import setupParser, { getFileContent } from "../parserSetup";
-import Linter from "../../language/linter";
+import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
+import { readFile } from "fs/promises";
+import Statement from "../../language/ile/statement";
+import { Token } from "../../language/ile/types";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -34,7 +37,7 @@ test('vitestTest2', async () => {
 
   expect(cache.variables.length).toBe(2);
   expect(cache.variables[0].position.range.line).toBe(1);
-  expect(cache.variables[1].position.range.line).toBe(3); 
+  expect(cache.variables[1].position.range.line).toBe(3);
 });
 
 test('vitestTest3', async () => {
@@ -227,7 +230,7 @@ test('vitestTest7_fixed', async () => {
   const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
 
   expect(cache.procedures.length).toBe(2);
-  
+
   expect(cache.procedures[0].name).toBe(`GetArtDesc`);
   expect(cache.procedures[0].subItems.length).toBe(1);
   expect(cache.procedures[0].prototype).toBeTruthy();
@@ -1425,6 +1428,69 @@ test('keywords over multiple lines', async () => {
   expect(error.keyword[`LIKE`]).toBe(`TError`);
 });
 
+test('BINDEC with decimal positions', async () => {
+  const lines = [
+    `       Dcl-DS testDS;`,
+    `         field1 Bindec(5:2);`,
+    `         field2 Bindec(9:3);`,
+    `         field3 Bindec(4);`,
+    `       End-DS;`,
+    ``,
+    `       Dcl-S standalone_bindec Bindec(7:2);`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.structs.length).toBe(1);
+  const testDS = cache.find(`testDS`);
+  expect(testDS.subItems.length).toBe(3);
+
+  const field1 = testDS.subItems[0];
+  expect(field1.name).toBe(`field1`);
+  expect(field1.keyword[`BINDEC`]).toBe(`5:2`);
+
+  const field2 = testDS.subItems[1];
+  expect(field2.name).toBe(`field2`);
+  expect(field2.keyword[`BINDEC`]).toBe(`9:3`);
+
+  const field3 = testDS.subItems[2];
+  expect(field3.name).toBe(`field3`);
+  expect(field3.keyword[`BINDEC`]).toBe(`4`);
+
+  const standalone = cache.find(`standalone_bindec`);
+  expect(standalone.name).toBe(`standalone_bindec`);
+  expect(standalone.keyword[`BINDEC`]).toBe(`7:2`);
+});
+
+test('BINDEC with decimal positions - fixed format', async () => {
+  const lines = [
+    `     D BIN40           S              4B 0`,
+    `     D BIN90           S              9B 0`,
+    `     D BIN43           S              4B 3`,
+    `     D BIN92           S              9B 2`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+
+  expect(cache.variables.length).toBe(4);
+
+  const bin40 = cache.find(`BIN40`);
+  expect(bin40.name).toBe(`BIN40`);
+  expect(bin40.keyword[`BINDEC`]).toBe(`4:0`);
+
+  const bin90 = cache.find(`BIN90`);
+  expect(bin90.name).toBe(`BIN90`);
+  expect(bin90.keyword[`BINDEC`]).toBe(`9:0`);
+
+  const bin43 = cache.find(`BIN43`);
+  expect(bin43.name).toBe(`BIN43`);
+  expect(bin43.keyword[`BINDEC`]).toBe(`4:3`);
+
+  const bin92 = cache.find(`BIN92`);
+  expect(bin92.name).toBe(`BIN92`);
+  expect(bin92.keyword[`BINDEC`]).toBe(`9:2`);
+});
+
 test(`const keyword check`, async () => {
   const lines = [
     ``,
@@ -1631,7 +1697,7 @@ test('fixed-format c spec', async () => {
   const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
   expect(cache.constants.length).toBe(0);
   expect(cache.procedures.length).toBe(2);
-  
+
   expect(cache.procedures[0].name).toBe(`UpdArt`);
   expect(cache.procedures[0].prototype).toBeTruthy();
   expect(cache.procedures[0].subItems.length).toBe(2);
@@ -1877,22 +1943,256 @@ test('correct ranges (#427)', async () => {
   expect(constants[3].keyword[`CONST`]).toBe(`9`);
 });
 
-// test('scoobydo', async () => {
-//   const content = await getFileContent(path.join(__dirname, `..`, `rpgle`, `testing.rpgle`));
-//   const lines = content.split(/\r?\n/);
-//   const cache = await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: false });
+test('that symbols can be defined correctly', async () => {
+  const lines = [
+    ``,
+    `     D SAMPLEPG        Ds                  Qualified  `,
+    `       dcl-s myprogramText char(20);`,
+    `       dcl-s  sampleDcl               char(2);`,
+    `       dcl-enum ENUMTEST qualified;`,
+    `         CONSTANT1 value1;`,
+    `         CONSTANT2 value2;`,
+    `       end-enum;`,
+    `       `,
+    `       dcl-proc testing123 ;`,
+    `        dcl-pi *n ;`,
+    `        end-pi;`,
+    `         `,
+    `       end-proc;`,
+    `     `,
+  ].join(`\n`);
 
-//   const kill = cache.findAll(`kill`);
-  
-//   const killPrototype = kill[0];
-//   expect(killPrototype.name).toBe(`kill`);
-//   expect(killPrototype.prototype).toBeTruthy();
-//   expect(killPrototype.range.start).toBe(71);
-//   expect(killPrototype.range.end).toBe(74);
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
 
-//   const killProc = kill[1];
-//   expect(killProc.name).toBe(`kill`);
-//   expect(killProc.prototype).toBeFalsy();
-//   expect(killProc.range.start).toBe(741);
-//   expect(killProc.range.end).toBe(761);  
-// });
+  expect(cache.structs.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.procedures.length).toBe(1);
+});
+
+test('that mixed symbols can be defined correctly', async () => {
+  const lines = [
+    ``,
+    ``,
+    `     D SAMPLEPG        Ds                  Qualified`,
+    `     F TEST  `,
+    `       dcl-s myprogramText char(20);`,
+    `       dcl-s  sampleDcl               char(2);`,
+    `       dcl-enum ENUMTEST qualified;`,
+    `         CONSTANT1 value1;`,
+    `         CONSTANT2 value2;`,
+    `       end-enum;`,
+    `       `,
+    `       dcl-proc testing123 ;`,
+    `        dcl-pi *n ;`,
+    `        end-pi;`,
+    `         `,
+    `       end-proc;`,
+    `     `,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache.structs.length).toBe(1);
+  expect(cache.files.length).toBe(1);
+  expect(cache.constants.length).toBe(1);
+  expect(cache.variables.length).toBe(2);
+  expect(cache.procedures.length).toBe(1);
+});
+
+test('range issue #453 (snippet)', async () => {
+  const lines = [
+    `     D custName        S             10A`,
+    `     D custName`,
+    `     D                 S             10A`,
+    `          dcl-ds custInfo EXTNAME('CUSTMAST') INZ;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+});
+
+test('range issue #453 (full source)', async () => {
+  const testSource = path.join(__dirname, `..`, `rpgle`, `issue453.rpgle`);
+  const contents = await readFile(testSource, 'utf-8');
+
+  const cache = await parser.getDocs(testSource, contents, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+});
+
+test('**free after first line (#451)', async () => {
+  const lines = [
+    `       //**                                                           ***`,
+    ``,
+    `**FREE`,
+    `       //****************************************************************`,
+    `       //**    `,
+    ` `,
+    `       dcl-s txtMsg char(10);   `,
+    `                                                   `,
+    `       dcl-ds person;`,
+    `         name varchar(30);`,
+    `         age int(3);`,
+    `       end-Ds;`,
+    ``,
+    `       return;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+
+  expect(cache.find(`txtMsg`)).toBeDefined();
+});
+
+test('multi-line definition (#442)', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-s myprogramText char(20);`,
+    ``,
+    `dcl-ds name qualified dim;`,
+    `end-ds;`,
+    ``,
+    `dcl-ds person qualified dim`,
+    `end-ds;`,
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+
+  expect(cache).toBeDefined();
+
+  const name = cache.find(`name`);
+  expect(name).toBeDefined();
+  expect(name.range).toMatchObject({ start: 4, end: 5 });
+
+  const person = cache.find(`person`);
+  expect(person).toBeDefined();
+  console.log(person);
+  expect(person.range).toMatchObject({ start: 7, end: 8 });
+});
+
+/**
+ * Test for signature help with colon parameter (issue #442)
+ * Ensures that getParameters handles empty parameter blocks correctly
+ * when a separator (colon) appears at the start of a parameter position
+ */
+test('signatureHelpWithColonParameter', async () => {
+  const lines = [
+    `**free`,
+    `%scan(:code);`
+  ].join(`\n`);
+
+  // This test ensures the parser doesn't crash when processing
+  // BIF calls with colon-prefixed parameters
+  const cache = await parser.getDocs(uri, lines, { ignoreCache: true });
+
+  // The main goal is to ensure parsing doesn't throw an error
+  expect(cache).toBeDefined();
+});
+
+/**
+ * Test for various edge cases with BIF parameters
+ * Ensures robust handling of different parameter patterns
+ */
+test('bifParameterEdgeCases', async () => {
+  // Test multiple colons and mixed parameters
+  const lines1 = [
+    `**free`,
+    `result = %scan(:searchString :sourceString);`
+  ].join(`\n`);
+
+  const cache1 = await parser.getDocs(uri, lines1, { ignoreCache: true });
+  expect(cache1).toBeDefined();
+
+  // Test with trailing colon
+  const lines2 = [
+    `**free`,
+    `result = %subst(:str :pos);`
+  ].join(`\n`);
+
+  const cache2 = await parser.getDocs(uri, lines2, { ignoreCache: true });
+  expect(cache2).toBeDefined();
+
+  // Test with multiple separators
+  const lines3 = [
+    `**free`,
+    `result = %xlate(:from :to :string);`
+  ].join(`\n`);
+
+  const cache3 = await parser.getDocs(uri, lines3, { ignoreCache: true });
+  expect(cache3).toBeDefined();
+});
+
+/**
+ * Unit test for Statement.getParameters with empty blocks (issue #442)
+ * This directly tests the fix for the bug where a separator at the start
+ * of a parameter position would cause an error
+ */
+test('statementGetParametersEmptyBlock', () => {
+  // Test case 1: Separator as first token (the bug scenario)
+  const tokens1: Token[] = [
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 0, end: 1 }
+    }
+  ];
+
+  // This should not throw an error - this was the bug!
+  expect(() => Statement.getParameters(tokens1)).not.toThrow();
+  const result1 = Statement.getParameters(tokens1);
+  // Should have two parameters (first is empty, second has separator)
+  expect(result1.length).toBe(2);
+  expect(result1[0].block?.length).toBe(0); // Empty first parameter
+  expect(result1[1].block?.length).toBe(1); // Separator in second parameter
+
+  // Test case 2: Multiple separators with no content between them
+  const tokens2: Token[] = [
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 0, end: 1 }
+    },
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 1, end: 2 }
+    }
+  ];
+
+  expect(() => Statement.getParameters(tokens2)).not.toThrow();
+  const result2 = Statement.getParameters(tokens2);
+  // Should have three parameters (first is empty, second/third have separators)
+  expect(result2.length).toBe(3);
+  expect(result2[0].block?.length).toBe(0); // Empty first parameter
+  expect(result2[1].block?.length).toBe(1); // First separator
+  expect(result2[2].block?.length).toBe(1); // Second separator
+
+  // Test case 3: Normal case with content before separator
+  const tokens3: Token[] = [
+    {
+      type: 'word',
+      value: 'code',
+      range: { line: 0, start: 0, end: 4 }
+    },
+    {
+      type: 'seperator',
+      value: ':',
+      range: { line: 0, start: 4, end: 5 }
+    },
+    {
+      type: 'word',
+      value: 'str',
+      range: { line: 0, start: 5, end: 8 }
+    }
+  ];
+
+  expect(() => Statement.getParameters(tokens3)).not.toThrow();
+  const result3 = Statement.getParameters(tokens3);
+  expect(result3.length).toBe(2);
+  expect(result3[0].block?.length).toBe(1); // Just 'code'
+  expect(result3[1].block?.length).toBe(2); // ':' and 'str'
+});

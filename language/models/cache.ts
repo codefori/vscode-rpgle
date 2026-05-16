@@ -1,9 +1,10 @@
 import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
-import { IRange } from "../types";
+import { trimQuotes } from "../ile/tokens";
+import { IRange } from "../ile/types";
 import Declaration, { DeclarationType } from "./declaration";
 
 const DEFAULT_INDICATORS = [
-  ...Array(98).keys(), 
+  ...Array(98).keys(),
   `LR`, `KL`, `MR`,
   `L1`, `L2`, `L3`, `L4`, `L5`, `L6`, `L7`, `L8`, `L9`,
   `U1`, `U2`, `U3`, `U4`, `U5`, `U6`, `U7`, `U8`,
@@ -24,11 +25,39 @@ const newInds = () => {
 
 export type SymbolRegister = Map<string, Declaration[]>;
 
-export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph`;
-const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`];
+export type RpglePrimitiveType = `string`|`number`|`datetime`|`special`;
+export type RpgleType = RpgleVariableType|RpglePrimitiveType|`any`;
+
+export function typeToPrimitive(rpgleType: RpgleType): RpglePrimitiveType|undefined {
+  switch (rpgleType) {
+    case `char`:
+    case `varchar`:
+    case `ucs2`:
+    case `varucs2`:
+    case `vargraph`:
+      return `string`;
+
+    case `int`:
+    case `uns`:
+    case `packed`:
+    case `zoned`:
+    case `float`:
+      return `number`;
+
+    case `date`:
+    case `time`:
+    case `timestamp`:
+      return `datetime`;
+  }
+
+  return;
+}
+
+export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph` | `file`;
+const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`, `file`];
 
 export interface RpgleTypeDetail {
-  type?: { name: RpgleVariableType, value?: string };
+  type?: { name: RpgleVariableType, isArray: boolean, value?: string };
   reference?: Declaration;
 }
 
@@ -36,6 +65,7 @@ export default class Cache {
   keyword: Keywords;
   sqlReferences: Declaration[];
   includes: IncludeStatement[];
+  parseTree?: { [fileUri: string]: any[] };
   private symbolRegister: SymbolRegister;
 
   constructor(cache: CacheProps = {}, isProcedure: boolean = false) {
@@ -55,6 +85,7 @@ export default class Cache {
 
     this.sqlReferences = cache.sqlReferences || [];
     this.includes = cache.includes || [];
+    this.parseTree = cache.parseTree || {};
   }
 
   private symbolCache: Declaration[] | undefined;
@@ -89,6 +120,10 @@ export default class Cache {
     return this.symbols.filter(s => s.type === `file`);
   }
 
+  get inputs() {
+    return this.symbols.filter(s => s.type === `input`);
+  }
+
   get constants() {
     return this.symbols.filter(s => s.type === `constant`);
   }
@@ -112,7 +147,7 @@ export default class Cache {
   get parameters() {
     return this.symbols.filter(s => s.type === `parameter`);
   }
-  
+
   addSymbol(symbol: Declaration) {
     const name = symbol.name.toUpperCase();
     if (this.symbolRegister.has(name)) {
@@ -142,7 +177,7 @@ export default class Cache {
     return (lines.length >= 1 ? lines[0] : 0);
   }
 
-  find(name: string, specificType?: DeclarationType): Declaration | undefined {
+  find(name: string, specificType?: DeclarationType, ignorePrefix?: boolean): Declaration | undefined {
     name = name.toUpperCase();
 
     const existing = this.symbolRegister.get(name);
@@ -162,32 +197,82 @@ export default class Cache {
       }
     }
 
-    // Additional logic to check for subItems in symbols
-    const symbolsWithSubs = [...this.structs, ...this.files];
+    // If we didn't find it, let's check for subfields
+    const [subfield] = this.findSubfields(name, ignorePrefix, true);
 
+    return subfield;
+  }
+
+  findAll(name: string, ignorePrefix?: boolean): Declaration[] {
+    name = name.toUpperCase();
+    let symbols = this.symbolRegister.get(name) || [];
+
+    symbols.push(...this.findSubfields(name, ignorePrefix));
+
+    // Remove duplicates by position, since we can have the same reference to symbols in structures due to I-spec
+    symbols = symbols.filter((s, index, self) => {
+      return self.findIndex(item => item.position.path === s.position.path && s.position.range.line === item.position.range.line) === index;
+    });
+
+    return symbols || [];
+  }
+
+  private findSubfields(name: string, ignorePrefix: boolean, onlyOne?: boolean): Declaration[] {
+    let symbols: Declaration[] = [];
+
+    // Additional logic to check for subItems in symbols
+    const symbolsWithSubs = [...this.structs, ...this.files, ...this.inputs];
+
+    const subNameIsValid = (sub: Declaration, name: string, prefix?: string) => {
+      if (prefix) {
+        name = `${prefix}${name}`;
+      }
+
+      return sub.name.toUpperCase() === name;
+    }
+
+    // First we do a loop to check all names without changing the prefix.
+    // This only applied to files
     for (const struct of symbolsWithSubs) {
       if (struct.keyword[`QUALIFIED`] !== true) {
-        // If the symbol is qualified, we need to check the subItems
-        const subItem = struct.subItems.find(sub => sub.name.toUpperCase() === name);
-        if (subItem) return subItem;
 
-        if (struct.type === `file`) {
-          // If it's a file, we also need to check the subItems of the file's recordformats
-          for (const subFile of struct.subItems) {
-            const subSubItem = subFile.subItems.find(sub => sub.name.toUpperCase() === name);
-            if (subSubItem) return subSubItem;
+        // If the symbol is qualified, we need to check the subItems
+        const subItem = struct.subItems.find(sub => subNameIsValid(sub, name));
+        if (subItem) {
+          symbols.push(subItem);
+          if (onlyOne) return symbols;
+        }
+
+        // If it's a file, we also need to check the subItems of the file's recordformats
+        for (const subFile of struct.subItems) {
+          const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name));
+          if (subSubItem) {
+            symbols.push(subSubItem);
+            if (onlyOne) return symbols;
           }
         }
       }
     }
 
-    return;
-  }
+    // Then we check the names, ignoring the prefix
+    if (ignorePrefix) {
+      for (const struct of symbolsWithSubs) {
+        if (struct.type === `file` && struct.keyword[`QUALIFIED`] !== true) {
+          const prefix = ignorePrefix && struct.keyword[`PREFIX`] && typeof struct.keyword[`PREFIX`] === `string` ? trimQuotes(struct.keyword[`PREFIX`].toUpperCase()) : ``;
 
-  findAll(name: string): Declaration[] {
-    name = name.toUpperCase();
-    const symbols = this.symbolRegister.get(name);
-    return symbols || [];
+          // If it's a file, we also need to check the subItems of the file's recordformats
+          for (const subFile of struct.subItems) {
+            const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name, prefix));
+            if (subSubItem) {
+              symbols.push(subSubItem);
+              if (onlyOne) return symbols;
+            }
+          }
+        }
+      }
+    }
+
+    return symbols;
   }
 
   public findProcedurebyLine(lineNumber: number): Declaration | undefined {
@@ -259,7 +344,10 @@ export default class Cache {
     let refName: string;
     let reference: Declaration | undefined;
 
-    if (typeof keywords[`LIKEDS`] === `string`) {
+    if (def.type === `file`) {
+      return { type: { name: `file`, isArray: false, value: def.name } };
+
+    } else if (typeof keywords[`LIKEDS`] === `string`) {
       refName = (keywords[`LIKEDS`] as string).toUpperCase();
       reference = this.symbols.find(s => s.name.toUpperCase() === refName);
 
@@ -276,15 +364,16 @@ export default class Cache {
       return { reference };
     } else {
       const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
+      const isArray = keywords[`DIM`] ? true : false;
       if (type) {
-        return { type: { name: (type.toLowerCase() as RpgleVariableType), value: keywords[type] as string } };
+        return { type: { name: (type.toLowerCase() as RpgleVariableType), isArray, value: keywords[type] as string } };
       }
     }
 
     return {};
   }
 
-  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {  
+  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
     for (const def of scope.symbols) {
       let possibleRef: boolean;
 

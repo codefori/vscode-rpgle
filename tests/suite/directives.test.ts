@@ -1,8 +1,8 @@
 import path from "path";
 import setupParser from "../parserSetup";
-import Linter from "../../language/linter";
+import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
-import Parser from "../../language/parser";
+import Parser from "../../language/ile/parser";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -673,4 +673,124 @@ test('test copy with *libl', async () => {
 
   const valueB = Parser.getIncludeFromDirective(`/copy *libl/qrpgleref,stufh`);
   expect(valueB).toBe(`*libl/qrpgleref,stufh`);
+});
+
+test('/IF DEFINED - uppercase', async () => {
+  const lines = [
+    `**FREE`,
+    `/DEFINE MYMACRO`,
+    `/IF NOT DEFINED(MYMACRO)`,
+    `Dcl-S Var1 char(10);`,
+    `/ELSE`,
+    `Dcl-S Var2 char(10);`,
+    `/ENDIF`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  expect(cache.variables.length).toBe(1);
+  expect(cache.variables[0].name).toBe('Var2');
+});
+
+test('/IF DEFINED - lowercase', async () => {
+  const lines = [
+    `**FREE`,
+    `/define mymacro`,
+    `/if not defined(mymacro)`,
+    `Dcl-S Var1 char(10);`,
+    `/else`,
+    `Dcl-S Var2 char(10);`,
+    `/endif`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  expect(cache.variables.length).toBe(1);
+  expect(cache.variables[0].name).toBe('Var2');
+});
+
+test('/IF DEFINED with Not - mixed case', async () => {
+  const lines = [
+    `**FREE`,
+    `/DEFINE MYMACRO`,
+    `/IF Not DEFINED(MYMACRO)`,
+    `Dcl-S Var1 char(10);`,
+    `/ELSE`,
+    `Dcl-S Var2 char(10);`,
+    `/ENDIF`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  expect(cache.variables.length).toBe(1);
+  expect(cache.variables[0].name).toBe('Var2');
+});
+
+test('rapid re-parse produces consistent offsets', async () => {
+  const base = [
+    `**FREE`,
+    `Dcl-S MyVar Char(10);`,
+  ].join(`\n`);
+
+  const versions = [
+    base + `\nMyVar = 'hello';`,
+    base + `\nMyVar = 'hello';\nDcl-S MyVar2 Char(20);`,
+    base + `\nMyVar = 'hello';\nDcl-S MyVar2 Char(20);\nMyVar2 = 'world';`,
+  ];
+
+  for (const content of versions) {
+    const cache = await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: true });
+    const myVarDefs = cache.variables.filter(v => v.name.toUpperCase() === 'MYVAR');
+    expect(myVarDefs.length).toBe(1);
+    expect(myVarDefs[0].position.range.line).toBe(1);
+  }
+});
+
+test('re-parse with includes does not duplicate definitions', async () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No);`,
+    `/copy './rpgle/depth1.rpgleinc'`,
+    `Dcl-S MyCustomerName1 char(5);`,
+    `Return;`
+  ].join(`\n`);
+
+  // Parse the same content twice with ignoreCache
+  await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+
+  // Should have exactly 2 includes (depth1 -> copy3), not duplicates
+  expect(cache.includes.length).toBe(2);
+
+  // Each variable should appear exactly once
+  const varNames = cache.variables.map(v => v.name.toUpperCase());
+  const uniqueVarNames = [...new Set(varNames)];
+  expect(varNames.length).toBe(uniqueVarNames.length);
+});
+
+test('editing around include directives maintains offsets', async () => {
+  const lines1 = [
+    `**FREE`,
+    `/copy './rpgle/copy4.rpgleinc'`,
+    `Dcl-S LocalVar Char(10);`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache1 = await parser.getDocs(uri, lines1, { withIncludes: true, ignoreCache: true });
+  const localVarLine1 = cache1.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
+
+  // Add a new include line before LocalVar
+  const lines2 = [
+    `**FREE`,
+    `/copy './rpgle/copy4.rpgleinc'`,
+    `/copy './rpgle/file1.rpgleinc'`,
+    `Dcl-S LocalVar Char(10);`,
+    `Return;`
+  ].join(`\n`);
+
+  const cache2 = await parser.getDocs(uri, lines2, { withIncludes: true, ignoreCache: true });
+  const localVarLine2 = cache2.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
+
+  // LocalVar should shift down by 1 line
+  expect(localVarLine2).toBe(localVarLine1! + 1);
 });

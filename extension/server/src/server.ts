@@ -11,27 +11,28 @@ import {
 } from 'vscode-languageserver/node';
 
 import documentSymbolProvider from './providers/documentSymbols';
-import { documents, parser } from './providers';
+import { documents, getParser, opmParser, parser } from './providers';
 import definitionProvider from './providers/definition';
 import { URI } from 'vscode-uri';
 import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 
-import { connection, getFileRequest, getObject as getObjectData, handleClientRequests, memberResolve, streamfileResolve, validateUri } from "./connection";
+import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
-import { getPrettyType } from '../../../language/models/fixed';
 
 import * as Project from './providers/project';
 import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
+import { resolveWorkspaceIncludePath } from './includeResolver';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
 import genericCodeActionsProvider from './providers/codeActions';
 import { isLinterEnabled } from './providers/linter';
+import { signatureHelpProvider } from './providers/signatureHelp';
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
@@ -46,6 +47,8 @@ let projectEnabled = false;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
+
+	console.log(capabilities.textDocument?.completion);
 
 	// Does the client support the `workspace/configuration` request?
 	// If not, we fall back using global settings.
@@ -71,12 +74,15 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.documentSymbolProvider = true;
 		result.capabilities.definitionProvider = true;
 		result.capabilities.completionProvider = {
-			triggerCharacters: [`.`, `:`]
+			triggerCharacters: [`.`, `:`],
 		};
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
 		result.capabilities.implementationProvider = true;
 		result.capabilities.renameProvider = {prepareProvider: true};
+		result.capabilities.signatureHelpProvider = {
+			triggerCharacters: [`(`, `:`]
+		}
 	}
 
 	if (isLinterEnabled()) {
@@ -111,6 +117,8 @@ connection.onInitialize((params: InitializeParams) => {
 });
 
 connection.onInitialized(() => {
+	initializeLogLevel();
+
 	if (projectEnabled) {
 		Project.initialise();
 	}
@@ -118,29 +126,36 @@ connection.onInitialized(() => {
 	handleClientRequests();
 });
 
-parser.setTableFetch(async (table: string, aliases = false): Promise<Declaration[]> => {
+const tableFetch = async (table: string, aliases = false): Promise<Declaration[]> => {
 	if (!languageToolsEnabled) return [];
 
-	console.log(`Server is resolving ${table}`);
+
 
 	const data = await getObjectData(table);
 
-	console.log(`Resolved ${table} and got ${data.length} rows.`);
+
 
 	return dspffdToRecordFormats(data, aliases);
-});
+};
+
+parser.setTableFetch(tableFetch);
+opmParser.setTableFetch(tableFetch);
 
 let fetchingInProgress: { [fetchKey: string]: boolean } = {};
 
-parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
+const includeFileFetch = async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
-	const uriPath = currentUri.path;
+	const uriPath = currentUri.fsPath;
+	// Extract clean filename without query parameters
+	const parentFileName = getDisplayName(stringUri);
+	const fetchStartTime = Date.now();
 
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
 
 	if (!fetchingInProgress[includeString]) {
 		fetchingInProgress[includeString] = true;
+		logWithTimestamp(`Include fetch started: ${includeString} (from ${parentFileName})`, LogLevel.DEBUG);
 
 		// Right now we are resolving based on the base file schema.
 		// This is likely bad since you can include across file systems.
@@ -160,7 +175,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				const workspaceFolders = await connection.workspace.getWorkspaceFolders();
 				let workspaceFolder: WorkspaceFolder | undefined;
 				if (workspaceFolders) {
-					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).path))
+					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).fsPath))
 				}
 
 				if (Project.isEnabled) {
@@ -170,15 +185,12 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				} else {
 					// Because project mode is disabled, likely due to the large workspace, we don't search
 					if (workspaceFolder) {
-						cleanString = path.posix.join(URI.parse(workspaceFolder.uri).path, cleanString)
+						const resolved = resolveWorkspaceIncludePath(workspaceFolder.uri, cleanString);
+						cleanString = resolved.absolutePath;
+						validUri = existsSync(cleanString) ? resolved.fileUri : undefined;
+					} else {
+						validUri = existsSync(cleanString) ? URI.file(cleanString).toString() : undefined;
 					}
-
-					validUri = existsSync(cleanString) ?
-						URI.from({
-							scheme: currentUri.scheme,
-							path: cleanString
-						}).toString()
-						: undefined;
 				}
 
 				if (!validUri) {
@@ -197,7 +209,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 				// Resolving IFS path from member or streamfile
 
 				// IFS fetch
-				
+
 				if (cleanString.startsWith(`/`)) {
 					// Path from root
 					validUri = URI.from({
@@ -211,7 +223,7 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 					//   - `${cleanString}.rpgleinc`
 					//   - `${cleanString}.rpgle`
 					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
-					
+
 					// Path from home directory?
 					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
 
@@ -275,11 +287,13 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			}
 		}
 
-		fetchingInProgress[includeString] = false;
-
 		if (validUri) {
-			const validSource = await getFileRequest(validUri);
+			const validSource = await getFileRequest(validUri, true); // true = skip debounce for include files
 			if (validSource) {
+				const duration = Date.now() - fetchStartTime;
+				const fileName = getDisplayName(validUri);
+				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`, LogLevel.INFO);
+				fetchingInProgress[includeString] = false;
 				return {
 					found: true,
 					uri: validUri,
@@ -288,15 +302,24 @@ parser.setIncludeFileFetch(async (stringUri: string, includeString: string) => {
 			}
 		}
 
+		const duration = Date.now() - fetchStartTime;
+		logWithTimestamp(`Include fetch completed: ${includeString} (${duration}ms, NOT FOUND)`, LogLevel.WARN);
+		fetchingInProgress[includeString] = false;
+		return {
+			found: false,
+			uri: validUri
+		};
+	} else {
+		logWithTimestamp(`Include fetch skipped: ${includeString} (already fetching)`, LogLevel.DEBUG);
+		return {
+			found: false,
+			uri: validUri
+		};
 	}
-	
-	fetchingInProgress[includeString] = false;
+};
 
-	return {
-		found: false,
-		uri: validUri
-	};
-});
+parser.setIncludeFileFetch(includeFileFetch);
+opmParser.setIncludeFileFetch(includeFileFetch);
 
 if (languageToolsEnabled) {
 	// regular language stuff
@@ -308,6 +331,7 @@ if (languageToolsEnabled) {
 	connection.onPrepareRename(renamePrepareProvider);
 	connection.onRenameRequest(renameRequestProvider);
 	connection.onCodeAction(genericCodeActionsProvider);
+	connection.onSignatureHelp(signatureHelpProvider);
 
 	// project specific
 	connection.onWorkspaceSymbol(workspaceSymbolProvider);
@@ -316,21 +340,146 @@ if (languageToolsEnabled) {
 
 if (isLinterEnabled()) Linter.initialise(connection);
 
-// Always get latest stuff
-documents.onDidChangeContent(handler => {
-	parser.getDocs(
-		handler.document.uri,
-		handler.document.getText(),
+// Track parsing state for each document
+const documentParseState: {
+	[uri: string]: {
+		timer?: NodeJS.Timeout,
+		parseId: number,
+		parseStartTime?: number,
+		isParsing: boolean,
+		needsReparse: boolean
+	}
+} = {};
+
+// Execute a parse for a document
+function executeParse(uri: string, parseId: number, document: any) {
+	const fileName = getDisplayName(uri);
+	const state = documentParseState[uri];
+
+	if (!state) return;
+
+	// Mark parse as active
+	state.isParsing = true;
+	state.needsReparse = false;
+	const parseStartTime = Date.now();
+	state.parseStartTime = parseStartTime;
+	logWithTimestamp(`Parse started: ${fileName} (parseId: ${parseId})`, LogLevel.DEBUG);
+
+
+	const activeParser = getParser(uri);
+
+
+	activeParser.getDocs(
+		uri,
+		document.getText(),
 		{
 			withIncludes: true,
 			ignoreCache: true,
 			collectReferences: true
 		}
 	).then(cache => {
-		if (cache) {
-			Linter.refreshLinterDiagnostics(handler.document, cache);
+		const duration = Date.now() - parseStartTime;
+		const isLatest = parseId === state.parseId;
+
+		// Mark parse as complete
+		state.isParsing = false;
+
+		// Only update diagnostics if this is still the latest parse
+		if (cache && isLatest) {
+			Linter.refreshLinterDiagnostics(document, cache);
+
+			// When includes are changed, clear cache for any files that reference it
+			for (const [thePath, cache] of Object.entries(parser.parsedCache)) {
+				if (cache) {
+					const includePaths = cache.includes.map(include => include.toPath);
+					if (includePaths.includes(document.uri)) {
+						parser.clearParsedCache(thePath);
+					}
+				}
+			}
+
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, diagnostics updated)`, LogLevel.INFO);
+		} else if (cache) {
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, STALE - ignored)`, LogLevel.DEBUG);
+		} else {
+			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, no cache)`, LogLevel.DEBUG);
+		}
+
+		// If a re-parse was queued while this parse was running, trigger it now
+		if (state.needsReparse) {
+			state.needsReparse = false;
+			const latestParseId = state.parseId;
+			logWithTimestamp(`Triggering queued re-parse for ${fileName} (parseId: ${latestParseId})`, LogLevel.DEBUG);
+			setTimeout(() => executeParse(uri, latestParseId, document), 0);
+		}
+	}).catch(err => {
+		const duration = Date.now() - parseStartTime;
+		state.isParsing = false;
+		logWithTimestamp(`Parse error: ${fileName} (parseId: ${parseId}, ${duration}ms)`, LogLevel.ERROR);
+		console.error(`Error parsing ${uri}:`, err);
+
+		// If a re-parse was queued, trigger it even after an error
+		if (state.needsReparse) {
+			state.needsReparse = false;
+			const latestParseId = state.parseId;
+			logWithTimestamp(`Triggering queued re-parse after error for ${fileName} (parseId: ${latestParseId})`, LogLevel.DEBUG);
+			setTimeout(() => executeParse(uri, latestParseId, document), 0);
 		}
 	});
+}
+
+// Always get latest stuff
+documents.onDidChangeContent(handler => {
+	const uri = handler.document.uri;
+	// Extract clean filename without query parameters
+	const fileName = getDisplayName(uri);
+
+	// Initialize state if needed
+	if (!documentParseState[uri]) {
+		documentParseState[uri] = { parseId: 0, isParsing: false, needsReparse: false };
+	}
+
+	const state = documentParseState[uri];
+	const isFirstOpen = state.parseId === 0;
+	const isIncludeFile = filesBeingFetchedForIncludes.has(uri);
+
+	// Increment parse ID to invalidate any in-flight parses
+	state.parseId++;
+	const currentParseId = state.parseId;
+
+	// Parse immediately without debounce for:
+	// - Include files (opened during getFileRequest with skipDebounce)
+	// - Main files on first open
+	// Use debounce timer for main files being edited
+	const debounceDelay = (isIncludeFile || isFirstOpen) ? 0 : 300;
+
+	// Clear any existing timer
+	if (state.timer) {
+		clearTimeout(state.timer);
+		logWithTimestamp(`Debounce: Timer reset for ${fileName} (parseId: ${currentParseId})`, LogLevel.DEBUG);
+	} else if (!isFirstOpen && !isIncludeFile) {
+		logWithTimestamp(`Debounce: Timer started for ${fileName} (${debounceDelay}ms)`, LogLevel.DEBUG);
+	}
+
+	// Set a new timer to parse after delay (0ms for includes/first open, 300ms for edits)
+	state.timer = setTimeout(() => {
+		delete state.timer;
+
+		if (!isFirstOpen && !isIncludeFile) {
+			logWithTimestamp(`Debounce: Timer expired for ${fileName}, starting parse (parseId: ${currentParseId})`, LogLevel.DEBUG);
+		}
+
+		// Check if a parse is already running for this document
+		if (state.isParsing) {
+			// A parse is already active - queue a re-parse to run after it completes
+			state.needsReparse = true;
+			logWithTimestamp(`Parse queued: ${fileName} (parseId: ${currentParseId}, waiting for active parse to complete)`, LogLevel.DEBUG);
+			return;
+		}
+
+		// Execute the parse
+		executeParse(uri, currentParseId, handler.document);
+	}, debounceDelay); // 0ms for first open, 300ms for edits
 });
 
 // Make the text document manager listen on the connection

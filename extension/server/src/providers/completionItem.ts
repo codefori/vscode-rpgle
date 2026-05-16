@@ -1,13 +1,15 @@
 import path = require('path');
-import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, Position, Range } from 'vscode-languageserver';
+import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
-import Cache from '../../../../language/models/cache';
+import Cache, { RpgleType, RpgleVariableType } from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import * as ileExports from './apis';
 import skipRules from './linter/skipRules';
 import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
-import Parser from '../../../../language/parser';
+import Parser from '../../../../language/ile/parser';
+import { Token } from '../../../../language/types';
+import { getBuiltIn, getBuiltIns, getBuiltInsForType } from './apis/bif';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -15,6 +17,19 @@ const completionKind = {
 };
 
 const eol = `\n`;
+
+const builtInFunctionCompletionItems: CompletionItem[] = getBuiltIns().map(builtIn => {
+	const item = CompletionItem.create(builtIn.name);
+	item.filterText = builtIn.name.substring(1);
+	item.kind = CompletionItemKind.Function;
+	item.detail = builtIn.returnType || `void`;
+	item.documentation = `Built-in function`;
+	item.insertText = builtIn.name + `(\${1})`;
+	item.insertTextFormat = InsertTextFormat.Snippet;
+	item.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
+	item.sortText = item.filterText;
+	return item;
+});
 
 export default async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
 	const items: CompletionItem[] = [];
@@ -29,14 +44,6 @@ export default async function completionItemProvider(handler: CompletionParams):
 		if (doc) {
 			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
-			// If they're typing inside of a procedure, let's get the stuff from there too
-			const currentProcedure = doc.procedures.find((proc, index) =>
-				proc.range.start && proc.range.end &&
-				lineNumber >= proc.range.start &&
-				(lineNumber <= proc.range.end + 1 || index === doc.procedures.length - 1) &&
-				currentPath === proc.position.path
-			);
-
 			const currentLine = document.getText(Range.create(
 				handler.position.line,
 				0,
@@ -44,24 +51,36 @@ export default async function completionItemProvider(handler: CompletionParams):
 				200
 			));
 
-			// This means we're just looking for subfields in the struct
 			if (trigger === `.`) {
-				const tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? currentLine.substring(7) : ``, 0, 0, true);
+
+				//================================================
+				// Logic for showing subfields (subitems) on symbols
+				//================================================
+
+				const cursorIndex = handler.position.character;
+				let tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? ``.padEnd(7) + currentLine.substring(7) : ``, 0, 0, true);
 
 				if (tokens.length > 0) {
-					const cursorIndex = handler.position.character;
-					let tokenIndex = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
-					console.log(tokens);
-					console.log({ cPos: handler.position.character, tokenIndex });
+					
+					// We need to find the innermost block we are part of
+					tokens = Parser.fromBlocksGetTokens(tokens, cursorIndex).block;
 
-					while (tokens[tokenIndex] && [`block`, `word`, `dot`].includes(tokens[tokenIndex].type) && tokenIndex > 0) {
-						tokenIndex--;
+					// Remove any tokens after the cursor
+					tokens = tokens.filter(token => token.range.end <= cursorIndex);
+
+					// Get the possible variable we're referring to
+					const referenceStart = Parser.getReference(tokens, cursorIndex);
+
+					if (referenceStart === undefined) {
+						return [];
 					}
 
-					let currentDef: Declaration | undefined;
+					let tokenIndex = referenceStart;
+
+					let currentDef: Declaration|undefined;
 
 					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
-						if ([`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
+						if (tokens[tokenIndex] === undefined || [`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
 							continue;
 						}
 
@@ -70,23 +89,18 @@ export default async function completionItemProvider(handler: CompletionParams):
 						if (!word) break;
 
 						if (currentDef) {
-							if (currentDef.subItems && currentDef.subItems.length > 0) {
+							if (currentDef.type !== `procedure` && currentDef.subItems && currentDef.subItems.length > 0) {
 								currentDef = currentDef.subItems.find(subItem => subItem.name.toUpperCase() === word);
 							}
 
 						} else {
-							currentDef = [
-								// First we search the local procedure
-								currentProcedure && currentProcedure.scope ? currentProcedure.scope.parameters.find(parm => parm.name.toUpperCase() === word && parm.subItems.length > 0) : undefined,
-								currentProcedure && currentProcedure.scope ? currentProcedure.scope.structs.find(struct => struct.name.toUpperCase() === word && struct.keyword[`QUALIFIED`]) : undefined,
-								currentProcedure && currentProcedure.scope ? currentProcedure.scope.constants.find(struct => struct.subItems.length > 0 && struct.name.toUpperCase() === word) : undefined,
-	
-								// Then we search the globals
-								doc.structs.find(struct => struct.name.toUpperCase() === word && struct.keyword[`QUALIFIED`]),
-								doc.constants.find(constants => constants.subItems.length > 0 && constants.name.toUpperCase() === word)
-							].find(x => x); // find the first non-undefined item
+							currentDef = doc.findDefinition(lineNumber, word);
 
-							if (currentDef && currentDef.subItems.length > 0) {
+							if (currentDef) {
+								if (currentDef.type === `struct` && currentDef.keyword[`QUALIFIED`] === undefined) {
+									currentDef = undefined;
+								}
+
 								// All good!
 							} else {
 								currentDef = undefined;
@@ -94,15 +108,72 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 					}
 
-					if (currentDef && currentDef.subItems.length > 0) {
-						items.push(...currentDef.subItems.map(subItem => {
-							const item = CompletionItem.create(subItem.name);
-							item.kind = CompletionItemKind.Property;
-							item.insertText = subItem.name;
-							item.detail = prettyKeywords(subItem.keyword);
-							item.documentation = subItem.description + ` (${currentDef.name})`;
-							return item;
-						}));
+					let onType: RpgleType|undefined;
+					let onArray = false;
+
+					if (currentDef) {
+						if (currentDef.subItems.length > 0) {
+							items.push(...currentDef.subItems.map(subItem => {
+								const item = CompletionItem.create(subItem.name);
+								item.kind = CompletionItemKind.Property;
+								item.insertText = subItem.name;
+								item.detail = prettyKeywords(subItem.keyword);
+								item.documentation = subItem.description + ` (${currentDef.name})`;
+								return item;
+							}));
+						}
+
+						const typeDetail = doc.resolveType(currentDef);
+						if (typeDetail.type) {
+							onType = typeDetail.type.name;
+							onArray = typeDetail.type.isArray;
+						}
+					} else if (tokens[referenceStart].type === `builtin` && tokens[referenceStart].value) {
+						const builtIn = getBuiltIn(tokens[referenceStart].value);
+						if (builtIn) {
+							onType = builtIn.returnType;
+						}
+					}
+
+					//================================================
+					// How about showing applicable built-in functions for a given type?
+					//================================================
+
+					if (onType) {
+						const usableFunctions = getBuiltInsForType(onType, onArray);
+						if (usableFunctions.length > 0) {
+							const changeRange = Range.create(
+								handler.position.line,
+								tokens[referenceStart].range.start,
+								handler.position.line,
+								tokens[tokens.length-1].range.end
+							);
+
+							const refValue = currentLine.substring(tokens[referenceStart].range.start, tokens[tokens.length-1].range.start);
+
+							for (let func of usableFunctions) {
+								let builtInFunction = CompletionItem.create(func.name.substring(1));
+								builtInFunction.kind = CompletionItemKind.Function;
+
+								const requiredParms = func.parameters.filter(p => !p.optional);
+
+								builtInFunction.additionalTextEdits = [TextEdit.del(changeRange)];
+								builtInFunction.insertText = `${func.name}(` + requiredParms.map((p, i) => {
+									if (p.base) {
+										return refValue
+									} else {
+										return `\${${i+1}:${p.name}}`
+									}
+								}).join(`:`) + `)`;
+								builtInFunction.insertTextFormat = InsertTextFormat.Snippet;
+
+								// To trigger the signature information
+								builtInFunction.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
+
+								builtInFunction.detail = `Built-in function`;
+								items.push(builtInFunction);
+							}
+						}
 					}
 				}
 			} else {
@@ -125,6 +196,11 @@ export default async function completionItemProvider(handler: CompletionParams):
 					items.push(...skipRules);
 
 				} else {
+
+					//================================================
+					// Content assist on existing symbols
+					//================================================
+
 					const expandScope = (localCache: Cache) => {
 						for (const subItem of localCache.parameters) {
 							const item = CompletionItem.create(subItem.name);
@@ -146,6 +222,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 							item.insertText = `${procedure.name}(${procedure.subItems.map((parm, index) => `\${${index + 1}:${parm.name}}`).join(`:`)})`;
 							item.detail = prettyKeywords(procedure.keyword);
 							item.documentation = procedure.description;
+
+							if (procedure.subItems.length > 0) {
+								item.command = { command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints` };
+							}
 							items.push(item);
 						}
 
@@ -238,6 +318,14 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					expandScope(doc);
 
+					// If they're typing inside of a procedure, let's get the stuff from there too
+					const currentProcedure = doc.procedures.find((proc, index) =>
+						proc.range.start && proc.range.end &&
+						lineNumber >= proc.range.start &&
+						(lineNumber <= proc.range.end + 1 || index === doc.procedures.length - 1) &&
+						currentPath === proc.position.path
+					);
+
 					if (currentProcedure) {
 						// If we have the entire scope, perfect
 						if (currentProcedure.scope) {
@@ -257,6 +345,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 							}
 						}
 					}
+
+					//================================================
+					// Auto-import logic 
+					//================================================
 
 					if (isFree) {
 						const isInclude = currentPath.toLowerCase().endsWith(`.rpgleinc`);
@@ -314,6 +406,12 @@ export default async function completionItemProvider(handler: CompletionParams):
 							items.push(item);
 						})
 					}
+
+					//================================================
+					// Showing the available built-in functions
+					//================================================
+
+					items.push(...builtInFunctionCompletionItems);
 				}
 			}
 		}

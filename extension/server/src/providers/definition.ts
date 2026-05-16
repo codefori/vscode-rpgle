@@ -1,6 +1,6 @@
 import { DefinitionParams, Location, Definition, Range } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
-import Parser from '../../../../language/parser';
+import Parser from '../../../../language/ile/parser';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 

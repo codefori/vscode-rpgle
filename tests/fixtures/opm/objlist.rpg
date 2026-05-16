@@ -1,0 +1,210 @@
+      *%METADATA
+      * %TEXT System Object Listing Utility
+      *%EMETADATA
+     H*Program Name: OBJLIST
+     H*Title: System Object Listing Utility
+     H*Function:
+     H* 1. Create a temporary buffer for output.
+     H* 2. Call the Object List Service.
+     H* 3. Retrieve the information in sections:
+     H*   A. The Control Header - standard for all services, it
+     H*      contains the location and size of the other sections.
+     H*   B. Request Section - the parameter fields used to call service.
+     H*   C. Meta Section - general info on the object used by service.
+     H*   D. Result Section - actual info returned by the service.
+     H*Note: This demonstrates using a system service without
+     H* advanced structures.
+     H*Input: parms for object and location to be listed.
+     H*Output: Report on objects
+     H*Called by: Interface
+     H*External Calls: QUSCRTUS - Buffer Management
+     H*                QUSLOBJ  - Object Listing
+     H*                QUSRTVUS - Data Retrieval
+     H*Compilation Notes/Parameters: None
+     FOUTFILE O   F     132     OF     PRINTER
+     I* Buffer Control Header; location & size of other sections:
+     ICTLHDR      DS
+     I                                        1  64 REGION
+     I                                    B  65  680SZCNTL
+     I                                       69  72 RLVL
+     I                                       73  80 FMTNM
+     I                                       81  90 SVCUSE
+     I                                       91 103 TMSTMP
+     I                                      104 104 STATUS
+     I                                    B 105 1080SZUSED
+     I                                    B 109 1120POSINP
+     I                                    B 113 1160LENREQ
+     I                                    B 117 1200POSMTA
+     I                                    B 121 1240LENMTA
+     I                                    B 125 1280POSRES
+     I                                    B 129 1320LENRES
+     I                                    B 133 1360NUMRES
+     I                                    B 137 1400LENTRY
+     I* Buffer Request Section; parameter fields of called service:
+     IREQUEST     DS
+     I                                        1  20 BUFREF
+     I                                        1  10 BUFNM
+     I                                       11  20 BUFLOC
+     I                                       21  28 REQFMT
+     I                                       29  48 OBJINF
+     I                                       29  38 OBJNMI
+     I                                       39  48 OBJLCI
+     I                                       49  58 FMTNMI
+     I                                       59  59 OVRIDE
+     I* Buffer Meta Section; general info on the object used by service:
+     IMETAINF     DS
+     I                                        1  20 OBJINM
+     I                                        1  10 OBJNMM
+     I                                       11  20 OBJLCM
+     I                                       21  30 OBJTYP
+     I                                       31  40 FMTNMM
+     I                                    B  41  440FMTLEN
+     I                                       45  57 FMTKEY
+     I                                       58 107 DESC
+     I* Buffer Result Section; info returned by the service:
+     IRESULT      DS
+     I                                        1  10 ITEMNM
+     I                                       11  11 ITMTYP
+     I                                       12  12 ITMUSE
+     I                                    B  13  160BUFOUT
+     I                                    B  17  200BUFIN
+     I                                    B  21  240ITMLEN
+     I                                    B  25  280NUMDIG
+     I                                    B  29  320DECSIG
+     I                                       33  82 DETAIL
+     I                                       83  84 EDITCD
+     I                                    B  85  880EDTLEN
+     I                                       89 152 EDITWD
+     I                                      153 172 HEAD1
+     I                                      173 192 HEAD2
+     I                                      193 212 HEAD3
+     I* System error code parameter
+     IERRINF      DS
+     I                                    B   1   40ERRPRV
+     I                                    B   5   80ERRRET
+     I                                        9  15 ERRMID
+     I                                       16  16 ERRRES
+     I                                       17 116 ERRDTA
+     I* Define binary work fields
+     I            DS
+     I                                    B   1   40BEGPOS
+     I                                    B   5   80SEGLEN
+     I                                    B   9  120BUFLEN
+     C* Create the buffer
+     C                     CALL 'QUSCRTUS'
+     C                     PARM           BUFREF
+     C                     PARM *BLANKS   BUFATR 10
+     C                     PARM 1024      BUFLEN
+     C                     PARM *BLANKS   BUFVAL  1
+     C                     PARM '*CHANGE' BUFAUT 10
+     C                     PARM *BLANKS   BUFTXT 50
+     C                     PARM '*YES'    BUFRPL 10
+     C                     PARM           ERRINF
+     C* Call the Object List Service
+     C                     CALL 'QUSLOBJ'
+     C                     PARM           BUFREF
+     C                     PARM 'OBJL0100'REQFMT
+     C                     PARM           OBJINF
+     C                     PARM '*FIRST'  FMTNMI
+     C                     PARM '1'       OVRIDE
+     C* The control header starts at position 1; length is 140 bytes:
+     C                     Z-ADD1         BEGPOS
+     C                     Z-ADD140       SEGLEN
+     C* Retrieve the control header:
+     C                     CALL 'QUSRTVUS'
+     C                     PARM           BUFREF
+     C                     PARM           BEGPOS
+     C                     PARM           SEGLEN
+     C                     PARM           CTLHDR
+     C* Load the starting position and length of the request section:
+     C           POSINP    ADD  1         BEGPOS
+     C                     Z-ADDLENREQ    SEGLEN
+     C* Retrieve the request section:
+     C                     CALL 'QUSRTVUS'
+     C                     PARM           BUFREF
+     C                     PARM           BEGPOS
+     C                     PARM           SEGLEN
+     C                     PARM           REQUEST
+      *
+      *  ************************************************
+      *  * Custom processing for REQUEST data         *
+      *  ************************************************
+      *
+     C* Load the starting position and length of the meta section:
+     C           POSMTA    ADD  1         BEGPOS
+     C                     Z-ADDLENMTA    SEGLEN
+     C* Retrieve the meta section:
+     C                     CALL 'QUSRTVUS'
+     C                     PARM           BUFREF
+     C                     PARM           BEGPOS
+     C                     PARM           SEGLEN
+     C                     PARM           METAINF
+      *
+      *  ************************************************
+      *  * Custom processing for META data            *
+      *  ************************************************
+      *
+     C* Load the starting position and length of the result section:
+     C           POSRES    ADD  1         BEGPOS
+     C                     Z-ADDLENTRY    SEGLEN
+     C* Repeat for each entry in the result section:
+     C                     DO   NUMRES
+     C* Retrieve an entry from the result section:
+     C                     CALL 'QUSRTVUS'
+     C                     PARM           BUFREF
+     C                     PARM           BEGPOS
+     C                     PARM           SEGLEN
+     C                     PARM           RESULT
+     C           ITMTYP    IFEQ 'A'
+     C           ITMTYP    OREQ 'L'
+     C           ITMTYP    OREQ 'T'
+     C           ITMTYP    OREQ 'Z'
+     C                     Z-ADDITMLEN    ITMSZE  50       ALPHA: BYTES
+     C                     MOVE *ON       *IN01
+     C                     ELSE
+     C                     Z-ADDNUMDIG    ITMSZE  50       NUM: DIGITS
+     C                     MOVE *OFF      *IN01
+     C                     ENDIF
+     C                     EXCPTDETAIL
+     C* Increment the starting position to point to the next entry:
+     C                     ADD  LENTRY    BEGPOS
+     C                     ENDDO
+     C                     SETON                     LR
+     C*           -----    -----
+     C           *INZSR    BEGSR
+     C* Initial Subroutine; executed automatically when program starts:
+     C           *ENTRY    PLIST
+     C                     PARM           OBJ    10
+     C                     PARM           LOC    10
+     C* Load data structure fields
+     C                     MOVEL'BUFFER'  BUFNM
+     C                     MOVEL'QTEMP'   BUFLOC
+     C                     MOVELOBJ       OBJNMI
+     C                     MOVELLOC       OBJLCI
+     C                     Z-ADD116       ERRPRV
+     C                     ENDSR                           End *INZSR
+     OOUTFILE H  103   1P
+     O       OR        OF
+     O                                   10 'OBJLIST'
+     O                                   29 'Object Layout for'
+     O                                   34 'obj'
+     O                         OBJ       45
+     O                                   56 'DATE'
+     O                         UDATE Y   65
+     O                                   75 'Page'
+     O                         PAGE  Z   80
+     O        H  2     1P
+     O       OR        OF
+     O                         DESC      62
+     O        H  2     1P
+     O       OR        OF
+     O                                   17 'Item Name'
+     O                                   29 'Length'
+     O                                   41 'Description'
+     O        E  1             DETAIL
+     O                         ITEMNM    17
+     O                         ITMTYP    19
+     O                         ITMSZ Z   26
+     O                 01                29 '   '
+     O                N01      DECSIG    29 '0        '
+     O                         DETAIL    80

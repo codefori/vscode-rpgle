@@ -1,7 +1,7 @@
 
 import { documents, getWordRangeAtPosition, parser } from '.';
 import { PrepareRenameParams, Range, RenameParams, TextEdit, WorkspaceEdit } from "vscode-languageserver";
-import Linter from '../../../../language/linter';
+import Linter from '../../../../language/ile/linter';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 

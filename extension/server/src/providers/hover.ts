@@ -1,8 +1,9 @@
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
-import Parser from "../../../../language/parser";
+import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywords } from '.';
+import Parser from '../../../../language/ile/parser';
 import { URI } from 'vscode-uri';
-import { Keywords } from '../../../../language/parserTypes';
+import { Keywords } from '../../../../language/ile/parserTypes';
+import Declaration from '../../../../language/models/declaration';
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover | undefined> {
 	const currentPath = params.textDocument.uri;
@@ -30,14 +31,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 					}
 
 					let markdown = ``;
-					let returnValue = `void`
-
-					let returnKeywords: Keywords = {
-						...symbol.keyword,
-					};
-					delete returnKeywords[`EXTPROC`];
-
-					if (Object.keys(returnKeywords).length > 0) returnValue = prettyKeywords(returnKeywords);
+					const returnValue = getReturnValue(symbol);
 
 					const returnTag = symbol.tags.find(tag => tag.tag === `return`);
 					const deprecatedTag = symbol.tags.find(tag => tag.tag === `deprecated`);
@@ -88,6 +82,24 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 
 					let markdown = `\`${symbol.name} ${prettyKeywords(symbol.keyword)}\` (${refs} reference${refs === 1 ? `` : `s`})`;
 
+					// If this is a subfield, show parent structure context
+					if (symbol && symbol.type === `subitem`) {
+						// Find the parent structure
+						const parentStruct = doc.symbols.find(s => s.subItems.includes(symbol as Declaration));
+						if (parentStruct) {
+							const isQualified = parentStruct.keyword[`QUALIFIED`] === true;
+							const structName = parentStruct.name || `*UNNAMED`;
+							const qualifierText = isQualified ? `QUALIFIED` : `*UNQUALIFIED`;
+							markdown = `\`${structName}.${symbol.name} ${prettyKeywords(symbol.keyword)} ${qualifierText}\` (${refs} reference${refs === 1 ? `` : `s`})`;
+						}
+					}
+
+					// Add description if available
+					const descriptionTag = symbol.tags.find(tag => tag.tag === `description`);
+					if (descriptionTag) {
+						markdown += `\n\n${descriptionTag.content}`;
+					}
+
 					if (symbol.position && currentPath !== symbol.position.path) {
 						markdown += `\n\n*@file* \`${symbol.position.path}:${symbol.position.range.line + 1}\``;
 					}
@@ -113,17 +125,15 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 						const foundUri = URI.parse(include.uri);
 
 						if (foundUri.scheme === `member`) {
-							const lastIndex = foundUri.path.lastIndexOf(`.`);
+							const lastIndex = foundUri.fsPath.lastIndexOf(`.`);
 							if (lastIndex >= 0) {
-								displayName = foundUri.path.substring(0, lastIndex);
+								displayName = foundUri.fsPath.substring(0, lastIndex);
 							} else {
-								displayName = foundUri.path;
+								displayName = foundUri.fsPath;
 							}
 
-							if (displayName.startsWith(`/`)) displayName = displayName.substring(1);
-
 						} else {
-							displayName = foundUri.path;
+							displayName = foundUri.fsPath;
 						}
 					}
 

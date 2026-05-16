@@ -12,7 +12,7 @@
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
 	"license": "MIT",
-	"version": "0.32.1",
+	"version": "0.33.5-dev.0",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
@@ -29,6 +29,7 @@
 	],
 	"activationEvents": [
 		"onLanguage:rpgle",
+		"onLanguage:rpg",
 		"onCommand:workbench.action.showAllSymbols"
 	],
 	"main": "./out/extension",
@@ -50,6 +51,19 @@
 					"type": "string",
 					"default": "",
 					"description": "RPGLE linter ignore libraries, separated by semicolon."
+				},
+				"vscode-rpgle.logLevel": {
+					"type": "string",
+					"default": "info",
+					"enum": ["none", "error", "warn", "info", "debug"],
+					"enumDescriptions": [
+						"No logging",
+						"Only errors",
+						"Errors and warnings",
+						"Errors, warnings, and info (default)",
+						"All messages including debug output"
+					],
+					"description": "Controls the verbosity of RPGLE language server logging output."
 				}
 			}
 		},
@@ -78,13 +92,13 @@
 				"command": "vscode-rpgle.assist.launchUI",
 				"title": "Launch Column Assistant",
 				"category": "RPGLE",
-				"enablement": "editorLangId == rpgle"
+				"enablement": "editorLangId == rpgle || editorLangId == rpg"
 			},
 			{
 				"command": "vscode-rpgle.assist.toggleFixedRuler",
 				"title": "Toggle Inline Editor Helper",
 				"category": "RPGLE",
-				"enablement": "editorLangId == rpgle"
+				"enablement": "editorLangId == rpgle || editorLangId == rpg"
 			},
 			{
 				"command": "vscode-rpgle.server.reloadCache",
@@ -98,14 +112,14 @@
 				"title": "Move Left",
 				"category": "RPGLE Fixed-Format",
 				"icon": "$(arrow-left)",
-				"when": "editorLangId == rpgle"
+				"when": "editorLangId == rpgle || editorLangId == rpg"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveRight",
 				"title": "Move Right",
 				"category": "RPGLE Fixed-Format",
 				"icon": "$(arrow-right)",
-				"when": "editorLangId == rpgle"
+				"when": "editorLangId == rpgle || editorLangId == rpg"
 			}
 		],
 		"keybindings": [
@@ -113,25 +127,25 @@
 				"command": "vscode-rpgle.assist.launchUI",
 				"key": "ctrl+shift+f4",
 				"mac": "cmd+shift+f4",
-				"when": "editorLangId == rpgle"
+				"when": "editorLangId == rpgle || editorLangId == rpg"
 			},
 			{
 				"command": "vscode-rpgle.assist.toggleFixedRuler",
 				"key": "shift+f4",
 				"mac": "shift+f4",
-				"when": "editorLangId == rpgle"
+				"when": "editorLangId == rpgle || editorLangId == rpg"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveLeft",
 				"key": "ctrl+[",
 				"mac": "ctrl+[",
-				"when": "editorLangId == rpgle"
+				"when": "editorLangId == rpgle || editorLangId == rpg"
 			},
 			{
 				"command": "vscode-rpgle.assist.moveRight",
 				"key": "ctrl+]",
 				"mac": "ctrl+]",
-				"when": "editorLangId == rpgle"
+				"when": "editorLangId == rpgle || editorLangId == rpg"
 			}
 		],
 		"menus": {
@@ -182,6 +196,7 @@
 		"tsx": "^3.11.0",
 		"typescript": "^4.8.4",
 		"vitest": "^1.3.1",
+		"vscode-uri": "^3.1.0",
 		"webpack": "^5.76.0",
 		"webpack-cli": "^4.5.0"
 	}

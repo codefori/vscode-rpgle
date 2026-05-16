@@ -1,0 +1,20 @@
+     H*Program Name: DATAMGMT
+     H*Purpose: Data Management with KLIST
+     FDATAFILE UF  E           K        DISK                      A
+     I* Key list for file access
+     I*
+     IDSKEYS      DS
+     I                                        1  10 IDNUM
+     I                                       11  20 CATCOD
+     C* Key list definition
+     C           DATAKEY   KLIST
+     C                     KFLD           IDNUM
+     C                     KFLD           CATCOD
+     C*
+     C* Main processing loop
+     C                     READ DATAFILE                            99
+     C           *IN99     DOWEQ*OFF
+     C* Process record
+     C                     ENDDO
+     C*
+     C                     SETON                     LR

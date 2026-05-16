@@ -2,6 +2,8 @@
 
 This is a command-line interface (CLI) for the RPG Linter, derived from the vscode-rpgle extension. It allows you to lint your RPG code from the command line, using the same rules and configuration as the vscode-rpgle extension.
 
+**Note**: The CLI currently supports ILE RPG (`.rpgle`, `.sqlrpgle`) files only. OPM RPG (`.rpg`) support is not yet available in the CLI version.
+
 ## Installation
 
 `rpglint` can be installed through npm. You can see the package on npmjs.com! `rpglint` is intended to be installed globally and not at a project level. To do that, you can simply run:

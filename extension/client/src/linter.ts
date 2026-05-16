@@ -87,7 +87,7 @@ export function initialise(context: ExtensionContext) {
 					configPath = `${library}/VSCODE/RPGLINT.JSON`;
 
 					exists = (await connection.runCommand({
-						command: `CHKOBJ OBJ(${library}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
+						command: `QSYS/CHKOBJ OBJ(${library}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
 						noLibList: true
 					})).code === 0;
 
@@ -114,7 +114,7 @@ export function initialise(context: ExtensionContext) {
 							configPath = memberUri.path;
 
 							exists = (await connection.runCommand({
-								command: `CHKOBJ OBJ(${memberPath.library!.toLocaleUpperCase()}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
+								command: `QSYS/CHKOBJ OBJ(${memberPath.library!.toLocaleUpperCase()}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
 								noLibList: true
 							})).code === 0;
 							break;
@@ -164,14 +164,14 @@ export function initialise(context: ExtensionContext) {
 												// Will not crash, even if it fails
 												await connection.runCommand(
 													{
-														'command': `CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
+														'command': `QSYS/CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
 													}
 												);
 
 												// Will not crash, even if it fails
 												await connection.runCommand(
 													{
-														command: `ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
+														command: `QSYS/ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
 													}
 												);
 

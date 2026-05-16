@@ -1,0 +1,309 @@
+      *%METADATA
+      * %TEXT Compare Object Formats Between Two Locations
+      *%EMETADATA
+     H* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     H*Program Name: FILELEVEL
+     H*Purpose: Compare Object Formats between two locations.
+     H*         Modified objects are copied to a third location, and a
+     H*         report is printed.
+     H*
+     H*Notes:
+     H* LOC1 = Location with Current Objects
+     H* LOC2 = Location with Previous Objects
+     H* LOC3 = Location for Modified Objects
+     H* OFTYPE = Object Type (P = Primary, L = Link, D = Display)
+     H* OFILE = Object Name
+     H* OFMT = Format Name
+     H* OLEV = Format Level
+     H* ODESC = Text Description
+     H*
+     H*Input: Data from system query
+     H*Output: New objects, report.
+     H*External Calls: QCMDEXC
+     H* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     F* * * * * * * * * * *   File Specifications   * * * * * * * * * * * *
+     FCURROBJS IP DE                    DISK
+     FPREVOBJS IS DE                    DISK
+     F            QWHFDFMT                          KRENAMEPREVREC
+     FPRTFILE O   F     132     OF     PRINTER
+     F*
+     I* * * * * * * * * * *   Input Specifications  * * * * * * * * * * * *
+     IQWHFDFMT    01
+     I              RFFTYP                          OTYPE1  M3
+     I              RFFILE                          OFIL1   M2
+     I              RFNAME                          OFMT1   M1
+     I              RFID                            OLEV1
+     I              RFFTXT                          ODSC1
+     I*
+     IPREVREC     02
+     I              RFFTYP                          OTYPE2  M3
+     I              RFFILE                          OFIL2   M2
+     I              RFNAME                          OFMT2   M1
+     I              RFID                            OLEV2
+     I              RFFTXT                          ODSC2
+     I*
+     I* Program Status Data Structure:
+     I           SDS
+     I                                     *PROGRAM PGM
+     I                                     *STATUS  STATUS
+     I                                       40  46 ERRMSG
+     I                                       51  80 WRKARA
+     I                                       91 170 MSGDTA
+     I*
+     I           UDS
+     I                                        1  10 LOC1
+     I                                       11  20 LOC2
+     I                                       21  30 LOC3
+     I*
+     I* Constants:  Value                           Field Name
+     I              ')'                   C         CPAREN
+     I              'CRTDUPOBJ OBJ('      C         DUPOBJ
+     I              'CRTLF FILE('         C         CRLINK
+     I              'DATA(*NO)'           C         NODATA
+     I              'FROMLIB('            C         SRCLIB
+     I              'OBJTYPE(*FILE)'      C         OTYPEF
+     I              '('                   C         OPAREN
+     I              'OPTION(*NOSRC -      C         OPTS
+     I              '*NOLIST)'
+     I              'TOLIB('              C         DSTLIB
+     I              '/'                   C         DIVIDER
+     I              'QDDSSRC'             C         DDSSRC
+     I              'SOURCE'              C         SRCSRC
+     I              'SRCFILE('            C         SRCREF
+     I              'LOCLIB1'             C         LIB1
+     I              'LOCLIB2'             C         LIB2
+     I              'LOCLIB3'             C         LIB3
+     I              'LOCLIB4'             C         LIB4
+     C* * * * * * * * * * *   Calculations   * * * * * * * * * * * * * * * **
+     C                     MOVE *OFF      *IN03
+     C*
+     C* Skip system objects (First letter of name = 'Q')
+     C           1         SUBSTRFIL1:1   FIRST1  1        First Letter
+     C*
+     C*   If object in both locations, but Format Level doesn't match, copy
+     C* into the modified objects location:
+     C   MR 02   OLEV1     IFNE OLEV2                      Format Levels <>
+     C           FIRST1    ANDNE'Q'                        Skip system objs
+     C                     EXSR COPOBJ
+     C                     MOVE *ON       *IN03            Lvl Mismatch Msg
+     C                     ENDIF
+     C*
+     C*   If object in current but not previous location, copy into modified
+     C* objects location: (Exception: Use CRLINK for Link Objects)
+     C  NMR 01   FIRST1    IFNE 'Q'                        Skip system objs
+     C           OTYPE1    IFEQ 'L'                         Link Object
+     C                     EXSR MAKLINK                      CrtLf
+     C                     ELSE                             Else
+     C                     EXSR COPOBJ                       CrtDupObj
+     C                     ENDIF                            End OTYPE1=L
+     C                     ENDIF                           End FIRST1 <> Q
+     C*
+     C           *IN01     IFEQ *ON
+     C                     MOVELODSC1     DSCWRK 40        TEXT
+     C                     ELSE
+     C                     MOVELODSC2     DSCWRK           TEXT
+     C                     ENDIF
+     C* * * * * * * * * * *   Subroutines  * * * * * * * * * * * * * * * * **
+     C*           -----    -----
+     C           *INZSR    BEGSR
+     C* Initial Subroutine; executed automatically when program starts:
+     C*
+     C* Get current time for header:
+     C                     TIME           TIME    60
+     C*
+     C                     ENDSR                           END *INZSR
+     C*                    -----
+     C* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     C*          ------    -----
+     C           COPOBJ    BEGSR
+     C*   Build and execute the duplicate object command:
+     C           DUPOBJ    CAT  OFIL1     CMDSTR256 P
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  SRCLIB:1  CMDSTR
+     C                     CAT  LOC1:0    CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  OTYPEF:1  CMDSTR
+     C                     CAT  DSTLIB:1  CMDSTR
+     C                     CAT  LOC3:0    CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  NODATA:1  CMDSTR
+     C*
+     C                     Z-ADD256       CMDLEN 155
+     C                     CALL 'QCMDEXC'              99
+     C                     PARM           CMDSTR
+     C                     PARM           CMDLEN
+     C*
+     C                     ENDSR                           END COPOBJ
+     C*          ------    -----
+     C           MAKLINK   BEGSR
+     C*   Build and execute the create link command:
+     C*
+     C           CRLINK    CAT  LOC3:0    CMDSTR    P
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  OFIL1:0   CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  OPTS:1    CMDSTR
+     C*
+     C                     Z-ADD256       CMDLEN 155
+     C                     CALL 'QCMDEXC'              99
+     C                     PARM           CMDSTR
+     C                     PARM           CMDLEN
+     C*
+     C* If create failed, try with SRCFILE(SOURCE)
+     C           *IN99     IFEQ *ON
+     C           CRLINK    CAT  LOC3:0    CMDSTR    P
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  OFIL1:0   CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  SRCREF:1  CMDSTR
+     C                     CAT  SRCSRC:0  CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  OPTS:1    CMDSTR
+     C*
+     C                     Z-ADD256       CMDLEN 155
+     C                     CALL 'QCMDEXC'              99
+     C                     PARM           CMDSTR
+     C                     PARM           CMDLEN
+     C                     ENDIF
+     C*
+     C* Try alternate location 1
+     C           *IN99     IFEQ *ON
+     C           CRLINK    CAT  LOC3:0    CMDSTR    P
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  OFIL1:0   CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  SRCREF:1  CMDSTR
+     C                     CAT  LIB1:0    CMDSTR
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  SRCSRC:0  CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  OPTS:1    CMDSTR
+     C*
+     C                     Z-ADD256       CMDLEN 155
+     C                     CALL 'QCMDEXC'              99
+     C                     PARM           CMDSTR
+     C                     PARM           CMDLEN
+     C                     ENDIF
+     C*
+     C* Try alternate location 2
+     C           *IN99     IFEQ *ON
+     C           CRLINK    CAT  LOC3:0    CMDSTR    P
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  OFIL1:0   CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  SRCREF:1  CMDSTR
+     C                     CAT  LIB2:0    CMDSTR
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  SRCSRC:0  CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  OPTS:1    CMDSTR
+     C*
+     C                     Z-ADD256       CMDLEN 155
+     C                     CALL 'QCMDEXC'              99
+     C                     PARM           CMDSTR
+     C                     PARM           CMDLEN
+     C                     ENDIF
+     C*
+     C* Try alternate location 3
+     C           *IN99     IFEQ *ON
+     C           CRLINK    CAT  LOC3:0    CMDSTR    P
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  OFIL1:0   CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  SRCREF:1  CMDSTR
+     C                     CAT  LIB3:0    CMDSTR
+     C                     CAT  SRCSRC:0  CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  OPTS:1    CMDSTR
+     C*
+     C                     Z-ADD256       CMDLEN 155
+     C                     CALL 'QCMDEXC'              99
+     C                     PARM           CMDSTR
+     C                     PARM           CMDLEN
+     C                     ENDIF
+     C*
+     C* Try alternate location 4
+     C           *IN99     IFEQ *ON
+     C           CRLINK    CAT  LOC3:0    CMDSTR    P
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  OFIL1:0   CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  SRCREF:1  CMDSTR
+     C                     CAT  LIB4:0    CMDSTR
+     C                     CAT  DIVIDER:0 CMDSTR
+     C                     CAT  DDSSRC:0  CMDSTR
+     C                     CAT  CPAREN:0  CMDSTR
+     C                     CAT  OPTS:1    CMDSTR
+     C*
+     C                     Z-ADD256       CMDLEN 155
+     C                     CALL 'QCMDEXC'              99
+     C                     PARM           CMDSTR
+     C                     PARM           CMDLEN
+     C                     ENDIF
+     C*
+     C* If still failed, write error
+     C           *IN99     IFEQ *ON
+     C                     EXCPTERROR
+     C                     ENDIF
+     C*
+     C                     ENDSR                           END MAKLINK
+     O* * * * * * * * * * *   Output Specifications   * * * * * * * * * * *
+     OPRTFILE H  203   1P
+     O       OR        OF
+     O                         PGM       10
+     O                                   63 'Compare Object Formats'
+     O                                   95 'DATE'
+     O                         UDATE Y  104
+     O                         TIME     116 '  :  :  '
+     O                                  127 'Page'
+     O                         PAGE  Z  132
+     O*
+     O        H  1     1P
+     O       OR        OF
+     O                                   34 'Current Location:'
+     O                         LOC1      46
+     O                                   72 'Previous Location:'
+     O                         LOC2      83
+     O                                  110 'Modified Objects in:'
+     O                         LOC3     121
+     O*
+     O        H  2     1P
+     O       OR        OF
+     O                                    7 'Message'
+     O                                   20 'Object'
+     O                                   28 'Typ'
+     O                                   35 'Format'
+     O                                   45 'Level'
+     O                                   58 'Object'
+     O                                   66 'Typ'
+     O                                   73 'Format'
+     O                                   83 'Level'
+     O*
+     O        D  1    NMR
+     O                 01                15 'Not in Prev Loc'
+     O                 02                15 'Not in Curr Loc'
+     O                 01      OFIL1  B  26
+     O                 01      OTYPE1 B  28
+     O                 01      OFMT1  B  39
+     O                 01      OLEV1  B  53
+     O                 02      OFIL2  B  64
+     O                 02      OTYPE2 B  66
+     O                 02      OFMT2  B  77
+     O                 02      OLEV2  B  91
+     O                         DSCWRK B 132
+     O*
+     O        D  1     MR 03
+     O                                   15 '*Level Mismatch'
+     O                         OFIL1  B  26
+     O                         OTYPE1 B  28
+     O                         OFMT1  B  39
+     O                         OLEV1  B  53
+     O                         OFIL2  B  64
+     O                         OTYPE2 B  66
+     O                         OFMT2  B  77
+     O                         OLEV2  B  91
+     O                         DSCWRK B 132
+     O        E  1             ERROR
+     O                                   10 '*** ERROR:'
+     O                         ERRMSG B  18
+     O                         MSGDTA B  99
