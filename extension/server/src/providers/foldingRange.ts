@@ -1,6 +1,6 @@
 import { FoldingRange, FoldingRangeParams, FoldingRangeKind } from 'vscode-languageserver';
 import { documents } from '.';
-import Document from '../../../../language/document';
+import Document from '../../../../language/ile/document';
 import { isInSqlBlock, isInCommentOrString } from '../utils/sqlDetection';
 
 // Defines opening and closing keywords for code blocks

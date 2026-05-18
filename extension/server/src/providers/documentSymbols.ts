@@ -2,7 +2,7 @@ import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-
 import { documents, parser, prettyKeywords, getParser } from '.';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
-import Document from '../../../../language/document';
+import Document from '../../../../language/ile/document';
 import { isInSqlBlock } from '../utils/sqlDetection';
 
 export default async function documentSymbolProvider(handler: DocumentSymbolParams): Promise<DocumentSymbol[]> {
