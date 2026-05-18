@@ -321,7 +321,7 @@ export function tokenise(statement: string, options: TokeniseOptions = {}): Toke
       // Ignore characters when we're in a string
     } else if (state === ReadState.IN_COMMENT) {
       currentText += statement[i];
-    
+
     } else if (state === ReadState.IN_STRING && statement[i] !== stringChar) {
       currentText += statement[i];
 
@@ -483,4 +483,10 @@ export function createBlocks(tokens: Token[]) {
   }
 
   return tokens;
+}
+
+export function trimQuotes(input: string) {
+	if (input[0] === `'`) input = input.substring(1);
+	if (input[input.length - 1] === `'`) input = input.substring(0, input.length - 1);
+	return input;
 }

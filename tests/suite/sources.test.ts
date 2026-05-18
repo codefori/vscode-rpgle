@@ -4,7 +4,7 @@ import path from "path";
 import { fail } from "assert";
 import Declaration from "../../language/models/declaration";
 import Cache from "../../language/models/cache";
-import { Reference } from "../../language/parserTypes";
+import { Reference } from "../../language/ile/parserTypes";
 
 const timeout = 1000 * 60 * 10; // 10 minutes
 

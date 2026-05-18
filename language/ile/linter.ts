@@ -1,13 +1,13 @@
 /* eslint-disable no-case-declarations */
 
-import Cache from "./models/cache";
+import Cache from "../models/cache";
 import { tokenise } from "./tokens";
-import oneLineTriggers from "./models/oneLineTriggers";
-import { Range, Position } from "./models/DataPoints";
-import opcodes from "./models/opcodes";
+import oneLineTriggers from "../models/oneLineTriggers";
+import { Range, Position } from "../models/DataPoints";
+import opcodes from "../models/opcodes";
 import Document from "./document";
 import { IssueRange, Rules, SelectBlock } from "./parserTypes";
-import Declaration from "./models/declaration";
+import Declaration from "../models/declaration";
 import { IRange, Token } from "./types";
 import { NO_NAME } from "./statement";
 

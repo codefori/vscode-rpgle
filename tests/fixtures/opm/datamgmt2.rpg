@@ -1,0 +1,17 @@
+     H*Program Name: DATAMGMT2
+     H*Purpose: Data Management with KLIST - Simple Version
+     FDATAFILE IF  E           K        DISK
+     I* Key list for file access
+     I*
+     C* Key list definition
+     C           DATAKEY   KLIST
+     C                     KFLD           IDNUM
+     C                     KFLD           CATCOD
+     C*
+     C* Main processing loop
+     C                     READ DATAFILE                            99
+     C           *IN99     DOWEQ*OFF
+     C* Process record
+     C                     ENDDO
+     C*
+     C                     SETON                     LR
