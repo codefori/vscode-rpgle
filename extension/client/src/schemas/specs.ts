@@ -6,7 +6,11 @@ export const SpecRulers: {[spec: string]: string} = {
   D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords+++++++++++++++++++++++++++++`,
   F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords+++++++++++++++++++++++++++++`,
   I: `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
-  O: `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.Constant/Editword/DateFormat`,
+  O:    `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.Constant/Editword/DateFormat`,
+  OAnd: `.....O.........And++N01N02N03ExceptName+++++++++++++++++++++++++++++++++++++++++`,
+  OF:   `.....O..............N01N02N03FieldName+++++BEcEndPoDConstant/Editword+++++++++++`,
+  OFC:  `.....O..................................................Constant/Editword+++++++++++`,
+  OXF:  `.....O..............N01N02N03FieldName++++++B+++++++++++++++++++++++++++++++++++`,
   P: `.....PName+++++++++++..T...................Keywords+++++++++++++++++++++++++++++`
 }
 
@@ -151,6 +155,48 @@ export const specs: {[spec: string]: SpecFieldDef[]} = {
     {start: 34, end: 34, name: `File Organization`, id: `fileOrg`},
     {start: 35, end: 41, name: `Device`, id: `device`},
     {start: 43, end: 79, name: `Keywords`, id: `keywords`}
+  ],
+  // E, H, I specs are OPM-only or have significant differences - see opmSpecs below
+  O: [
+    {start: 6,  end: 15, name: `Filename`,             id: `fileName`},
+    {start: 16, end: 16, name: `Type`,                 id: `type`},
+    {start: 17, end: 19, name: `Fetch Overflow`,       id: `fetchOverflow`},
+    {start: 20, end: 22, name: `Add/Delete Indicator`, id: `addDeleteIndicator`},
+    {start: 23, end: 25, name: `Output Indicator 1`,   id: `outputIndicator1`},
+    {start: 26, end: 28, name: `Output Indicator 2`,   id: `outputIndicator2`},
+    {start: 29, end: 38, name: `Except Name`,          id: `exceptName`},
+    {start: 39, end: 41, name: `Space Before`,         id: `spaceBefore`},
+    {start: 42, end: 44, name: `Space After`,          id: `spaceAfter`},
+    {start: 45, end: 47, name: `Skip Before`,          id: `skipBefore`},
+    {start: 48, end: 79, name: `Skip After`,           id: `skipAfter`},
+  ],
+  OAnd: [
+    {start: 15, end: 19, name: `AND/OR Keyword`,      id: `andOrKeyword`},
+    {start: 20, end: 22, name: `Output Indicator 1`,  id: `outputIndicator1`},
+    {start: 23, end: 25, name: `Output Indicator 2`,  id: `outputIndicator2`},
+    {start: 26, end: 28, name: `Output Indicator 3`,  id: `outputIndicator3`},
+    {start: 29, end: 79, name: `Except Name`,         id: `exceptName`},
+  ],
+  OF: [
+    {start: 20, end: 22, name: `Output Indicator 1`,  id: `outputIndicator1`},
+    {start: 23, end: 25, name: `Output Indicator 2`,  id: `outputIndicator2`},
+    {start: 26, end: 28, name: `Output Indicator 3`,  id: `outputIndicator3`},
+    {start: 29, end: 42, name: `Field Name`,          id: `fieldName`},
+    {start: 43, end: 43, name: `Blank After`,         id: `blankAfter`},
+    {start: 44, end: 45, name: `Edit Codes`,          id: `editCodes`},
+    {start: 46, end: 50, name: `End Position`,        id: `endPosition`, padStart: true},
+    {start: 51, end: 51, name: `Data Format`,         id: `dataFormat`},
+    {start: 52, end: 79, name: `Constant/Edit Word`,  id: `constantOrEdit`},
+  ],
+  OFC: [
+    {start: 52, end: 79, name: `Constant/Edit Word`,  id: `constantOrEdit`},
+  ],
+  OXF: [
+    {start: 20, end: 22, name: `Output Indicator 1`,  id: `outputIndicator1`},
+    {start: 23, end: 25, name: `Output Indicator 2`,  id: `outputIndicator2`},
+    {start: 26, end: 28, name: `Output Indicator 3`,  id: `outputIndicator3`},
+    {start: 29, end: 43, name: `Field Name`,          id: `fieldName`},
+    {start: 44, end: 79, name: `Blank After`,         id: `blankAfter`},
   ],
   P: [
     {start: 6, end: 20, name: `Name`, id: `name`},

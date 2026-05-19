@@ -20,11 +20,38 @@ let currentEditorLine = -1;
 
 import { SpecFieldDef, SpecFieldValue, SpecRulers, specs } from '../schemas/specs';
 
+/**
+ * Resolves the spec lookup key for a line, detecting O-spec sub-types
+ * (OAnd, OF, OFC, OXF) so they map to the correct SpecFieldDef array.
+ * All other spec letters are returned as-is.
+ */
+function resolveSpecKey(line: string): string {
+  const specLetter = line[5]?.toUpperCase() ?? ``;
+  if (specLetter !== `O`) return specLetter;
+
+  const paddedLine = line.padEnd(80);
+  const andOrKeyword = paddedLine.substring(15, 20).trim().toUpperCase();
+  if (andOrKeyword === `AND` || andOrKeyword === `OR`) return `OAnd`;
+
+  const filename  = paddedLine.substring(6,  16).trim();
+  const type      = paddedLine.substring(16, 17).trim();
+  const fieldName = paddedLine.substring(29, 43).trim();
+  const endPos    = paddedLine.substring(46, 51).trim();
+  const constant  = paddedLine.substring(52).trim();
+
+  if (endPos && (fieldName || constant)) return `OF`;
+  if (filename || type)                  return `O`;
+  if (!fieldName && constant)            return `OFC`;
+  if (fieldName)                         return `OXF`;
+  return `O`;
+}
+
 const getAreasForLine = (line: string, index: number) => {
   if (line.length < 6) return undefined;
   if (line[6] === `*` || line[6] === `/`) return undefined;
 
-  const specLetter = line[5].toUpperCase();
+  const specLetter = resolveSpecKey(line);
+  const baseSpecLetter = line[5]?.toUpperCase() ?? ``;
   if (specs[specLetter]) {
     const specification = specs[specLetter];
 
@@ -33,13 +60,13 @@ const getAreasForLine = (line: string, index: number) => {
     return {
       specification,
       active,
-      outline: SpecRulers[specLetter]
+      outline: SpecRulers[specLetter] ?? SpecRulers[baseSpecLetter]
     };
-  } else if (SpecRulers[specLetter]) {
+  } else if (SpecRulers[specLetter] ?? SpecRulers[baseSpecLetter]) {
     return {
       specification: [] as SpecFieldDef[],
       active: -1,
-      outline: SpecRulers[specLetter]
+      outline: SpecRulers[specLetter] ?? SpecRulers[baseSpecLetter]
     };
   }
 }
@@ -231,7 +258,7 @@ async function promptLine (line: string, _index: number): Promise<string|undefin
   if (line[6] === `*`) return undefined;
   line = line.padEnd(80);
 
-  const specLetter = line[5].toUpperCase();
+  const specLetter = resolveSpecKey(line);
   if (specs[specLetter]) {
     const specification = specs[specLetter];
 
