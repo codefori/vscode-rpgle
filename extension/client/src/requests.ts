@@ -23,7 +23,7 @@ export function buildRequestHandlers(client: LanguageClient) {
 			return doc.uri.toString();
 		} else
 			if (uri.scheme === `file`) {
-				const basename = path.basename(uri.path);
+				const basename = path.basename(uri.fsPath);
 				const [possibleFile] = await workspace.findFiles(`**/${basename}`, `**/.git`, 1);
 				if (possibleFile) {
 					return possibleFile.toString();
@@ -181,6 +181,20 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 export function clearTableCache(client: LanguageClient) {
 	client.sendRequest(`clearTableCache`);
+}
+
+export function clearAllCache(client: LanguageClient) {
+	client.sendRequest(`clearAllCache`);
+}
+
+export interface CacheMetricsResponse {
+	parsed: { hits: number, misses: number };
+	table: { hits: number, misses: number };
+	include: { hits: number, misses: number };
+}
+
+export function getCacheMetrics(client: LanguageClient): Promise<CacheMetricsResponse> {
+	return client.sendRequest(`getCacheMetrics`);
 }
 
 export function getCache(client: LanguageClient, uri: Uri): Promise<any> {
