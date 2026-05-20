@@ -3,7 +3,7 @@ import { documents, parser, prettyKeywords, getParser } from '.';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import Document from '../../../../language/ile/document';
-import { isInSqlBlock } from '../utils/sqlDetection';
+import { isInSqlBlock } from '../../../../language/utils/sqlDetection';
 
 export default async function documentSymbolProvider(handler: DocumentSymbolParams): Promise<DocumentSymbol[]> {
 	const currentPath = handler.textDocument.uri;

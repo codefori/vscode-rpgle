@@ -1,31 +1,8 @@
 import { FoldingRange, FoldingRangeParams, FoldingRangeKind } from 'vscode-languageserver';
 import { documents } from '.';
 import Document from '../../../../language/ile/document';
-import { isInSqlBlock, isInCommentOrString } from '../utils/sqlDetection';
-
-// Defines opening and closing keywords for code blocks
-interface BlockPair {
-  open: string[];
-  close: string[];
-}
-
-// RPGLE block structures that can be folded
-const RPGLE_BLOCK_PAIRS: BlockPair[] = [
-  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif','end'] },
-  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo','end'] },
-  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo','end'] },
-  { open: ['do'], close: ['enddo','end'] },
-  { open: ['for', 'for-each'], close: ['endfor','end'] },
-  { open: ['select'], close: ['endsl','end'] },
-  { open: ['monitor'], close: ['endmon'] },
-  { open: ['dcl-proc'], close: ['end-proc'] },
-  { open: ['dcl-ds'], close: ['end-ds'] },
-  { open: ['dcl-pr'], close: ['end-pr'] },
-  { open: ['dcl-pi'], close: ['end-pi'] },
-  { open: ['dcl-enum'], close: ['end-enum'] },
-  { open: ['begsr'], close: ['endsr'] },
-  { open: ['casxx', 'caseq', 'casne', 'casgt', 'caslt', 'casge', 'casle'], close: ['endcs'] },
-];
+import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
+import { RPGLE_BLOCK_PAIRS, BlockPair } from '../../../../language/utils/blockParser';
 
 // Provides folding ranges for RPGLE code blocks
 export default function foldingRangeProvider(params: FoldingRangeParams): FoldingRange[] {

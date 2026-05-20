@@ -1,30 +1,8 @@
 import * as vscode from 'vscode';
-import { isInSqlBlock, isInCommentOrString } from '../utils/sqlDetection';
+import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
+import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/utils/blockParser';
 
-// Defines block structure with opening, closing, and optional middle keywords
-interface BracketPair {
-  open: string[];
-  close: string[];
-  middle?: string[]; // Middle keywords like else, elseif, when, other
-}
-
-// RPGLE block structures for bracket matching
-const RPGLE_BRACKET_PAIRS: BracketPair[] = [
-  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif','end'], middle: ['else', 'elseif'] },
-  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo','end'] },
-  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo','end'] },
-  { open: ['do'], close: ['enddo','end'] },
-  { open: ['for', 'for-each'], close: ['endfor','end'] },
-  { open: ['select'], close: ['endsl','end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
-  { open: ['monitor'], close: ['endmon'], middle: ['on-error', 'on-excp'] },
-  { open: ['dcl-proc'], close: ['end-proc'] },
-  { open: ['dcl-ds'], close: ['end-ds'] },
-  { open: ['dcl-pr'], close: ['end-pr'] },
-  { open: ['dcl-pi'], close: ['end-pi'] },
-  { open: ['dcl-enum'], close: ['end-enum'] },
-  { open: ['begsr'], close: ['endsr'] },
-  { open: ['casxx', 'caseq', 'casne', 'casgt', 'caslt', 'casge', 'casle'], close: ['endcs'] },
-];
+type BracketPair = BlockPair;
 
 // Highlight style for matched brackets
 const decorationType = vscode.window.createTextEditorDecorationType({
@@ -127,7 +105,7 @@ function updateDecorations(editor: vscode.TextEditor) {
   let matchingPair: BracketPair | undefined;
   
   // Check if this is a closing keyword
-  const isClosingKeyword = RPGLE_BRACKET_PAIRS.some(p => p.close.includes(word));
+  const isClosingKeyword = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(word));
   
   if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
     // For END and ENDDO, we need to find which block it actually closes
@@ -149,7 +127,7 @@ function updateDecorations(editor: vscode.TextEditor) {
       const openIndex = findMatchingOpenForClosing(allMatches, currentIndex, word);
       if (openIndex !== -1) {
         const openWord = allMatches[openIndex].word;
-        matchingPair = RPGLE_BRACKET_PAIRS.find(p => p.open.includes(openWord));
+        matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
       }
     }
   } else {
@@ -191,7 +169,7 @@ function updateDecorations(editor: vscode.TextEditor) {
 }
 
 function findMatchingPair(word: string): BracketPair | undefined {
-  return RPGLE_BRACKET_PAIRS.find(pair =>
+  return RPGLE_BLOCK_PAIRS.find(pair =>
     pair.open.includes(word) || pair.close.includes(word) || (pair.middle && pair.middle.includes(word))
   );
 }
@@ -237,11 +215,9 @@ function extractBlockCondition(document: vscode.TextDocument, lineNumber: number
   return text;
 }
 
-// Helper function to find all keyword matches in the document
-function findAllMatches(text: string, document: vscode.TextDocument): { offset: number; word: string; length: number }[] {
-  // Build regex for all block keywords from all pairs
+function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
-  RPGLE_BRACKET_PAIRS.forEach(pair => {
+  RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
     if (pair.middle) {
       allKeywords.push(...pair.middle);
@@ -249,20 +225,15 @@ function findAllMatches(text: string, document: vscode.TextDocument): { offset: 
   });
   
   const regex = new RegExp(`\\b(${allKeywords.join('|')})\\b`, 'gi');
-  const matches: { offset: number; word: string; length: number }[] = [];
+  const matches: BlockMatch[] = [];
   
   let match;
   regex.lastIndex = 0;
   while ((match = regex.exec(text)) !== null) {
     const matchWord = match[0].toLowerCase();
     
-    // Skip matches inside comments or strings
     if (isInCommentOrString(text, match.index)) continue;
-    
-    // Skip SELECT if inside SQL block
     if (matchWord === 'select' && isInSqlBlock(text, match.index)) continue;
-    
-    // Skip FOR if inside SQL block
     if (matchWord === 'for' && isInSqlBlock(text, match.index)) continue;
     
     matches.push({
@@ -296,7 +267,7 @@ function findMatchingOpenForClosing(
     const word = matches[i].word;
     
     // Check if this word opens any block
-    const openingPair = RPGLE_BRACKET_PAIRS.find(p => p.open.includes(word));
+    const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
       stack.push({ index: i, pair: openingPair });
     }
@@ -453,7 +424,7 @@ function findMatchingClose(
     const word = matches[i].word;
     
     // Check if this word opens any block
-    const openingPair = RPGLE_BRACKET_PAIRS.find(p => p.open.includes(word));
+    const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
       stack.push(openingPair);
       continue;
@@ -511,7 +482,7 @@ function findMatchingOpen(
       const word = matches[i].word;
       
       // Check if this word opens any block
-      const openingPair = RPGLE_BRACKET_PAIRS.find(p => p.open.includes(word));
+      const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
       if (openingPair) {
         stack.push({ index: i, pair: openingPair });
       }
