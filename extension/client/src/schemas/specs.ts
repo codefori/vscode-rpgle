@@ -5,11 +5,11 @@ export const SpecRulers: {[spec: string]: string} = {
   C: `.....CL0N01Factor1+++++++Opcode&ExtFactor2+++++++Result++++++++Len++D+HiLoEq....`,
   D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords+++++++++++++++++++++++++++++`,
   F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords+++++++++++++++++++++++++++++`,
-  I: `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
+  I:    `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
   O:    `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.Constant/Editword/DateFormat`,
-  OAnd: `.....O.........And++N01N02N03ExceptName+++++++++++++++++++++++++++++++++++++++++`,
+  OAnd: `.....O.........And++N01N02N03ExceptNameB++A++Sb+Sa+.............................`,
   OF:   `.....O..............N01N02N03FieldName+++++BEcEndPoDConstant/Editword+++++++++++`,
-  OFC:  `.....O..................................................Constant/Editword+++++++++++`,
+  OFC:  `.....O..............................................Constant/Editword+++++++++++`,
   OXF:  `.....O..............N01N02N03FieldName++++++B+++++++++++++++++++++++++++++++++++`,
   P: `.....PName+++++++++++..T...................Keywords+++++++++++++++++++++++++++++`
 }
