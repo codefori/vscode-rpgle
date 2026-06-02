@@ -10,7 +10,8 @@ import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTy
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
-import { LogLevel, logWithTimestamp } from "../../extension/server/src/connection";
+
+export type ParserLogger = (message: string) => void;
 
 const HALF_HOUR = (30 * 60 * 1000);
 
@@ -59,8 +60,10 @@ export default class Parser {
   tables: TableDetail = {};
   tableFetch: tablePromise|undefined;
   includeFileFetch: includeFilePromise|undefined;
+  private logDebug: ParserLogger;
 
-  constructor() {
+  constructor(logger: ParserLogger = () => {}) {
+    this.logDebug = logger;
   }
 
   setTableFetch(promise: tablePromise) {
@@ -93,13 +96,13 @@ export default class Parser {
       // If we still have a cached version, let's use that
       if (now <= (this.tables[existingVersion].fetched + HALF_HOUR)) {
         CacheMetrics.tableHits++;
-        logWithTimestamp(`[cache] table-hit for ${table}`, LogLevel.DEBUG);
+        this.logDebug(`[cache] table-hit for ${table}`);
         return this.tables[existingVersion].recordFormats.map(d => d.clone());
       }
     }
 
     CacheMetrics.tableMisses++;
-    logWithTimestamp(`[cache] table-miss for ${table}`, LogLevel.DEBUG);
+    this.logDebug(`[cache] table-miss for ${table}`);
 
     // Capture tableFetch in a local so it is accessible inside the async closure
     const tableFetch = this.tableFetch;
@@ -269,11 +272,11 @@ export default class Parser {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       CacheMetrics.parsedHits++;
-      logWithTimestamp(`[cache] parsed-hit for ${workingUri}`, LogLevel.DEBUG);
+      this.logDebug(`[cache] parsed-hit for ${workingUri}`);
       return existingCache;
     }
     CacheMetrics.parsedMisses++;
-    logWithTimestamp(`[cache] parsed-miss for ${workingUri}`, LogLevel.DEBUG);
+    this.logDebug(`[cache] parsed-miss for ${workingUri}`);
 
     if (baseContent === undefined) return null;
 

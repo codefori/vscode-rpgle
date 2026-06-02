@@ -10,7 +10,7 @@ import {
 
 import PQueue from 'p-queue';
 
-import { documents, findFile, parser } from './providers';
+import { configureParserLogger, documents, findFile, parser } from './providers';
 import { includePath } from './providers/project';
 import { CacheMetrics } from '../../../language/ile/parser';
 
@@ -98,6 +98,8 @@ export function logWithTimestamp(message: string, level: number = LogLevel.INFO)
 	const levelName = LOG_LEVEL_NAMES[level] || 'LOG';
 	console.log(`[${timestamp}] [${levelName}] ${message}`);
 }
+
+configureParserLogger((message: string) => logWithTimestamp(message, LogLevel.DEBUG));
 
 export async function validateUri(stringUri: string, scheme = ``) {
 	const startTime = Date.now();
