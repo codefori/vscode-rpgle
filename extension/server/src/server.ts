@@ -34,7 +34,7 @@ import genericCodeActionsProvider from './providers/codeActions';
 import { isLinterEnabled } from './providers/linter';
 import { signatureHelpProvider } from './providers/signatureHelp';
 
-import { CacheMetrics } from '../../../language/parser';
+import { CacheMetrics } from '../../../language/ile/parser';
 import { log } from 'console';
 
 let hasConfigurationCapability = false;
@@ -196,11 +196,11 @@ const includeFileFetch = async (stringUri: string, includeString: string) => {
 	const cached = resolvedIncludeCache.get(fetchKey);
 	if (cached && now <= cached.fetched + includeCacheTTL) {
 		CacheMetrics.includeHits++;
-		CacheMetrics.log(`include-hit`, fetchKey);
+		logWithTimestamp(`[cache] include-hit for ${fetchKey}`, LogLevel.DEBUG);
 		return cached.result;
 	}
 	CacheMetrics.includeMisses++;
-	CacheMetrics.log(`include-miss`, fetchKey);
+	logWithTimestamp(`[cache] include-miss for ${fetchKey}`, LogLevel.DEBUG);
 
 	// Deduplicate concurrent fetches for the same key
 	if (fetchingInProgress[fetchKey] !== undefined) {

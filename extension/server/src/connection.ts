@@ -12,7 +12,7 @@ import PQueue from 'p-queue';
 
 import { documents, findFile, parser } from './providers';
 import { includePath } from './providers/project';
-import { CacheMetrics } from '../../../language/parser';
+import { CacheMetrics } from '../../../language/ile/parser';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -311,10 +311,6 @@ export function handleClientRequests() {
 
 	connection.onRequest(`resetCacheMetrics`, () => {
 		CacheMetrics.reset();
-	});
-
-	connection.onRequest(`setCacheMetricsEnabled`, (enabled: boolean) => {
-		CacheMetrics.enabled = enabled;
 	});
 
 	connection.onRequest(`getCache`, (uri: string) => {

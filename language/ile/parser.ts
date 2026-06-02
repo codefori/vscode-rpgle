@@ -10,6 +10,7 @@ import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTy
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
+import { LogLevel, logWithTimestamp } from "../../extension/server/src/connection";
 
 const HALF_HOUR = (30 * 60 * 1000);
 
@@ -30,12 +31,6 @@ export class CacheMetrics {
   static tableMisses = 0;
   static includeHits = 0;
   static includeMisses = 0;
-
-  static log(event: string, key: string) {
-    if (CacheMetrics.enabled) {
-      console.log(`[cache] ${event} key=${key}`);
-    }
-  }
 
   static reset() {
     CacheMetrics.parsedHits = 0;
@@ -98,13 +93,13 @@ export default class Parser {
       // If we still have a cached version, let's use that
       if (now <= (this.tables[existingVersion].fetched + HALF_HOUR)) {
         CacheMetrics.tableHits++;
-        CacheMetrics.log(`table-hit`, table);
+        logWithTimestamp(`[cache] table-hit for ${table}`, LogLevel.DEBUG);
         return this.tables[existingVersion].recordFormats.map(d => d.clone());
       }
     }
 
     CacheMetrics.tableMisses++;
-    CacheMetrics.log(`table-miss`, table);
+    logWithTimestamp(`[cache] table-miss for ${table}`, LogLevel.DEBUG);
 
     // Capture tableFetch in a local so it is accessible inside the async closure
     const tableFetch = this.tableFetch;
@@ -274,11 +269,11 @@ export default class Parser {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
       CacheMetrics.parsedHits++;
-      CacheMetrics.log(`parsed-hit`, workingUri);
+      logWithTimestamp(`[cache] parsed-hit for ${workingUri}`, LogLevel.DEBUG);
       return existingCache;
     }
     CacheMetrics.parsedMisses++;
-    CacheMetrics.log(`parsed-miss`, workingUri);
+    logWithTimestamp(`[cache] parsed-miss for ${workingUri}`, LogLevel.DEBUG);
 
     if (baseContent === undefined) return null;
 
