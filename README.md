@@ -58,3 +58,4 @@ Thanks so much to everyone [who has contributed](https://github.com/codefori/vsc
 - [@SanjulaGanepola](https://github.com/SanjulaGanepola)
 - [@bobcozzi](https://github.com/bobcozzi)
 - [@Mohammed-Yaseen-Ali-2081](https://github.com/Mohammed-Yaseen-Ali-2081)
+- [@eric-simpson](https://github.com/eric-simpson)
