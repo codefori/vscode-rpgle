@@ -9,7 +9,7 @@ import {
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import Parser from '../../../../language/ile/parser';
+import Parser, { ParserLogger } from '../../../../language/ile/parser';
 import { OpmParser } from '../../../../language/opm/parser';
 import Declaration from '../../../../language/models/declaration';
 import { ParserFactory, IParser } from '../../../../language/parserFactory';
@@ -23,8 +23,13 @@ export function findFile(fileString: string, scheme = ``) {
 	return documents.keys().find(fileUri => fileUri.includes(fileString) && fileUri.startsWith(`${scheme}:`));
 }
 
+let parserLogger: ParserLogger = () => {};
+export function configureParserLogger(logger: ParserLogger) {
+	parserLogger = logger;
+}
+
 // Parser instances reused across requests so logging and caches show the real flow.
-export const parser = new Parser();
+export const parser = new Parser((message: string) => parserLogger(message));
 export const opmParser = new OpmParser();
 
 /**

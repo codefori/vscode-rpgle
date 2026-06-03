@@ -10,8 +10,9 @@ import {
 
 import PQueue from 'p-queue';
 
-import { documents, findFile, parser } from './providers';
+import { configureParserLogger, documents, findFile, parser } from './providers';
 import { includePath } from './providers/project';
+import { CacheMetrics } from '../../../language/ile/parser';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -19,8 +20,28 @@ export const connection: _Connection = createConnection(ProposedFeatures.all);
 
 const queue = new PQueue();
 
+/** TTL-based cache for remote file content fetched via sendRequest("getFile").
+ *
+ * Tuning knobs — controlled via VS Code settings (vscode-rpgle.cache.*):
+ *   remoteFileTTL      — how long a remote file body is considered fresh (ms)
+ *   remoteFileMaxSize  — maximum number of remote file bodies kept in memory
+ */
+export let remoteFileTTL = 5 * 60 * 1000;    // 5 minutes default
+export let remoteFileMaxSize = 200;
+
+export function applyRemoteCacheSettings(ttlMs: number, maxEntries: number) {
+	remoteFileTTL = ttlMs;
+	remoteFileMaxSize = maxEntries;
+}
+const remoteFileCache: Map<string, {content: string, fetched: number}> = new Map();
+
+export function invalidateRemoteFileCache(uri: string) {
+	remoteFileCache.delete(uri);
+}
+
 export let watchedFilesChangeEvent: ((params: DidChangeWatchedFilesParams) => void)[] = [];
 connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
+	params.changes.forEach(change => invalidateRemoteFileCache(change.uri));
 	watchedFilesChangeEvent.forEach(editEvent => editEvent(params));
 })
 
@@ -78,6 +99,8 @@ export function logWithTimestamp(message: string, level: number = LogLevel.INFO)
 	console.log(`[${timestamp}] [${levelName}] ${message}`);
 }
 
+configureParserLogger((message: string) => logWithTimestamp(message, LogLevel.DEBUG));
+
 export async function validateUri(stringUri: string, scheme = ``) {
 	const startTime = Date.now();
 
@@ -93,6 +116,7 @@ export async function validateUri(stringUri: string, scheme = ``) {
 
 	// Then reach out to the extension to find it
 	const uri: string|undefined = await connection.sendRequest("getUri", stringUri);
+
 	const duration = Date.now() - startTime;
 
 	if (uri) {
@@ -119,6 +143,15 @@ export async function getFileRequest(uri: string, skipDebounce: boolean = false)
 		return localCacheDoc.getText();
 	}
 
+	// Second, check the remote file content cache
+	const now = Date.now();
+	const remoteCacheDoc = remoteFileCache.get(uri);
+	if (remoteCacheDoc && now <= remoteCacheDoc.fetched + remoteFileTTL) {
+		const duration = Date.now() - startTime;
+		logWithTimestamp(`File fetch: ${fileName} (${duration}ms, remote documents cache)`, LogLevel.DEBUG);
+		return remoteCacheDoc.content;
+	}
+
 	logWithTimestamp(`File fetch: ${fileName} (requesting from server...)`, LogLevel.DEBUG);
 
 	// If this is an include file fetch, track it to skip debounce
@@ -133,7 +166,15 @@ export async function getFileRequest(uri: string, skipDebounce: boolean = false)
 
 		if (body) {
 			logWithTimestamp(`File fetch: ${fileName} (${duration}ms, ${body.length} bytes from server)`, LogLevel.INFO);
-			// TODO.. cache it?
+			// Cache it
+			remoteFileCache.set(uri, { content: body, fetched: now });
+			// Evict oldest entries when over the size limit
+			if (remoteFileCache.size > remoteFileMaxSize) {
+				const oldestKey = remoteFileCache.keys().next().value;
+				if (oldestKey) {
+					remoteFileCache.delete(oldestKey);
+				}
+			}
 			return body;
 		}
 
@@ -264,6 +305,14 @@ export async function getWorkspaceFolder(baseUri: string) {
 export function handleClientRequests() {
 	connection.onRequest(`clearTableCache`, () => {
 		parser.clearTableCache();
+	});
+
+	connection.onRequest(`getCacheMetrics`, () => {
+		return CacheMetrics.summary();
+	});
+
+	connection.onRequest(`resetCacheMetrics`, () => {
+		CacheMetrics.reset();
 	});
 
 	connection.onRequest(`getCache`, (uri: string) => {

@@ -11,22 +11,59 @@ import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
 
+export type ParserLogger = (message: string) => void;
+
 const HALF_HOUR = (30 * 60 * 1000);
 
 export type tablePromise = (name: string, aliases?: boolean) => Promise<Declaration[]>;
 export type includeFilePromise = (baseFile: string, includeString: string) => Promise<{found: boolean, uri?: string, content?: string}>;
-export type TableDetail = {[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}};
+export type TableDetail = {[name: string]: {fetched: number, fetchingPromise?: Promise<Declaration[]>, recordFormats: Declaration[]}};
 export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean};
+
+/**
+ * Lightweight cache instrumentation. Enable with CacheMetrics.enabled = true.
+ * Tracks hits/misses for parsed document cache, table cache, and include fetches.
+ */
+export class CacheMetrics {
+  static enabled = false;
+  static parsedHits = 0;
+  static parsedMisses = 0;
+  static tableHits = 0;
+  static tableMisses = 0;
+  static includeHits = 0;
+  static includeMisses = 0;
+
+  static reset() {
+    CacheMetrics.parsedHits = 0;
+    CacheMetrics.parsedMisses = 0;
+    CacheMetrics.tableHits = 0;
+    CacheMetrics.tableMisses = 0;
+    CacheMetrics.includeHits = 0;
+    CacheMetrics.includeMisses = 0;
+  }
+
+  static summary() {
+    return {
+      parsed: { hits: CacheMetrics.parsedHits, misses: CacheMetrics.parsedMisses },
+      table: { hits: CacheMetrics.tableHits, misses: CacheMetrics.tableMisses },
+      include: { hits: CacheMetrics.includeHits, misses: CacheMetrics.includeMisses },
+    };
+  }
+}
 
 const PROGRAMPARMS_NAME = `PROGRAMPARMS`;
 
 export default class Parser {
   parsedCache: {[thePath: string]: Cache} = {};
+  /** Reverse dependency index: maps an include URI to the set of file URIs that include it */
+  private includesDependents: Map<string, Set<string>> = new Map();
   tables: TableDetail = {};
   tableFetch: tablePromise|undefined;
   includeFileFetch: includeFilePromise|undefined;
+  private logDebug: ParserLogger;
 
-  constructor() {
+  constructor(logger: ParserLogger = () => {}) {
+    this.logDebug = logger;
   }
 
   setTableFetch(promise: tablePromise) {
@@ -50,41 +87,48 @@ export default class Parser {
     const now = Date.now();
 
     if (this.tables[existingVersion]) {
-      // We use this to make sure we aren't running this all over the place
-      if (this.tables[existingVersion].fetching) return [];
+      // Deduplicate concurrent fetches — await the shared in-flight Promise
+      if (this.tables[existingVersion].fetchingPromise) {
+        const defs = await this.tables[existingVersion].fetchingPromise;
+        return (defs || []).map(d => d.clone());
+      }
 
       // If we still have a cached version, let's use that
       if (now <= (this.tables[existingVersion].fetched + HALF_HOUR)) {
+        CacheMetrics.tableHits++;
+        this.logDebug(`[cache] table-hit for ${table}`);
         return this.tables[existingVersion].recordFormats.map(d => d.clone());
       }
     }
 
-    this.tables[existingVersion] = {
-      fetching: true,
-      fetched: 0,
-      recordFormats: []
-    };
+    CacheMetrics.tableMisses++;
+    this.logDebug(`[cache] table-miss for ${table}`);
 
-    let newDefs: Declaration[];
+    // Capture tableFetch in a local so it is accessible inside the async closure
+    const tableFetch = this.tableFetch;
 
-    try {
-      newDefs = await this.tableFetch(table, aliases);
-
-      this.tables[existingVersion] = {
-        fetched: now,
-        recordFormats: newDefs
-      };
-    } catch (e) {
-      // Failed. Don't fetch it again
-      this.tables[existingVersion] = {
-        fetched: now,
-        recordFormats: []
-      };
-      newDefs = [];
+    // Initialise the entry so concurrent callers can find the fetchingPromise
+    if (!this.tables[existingVersion]) {
+      this.tables[existingVersion] = { fetched: 0, recordFormats: [] };
     }
 
-    this.tables[existingVersion].fetching = false;
+    const fetchPromise: Promise<Declaration[]> = (async () => {
+      try {
+        const newDefs = await tableFetch(table, aliases);
+        this.tables[existingVersion] = { fetched: Date.now(), recordFormats: newDefs };
+        return newDefs;
+      } catch (e) {
+        // Failed. Don't fetch it again for a short while
+        this.tables[existingVersion] = { fetched: Date.now(), recordFormats: [] };
+        return [];
+      } finally {
+        this.tables[existingVersion].fetchingPromise = undefined;
+      }
+    })();
 
+    this.tables[existingVersion].fetchingPromise = fetchPromise;
+
+    const newDefs = await fetchPromise;
     return newDefs.map(d => d.clone());
   }
 
@@ -92,7 +136,27 @@ export default class Parser {
    * @param {string} path
    */
   clearParsedCache(path) {
-    this.parsedCache[path] = undefined;
+    // Remove from reverse dependency index entries
+    const cache = this.parsedCache[path];
+    if (cache) {
+      for (const inc of cache.includes) {
+        if (inc.toPath) {
+          const dependents = this.includesDependents.get(inc.toPath);
+          if (dependents) {
+            dependents.delete(path);
+            if (dependents.size === 0) this.includesDependents.delete(inc.toPath);
+          }
+        }
+      }
+    }
+    delete this.parsedCache[path];
+  }
+
+  /**
+   * Returns all file URIs that (directly) include the given URI.
+   */
+  getDependents(includeUri: string): string[] {
+    return Array.from(this.includesDependents.get(includeUri) ?? []);
   }
 
   /**
@@ -207,8 +271,12 @@ export default class Parser {
   async getDocs(workingUri: string, baseContent?: string, options: ParseOptions = {withIncludes: true, collectReferences: true}): Promise<Cache|undefined> {
     const existingCache = this.getParsedCache(workingUri);
     if (options.ignoreCache !== true && existingCache) {
+      CacheMetrics.parsedHits++;
+      this.logDebug(`[cache] parsed-hit for ${workingUri}`);
       return existingCache;
     }
+    CacheMetrics.parsedMisses++;
+    this.logDebug(`[cache] parsed-miss for ${workingUri}`);
 
     if (baseContent === undefined) return null;
 
@@ -1508,7 +1576,6 @@ export default class Parser {
                 });
               }
             }
-
             break;
 
           case `I`:
@@ -2065,6 +2132,16 @@ export default class Parser {
     const parsedData = scopes[0];
 
     this.parsedCache[workingUri] = parsedData;
+
+    // Update reverse dependency index so invalidation is O(dependents) not O(all cached)
+    for (const inc of parsedData.includes) {
+      if (inc.toPath) {
+        if (!this.includesDependents.has(inc.toPath)) {
+          this.includesDependents.set(inc.toPath, new Set());
+        }
+        this.includesDependents.get(inc.toPath)!.add(workingUri);
+      }
+    }
 
     return parsedData;
   }
