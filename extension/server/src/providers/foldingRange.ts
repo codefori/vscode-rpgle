@@ -101,10 +101,10 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
             break;
           }
         }
-      } else {
-        // Specific closing keyword (endif, enddo, etc.) - match exact pair
+      } else if (current.word === 'enddo') {
+        // ENDDO can close DOW, DOU, or DO blocks
         for (let j = stack.length - 1; j >= 0; j--) {
-          if (stack[j].pair === pair) {
+          if (stack[j].pair.close.includes('enddo')) {
             const openBlock = stack[j];
             
             // Create folding range only if block spans multiple lines
@@ -122,6 +122,37 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
             stack.splice(j, 1);
             break;
           }
+        }
+      } else {
+        // Specific closing keyword (endif, endfor, endsl, etc.)
+        // These can ONLY close their specific block type AND only if it's the last open block
+        
+        // Find which pair this specific closer belongs to (the one where it's the PRIMARY closer)
+        const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
+          if (!p.close.includes(current.word)) return false;
+          const firstCloser = p.close[0];
+          return firstCloser === current.word;
+        });
+        
+        if (closerPair && stack.length > 0) {
+          // A specific closer can ONLY close the last block if it's of the correct type
+          const lastBlock = stack[stack.length - 1];
+          if (lastBlock.pair === closerPair) {
+            // Create folding range only if block spans multiple lines
+            if (current.line > lastBlock.startLine) {
+              foldingRanges.push(FoldingRange.create(
+                lastBlock.startLine,
+                current.line,
+                undefined,
+                undefined,
+                FoldingRangeKind.Region
+              ));
+            }
+            
+            // Remove matched block from stack
+            stack.pop();
+          }
+          // If it's not the correct type, don't remove anything (it's an error - skip this closer)
         }
       }
     }

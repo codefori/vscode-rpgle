@@ -13,6 +13,15 @@ const decorationType = vscode.window.createTextEditorDecorationType({
   fontStyle: 'italic' // Make text italic
 });
 
+// Highlight style for mismatched closing keywords (errors)
+const errorDecorationType = vscode.window.createTextEditorDecorationType({
+  backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
+  border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
+  borderRadius: '3px',
+  fontWeight: 'bold',
+  textDecoration: 'wavy underline red'
+});
+
 let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
 
 // Register bracket matching functionality
@@ -65,8 +74,16 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
 function updateDecorations(editor: vscode.TextEditor) {
   const document = editor.document;
   const position = editor.selection.active;
+  const text = document.getText();
   
-  // Get word at cursor position
+  // First, find and highlight ALL mismatched closing keywords in the document
+  const allMatches = findAllMatches(text, document);
+  const allErrorRanges = findAllMismatchedClosingKeywords(document, allMatches);
+  
+  // Always show errors in red
+  editor.setDecorations(errorDecorationType, allErrorRanges);
+  
+  // Get word at cursor position for block highlighting
   const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z][\w-]*/);
   if (!wordRange) {
     editor.setDecorations(decorationType, []);
@@ -78,7 +95,6 @@ function updateDecorations(editor: vscode.TextEditor) {
   
   // Check if we're clicking on SELECT inside an SQL block
   if (word === 'select') {
-    const text = document.getText();
     const offset = document.offsetAt(position);
     if (isInSqlBlock(text, offset)) {
       // Don't highlight SELECT inside SQL blocks
@@ -90,7 +106,6 @@ function updateDecorations(editor: vscode.TextEditor) {
   
   // Check if we're clicking on FOR inside an SQL block
   if (word === 'for') {
-    const text = document.getText();
     const offset = document.offsetAt(position);
     if (isInSqlBlock(text, offset)) {
       // Don't highlight FOR inside SQL blocks
@@ -109,8 +124,6 @@ function updateDecorations(editor: vscode.TextEditor) {
   
   if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
     // For END and ENDDO, we need to find which block it actually closes
-    const text = document.getText();
-    const allMatches = findAllMatches(text, document);
     const currentOffset = document.offsetAt(wordRange.start);
     
     // Find current match index
@@ -140,12 +153,15 @@ function updateDecorations(editor: vscode.TextEditor) {
     return;
   }
 
-  // Find all related keywords in the block
+  // Find all related keywords in the block (only valid ones for yellow highlighting)
   const relatedRanges = findAllRelatedKeywords(document, wordRange, matchingPair);
 
   if (relatedRanges.length > 0) {
-    // Highlight all related keywords
-    editor.setDecorations(decorationType, relatedRanges);
+    // Highlight valid keywords in yellow (excluding error ranges)
+    const validRanges = relatedRanges.filter(range =>
+      !allErrorRanges.some((errorRange: vscode.Range) => errorRange.isEqual(range))
+    );
+    editor.setDecorations(decorationType, validRanges);
     
     // Determine block type
     const blockType = getBlockTypeName(matchingPair);
@@ -350,6 +366,246 @@ function findAllRelatedKeywords(
   return ranges;
 }
 
+// Find all mismatched closing keywords in the entire document
+function findAllMismatchedClosingKeywords(
+  document: vscode.TextDocument,
+  matches: { offset: number; word: string; length: number }[]
+): vscode.Range[] {
+  const errorRanges: vscode.Range[] = [];
+  
+  // Check each closing keyword
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    const isClosing = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(match.word));
+    
+    if (isClosing) {
+      // Validate this closing keyword
+      const isValid = validateClosingKeyword(matches, i);
+      if (!isValid) {
+        const start = document.positionAt(match.offset);
+        const end = document.positionAt(match.offset + match.length);
+        errorRanges.push(new vscode.Range(start, end));
+      }
+    }
+  }
+  
+  return errorRanges;
+}
+
+// New function that validates block matching and returns separate lists for valid and error ranges
+function findAllRelatedKeywordsWithValidation(
+  document: vscode.TextDocument,
+  startRange: vscode.Range,
+  pair: BracketPair
+): { validRanges: vscode.Range[]; errorRanges: vscode.Range[] } {
+  const text = document.getText();
+  const startOffset = document.offsetAt(startRange.start);
+  
+  // Use findAllMatches to get ALL keywords in the document
+  const allMatches = findAllMatches(text, document);
+  
+  // Find index of current match
+  let currentIndex = -1;
+  for (let i = 0; i < allMatches.length; i++) {
+    if (allMatches[i].offset === startOffset) {
+      currentIndex = i;
+      break;
+    }
+  }
+  
+  if (currentIndex === -1) return { validRanges: [startRange], errorRanges: [] };
+  
+  // Find block containing current keyword
+  const blockIndices = findBlockIndices(allMatches, currentIndex, pair);
+  if (!blockIndices) return { validRanges: [startRange], errorRanges: [] };
+  
+  // Validate all closing keywords in the block
+  const validRanges: vscode.Range[] = [];
+  const errorRanges: vscode.Range[] = [];
+  
+  for (const idx of blockIndices) {
+    const m = allMatches[idx];
+    const start = document.positionAt(m.offset);
+    const end = document.positionAt(m.offset + m.length);
+    const range = new vscode.Range(start, end);
+    
+    // Check if this is a closing keyword
+    const isClosing = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(m.word));
+    
+    if (isClosing) {
+      // Validate that this closing keyword matches its opening keyword
+      const isValid = validateClosingKeyword(allMatches, idx);
+      if (isValid) {
+        validRanges.push(range);
+      } else {
+        errorRanges.push(range);
+      }
+    } else {
+      // Opening and middle keywords are always valid
+      validRanges.push(range);
+    }
+  }
+  
+  return { validRanges, errorRanges };
+}
+
+// Validate that a closing keyword matches its corresponding opening keyword
+function validateClosingKeyword(
+  matches: { offset: number; word: string; length: number }[],
+  closeIndex: number
+): boolean {
+  const closeWord = matches[closeIndex].word;
+  
+  // Find the opening keyword that this closing keyword should match
+  const openIndex = findMatchingOpenForAnyClosing(matches, closeIndex);
+  
+  if (openIndex === -1) {
+    // No matching opening found - this is an error
+    return false;
+  }
+  
+  const openWord = matches[openIndex].word;
+  
+  // Find the pair that contains this opening keyword
+  const openPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
+  
+  if (!openPair) {
+    return false;
+  }
+  
+  // Check if the closing keyword is valid for this opening keyword
+  // Specific closers (endif, endfor, endsl, etc.) can ONLY close their specific block type
+  // Generic closers (end, enddo) can close multiple types
+  
+  if (closeWord === 'end' || closeWord === 'enddo') {
+    // Generic closers: check if they can close this type of block
+    return openPair.close.includes(closeWord);
+  } else {
+    // Specific closers: must match the EXACT block type
+    // For example, 'endif' can ONLY close 'if' blocks, not 'dow' or 'dou'
+    // 'endfor' can ONLY close 'for' blocks, etc.
+    
+    // Find which pair this specific closer belongs to (the one where it's the PRIMARY closer)
+    const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
+      // Check if this closer is in the close array
+      if (!p.close.includes(closeWord)) return false;
+      
+      // For specific closers like 'endif', 'endfor', etc., they should be the first (primary) closer
+      // or the only non-generic closer in the array
+      const firstCloser = p.close[0];
+      return firstCloser === closeWord;
+    });
+    
+    if (!closerPair) {
+      // This shouldn't happen, but if it does, fall back to checking if it's in the list
+      return openPair.close.includes(closeWord);
+    }
+    
+    // The closer is valid only if it belongs to the same pair as the opener
+    return closerPair === openPair;
+  }
+}
+
+// Find the opening keyword for any closing keyword (similar to findMatchingOpenForClosing but more general)
+function findMatchingOpenForAnyClosing(
+  matches: { offset: number; word: string; length: number }[],
+  closeIndex: number
+): number {
+  const closeWord = matches[closeIndex].word;
+  
+  // Build a stack to track all open blocks
+  const stack: { index: number; pair: BracketPair }[] = [];
+  
+  for (let i = 0; i < closeIndex; i++) {
+    const word = matches[i].word;
+    
+    // Check if this word opens any block
+    const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
+    if (openingPair) {
+      stack.push({ index: i, pair: openingPair });
+    }
+    
+    // Check if this word closes a block
+    if (word === 'end') {
+      // Generic closer 'END': Find the most recent block that can be closed by 'END'
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].pair.close.includes('end')) {
+          stack.splice(j, 1);
+          break;
+        }
+      }
+    } else if (word === 'enddo') {
+      // Generic closer 'ENDDO': Find the most recent block that can be closed by 'ENDDO'
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].pair.close.includes('enddo')) {
+          stack.splice(j, 1);
+          break;
+        }
+      }
+    } else {
+      // Specific closers (endif, endfor, endsl, etc.)
+      // These can ONLY close their specific block type AND only if it's the last open block
+      const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
+        if (!p.close.includes(word)) return false;
+        const firstCloser = p.close[0];
+        return firstCloser === word;
+      });
+      
+      if (closerPair && stack.length > 0) {
+        // A specific closer can ONLY close the last block if it's of the correct type
+        const lastBlock = stack[stack.length - 1];
+        if (lastBlock.pair === closerPair) {
+          stack.pop();
+        }
+        // If it's not the correct type, don't remove anything (it's an error)
+      } else if (!closerPair) {
+        // Fallback for other closers
+        for (let j = stack.length - 1; j >= 0; j--) {
+          if (stack[j].pair.close.includes(word)) {
+            stack.splice(j, 1);
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Find the most recent unclosed block that can be closed by the closing word
+  if (closeWord === 'end' || closeWord === 'enddo') {
+    // Generic closers: find any block that accepts this closer
+    for (let j = stack.length - 1; j >= 0; j--) {
+      if (stack[j].pair.close.includes(closeWord)) {
+        return stack[j].index;
+      }
+    }
+  } else {
+    // Specific closers: can ONLY close the last block if it's of the correct type
+    const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
+      if (!p.close.includes(closeWord)) return false;
+      const firstCloser = p.close[0];
+      return firstCloser === closeWord;
+    });
+    
+    if (closerPair && stack.length > 0) {
+      // Check if the last block is of the correct type
+      const lastBlock = stack[stack.length - 1];
+      if (lastBlock.pair === closerPair) {
+        return lastBlock.index;
+      }
+      // If not, this is an error (no matching opener)
+    } else if (!closerPair) {
+      // Fallback for other closers
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].pair.close.includes(closeWord)) {
+          return stack[j].index;
+        }
+      }
+    }
+  }
+  
+  return -1;
+}
+
 // Find all indices of keywords belonging to the same block
 function findBlockIndices(
   matches: { offset: number; word: string; length: number }[],
@@ -528,4 +784,5 @@ function findMatchingOpen(
 
 export function deactivateBracketMatcher() {
   decorationType.dispose();
+  errorDecorationType.dispose();
 }
