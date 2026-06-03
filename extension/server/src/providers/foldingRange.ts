@@ -18,7 +18,13 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
   });
-  const regex = new RegExp(`\\b(${allKeywords.join('|')})\\b`, 'gi');
+  
+  // Sort keywords by length (longest first) to match longer keywords before shorter ones
+  // This ensures 'end-proc' is matched before 'end'
+  const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
+  
+  // Escape hyphens in keywords for regex
+  const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
 
   // Find all keyword matches in the document
   interface Match {
@@ -124,14 +130,17 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
           }
         }
       } else {
-        // Specific closing keyword (endif, endfor, endsl, etc.)
+        // Specific closing keyword (endif, endfor, endsl, end-proc, end-ds, etc.)
         // These can ONLY close their specific block type AND only if it's the last open block
         
-        // Find which pair this specific closer belongs to (the one where it's the PRIMARY closer)
+        // Find which pair this specific closer belongs to
         const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
           if (!p.close.includes(current.word)) return false;
-          const firstCloser = p.close[0];
-          return firstCloser === current.word;
+          // For single-closer pairs, always match
+          if (p.close.length === 1) return true;
+          // For multi-closer pairs, match only the specific (non-generic) closer
+          const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
+          return specificClosers.includes(current.word);
         });
         
         if (closerPair && stack.length > 0) {

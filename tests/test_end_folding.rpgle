@@ -1,8 +1,23 @@
 **free
 
+dcl-pr  extpgm('');
+  if ();
+    
+  endif;
+end-pr;
+
+
+dcl-ds name qualified dim;
+  
+end-ds;
+
+
+
+
 // Test per verificare il folding con END generico
 dcl-s pluto int(10);
 dcl-s pippo int(10);
+
 
 pluto = 10;
 pippo = 5;
@@ -15,6 +30,7 @@ if (pluto > 0);
   dow (pippo < 10);
     dsply 'dentro dow';
     pippo = pippo + 1;
+    endif;
   end; // Questo END deve chiudere DOW
   
   dsply 'dopo dow, ancora dentro if';
@@ -25,6 +41,12 @@ dow (pluto > 0);
   dsply 'dentro dow';
   pluto = pluto - 1;
 end;
+
+if ();
+  
+else;
+ 
+endif;
 
 // ===== TEST 3: FOR con END =====
 for pippo = 1 to 10;

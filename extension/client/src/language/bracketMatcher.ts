@@ -240,7 +240,13 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
     }
   });
   
-  const regex = new RegExp(`\\b(${allKeywords.join('|')})\\b`, 'gi');
+  // Sort keywords by length (longest first) to match longer keywords before shorter ones
+  // This ensures 'end-proc' is matched before 'end'
+  const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
+  
+  // Use word boundary that works with hyphens: (?<![a-zA-Z0-9-]) and (?![a-zA-Z0-9-])
+  // Or simpler: match the keyword followed by non-alphanumeric-hyphen character
+  const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
   const matches: BlockMatch[] = [];
   
   let match;
@@ -483,26 +489,30 @@ function validateClosingKeyword(
   } else {
     // Specific closers: must match the EXACT block type
     // For example, 'endif' can ONLY close 'if' blocks, not 'dow' or 'dou'
-    // 'endfor' can ONLY close 'for' blocks, etc.
+    // 'end-proc' can ONLY close 'dcl-proc', etc.
     
-    // Find which pair this specific closer belongs to (the one where it's the PRIMARY closer)
-    const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
-      // Check if this closer is in the close array
-      if (!p.close.includes(closeWord)) return false;
-      
-      // For specific closers like 'endif', 'endfor', etc., they should be the first (primary) closer
-      // or the only non-generic closer in the array
-      const firstCloser = p.close[0];
-      return firstCloser === closeWord;
-    });
+    // A specific closer is valid if:
+    // 1. The opening pair includes this closer in its close array
+    // 2. This closer is the ONLY specific closer for that pair (not 'end' or 'enddo')
     
-    if (!closerPair) {
-      // This shouldn't happen, but if it does, fall back to checking if it's in the list
-      return openPair.close.includes(closeWord);
+    // Check if this closer is in the opening pair's close array
+    if (!openPair.close.includes(closeWord)) {
+      return false;
     }
     
-    // The closer is valid only if it belongs to the same pair as the opener
-    return closerPair === openPair;
+    // For pairs with multiple closers (e.g., ['endif', 'end']),
+    // the specific closer (endif) should only match if it's the primary one
+    // For pairs with single specific closer (e.g., ['end-proc']), it should always match
+    
+    // If the pair has only one closer, it must match
+    if (openPair.close.length === 1) {
+      return true;
+    }
+    
+    // If the pair has multiple closers, check if this is the specific (non-generic) one
+    // The specific closer is the one that's NOT 'end' or 'enddo'
+    const specificClosers = openPair.close.filter(c => c !== 'end' && c !== 'enddo');
+    return specificClosers.includes(closeWord);
   }
 }
 
@@ -543,12 +553,17 @@ function findMatchingOpenForAnyClosing(
         }
       }
     } else {
-      // Specific closers (endif, endfor, endsl, etc.)
+      // Specific closers (endif, endfor, endsl, end-proc, end-ds, etc.)
       // These can ONLY close their specific block type AND only if it's the last open block
+      
+      // Find which pair this closer belongs to
       const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
         if (!p.close.includes(word)) return false;
-        const firstCloser = p.close[0];
-        return firstCloser === word;
+        // For single-closer pairs, always match
+        if (p.close.length === 1) return true;
+        // For multi-closer pairs, match only the specific (non-generic) closer
+        const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
+        return specificClosers.includes(word);
       });
       
       if (closerPair && stack.length > 0) {
@@ -558,14 +573,6 @@ function findMatchingOpenForAnyClosing(
           stack.pop();
         }
         // If it's not the correct type, don't remove anything (it's an error)
-      } else if (!closerPair) {
-        // Fallback for other closers
-        for (let j = stack.length - 1; j >= 0; j--) {
-          if (stack[j].pair.close.includes(word)) {
-            stack.splice(j, 1);
-            break;
-          }
-        }
       }
     }
   }
@@ -582,8 +589,11 @@ function findMatchingOpenForAnyClosing(
     // Specific closers: can ONLY close the last block if it's of the correct type
     const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
       if (!p.close.includes(closeWord)) return false;
-      const firstCloser = p.close[0];
-      return firstCloser === closeWord;
+      // For single-closer pairs, always match
+      if (p.close.length === 1) return true;
+      // For multi-closer pairs, match only the specific (non-generic) closer
+      const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
+      return specificClosers.includes(closeWord);
     });
     
     if (closerPair && stack.length > 0) {
@@ -593,13 +603,6 @@ function findMatchingOpenForAnyClosing(
         return lastBlock.index;
       }
       // If not, this is an error (no matching opener)
-    } else if (!closerPair) {
-      // Fallback for other closers
-      for (let j = stack.length - 1; j >= 0; j--) {
-        if (stack[j].pair.close.includes(closeWord)) {
-          return stack[j].index;
-        }
-      }
     }
   }
   
