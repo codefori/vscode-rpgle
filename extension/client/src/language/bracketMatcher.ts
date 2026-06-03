@@ -32,19 +32,19 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
   const hoverProvider = vscode.languages.registerHoverProvider('rpgle', {
     provideHover(document, position) {
       if (!currentBlockInfo) return undefined;
-      
+
       // Check if cursor is on a highlighted keyword
       const isOnHighlightedWord = currentBlockInfo.ranges.some(range => range.contains(position));
-      
+
       if (isOnHighlightedWord) {
         const hoverText = `${currentBlockInfo.condition}\n\nStart: line ${currentBlockInfo.startLine + 1}\nEnd: line ${currentBlockInfo.endLine + 1}`;
         return new vscode.Hover(hoverText);
       }
-      
+
       return undefined;
     }
   });
-  
+
   context.subscriptions.push(hoverProvider);
 
   // Update decorations when selection changes
@@ -75,14 +75,14 @@ function updateDecorations(editor: vscode.TextEditor) {
   const document = editor.document;
   const position = editor.selection.active;
   const text = document.getText();
-  
+
   // First, find and highlight ALL mismatched closing keywords in the document
   const allMatches = findAllMatches(text, document);
   const allErrorRanges = findAllMismatchedClosingKeywords(document, allMatches);
-  
+
   // Always show errors in red
   editor.setDecorations(errorDecorationType, allErrorRanges);
-  
+
   // Get word at cursor position for block highlighting
   const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z][\w-]*/);
   if (!wordRange) {
@@ -92,7 +92,7 @@ function updateDecorations(editor: vscode.TextEditor) {
   }
 
   const word = document.getText(wordRange).toLowerCase();
-  
+
   // Check if we're clicking on SELECT inside an SQL block
   if (word === 'select') {
     const offset = document.offsetAt(position);
@@ -103,7 +103,7 @@ function updateDecorations(editor: vscode.TextEditor) {
       return;
     }
   }
-  
+
   // Check if we're clicking on FOR inside an SQL block
   if (word === 'for') {
     const offset = document.offsetAt(position);
@@ -114,18 +114,18 @@ function updateDecorations(editor: vscode.TextEditor) {
       return;
     }
   }
-  
+
   // Find matching bracket pair
   // Special handling for closing keywords that can close multiple block types
   let matchingPair: BracketPair | undefined;
-  
+
   // Check if this is a closing keyword
   const isClosingKeyword = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(word));
-  
+
   if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
     // For END and ENDDO, we need to find which block it actually closes
     const currentOffset = document.offsetAt(wordRange.start);
-    
+
     // Find current match index
     let currentIndex = -1;
     for (let i = 0; i < allMatches.length; i++) {
@@ -134,7 +134,7 @@ function updateDecorations(editor: vscode.TextEditor) {
         break;
       }
     }
-    
+
     if (currentIndex !== -1) {
       // Use findMatchingOpenForClosing to determine which block this closes
       const openIndex = findMatchingOpenForClosing(allMatches, currentIndex, word);
@@ -146,7 +146,7 @@ function updateDecorations(editor: vscode.TextEditor) {
   } else {
     matchingPair = findMatchingPair(word);
   }
-  
+
   if (!matchingPair) {
     editor.setDecorations(decorationType, []);
     currentBlockInfo = undefined;
@@ -162,15 +162,15 @@ function updateDecorations(editor: vscode.TextEditor) {
       !allErrorRanges.some((errorRange: vscode.Range) => errorRange.isEqual(range))
     );
     editor.setDecorations(decorationType, validRanges);
-    
+
     // Determine block type
     const blockType = getBlockTypeName(matchingPair);
-    
+
     // Extract condition from first line of block
     const startLine = relatedRanges[0].start.line;
     const endLine = relatedRanges[relatedRanges.length - 1].start.line;
     const condition = extractBlockCondition(document, startLine);
-    
+
     currentBlockInfo = {
       startLine,
       endLine,
@@ -194,7 +194,7 @@ function findMatchingPair(word: string): BracketPair | undefined {
 function getBlockTypeName(pair: BracketPair): string {
   // Determine block type based on opening keyword
   const openWord = pair.open[0].toUpperCase();
-  
+
   const typeMap: { [key: string]: string } = {
     'IF': 'IF',
     'DOW': 'DOW',
@@ -209,25 +209,25 @@ function getBlockTypeName(pair: BracketPair): string {
     'DCL-ENUM': 'ENUMERATION',
     'BEGSR': 'SUBROUTINE'
   };
-  
+
   return typeMap[openWord] || openWord;
 }
 
 function extractBlockCondition(document: vscode.TextDocument, lineNumber: number): string {
   const line = document.lineAt(lineNumber);
   let text = line.text.trim();
-  
+
   // Remove trailing comments
   const commentIndex = text.indexOf('//');
   if (commentIndex !== -1) {
     text = text.substring(0, commentIndex).trim();
   }
-  
+
   // Remove trailing semicolon if present
   if (text.endsWith(';')) {
     text = text.substring(0, text.length - 1).trim();
   }
-  
+
   return text;
 }
 
@@ -239,32 +239,36 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
       allKeywords.push(...pair.middle);
     }
   });
-  
+
   // Sort keywords by length (longest first) to match longer keywords before shorter ones
   // This ensures 'end-proc' is matched before 'end'
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
-  
+
   // Use word boundary that works with hyphens: (?<![a-zA-Z0-9-]) and (?![a-zA-Z0-9-])
   // Or simpler: match the keyword followed by non-alphanumeric-hyphen character
   const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
   const matches: BlockMatch[] = [];
-  
+
   let match;
   regex.lastIndex = 0;
   while ((match = regex.exec(text)) !== null) {
     const matchWord = match[0].toLowerCase();
-    
+
     if (isInCommentOrString(text, match.index)) continue;
-    if (matchWord === 'select' && isInSqlBlock(text, match.index)) continue;
-    if (matchWord === 'for' && isInSqlBlock(text, match.index)) continue;
-    
+
+    // Skip SQL keywords when inside EXEC SQL blocks
+    const sqlKeywords = ['select', 'for', 'when', 'case', 'end', 'then', 'else'];
+    if (sqlKeywords.includes(matchWord) && isInSqlBlock(text, match.index)) {
+      continue;
+    }
+
     matches.push({
       offset: match.index,
       word: matchWord,
       length: match[0].length
     });
   }
-  
+
   return matches;
 }
 
@@ -284,16 +288,16 @@ function findMatchingOpenForClosing(
 ): number {
   // Build a stack to track all open blocks
   const stack: { index: number; pair: BracketPair }[] = [];
-  
+
   for (let i = 0; i < closeIndex; i++) {
     const word = matches[i].word;
-    
+
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
       stack.push({ index: i, pair: openingPair });
     }
-    
+
     // Check if this word closes a block
     // Special handling for shared closers like 'end' and 'enddo'
     if (word === 'end') {
@@ -323,14 +327,14 @@ function findMatchingOpenForClosing(
       }
     }
   }
-  
+
   // Find the most recent unclosed block that can be closed by the closing word
   for (let j = stack.length - 1; j >= 0; j--) {
     if (stack[j].pair.close.includes(closingWord)) {
       return stack[j].index;
     }
   }
-  
+
   return -1;
 }
 
@@ -341,10 +345,10 @@ function findAllRelatedKeywords(
 ): vscode.Range[] {
   const text = document.getText();
   const startOffset = document.offsetAt(startRange.start);
-  
+
   // Use findAllMatches to get ALL keywords in the document
   const allMatches = findAllMatches(text, document);
-  
+
   // Find index of current match
   let currentIndex = -1;
   for (let i = 0; i < allMatches.length; i++) {
@@ -353,13 +357,13 @@ function findAllRelatedKeywords(
       break;
     }
   }
-  
+
   if (currentIndex === -1) return [startRange];
-  
+
   // Find block containing current keyword
   const blockIndices = findBlockIndices(allMatches, currentIndex, pair);
   if (!blockIndices) return [startRange];
-  
+
   // Convert indices to ranges
   const ranges: vscode.Range[] = [];
   for (const idx of blockIndices) {
@@ -368,7 +372,7 @@ function findAllRelatedKeywords(
     const end = document.positionAt(m.offset + m.length);
     ranges.push(new vscode.Range(start, end));
   }
-  
+
   return ranges;
 }
 
@@ -378,15 +382,16 @@ function findAllMismatchedClosingKeywords(
   matches: { offset: number; word: string; length: number }[]
 ): vscode.Range[] {
   const errorRanges: vscode.Range[] = [];
-  
+  const text = document.getText();
+
   // Check each closing keyword
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i];
     const isClosing = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(match.word));
-    
+
     if (isClosing) {
       // Validate this closing keyword
-      const isValid = validateClosingKeyword(matches, i);
+      const isValid = validateClosingKeyword(text, matches, i);
       if (!isValid) {
         const start = document.positionAt(match.offset);
         const end = document.positionAt(match.offset + match.length);
@@ -394,7 +399,7 @@ function findAllMismatchedClosingKeywords(
       }
     }
   }
-  
+
   return errorRanges;
 }
 
@@ -406,10 +411,10 @@ function findAllRelatedKeywordsWithValidation(
 ): { validRanges: vscode.Range[]; errorRanges: vscode.Range[] } {
   const text = document.getText();
   const startOffset = document.offsetAt(startRange.start);
-  
+
   // Use findAllMatches to get ALL keywords in the document
   const allMatches = findAllMatches(text, document);
-  
+
   // Find index of current match
   let currentIndex = -1;
   for (let i = 0; i < allMatches.length; i++) {
@@ -418,29 +423,29 @@ function findAllRelatedKeywordsWithValidation(
       break;
     }
   }
-  
+
   if (currentIndex === -1) return { validRanges: [startRange], errorRanges: [] };
-  
+
   // Find block containing current keyword
   const blockIndices = findBlockIndices(allMatches, currentIndex, pair);
   if (!blockIndices) return { validRanges: [startRange], errorRanges: [] };
-  
+
   // Validate all closing keywords in the block
   const validRanges: vscode.Range[] = [];
   const errorRanges: vscode.Range[] = [];
-  
+
   for (const idx of blockIndices) {
     const m = allMatches[idx];
     const start = document.positionAt(m.offset);
     const end = document.positionAt(m.offset + m.length);
     const range = new vscode.Range(start, end);
-    
+
     // Check if this is a closing keyword
     const isClosing = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(m.word));
-    
+
     if (isClosing) {
       // Validate that this closing keyword matches its opening keyword
-      const isValid = validateClosingKeyword(allMatches, idx);
+      const isValid = validateClosingKeyword(document.getText(), allMatches, idx);
       if (isValid) {
         validRanges.push(range);
       } else {
@@ -451,38 +456,39 @@ function findAllRelatedKeywordsWithValidation(
       validRanges.push(range);
     }
   }
-  
+
   return { validRanges, errorRanges };
 }
 
 // Validate that a closing keyword matches its corresponding opening keyword
 function validateClosingKeyword(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   closeIndex: number
 ): boolean {
   const closeWord = matches[closeIndex].word;
-  
+
   // Find the opening keyword that this closing keyword should match
-  const openIndex = findMatchingOpenForAnyClosing(matches, closeIndex);
-  
+  const openIndex = findMatchingOpenForAnyClosing(text, matches, closeIndex);
+
   if (openIndex === -1) {
     // No matching opening found - this is an error
     return false;
   }
-  
+
   const openWord = matches[openIndex].word;
-  
+
   // Find the pair that contains this opening keyword
   const openPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
-  
+
   if (!openPair) {
     return false;
   }
-  
+
   // Check if the closing keyword is valid for this opening keyword
   // Specific closers (endif, endfor, endsl, etc.) can ONLY close their specific block type
   // Generic closers (end, enddo) can close multiple types
-  
+
   if (closeWord === 'end' || closeWord === 'enddo') {
     // Generic closers: check if they can close this type of block
     return openPair.close.includes(closeWord);
@@ -490,25 +496,25 @@ function validateClosingKeyword(
     // Specific closers: must match the EXACT block type
     // For example, 'endif' can ONLY close 'if' blocks, not 'dow' or 'dou'
     // 'end-proc' can ONLY close 'dcl-proc', etc.
-    
+
     // A specific closer is valid if:
     // 1. The opening pair includes this closer in its close array
     // 2. This closer is the ONLY specific closer for that pair (not 'end' or 'enddo')
-    
+
     // Check if this closer is in the opening pair's close array
     if (!openPair.close.includes(closeWord)) {
       return false;
     }
-    
+
     // For pairs with multiple closers (e.g., ['endif', 'end']),
     // the specific closer (endif) should only match if it's the primary one
     // For pairs with single specific closer (e.g., ['end-proc']), it should always match
-    
+
     // If the pair has only one closer, it must match
     if (openPair.close.length === 1) {
       return true;
     }
-    
+
     // If the pair has multiple closers, check if this is the specific (non-generic) one
     // The specific closer is the one that's NOT 'end' or 'enddo'
     const specificClosers = openPair.close.filter(c => c !== 'end' && c !== 'enddo');
@@ -518,23 +524,24 @@ function validateClosingKeyword(
 
 // Find the opening keyword for any closing keyword (similar to findMatchingOpenForClosing but more general)
 function findMatchingOpenForAnyClosing(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   closeIndex: number
 ): number {
   const closeWord = matches[closeIndex].word;
-  
+
   // Build a stack to track all open blocks
   const stack: { index: number; pair: BracketPair }[] = [];
-  
+
   for (let i = 0; i < closeIndex; i++) {
     const word = matches[i].word;
-    
+
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
       stack.push({ index: i, pair: openingPair });
     }
-    
+
     // Check if this word closes a block
     if (word === 'end') {
       // Generic closer 'END': Find the most recent block that can be closed by 'END'
@@ -555,7 +562,7 @@ function findMatchingOpenForAnyClosing(
     } else {
       // Specific closers (endif, endfor, endsl, end-proc, end-ds, etc.)
       // These can ONLY close their specific block type AND only if it's the last open block
-      
+
       // Find which pair this closer belongs to
       const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
         if (!p.close.includes(word)) return false;
@@ -565,18 +572,21 @@ function findMatchingOpenForAnyClosing(
         const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
         return specificClosers.includes(word);
       });
-      
+
       if (closerPair && stack.length > 0) {
-        // A specific closer can ONLY close the last block if it's of the correct type
-        const lastBlock = stack[stack.length - 1];
-        if (lastBlock.pair === closerPair) {
-          stack.pop();
+        // For specific closers, search the stack for a matching block type
+        // This maintains stack integrity by removing the block even when nesting is incorrect
+        // The validation of correctness happens in validateClosingKeyword
+        for (let j = stack.length - 1; j >= 0; j--) {
+          if (stack[j].pair === closerPair) {
+            stack.splice(j, 1);
+            break;
+          }
         }
-        // If it's not the correct type, don't remove anything (it's an error)
       }
     }
   }
-  
+
   // Find the most recent unclosed block that can be closed by the closing word
   if (closeWord === 'end' || closeWord === 'enddo') {
     // Generic closers: find any block that accepts this closer
@@ -595,7 +605,7 @@ function findMatchingOpenForAnyClosing(
       const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
       return specificClosers.includes(closeWord);
     });
-    
+
     if (closerPair && stack.length > 0) {
       // Check if the last block is of the correct type
       const lastBlock = stack[stack.length - 1];
@@ -605,7 +615,7 @@ function findMatchingOpenForAnyClosing(
       // If not, this is an error (no matching opener)
     }
   }
-  
+
   return -1;
 }
 
@@ -616,15 +626,15 @@ function findBlockIndices(
   pair: BracketPair
 ): number[] | undefined {
   const currentWord = matches[currentIndex].word;
-  
+
   // Determine if current keyword is opening, closing, or middle
   const isOpen = pair.open.includes(currentWord);
   const isClose = pair.close.includes(currentWord);
   const isMiddle = pair.middle?.includes(currentWord);
-  
+
   let openIndex = -1;
   let closeIndex = -1;
-  
+
   if (isOpen) {
     // If opening, find matching close
     openIndex = currentIndex;
@@ -640,32 +650,32 @@ function findBlockIndices(
       closeIndex = findMatchingClose(matches, openIndex, pair);
     }
   }
-  
+
   if (openIndex === -1 || closeIndex === -1) return undefined;
-  
+
   // Collect all block indices (open, close, and same-level middle keywords)
   const blockIndices: number[] = [openIndex, closeIndex];
-  
+
   // Add middle keywords at the same nesting level
   if (pair.middle) {
     let depth = 0;
     for (let i = openIndex; i <= closeIndex; i++) {
       const word = matches[i].word;
-      
+
       if (pair.open.includes(word)) {
         depth++;
       }
-      
+
       if (depth === 1 && pair.middle.includes(word) && i !== openIndex && i !== closeIndex) {
         blockIndices.push(i);
       }
-      
+
       if (pair.close.includes(word)) {
         depth--;
       }
     }
   }
-  
+
   return blockIndices.sort((a, b) => a - b);
 }
 
@@ -678,17 +688,17 @@ function findMatchingClose(
   // Track ALL open blocks, not just the same type
   const stack: BracketPair[] = [];
   stack.push(pair); // Our target block
-  
+
   for (let i = openIndex + 1; i < matches.length; i++) {
     const word = matches[i].word;
-    
+
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
       stack.push(openingPair);
       continue;
     }
-    
+
     // Check if this word closes a block
     // For 'END', it closes the most recent block that accepts 'end' as closer
     if (word === 'end') {
@@ -720,7 +730,7 @@ function findMatchingClose(
       }
     }
   }
-  
+
   return -1;
 }
 
@@ -731,21 +741,21 @@ function findMatchingOpen(
   pair: BracketPair
 ): number {
   const startWord = matches[startIndex].word;
-  
+
   // Special handling for 'END' - find the most recent compatible opening
   if (startWord === 'end') {
     // Build a stack to track all open blocks
     const stack: { index: number; pair: BracketPair }[] = [];
-    
+
     for (let i = 0; i < startIndex; i++) {
       const word = matches[i].word;
-      
+
       // Check if this word opens any block
       const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
       if (openingPair) {
         stack.push({ index: i, pair: openingPair });
       }
-      
+
       // Check if this word closes a block
       // Find the most recent block that can be closed by this keyword
       for (let j = stack.length - 1; j >= 0; j--) {
@@ -755,23 +765,23 @@ function findMatchingOpen(
         }
       }
     }
-    
+
     // Find the most recent unclosed block that can be closed by 'END'
     for (let j = stack.length - 1; j >= 0; j--) {
       if (stack[j].pair.close.includes('end')) {
         return stack[j].index;
       }
     }
-    
+
     return -1;
   }
-  
+
   // Standard logic for specific closing keywords (endif, enddo, etc.)
   let depth = 1;
-  
+
   for (let i = startIndex - 1; i >= 0; i--) {
     const word = matches[i].word;
-    
+
     if (pair.close.includes(word)) {
       depth++;
     } else if (pair.open.includes(word)) {
@@ -781,7 +791,7 @@ function findMatchingOpen(
       }
     }
   }
-  
+
   return -1;
 }
 
