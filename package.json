@@ -12,7 +12,7 @@
 		"url": "https://github.com/halcyon-tech/vscode-rpgle"
 	},
 	"license": "MIT",
-	"version": "0.33.5-dev.0",
+	"version": "0.33.5",
 	"engines": {
 		"vscode": "^1.70.0"
 	},
@@ -45,7 +45,13 @@
 				"vscode-rpgle.logLevel": {
 					"type": "string",
 					"default": "info",
-					"enum": ["none", "error", "warn", "info", "debug"],
+					"enum": [
+						"none",
+						"error",
+						"warn",
+						"info",
+						"debug"
+					],
 					"enumDescriptions": [
 						"No logging",
 						"Only errors",
