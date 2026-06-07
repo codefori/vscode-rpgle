@@ -78,7 +78,15 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
       if (current.word === 'dcl-ds') {
         const lineStart = text.lastIndexOf('\n', current.offset) + 1;
         const lineEnd = text.indexOf('\n', current.offset);
-        const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd).toLowerCase();
+        let lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+
+        // Strip comments before checking
+        const commentIndex = lineContent.indexOf('//');
+        if (commentIndex !== -1) {
+          lineContent = lineContent.substring(0, commentIndex);
+        }
+
+        lineContent = lineContent.toLowerCase();
 
         // Skip if the line contains likeds() or likerec() - not a block opener
         // Use regex to handle optional whitespace between keyword and opening paren

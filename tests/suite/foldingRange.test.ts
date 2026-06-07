@@ -8,7 +8,10 @@ describe('Folding Range - dcl-ds with likeds/likerec', () => {
    * Returns true if dcl-ds should be treated as a block opener
    */
   function shouldDclDsCreateBlock(line: string): boolean {
-    const lowerLine = line.toLowerCase();
+    // Strip comments before checking
+    const commentIndex = line.indexOf('//');
+    let lineWithoutComments = commentIndex !== -1 ? line.substring(0, commentIndex) : line;
+    const lowerLine = lineWithoutComments.toLowerCase();
 
     // If line contains likeds() or likerec(), it's NOT a block opener
     // Use regex to handle optional whitespace between keyword and opening paren
@@ -136,6 +139,85 @@ describe('Folding Range - dcl-ds with likeds/likerec', () => {
 
       expect(shouldDclDsCreateBlock(lines[1])).toBe(false);
       expect(shouldDclDsCreateBlock(lines[2])).toBe(true);
+    });
+  });
+
+  describe('Nested data structures with likeds/likerec', () => {
+    it('should handle nested dcl-ds with likeds correctly', () => {
+      const code = `**free
+dcl-ds myds1 qualified inz;
+  field1 char(10);
+  field2 char(10);
+  dcl-ds myds2;
+    field3 char(10);
+    field4 char(10);
+  end-ds;
+  dcl-ds myds3 likeds(outputData_t);
+  dcl-ds myds4;
+   field5 char(10);
+  end-ds;
+end-ds;`;
+
+      const lines = code.split('\n');
+
+      // Test each dcl-ds line
+      expect(shouldDclDsCreateBlock(lines[1])).toBe(true);  // myds1 - should create block
+      expect(shouldDclDsCreateBlock(lines[4])).toBe(true);  // myds2 - should create block
+      expect(shouldDclDsCreateBlock(lines[8])).toBe(false); // myds3 with likeds - should NOT create block
+      expect(shouldDclDsCreateBlock(lines[9])).toBe(true);  // myds4 - should create block
+    });
+
+    it('should correctly identify which end-ds closes which dcl-ds', () => {
+      // This test documents the expected behavior:
+      // Line 1: dcl-ds myds1 (opens block)
+      // Line 4: dcl-ds myds2 (opens nested block)
+      // Line 7: end-ds (closes myds2)
+      // Line 8: dcl-ds myds3 likeds(...) (single-line, no block)
+      // Line 9: dcl-ds myds4 (opens nested block)
+      // Line 11: end-ds (closes myds4)
+      // Line 12: end-ds (closes myds1)
+
+      const code = `**free
+dcl-ds myds1 qualified inz;
+  field1 char(10);
+  field2 char(10);
+  dcl-ds myds2;
+    field3 char(10);
+    field4 char(10);
+  end-ds;
+  dcl-ds myds3 likeds(outputData_t);
+  dcl-ds myds4;
+   field5 char(10);
+  end-ds;
+end-ds;`;
+
+      // Expected folding ranges:
+      // 1. myds1: line 1 to line 12
+      // 2. myds2: line 4 to line 7
+      // 3. myds4: line 9 to line 11
+      // NOT: myds3 (it's a single-line declaration)
+
+      const lines = code.split('\n');
+      const blockOpeners = lines
+        .map((line, idx) => ({ line, idx }))
+        .filter(({ line }) => line.trim().startsWith('dcl-ds'))
+        .filter(({ line }) => shouldDclDsCreateBlock(line));
+
+      // Should have 3 block openers (myds1, myds2, myds4)
+      // NOT 4 (myds3 should be excluded)
+      expect(blockOpeners.length).toBe(3);
+      expect(blockOpeners[0].idx).toBe(1); // myds1
+      expect(blockOpeners[1].idx).toBe(4); // myds2
+      expect(blockOpeners[2].idx).toBe(9); // myds4
+    });
+
+    it('should not be fooled by likeds in comments', () => {
+      // Edge case: likeds in a comment should NOT prevent block creation
+      const line = '  dcl-ds shouldBeBlock;  // likeds(fake) in comment';
+
+      // Should be treated as a block opener because the actual code
+      // doesn't have likeds() - it's only in the comment
+      expect(shouldDclDsCreateBlock(line)).toBe(true);
     });
   });
 });

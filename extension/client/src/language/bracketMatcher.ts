@@ -272,6 +272,29 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   return matches;
 }
 
+// Helper function to strip comments from a line
+function stripComments(line: string): string {
+  // Remove // comments
+  const commentIndex = line.indexOf('//');
+  if (commentIndex !== -1) {
+    return line.substring(0, commentIndex);
+  }
+  return line;
+}
+
+// Helper function to check if dcl-ds line has likeds() or likerec()
+function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
+  const lineStart = text.lastIndexOf('\n', offset) + 1;
+  const lineEnd = text.indexOf('\n', offset);
+  const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+
+  // Strip comments before checking
+  const lineWithoutComments = stripComments(lineContent).toLowerCase();
+
+  // Check if the line contains likeds() or likerec()
+  return /likeds\s*\(/.test(lineWithoutComments) || /likerec\s*\(/.test(lineWithoutComments);
+}
+
 // Helper function specifically for finding the opening block for an END keyword
 function findMatchingOpenForEnd(
   text: string,
@@ -299,16 +322,8 @@ function findMatchingOpenForClosing(
     if (openingPair) {
       // Special handling for dcl-ds: skip if it uses likeds() or likerec()
       // These create single-line declarations that don't require end-ds
-      if (word === 'dcl-ds') {
-        // Get the line content containing this dcl-ds
-        const lineStart = text.lastIndexOf('\n', matches[i].offset) + 1;
-        const lineEnd = text.indexOf('\n', matches[i].offset);
-        const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd).toLowerCase();
-
-        // Skip if the line contains likeds() or likerec() - not a block opener
-        if (/likeds\s*\(/.test(lineContent) || /likerec\s*\(/.test(lineContent)) {
-          continue;
-        }
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue;
       }
 
       stack.push({ index: i, pair: openingPair });
@@ -377,7 +392,7 @@ function findAllRelatedKeywords(
   if (currentIndex === -1) return [startRange];
 
   // Find block containing current keyword
-  const blockIndices = findBlockIndices(allMatches, currentIndex, pair);
+  const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
   if (!blockIndices) return [startRange];
 
   // Convert indices to ranges
@@ -443,7 +458,7 @@ function findAllRelatedKeywordsWithValidation(
   if (currentIndex === -1) return { validRanges: [startRange], errorRanges: [] };
 
   // Find block containing current keyword
-  const blockIndices = findBlockIndices(allMatches, currentIndex, pair);
+  const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
   if (!blockIndices) return { validRanges: [startRange], errorRanges: [] };
 
   // Validate all closing keywords in the block
@@ -557,16 +572,8 @@ function findMatchingOpenForAnyClosing(
     if (openingPair) {
       // Special handling for dcl-ds: skip if it uses likeds() or likerec()
       // These create single-line declarations that don't require end-ds
-      if (word === 'dcl-ds') {
-        // Get the line content containing this dcl-ds
-        const lineStart = text.lastIndexOf('\n', matches[i].offset) + 1;
-        const lineEnd = text.indexOf('\n', matches[i].offset);
-        const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd).toLowerCase();
-
-        // Skip if the line contains likeds() or likerec() - not a block opener
-        if (/likeds\s*\(/.test(lineContent) || /likerec\s*\(/.test(lineContent)) {
-          continue;
-        }
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue;
       }
 
       stack.push({ index: i, pair: openingPair });
@@ -651,6 +658,7 @@ function findMatchingOpenForAnyClosing(
 
 // Find all indices of keywords belonging to the same block
 function findBlockIndices(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   currentIndex: number,
   pair: BracketPair
@@ -662,22 +670,28 @@ function findBlockIndices(
   const isClose = pair.close.includes(currentWord);
   const isMiddle = pair.middle?.includes(currentWord);
 
+  // Special check for dcl-ds with likeds/likerec - it's NOT a block opener
+  if (isOpen && currentWord === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[currentIndex].offset)) {
+    // This is a single-line declaration, not a block opener
+    return undefined;
+  }
+
   let openIndex = -1;
   let closeIndex = -1;
 
   if (isOpen) {
     // If opening, find matching close
     openIndex = currentIndex;
-    closeIndex = findMatchingClose(matches, currentIndex, pair);
+    closeIndex = findMatchingClose(text, matches, currentIndex, pair);
   } else if (isClose) {
     // If closing, find matching open
     closeIndex = currentIndex;
-    openIndex = findMatchingOpen(matches, currentIndex, pair);
+    openIndex = findMatchingOpen(text, matches, currentIndex, pair);
   } else if (isMiddle) {
     // If middle keyword, find both open and close
-    openIndex = findMatchingOpen(matches, currentIndex, pair);
+    openIndex = findMatchingOpen(text, matches, currentIndex, pair);
     if (openIndex !== -1) {
-      closeIndex = findMatchingClose(matches, openIndex, pair);
+      closeIndex = findMatchingClose(text, matches, openIndex, pair);
     }
   }
 
@@ -711,6 +725,7 @@ function findBlockIndices(
 
 // Find closing keyword index for an opening keyword
 function findMatchingClose(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   openIndex: number,
   pair: BracketPair
@@ -725,6 +740,11 @@ function findMatchingClose(
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue; // Skip this dcl-ds, it's not a block opener
+      }
+
       stack.push(openingPair);
       continue;
     }
@@ -766,6 +786,7 @@ function findMatchingClose(
 
 // Find opening keyword index for a closing or middle keyword
 function findMatchingOpen(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   startIndex: number,
   pair: BracketPair
@@ -783,6 +804,11 @@ function findMatchingOpen(
       // Check if this word opens any block
       const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
       if (openingPair) {
+        // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+        if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+          continue; // Skip this dcl-ds, it's not a block opener
+        }
+
         stack.push({ index: i, pair: openingPair });
       }
 

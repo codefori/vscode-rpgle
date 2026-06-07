@@ -240,6 +240,58 @@ end-proc;
       expect(code).toContain('dcl-ds myData likeds(MyDs);');
       expect(code).toContain('end-proc;');
     });
+
+    it('should handle nested dcl-ds with likeds correctly', () => {
+      // Complex nesting: outer dcl-ds contains nested dcl-ds blocks
+      // and a single-line dcl-ds with likeds
+      const code = `
+**free
+
+dcl-ds myds1 qualified inz;
+  field1 char(10);
+  field2 char(10);
+  dcl-ds myds2;
+    field3 char(10);
+    field4 char(10);
+  end-ds;
+  dcl-ds myds3 likeds(outputData_t);  // Single-line, no end-ds
+  dcl-ds myds4;
+   field5 char(10);
+  end-ds;
+end-ds;
+      `.trim();
+
+      // Expected behavior:
+      // - Clicking on myds1 dcl-ds should highlight its end-ds (last line)
+      // - Clicking on myds2 dcl-ds should highlight its end-ds (line after field4)
+      // - Clicking on myds3 dcl-ds should NOT highlight anything (single-line)
+      // - Clicking on myds4 dcl-ds should highlight its end-ds (line after field5)
+
+      expect(code).toContain('dcl-ds myds3 likeds(outputData_t);  // Single-line');
+    });
+
+    it('should not highlight when clicking on single-line dcl-ds with likeds in nested structure', () => {
+      // When cursor is on dcl-ds myds3 (which has likeds),
+      // it should NOT show any bracket highlighting
+      const code = `
+**free
+
+dcl-ds myds1 qualified inz;
+  dcl-ds myds3 likeds(outputData_t);  // Clicking here should show nothing
+  dcl-ds myds4;
+   field5 char(10);
+  end-ds;
+end-ds;
+      `.trim();
+
+      // The bracket matcher should:
+      // 1. Recognize myds3 has likeds()
+      // 2. NOT treat it as a block opener
+      // 3. NOT try to find a matching end-ds
+      // 4. Return undefined/empty for highlighting
+
+      expect(code).toContain('dcl-ds myds3 likeds(outputData_t);  // Clicking here');
+    });
   });
 });
 
