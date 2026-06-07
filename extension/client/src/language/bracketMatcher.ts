@@ -137,7 +137,7 @@ function updateDecorations(editor: vscode.TextEditor) {
 
     if (currentIndex !== -1) {
       // Use findMatchingOpenForClosing to determine which block this closes
-      const openIndex = findMatchingOpenForClosing(allMatches, currentIndex, word);
+      const openIndex = findMatchingOpenForClosing(text, allMatches, currentIndex, word);
       if (openIndex !== -1) {
         const openWord = allMatches[openIndex].word;
         matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
@@ -274,14 +274,16 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
 
 // Helper function specifically for finding the opening block for an END keyword
 function findMatchingOpenForEnd(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   endIndex: number
 ): number {
-  return findMatchingOpenForClosing(matches, endIndex, 'end');
+  return findMatchingOpenForClosing(text, matches, endIndex, 'end');
 }
 
 // Helper function for finding the opening block for any closing keyword
 function findMatchingOpenForClosing(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   closeIndex: number,
   closingWord: string
@@ -295,6 +297,20 @@ function findMatchingOpenForClosing(
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      // These create single-line declarations that don't require end-ds
+      if (word === 'dcl-ds') {
+        // Get the line content containing this dcl-ds
+        const lineStart = text.lastIndexOf('\n', matches[i].offset) + 1;
+        const lineEnd = text.indexOf('\n', matches[i].offset);
+        const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd).toLowerCase();
+
+        // Skip if the line contains likeds() or likerec() - not a block opener
+        if (/likeds\s*\(/.test(lineContent) || /likerec\s*\(/.test(lineContent)) {
+          continue;
+        }
+      }
+
       stack.push({ index: i, pair: openingPair });
     }
 
@@ -539,6 +555,20 @@ function findMatchingOpenForAnyClosing(
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      // These create single-line declarations that don't require end-ds
+      if (word === 'dcl-ds') {
+        // Get the line content containing this dcl-ds
+        const lineStart = text.lastIndexOf('\n', matches[i].offset) + 1;
+        const lineEnd = text.indexOf('\n', matches[i].offset);
+        const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd).toLowerCase();
+
+        // Skip if the line contains likeds() or likerec() - not a block opener
+        if (/likeds\s*\(/.test(lineContent) || /likerec\s*\(/.test(lineContent)) {
+          continue;
+        }
+      }
+
       stack.push({ index: i, pair: openingPair });
     }
 
