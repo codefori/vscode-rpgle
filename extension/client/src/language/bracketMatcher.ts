@@ -4,6 +4,24 @@ import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/u
 
 type BracketPair = BlockPair;
 
+// Comprehensive list of SQL keywords that might conflict with RPG keywords
+// These keywords will be excluded from bracket matching when inside EXEC SQL blocks
+const SQL_KEYWORDS = [
+  'select', 'from', 'where', 'join', 'inner', 'outer', 'left', 'right', 'full',
+  'insert', 'update', 'delete', 'into', 'set', 'values',
+  'declare', 'cursor', 'open', 'fetch', 'close',
+  'for', 'when', 'case', 'end', 'then', 'else', 'elseif',
+  'if', 'and', 'or', 'not', 'in', 'exists', 'between', 'like',
+  'order', 'group', 'having', 'union', 'intersect', 'except',
+  'create', 'alter', 'drop', 'table', 'index', 'view',
+  'as', 'on', 'using', 'with', 'option',
+  'commit', 'rollback', 'savepoint',
+  'json_table', 'json_object', 'json_array',
+  'distinct', 'all', 'any', 'some',
+  'begin', 'do', 'while', 'loop', 'repeat', 'until',
+  'call', 'return', 'exit', 'continue'
+];
+
 // Highlight style for matched brackets
 const decorationType = vscode.window.createTextEditorDecorationType({
   backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
@@ -93,22 +111,11 @@ function updateDecorations(editor: vscode.TextEditor) {
 
   const word = document.getText(wordRange).toLowerCase();
 
-  // Check if we're clicking on SELECT inside an SQL block
-  if (word === 'select') {
+  // Check if we're clicking on any SQL keyword inside an SQL block
+  if (SQL_KEYWORDS.includes(word)) {
     const offset = document.offsetAt(position);
     if (isInSqlBlock(text, offset)) {
-      // Don't highlight SELECT inside SQL blocks
-      editor.setDecorations(decorationType, []);
-      currentBlockInfo = undefined;
-      return;
-    }
-  }
-
-  // Check if we're clicking on FOR inside an SQL block
-  if (word === 'for') {
-    const offset = document.offsetAt(position);
-    if (isInSqlBlock(text, offset)) {
-      // Don't highlight FOR inside SQL blocks
+      // Don't highlight SQL keywords inside SQL blocks
       editor.setDecorations(decorationType, []);
       currentBlockInfo = undefined;
       return;
@@ -257,8 +264,7 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
     if (isInCommentOrString(text, match.index)) continue;
 
     // Skip SQL keywords when inside EXEC SQL blocks
-    const sqlKeywords = ['select', 'for', 'when', 'case', 'end', 'then', 'else'];
-    if (sqlKeywords.includes(matchWord) && isInSqlBlock(text, match.index)) {
+    if (SQL_KEYWORDS.includes(matchWord) && isInSqlBlock(text, match.index)) {
       continue;
     }
 

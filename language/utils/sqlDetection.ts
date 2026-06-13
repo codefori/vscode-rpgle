@@ -22,32 +22,57 @@ export function isInSqlBlock(text: string, offset: number): boolean {
     return true;
   }
   
-  // Look backwards for EXEC SQL on previous lines
-  const textBefore = text.substring(0, lineStart);
+  // Look backwards for EXEC SQL
+  const textBeforeOffset = text.substring(0, offset);
   
-  // Find all SQL block starts
+  // Find all SQL block starts and ends
   const execSqlRegex = /\b(exec\s+sql)\b/gi;
   
   let lastExecSql = -1;
+  let lastExecSqlEnd = -1;
   
-  // Find last EXEC SQL
+  // Find last EXEC SQL before current position
   let match;
   execSqlRegex.lastIndex = 0;
-  while ((match = execSqlRegex.exec(textBefore)) !== null) {
+  while ((match = execSqlRegex.exec(textBeforeOffset)) !== null) {
     lastExecSql = match.index;
+    lastExecSqlEnd = match.index + match[0].length;
   }
   
-  // If we found an EXEC SQL on a previous line, check if there's a semicolon after it
+  // If we found an EXEC SQL, check if there's a semicolon after it (before current position)
   if (lastExecSql !== -1) {
-    const textAfterExec = text.substring(lastExecSql, lineStart);
+    const textAfterExec = text.substring(lastExecSqlEnd, offset);
     
     // Look for semicolon that ends the SQL block
-    const semicolonMatch = textAfterExec.match(/;/);
+    // We need to be careful not to match semicolons inside SQL strings
+    let inString = false;
+    let stringChar = '';
     
-    // If we didn't find a semicolon, we're still in the SQL block
-    if (!semicolonMatch) {
-      return true;
+    for (let i = 0; i < textAfterExec.length; i++) {
+      const char = textAfterExec[i];
+      
+      // Handle string delimiters (both single and double quotes in SQL)
+      if ((char === "'" || char === '"') && !inString) {
+        inString = true;
+        stringChar = char;
+      } else if (char === stringChar && inString) {
+        // Check for escaped quotes (doubled quotes in SQL)
+        if (i + 1 < textAfterExec.length && textAfterExec[i + 1] === stringChar) {
+          i++; // Skip the escaped quote
+        } else {
+          inString = false;
+          stringChar = '';
+        }
+      }
+      
+      // If we find a semicolon outside of a string, the SQL block has ended
+      if (char === ';' && !inString) {
+        return false;
+      }
     }
+    
+    // No semicolon found, we're still in the SQL block
+    return true;
   }
   
   return false;
