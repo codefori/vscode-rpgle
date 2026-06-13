@@ -35,8 +35,11 @@ export function isInSqlBlock(text: string, offset: number): boolean {
   let match;
   execSqlRegex.lastIndex = 0;
   while ((match = execSqlRegex.exec(textBeforeOffset)) !== null) {
-    lastExecSql = match.index;
-    lastExecSqlEnd = match.index + match[0].length;
+    // Check if this EXEC SQL is inside a comment or string
+    if (!isInCommentOrString(text, match.index)) {
+      lastExecSql = match.index;
+      lastExecSqlEnd = match.index + match[0].length;
+    }
   }
   
   // If we found an EXEC SQL, check if there's a semicolon after it (before current position)
