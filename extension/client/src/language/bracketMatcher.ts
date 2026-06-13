@@ -238,6 +238,115 @@ function extractBlockCondition(document: vscode.TextDocument, lineNumber: number
   return text;
 }
 
+// Helper function to check if a position is in a compiler directive
+function isInCompilerDirective(text: string, offset: number): boolean {
+  // Find the start of the line
+  let lineStart = offset;
+  while (lineStart > 0 && text[lineStart - 1] !== '\n' && text[lineStart - 1] !== '\r') {
+    lineStart--;
+  }
+
+  // Get the text from line start to the offset
+  const lineBeforeOffset = text.substring(lineStart, offset + 1);
+
+  // Check if the line starts with / (compiler directive)
+  // Pattern: optional whitespace, then /, then optional whitespace, then the keyword
+  return /^\s*\//.test(lineBeforeOffset);
+}
+
+// Helper function to check if a keyword is actually being used as a variable
+// This handles cases like: end = 5; end += 1; dow (x < end); dcl-s end int(10); etc.
+function isVariableContext(text: string, matchOffset: number, matchLength: number): boolean {
+  const matchWord = text.substring(matchOffset, matchOffset + matchLength);
+  const afterKeyword = text.substring(matchOffset + matchLength);
+  const beforeKeyword = text.substring(0, matchOffset);
+
+  console.log(`[isVariableContext] Checking '${matchWord}' at offset ${matchOffset}`);
+  console.log(`[isVariableContext] Before: '${beforeKeyword.slice(-30)}'`);
+  console.log(`[isVariableContext] After: '${afterKeyword.slice(0, 30)}'`);
+
+  // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, etc.)
+  // ALL dcl- keywords indicate the next word is an identifier, not a keyword
+  // Pattern: dcl-s end pointer; dcl-proc end; dcl-pi myProc; etc.
+  const declMatch = beforeKeyword.match(/\b(dcl-[a-z]+)\s+$/i);
+  if (declMatch) {
+    console.log(`[isVariableContext] '${matchWord}' - IDENTIFIER (after ${declMatch[1]})`);
+    return true;
+  }
+
+  // Check if preceded by FOR loop clause keywords (to, downto, by)
+  // These indicate the next word is an expression/value, not a control keyword
+  // Pattern: for i = 1 to end; or for i = 10 downto end by 2;
+  const forClauseMatch = beforeKeyword.match(/\b(to|downto|by)\s+$/i);
+  if (forClauseMatch) {
+    console.log(`[isVariableContext] '${matchWord}' - VARIABLE (after FOR clause '${forClauseMatch[1]}')`);
+    return true;
+  }
+
+  // Check what comes after the keyword (skipping whitespace)
+  const afterMatch = afterKeyword.match(/^\s*(.)/);
+  if (!afterMatch) {
+    console.log(`[isVariableContext] '${matchWord}' - no char after, KEYWORD`);
+    return false;
+  }
+
+  const nextChar = afterMatch[1];
+  console.log(`[isVariableContext] nextChar: '${nextChar}'`);
+
+  // If followed by closing paren or comma, it's likely a variable in expression/parameter
+  // e.g., dow (x < end) or func(a, end)
+  if (nextChar === ')' || nextChar === ',') {
+    console.log(`[isVariableContext] '${matchWord}' - VARIABLE (followed by ${nextChar})`);
+    return true;
+  }
+
+  // If followed by assignment operators, it's a variable
+  // Matches: =, +=, -=, *=, /=
+  if (nextChar === '=' || nextChar === '+' || nextChar === '-' || nextChar === '*' || nextChar === '/') {
+    const twoChars = afterKeyword.substring(afterMatch[0].length - 1, afterMatch[0].length + 1);
+    if (twoChars === '+=' || twoChars === '-=' || twoChars === '*=' || twoChars === '/=' || nextChar === '=') {
+      console.log(`[isVariableContext] '${matchWord}' - VARIABLE (assignment)`);
+      return true;
+    }
+  }
+
+  // Check what comes BEFORE the keyword - look for comparison operators or other expression contexts
+  // e.g., dow (x < end) or if (y > end) or result = x + end
+  const beforeMatch = beforeKeyword.match(/([<>=+\-*/.(,])\s*$/);
+
+  // If followed by opening parenthesis or dot, check if it's actually array/DS access
+  // vs. control flow keyword with condition
+  // Examples:
+  //   arr(if)      → preceded by '(', followed by ')' → VARIABLE
+  //   ds.if(x)     → preceded by '.', followed by '(' → VARIABLE
+  //   func(x, if)  → preceded by ',', followed by ')' → VARIABLE
+  //   if (cond)    → NOT preceded by '.,(', followed by '(' → KEYWORD (control flow)
+  if (nextChar === '(' || nextChar === '.') {
+    // Only treat as variable if preceded by operators that indicate it's being used as a value
+    if (beforeMatch) {
+      const op = beforeMatch[1];
+      console.log(`[isVariableContext] '${matchWord}' - VARIABLE (preceded by '${op}', followed by '${nextChar}')`);
+      return true;
+    } else {
+      // Not preceded by operator context → it's a control flow keyword like if (condition)
+      console.log(`[isVariableContext] '${matchWord}' - KEYWORD (control flow with '${nextChar}')`);
+      return false;
+    }
+  }
+
+  // Check for other operator contexts
+  if (beforeMatch) {
+    const op = beforeMatch[1];
+    console.log(`[isVariableContext] '${matchWord}' - VARIABLE (preceded by operator '${op}')`);
+    return true;
+  } else {
+    console.log(`[isVariableContext] No operator match in before text`);
+  }
+
+  console.log(`[isVariableContext] '${matchWord}' - KEYWORD (no variable context detected)`);
+  return false;
+}
+
 function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
@@ -263,9 +372,34 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
 
     if (isInCommentOrString(text, match.index)) continue;
 
+    // Skip compiler directives (e.g., /END-FREE, /FREE, /COPY)
+    if (isInCompilerDirective(text, match.index)) {
+      if (matchWord === 'end-free' || matchWord.startsWith('end')) {
+        const lineNum = document.positionAt(match.index).line + 1;
+        console.log(`[findAllMatches] SKIPPED '${matchWord}' at line ${lineNum} - compiler directive`);
+      }
+      continue;
+    }
+
     // Skip SQL keywords when inside EXEC SQL blocks
     if (SQL_KEYWORDS.includes(matchWord) && isInSqlBlock(text, match.index)) {
       continue;
+    }
+
+    // Skip keywords that are actually variables in expression/assignment context
+    // Only check for simple keywords (no hyphens) that could be valid variable names
+    // Keywords with hyphens (end-proc, dcl-proc, etc.) cannot be variables
+    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length)) {
+      if (matchWord === 'for') {
+        const lineNum = document.positionAt(match.index).line + 1;
+        console.log(`[findAllMatches] SKIPPED 'for' as variable at line ${lineNum}`);
+      }
+      continue;
+    }
+
+    if (matchWord === 'for') {
+      const lineNum = document.positionAt(match.index).line + 1;
+      console.log(`[findAllMatches] ADDED 'for' as keyword at line ${lineNum}`);
     }
 
     matches.push({
@@ -275,6 +409,7 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
     });
   }
 
+  console.log(`[findAllMatches] Found ${matches.length} total keyword matches in document`);
   return matches;
 }
 
@@ -399,6 +534,8 @@ function findAllMismatchedClosingKeywords(
       // Validate this closing keyword
       const isValid = validateClosingKeyword(text, matches, i);
       if (!isValid) {
+        const lineNum = document.positionAt(match.offset).line + 1;
+        console.log(`[MISMATCH ERROR] '${match.word}' at line ${lineNum} has no matching opening keyword`);
         const start = document.positionAt(match.offset);
         const end = document.positionAt(match.offset + match.length);
         errorRanges.push(new vscode.Range(start, end));
@@ -406,6 +543,7 @@ function findAllMismatchedClosingKeywords(
     }
   }
 
+  console.log(`[findAllMismatchedClosingKeywords] Found ${errorRanges.length} mismatched closing keywords`);
   return errorRanges;
 }
 
