@@ -147,7 +147,11 @@ export default class Cache {
   get parameters() {
     return this.symbols.filter(s => s.type === `parameter`);
   }
-
+  
+  get outputs() {
+    return this.symbols.filter(s => s.type === `output`);
+  }
+  
   addSymbol(symbol: Declaration) {
     const name = symbol.name.toUpperCase();
     if (this.symbolRegister.has(name)) {

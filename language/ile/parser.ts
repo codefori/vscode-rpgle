@@ -6,7 +6,7 @@ import Cache from "../models/cache";
 import Declaration from "../models/declaration";
 
 import oneLineTriggers from "../models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "../models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens, parseOLine } from "../models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -691,7 +691,7 @@ export default class Parser {
               baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
-            } else if (![`D`, `I`, `P`, `C`, `F`, `H`].includes(spec)) {
+            } else if (![`D`, `I`, `P`, `C`, `F`, `H`, `O`].includes(spec)) {
               continue;
             }
           }
@@ -2031,6 +2031,159 @@ export default class Parser {
               potentialName = undefined;
             }
             break;
+
+            case `O`:
+              const oSpec = parseOLine(lineNumber, lineIndex, line);
+
+              // Handle based on line type
+              if (oSpec.lineType === 'O') {
+                // Record ID Line
+                if (oSpec.filename || oSpec.exceptName || oSpec.type) {
+                  currentItem = new Declaration(`output`);
+                  currentItem.name = oSpec.filename?.value || oSpec.exceptName?.value || oSpec.type?.value || '';
+
+                  currentItem.keyword = {
+                    lineType: 'O',
+                    filename: oSpec.filename?.value || '',
+                    type: oSpec.type?.value || '',
+                    fetchOverflow: oSpec.fetchOverflow?.value || '',
+                    addDeleteIndicator: oSpec.addDeleteIndicator?.value || '',
+                    outputIndicator1: oSpec.outputIndicator1?.value || '',
+                    outputIndicator2: oSpec.outputIndicator2?.value || '',
+                    exceptName: oSpec.exceptName?.value || '',
+                    spaceBefore: oSpec.spaceBefore?.value || '',
+                    spaceAfter: oSpec.spaceAfter?.value || '',
+                    skipBefore: oSpec.skipBefore?.value || '',
+                    skipAfter: oSpec.skipAfter?.value || ''
+                  };
+
+                  currentItem.position = {
+                    path: fileUri,
+                    range: oSpec.filename?.range || oSpec.exceptName?.range || oSpec.type?.range
+                  };
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  scope.addSymbol(currentItem);
+                  resetDefinition = true;
+                }
+              } else if (oSpec.lineType === 'OAnd') {
+                // AND/OR Continuation Line
+                if (oSpec.andOrKeyword || oSpec.exceptName) {
+                  currentItem = new Declaration(`output`);
+                  currentItem.name = oSpec.andOrKeyword?.value || oSpec.exceptName?.value || '';
+
+                  currentItem.keyword = {
+                    lineType: 'OAnd',
+                    andOrKeyword: oSpec.andOrKeyword?.value || '',
+                    outputIndicator1: oSpec.outputIndicator1?.value || '',
+                    outputIndicator2: oSpec.outputIndicator2?.value || '',
+                    outputIndicator3: oSpec.outputIndicator3?.value || '',
+                    exceptName: oSpec.exceptName?.value || ''
+                  };
+
+                  currentItem.position = {
+                    path: fileUri,
+                    range: oSpec.andOrKeyword?.range || oSpec.exceptName?.range
+                  };
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  scope.addSymbol(currentItem);
+                  resetDefinition = true;
+                }
+              } else if (oSpec.lineType === 'OF') {
+                // Program-Described Field Line
+                if (oSpec.fieldName || oSpec.constantOrEdit) {
+                  currentItem = new Declaration(`output`);
+                  currentItem.name = oSpec.fieldName?.value || oSpec.constantOrEdit?.value || '';
+
+                  currentItem.keyword = {
+                    lineType: 'OF',
+                    outputIndicator1: oSpec.outputIndicator1?.value || '',
+                    outputIndicator2: oSpec.outputIndicator2?.value || '',
+                    outputIndicator3: oSpec.outputIndicator3?.value || '',
+                    fieldName: oSpec.fieldName?.value || '',
+                    blankAfter: oSpec.blankAfter?.value || '',
+                    editCodes: oSpec.editCodes?.value || '',
+                    endPosition: oSpec.endPosition?.value || '',
+                    dataFormat: oSpec.dataFormat?.value || '',
+                    constantOrEdit: oSpec.constantOrEdit?.value || ''
+                  };
+
+                  currentItem.position = {
+                    path: fileUri,
+                    range: oSpec.fieldName?.range || oSpec.constantOrEdit?.range
+                  };
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  scope.addSymbol(currentItem);
+                  resetDefinition = true;
+                }
+              } else if (oSpec.lineType === 'OFC') {
+                // Field Constant Continuation Line
+                if (oSpec.constantOrEdit) {
+                  currentItem = new Declaration(`output`);
+                  currentItem.name = oSpec.constantOrEdit?.value || '';
+
+                  currentItem.keyword = {
+                    lineType: 'OFC',
+                    constantOrEdit: oSpec.constantOrEdit?.value || ''
+                  };
+
+                  currentItem.position = {
+                    path: fileUri,
+                    range: oSpec.constantOrEdit?.range
+                  };
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  scope.addSymbol(currentItem);
+                  resetDefinition = true;
+                }
+              } else if (oSpec.lineType === 'OXF') {
+                // Externally-Described Field Line
+                if (oSpec.fieldName) {
+                  currentItem = new Declaration(`output`);
+                  currentItem.name = oSpec.fieldName?.value || '';
+
+                  currentItem.keyword = {
+                    lineType: 'OXF',
+                    outputIndicator1: oSpec.outputIndicator1?.value || '',
+                    outputIndicator2: oSpec.outputIndicator2?.value || '',
+                    outputIndicator3: oSpec.outputIndicator3?.value || '',
+                    fieldName: oSpec.fieldName?.value || '',
+                    blankAfter: oSpec.blankAfter?.value || ''
+                  };
+
+                  currentItem.position = {
+                    path: fileUri,
+                    range: oSpec.fieldName?.range
+                  };
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  scope.addSymbol(currentItem);
+                  resetDefinition = true;
+                }
+              }
+              break;
           }
         }
 
