@@ -8,6 +8,7 @@ import { workspace, ExtensionContext } from 'vscode';
 
 import * as Linter from "./linter";
 import * as columnAssist from "./language/columnAssist";
+import { registerBracketMatcher } from "./language/bracketMatcher";
 
 
 import {
@@ -112,6 +113,7 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
+	registerBracketMatcher(context);
 	
 	registerCommands(context, client);
 	
