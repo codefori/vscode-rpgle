@@ -42,20 +42,23 @@
 					"default": true,
 					"description": "Whether to show the fixed-format ruler by default."
 				},
-				"vscode-rpgle.globalLintConfigPath": {
-					"type": "string",
-					"default": "",
-					"description": "QSYS.LIB path for global RPGLINT.JSON."
+				"vscode-rpgle.useGlobalLintConfig": {
+					"type": "boolean",
+					"default": false,
+					"description": "When enabled, uses the global lint configuration at /etc/vscode/rpglint.json on the IBM i instead of per-library configs."
 				},
-				"vscode-rpgle.lintIgnoreLibraries": {
-					"type": "string",
-					"default": "",
-					"description": "RPGLE linter ignore libraries, separated by semicolon."
+				"vscode-rpgle.lintExcludeLibraries": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "List of library names to exclude from linting. Members in these libraries will not be linted."
 				},
 				"vscode-rpgle.logLevel": {
 					"type": "string",
 					"default": "info",
-					"enum": ["none", "error", "warn", "info", "debug"],
+					"enum": [ "none", "error", "warn", "info", "debug" ],
 					"enumDescriptions": [
 						"No logging",
 						"Only errors",
@@ -183,7 +186,7 @@
 		"cli:dev:rpglint": "cd cli/rpglint && npm run webpack:dev"
 	},
 	"devDependencies": {
-		"@halcyontech/vscode-ibmi-types": "^2.11.0",
+		"@halcyontech/vscode-ibmi-types": "^3.0.10",
 		"@types/node": "^18.16.1",
 		"@typescript-eslint/eslint-plugin": "^5.30.0",
 		"@typescript-eslint/parser": "^5.30.0",
