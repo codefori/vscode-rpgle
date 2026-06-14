@@ -47,6 +47,20 @@ export function activate(context: ExtensionContext) {
 		}
 	};
 
+	// The global configuration path for linter config file
+	const globalConfig = workspace.getConfiguration(`vscode-rpgle`);
+	const globalLintPath = globalConfig.get<string>(`globalLintConfigPath`);
+	const lintIgnoreLibraries = globalConfig.get<string>(`lintIgnoreLibraries`);
+	const env = { ...process.env } as NodeJS.ProcessEnv;
+
+	if (globalLintPath) {
+		env.GLOBAL_LINT_CONFIG_PATH = globalLintPath;
+	}
+
+	if (lintIgnoreLibraries) {
+		env.LINT_IGNORE_LIBRARIES = lintIgnoreLibraries;
+	}
+
 	loadBase();
 
 	// Options to control the language client
