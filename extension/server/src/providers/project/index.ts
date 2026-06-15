@@ -111,13 +111,11 @@ async function getProjectFileLimit() {
 	try {
 		const settings = await connection.workspace.getConfiguration(`vscode-rpgle`);
 		const configuredLimit = settings[projectFileLimitSetting];
-
-		if (Number.isInteger(configuredLimit) && configuredLimit > 0) {
-			return configuredLimit;
-		}
-	} catch (e) {}
-
-	return defaultProjectFileLimit;
+		return configuredLimit;
+	} catch (e) {
+		console.log(`Error fetching project file limit setting, using default (${defaultProjectFileLimit}).`, e);
+		return defaultProjectFileLimit;
+	}
 }
 
 async function updateIProj(uri: string) {
