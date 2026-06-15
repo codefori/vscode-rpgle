@@ -133,7 +133,7 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 				const dateStr = Date.now().toString().substr(-6);
 				const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
-				const fullPath = `${config.tempLibrary}/${randomFile}`;
+				const fullPath = `QTEMP/${randomFile}`;
 
 				console.log(`Temp OUTFILE: ${fullPath}`);
 
@@ -161,7 +161,7 @@ export function buildRequestHandlers(client: LanguageClient) {
 				const resultCode = outfileRes.code || 0;
 
 				if (resultCode === 0) {
-					const data: any[] = await content.getTable(config.tempLibrary, randomFile, randomFile, true);
+					const data: any[] = await content.getTable('QTEMP', randomFile, randomFile, true);
 
 					console.log(`Temp OUTFILE read. ${data.length} rows.`);
 
