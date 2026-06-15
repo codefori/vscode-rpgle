@@ -41,14 +41,29 @@ const errorDecorationType = vscode.window.createTextEditorDecorationType({
 });
 
 let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
+let currentErrorRanges: { range: vscode.Range; keyword: string }[] = [];
 
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
   let timeout: any = undefined;
 
-  // Register hover provider to show block info
+  // Register hover provider to show block info and error info
   const hoverProvider = vscode.languages.registerHoverProvider('rpgle', {
-    provideHover(document, position) {
+    provideHover(_document, position) {
+      // First check if hovering over an error (unmatched keyword)
+      for (const errorInfo of currentErrorRanges) {
+        if (errorInfo.range.contains(position)) {
+          const keyword = errorInfo.keyword.toUpperCase();
+          const markdown = new vscode.MarkdownString();
+          markdown.appendText(`⚠️ Unmatched ${keyword} statement\n\n`);
+          markdown.appendText('This ENDxx keyword has no matching opening block.\n\n');
+          markdown.appendText('If it is a DS subfield: use DCL-SUBF\n\n');
+          markdown.appendText('If it is a parameter: use DCL-PARM');
+          return new vscode.Hover(markdown);
+        }
+      }
+
+      // Then check if hovering over a matched block
       if (!currentBlockInfo) return undefined;
 
       // Check if cursor is on a highlighted keyword
@@ -96,7 +111,11 @@ function updateDecorations(editor: vscode.TextEditor) {
 
   // First, find and highlight ALL mismatched closing keywords in the document
   const allMatches = findAllMatches(text, document);
-  const allErrorRanges = findAllMismatchedClosingKeywords(document, allMatches);
+  const allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
+  const allErrorRanges = allErrorRangesWithInfo.map(e => e.range);
+
+  // Store error ranges for hover provider
+  currentErrorRanges = allErrorRangesWithInfo;
 
   // Always show errors in red
   editor.setDecorations(errorDecorationType, allErrorRanges);
@@ -261,9 +280,13 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   const afterKeyword = text.substring(matchOffset + matchLength);
   const beforeKeyword = text.substring(0, matchOffset);
 
-  // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, etc.)
+  // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, dcl-subf, dcl-parm, etc.)
   // ALL dcl- keywords indicate the next word is an identifier, not a keyword
-  // Pattern: dcl-s end pointer; dcl-proc end; dcl-pi myProc; etc.
+  // Examples:
+  //   dcl-s end pointer;        - standalone variable
+  //   dcl-proc end;             - procedure name
+  //   dcl-subf end int(10);     - data structure subfield with keyword name
+  //   dcl-parm end char(10);    - parameter with keyword name
   const declMatch = beforeKeyword.match(/\b(dcl-[a-z]+)\s+$/i);
   if (declMatch) {
     return true;
@@ -332,7 +355,7 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   return false;
 }
 
-function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
+function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
@@ -492,8 +515,8 @@ function findAllRelatedKeywords(
 function findAllMismatchedClosingKeywords(
   document: vscode.TextDocument,
   matches: { offset: number; word: string; length: number }[]
-): vscode.Range[] {
-  const errorRanges: vscode.Range[] = [];
+): { range: vscode.Range; keyword: string }[] {
+  const errorRanges: { range: vscode.Range; keyword: string }[] = [];
   const text = document.getText();
 
   // Check each closing keyword
@@ -507,7 +530,10 @@ function findAllMismatchedClosingKeywords(
       if (!isValid) {
         const start = document.positionAt(match.offset);
         const end = document.positionAt(match.offset + match.length);
-        errorRanges.push(new vscode.Range(start, end));
+        errorRanges.push({
+          range: new vscode.Range(start, end),
+          keyword: match.word
+        });
       }
     }
   }
@@ -636,7 +662,7 @@ function validateClosingKeyword(
 
 // Find the opening keyword for any closing keyword (similar to findMatchingOpenForClosing but more general)
 function findMatchingOpenForAnyClosing(
-  text: string,
+  _text: string,
   matches: { offset: number; word: string; length: number }[],
   closeIndex: number
 ): number {
