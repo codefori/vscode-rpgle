@@ -1,6 +1,5 @@
 import { FoldingRange, FoldingRangeParams, FoldingRangeKind } from 'vscode-languageserver';
 import { documents } from '.';
-import Document from '../../../../language/ile/document';
 import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
 import { RPGLE_BLOCK_PAIRS, BlockPair } from '../../../../language/utils/blockParser';
 
@@ -10,7 +9,6 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
   if (!document) return [];
 
   const text = document.getText();
-  const doc = new Document(text);
   const foldingRanges: FoldingRange[] = [];
 
   // Build regex pattern for all block keywords
@@ -18,11 +16,11 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
   });
-  
+
   // Sort keywords by length (longest first) to match longer keywords before shorter ones
   // This ensures 'end-proc' is matched before 'end'
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
-  
+
   // Escape hyphens in keywords for regex
   const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
 
@@ -32,20 +30,20 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
     word: string;
     line: number;
   }
-  
+
   const matches: Match[] = [];
   let match;
   regex.lastIndex = 0;
-  
+
   while ((match = regex.exec(text)) !== null) {
     const matchWord = match[0].toLowerCase();
-    
+
     // Skip matches inside comments or strings
     if (isInCommentOrString(text, match.index)) continue;
-    
+
     // Skip SELECT if inside SQL block
     if (matchWord === 'select' && isInSqlBlock(text, match.index)) continue;
-    
+
     const line = document.positionAt(match.index).line;
     matches.push({
       offset: match.index,
@@ -60,21 +58,43 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
     startLine: number;
     matchIndex: number;
   }
-  
+
   const stack: OpenBlock[] = [];
 
   // Process matches to find matching pairs
   for (let i = 0; i < matches.length; i++) {
     const current = matches[i];
-    
+
     // Find the corresponding block pair
-    const pair = RPGLE_BLOCK_PAIRS.find(p => 
+    const pair = RPGLE_BLOCK_PAIRS.find(p =>
       p.open.includes(current.word) || p.close.includes(current.word)
     );
-    
+
     if (!pair) continue;
 
     if (pair.open.includes(current.word)) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      // These create single-line declarations that don't require end-ds
+      if (current.word === 'dcl-ds') {
+        const lineStart = text.lastIndexOf('\n', current.offset) + 1;
+        const lineEnd = text.indexOf('\n', current.offset);
+        let lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+
+        // Strip comments before checking
+        const commentIndex = lineContent.indexOf('//');
+        if (commentIndex !== -1) {
+          lineContent = lineContent.substring(0, commentIndex);
+        }
+
+        lineContent = lineContent.toLowerCase();
+
+        // Skip if the line contains likeds() or likerec() - not a block opener
+        // Use regex to handle optional whitespace between keyword and opening paren
+        if (/likeds\s*\(/.test(lineContent) || /likerec\s*\(/.test(lineContent)) {
+          continue;
+        }
+      }
+
       // Opening keyword - push to stack
       stack.push({
         pair: pair,
@@ -90,7 +110,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
           // Check if 'END' is a valid closer for this block
           if (stack[j].pair.close.includes('end')) {
             const openBlock = stack[j];
-            
+
             // Create folding range only if block spans multiple lines
             if (current.line > openBlock.startLine) {
               foldingRanges.push(FoldingRange.create(
@@ -101,7 +121,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
                 FoldingRangeKind.Region
               ));
             }
-            
+
             // Remove matched block from stack
             stack.splice(j, 1);
             break;
@@ -112,7 +132,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
         for (let j = stack.length - 1; j >= 0; j--) {
           if (stack[j].pair.close.includes('enddo')) {
             const openBlock = stack[j];
-            
+
             // Create folding range only if block spans multiple lines
             if (current.line > openBlock.startLine) {
               foldingRanges.push(FoldingRange.create(
@@ -123,7 +143,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
                 FoldingRangeKind.Region
               ));
             }
-            
+
             // Remove matched block from stack
             stack.splice(j, 1);
             break;
@@ -132,7 +152,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
       } else {
         // Specific closing keyword (endif, endfor, endsl, end-proc, end-ds, etc.)
         // These can ONLY close their specific block type AND only if it's the last open block
-        
+
         // Find which pair this specific closer belongs to
         const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
           if (!p.close.includes(current.word)) return false;
@@ -142,7 +162,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
           const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
           return specificClosers.includes(current.word);
         });
-        
+
         if (closerPair && stack.length > 0) {
           // A specific closer can ONLY close the last block if it's of the correct type
           const lastBlock = stack[stack.length - 1];
@@ -157,7 +177,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
                 FoldingRangeKind.Region
               ));
             }
-            
+
             // Remove matched block from stack
             stack.pop();
           }
