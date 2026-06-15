@@ -195,3 +195,73 @@ test('ispec file fields definitions', async () => {
   expect(someVar).toBeDefined();
   expect(someVar.references.length).toBe(2);
 });
+
+test('ispec programRecord with name and DS', () => {
+  // "I#INFDS      DS" — name present + DS keyword → programRecord with real name
+  const line = `     I#INFDS      DS`;
+  const result = parseISpec(1, 0, line);
+  expect(result).toBeDefined();
+  expect(result.iType).toBe(`programRecord`);
+  expect(result.name).toBeDefined();
+  expect(result.name.value).toBe(`#INFDS`);
+});
+
+test('ispec programRecord with no name and DS', () => {
+  // "I            DS" — no name + DS keyword → programRecord with *N
+  const line = `     I            DS`;
+  const result = parseISpec(1, 0, line);
+  expect(result).toBeDefined();
+  expect(result.iType).toBe(`programRecord`);
+  expect(result.name).toBeDefined();
+  expect(result.name.value).toBe(`*N`);
+});
+
+test('ispec programRecord with name and SDS', () => {
+  // "IPSDS         SDS" — name present + SDS keyword → programRecord with real name
+  const line = `     ITE         SDS`;
+  const result = parseISpec(1, 0, line);
+  expect(result).toBeDefined();
+  expect(result.iType).toBe(`programRecord`);
+  expect(result.name).toBeDefined();
+  expect(result.name.value).toBe(`TE`);
+});
+
+test('ispec programRecord with no name and SDS', () => {
+  // "I             SDS" — no name + SDS keyword → programRecord with *N
+  const line = `     I           SDS`;
+  const result = parseISpec(1, 0, line);
+  expect(result).toBeDefined();
+  expect(result.iType).toBe(`programRecord`);
+  expect(result.name).toBeDefined();
+  expect(result.name.value).toBe(`*N`);
+});
+
+test('ispec programRecord with name and UDS', () => {
+  // "IPSDS         SDS" — name present + SDS keyword → programRecord with real name
+  const line = `     ITE         UDS`;
+  const result = parseISpec(1, 0, line);
+  expect(result).toBeDefined();
+  expect(result.iType).toBe(`programRecord`);
+  expect(result.name).toBeDefined();
+  expect(result.name.value).toBe(`TE`);
+});
+
+test('ispec programRecord with no name and UDS', () => {
+  // "I             SDS" — no name + SDS keyword → programRecord with *N
+  const line = `     I           UDS`;
+  const result = parseISpec(1, 0, line);
+  expect(result).toBeDefined();
+  expect(result.iType).toBe(`programRecord`);
+  expect(result.name).toBeDefined();
+  expect(result.name.value).toBe(`*N`);
+});
+
+test('ispec externalRecord with name and no DS', () => {
+  // "ICUSTOMER  AA" — name present, no DS/SDS → externalRecord
+  const line = `     ICUSTOMER  AA  01`;
+  const result = parseISpec(1, 0, line);
+  expect(result).toBeDefined();
+  expect(result.iType).toBe(`externalRecord`);
+  expect(result.name).toBeDefined();
+  expect(result.name.value).toBe(`CUSTOMER`);
+});

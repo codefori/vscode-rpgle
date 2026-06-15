@@ -1,6 +1,7 @@
 import Parser from "../ile/parser";
 import { Keywords } from "../parserTypes";
 import { Token } from "../types";
+import { NO_NAME } from "../ile/statement";
 
 function calculateToken(lineNumber: number, startingPos: number, value: string, type?: string): Token | undefined {
   let resultValue = value.trim();
@@ -294,14 +295,16 @@ export function parseISpec(lineNumber: number, lineIndex: number, content: strin
   let iType: "programRecord"|"programField"|"externalRecord"|"externalField"|undefined;
 
   const name = content.substring(6, 16).trimEnd();
+  const externalReserved = content.substring(15, 20).trim();
+  // DS or SDS or UDS in cols 16-18 indicates a program-described data structure record
+  const isProgramDS = externalReserved === `DS` || externalReserved === `SDS` || externalReserved === `UDS`;
 
-  if (name) {
-    const externalReserved = content.substring(15, 20).trim();
-    if (externalReserved) {
-      iType = `programRecord`;
-    } else {
-      iType = `externalRecord`;
-    }
+  if (isProgramDS) {
+    // DS/SDS present — always a programRecord, with or without a name
+    iType = `programRecord`;
+  } else if (name) {
+    // No DS/SDS but a name is present — externally described record
+    iType = `externalRecord`;
   } else {
     const sequencingIndicator = content.substring(16, 18).trim();
     if (sequencingIndicator) {
@@ -324,7 +327,7 @@ export function parseISpec(lineNumber: number, lineIndex: number, content: strin
     case `programRecord`:
       return {
         iType,
-        name: getPart(7, 16),
+        name: name ? getPart(7, 16) : calculateToken(lineNumber, lineIndex + 6, NO_NAME),
         logicalRelationship: getPart(16, 18),
         sequence: getPart(18, 19),
         number: getPart(19, 20),
