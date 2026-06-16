@@ -33,8 +33,7 @@ const decorationType = vscode.window.createTextEditorDecorationType({
 
 // Highlight style for mismatched closing keywords (errors)
 const errorDecorationType = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
-  border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
+  border: '2px solid rgba(255, 0, 0, 0.3)', // Red border
   borderRadius: '3px',
   fontWeight: 'bold',
   textDecoration: 'wavy underline red'
@@ -710,7 +709,7 @@ function findMatchingOpenForAnyClosing(
     if (openingPair) {
       // Special handling for dcl-ds: skip if it uses likeds() or likerec()
       // These create single-line declarations that don't require end-ds
-      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(_text, matches[i].offset)) {
         continue;
       }
 
