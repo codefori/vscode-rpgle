@@ -749,12 +749,16 @@ function findMatchingOpenForAnyClosing(
 
       if (closerPair && stack.length > 0) {
         // For specific closers, ONLY close the top of the stack
-        // Unlike generic closers, specific closers (endif, endfor, etc.) must close
-        // the immediately preceding block
-        // For error recovery: pop the top even if it doesn't match (the mismatch
-        // will be caught by validateClosingKeyword), allowing subsequent closers
-        // to find their correct matches
+        // Check if it matches - if so, this is a valid closure
+        // If not, it's a mismatch - pop anyway so subsequent closers can match correctly
+        const topPair = stack[stack.length - 1].pair;
+        const isMatch = (topPair === closerPair ||
+                        (topPair.close.includes(word) && closerPair.close.includes(word)));
+
         stack.pop();
+
+        // IMPORTANT: Mismatch doesn't get to search deeper in the stack
+        // It consumes the top block (for error recovery) but that's it
       }
     }
   }
@@ -949,77 +953,63 @@ function findMatchingOpen(
 ): number {
   const startWord = matches[startIndex].word;
 
-  // Special handling for 'END' - find the most recent compatible opening
-  if (startWord === 'end') {
-    // Build a stack to track all open blocks
-    const stack: { index: number; pair: BracketPair }[] = [];
+  // Use stack-based approach for ALL closing keywords to properly handle
+  // nested blocks and error recovery (mirrors findMatchingClose logic)
+  const stack: { index: number; pair: BracketPair }[] = [];
 
-    for (let i = 0; i < startIndex; i++) {
-      const word = matches[i].word;
+  for (let i = 0; i < startIndex; i++) {
+    const word = matches[i].word;
 
-      // Check if this word opens any block
-      const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
-      if (openingPair) {
-        // Special handling for dcl-ds: skip if it uses likeds() or likerec()
-        if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
-          continue; // Skip this dcl-ds, it's not a block opener
-        }
-
-        stack.push({ index: i, pair: openingPair });
+    // Check if this word opens any block
+    const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
+    if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue; // Skip this dcl-ds, it's not a block opener
       }
 
-      // Check if this word closes a block
-      // Determine if it's a generic or specific closer
-      const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
-        const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
-        return specificClosers.includes(word);
-      });
-
-      if (closerPair && stack.length > 0) {
-        // Specific closers - ONLY close the top of the stack
-        // For error recovery: pop the top even if it doesn't match
-        const topPair = stack[stack.length - 1].pair;
-
-        if (topPair.close.includes(word)) {
-          // This closer matches the top of the stack - pop it
-          stack.pop();
-        } else {
-          // Mismatch: pop the top anyway for error recovery
-          stack.pop();
-        }
-      } else if (word === 'end' || word === 'enddo') {
-        // Generic closers can search the stack
-        for (let j = stack.length - 1; j >= 0; j--) {
-          if (stack[j].pair.close.includes(word)) {
-            stack.splice(j, 1);
-            break;
-          }
-        }
-      }
+      stack.push({ index: i, pair: openingPair });
+      continue;
     }
 
-    // Find the most recent unclosed block that can be closed by 'END'
+    // Check if this word closes a block
+    if (word === 'end' || word === 'enddo') {
+      // Generic closers: search stack for matching block
+      for (let j = stack.length - 1; j >= 0; j--) {
+        if (stack[j].pair.close.includes(word)) {
+          stack.splice(j, 1);
+          break;
+        }
+      }
+    } else {
+      // Check if this word is actually a closing keyword
+      const closingPair = RPGLE_BLOCK_PAIRS.find(p => p.close.includes(word));
+
+      if (closingPair && stack.length > 0) {
+        // Specific closing keyword (endif, endfor, end-proc, etc.)
+        // ONLY close the top of the stack, maintaining proper LIFO discipline
+        // For error recovery: pop the top even if it doesn't match
+        stack.pop();
+      }
+      // else: word is neither opener nor closer (might be middle keyword) - ignore it
+    }
+  }
+
+  // Find the most recent unclosed block that can be closed by startWord
+  if (startWord === 'end' || startWord === 'enddo') {
+    // Generic closers: find any block that accepts this closer
     for (let j = stack.length - 1; j >= 0; j--) {
-      if (stack[j].pair.close.includes('end')) {
+      if (stack[j].pair.close.includes(startWord)) {
         return stack[j].index;
       }
     }
-
-    return -1;
-  }
-
-  // Standard logic for specific closing keywords (endif, enddo, etc.)
-  let depth = 1;
-
-  for (let i = startIndex - 1; i >= 0; i--) {
-    const word = matches[i].word;
-
-    if (pair.close.includes(word)) {
-      depth++;
-    } else if (pair.open.includes(word)) {
-      depth--;
-      if (depth === 0) {
-        return i;
+  } else {
+    // Specific closers: can ONLY close the last block if it's of the correct type
+    if (stack.length > 0) {
+      const lastBlock = stack[stack.length - 1];
+      // Check if the last unclosed block can be closed by this keyword
+      if (lastBlock.pair.close.includes(startWord)) {
+        return lastBlock.index;
       }
     }
   }
