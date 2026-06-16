@@ -692,7 +692,7 @@ function validateClosingKeyword(
 
 // Find the opening keyword for any closing keyword (similar to findMatchingOpenForClosing but more general)
 function findMatchingOpenForAnyClosing(
-  _text: string,
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   closeIndex: number
 ): number {
@@ -748,15 +748,13 @@ function findMatchingOpenForAnyClosing(
       });
 
       if (closerPair && stack.length > 0) {
-        // For specific closers, search the stack for a matching block type
-        // This maintains stack integrity by removing the block even when nesting is incorrect
-        // The validation of correctness happens in validateClosingKeyword
-        for (let j = stack.length - 1; j >= 0; j--) {
-          if (stack[j].pair === closerPair) {
-            stack.splice(j, 1);
-            break;
-          }
-        }
+        // For specific closers, ONLY close the top of the stack
+        // Unlike generic closers, specific closers (endif, endfor, etc.) must close
+        // the immediately preceding block
+        // For error recovery: pop the top even if it doesn't match (the mismatch
+        // will be caught by validateClosingKeyword), allowing subsequent closers
+        // to find their correct matches
+        stack.pop();
       }
     }
   }

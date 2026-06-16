@@ -11,6 +11,9 @@ dcl-s counter int(10);
 
 // This IF has a matching ENDIF - no error
 if counter > 10;
+   dow counter < 100;
+     counter += 1;
+    endif;
   counter = 0;
 endif;
 
