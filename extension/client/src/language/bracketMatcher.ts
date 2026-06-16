@@ -709,7 +709,7 @@ function findMatchingOpenForAnyClosing(
     if (openingPair) {
       // Special handling for dcl-ds: skip if it uses likeds() or likerec()
       // These create single-line declarations that don't require end-ds
-      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(_text, matches[i].offset)) {
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
         continue;
       }
 
@@ -885,23 +885,9 @@ function findMatchingClose(
     }
 
     // Check if this word closes a block
-    // For 'END', it closes the most recent block that accepts 'end' as closer
-    if (word === 'end') {
-      // Find the most recent block that can be closed by 'END'
-      for (let j = stack.length - 1; j >= 0; j--) {
-        if (stack[j].close.includes('end')) {
-          if (j === 0) {
-            // This END closes our target block
-            return i;
-          }
-          // Remove this block from stack
-          stack.splice(j, 1);
-          break;
-        }
-      }
-    } else {
-      // Specific closing keyword (endif, enddo, etc.)
-      // Find the most recent block that can be closed by this keyword
+    // For 'END' or 'ENDDO', find the most recent block that accepts it
+    if (word === 'end' || word === 'enddo') {
+      // Generic closers: search stack for matching block
       for (let j = stack.length - 1; j >= 0; j--) {
         if (stack[j].close.includes(word)) {
           if (j === 0) {
@@ -912,6 +898,17 @@ function findMatchingClose(
           stack.splice(j, 1);
           break;
         }
+      }
+    } else {
+      // Specific closing keyword (endif, endfor, etc.)
+      // ONLY closes the top of the stack
+      if (stack.length > 0) {
+        if (stack.length === 1 && stack[0].close.includes(word)) {
+          // This closes our target block
+          return i;
+        }
+        // Pop the top (even if mismatched - allows error recovery)
+        stack.pop();
       }
     }
   }
@@ -948,11 +945,22 @@ function findMatchingOpen(
       }
 
       // Check if this word closes a block
-      // Find the most recent block that can be closed by this keyword
-      for (let j = stack.length - 1; j >= 0; j--) {
-        if (stack[j].pair.close.includes(word)) {
-          stack.splice(j, 1);
-          break;
+      // Determine if it's a generic or specific closer
+      const closerPair = RPGLE_BLOCK_PAIRS.find(p => {
+        const specificClosers = p.close.filter(c => c !== 'end' && c !== 'enddo');
+        return specificClosers.includes(word);
+      });
+
+      if (closerPair && stack.length > 0) {
+        // Specific closers ONLY close the top of the stack
+        stack.pop();
+      } else if (word === 'end' || word === 'enddo') {
+        // Generic closers can search the stack
+        for (let j = stack.length - 1; j >= 0; j--) {
+          if (stack[j].pair.close.includes(word)) {
+            stack.splice(j, 1);
+            break;
+          }
         }
       }
     }
