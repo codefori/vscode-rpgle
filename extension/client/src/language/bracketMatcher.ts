@@ -900,22 +900,40 @@ function findMatchingClose(
         }
       }
     } else {
-      // Specific closing keyword (endif, endfor, end-proc, etc.)
-      // ONLY closes if it matches the top of the stack
-      if (stack.length > 0) {
-        const topPair = stack[stack.length - 1];
+      // Check if this word is actually a closing keyword
+      const closingPair = RPGLE_BLOCK_PAIRS.find(p => p.close.includes(word));
 
-        if (topPair.close.includes(word)) {
-          // This closer matches the top of the stack
-          if (stack.length === 1) {
-            // This closes our target block
-            return i;
+      if (closingPair) {
+        // Specific closing keyword (endif, endfor, end-proc, etc.)
+        // ONLY close the top of the stack, maintaining proper LIFO discipline
+        // For error recovery: pop the top even if it doesn't match (the mismatch
+        // will be caught by validateClosingKeyword), allowing subsequent closers
+        // to find their correct matches
+        if (stack.length > 0) {
+          const topPair = stack[stack.length - 1];
+
+          if (topPair.close.includes(word)) {
+            // This closer matches the top of the stack
+            if (stack.length === 1) {
+              // This closes our target block
+              return i;
+            }
+            // Pop this matched block
+            stack.pop();
+          } else {
+            // Mismatch: pop the top anyway for error recovery
+            // The mismatch will be highlighted by validateClosingKeyword
+            stack.pop();
+
+            // If stack is now empty, our target block was closed (incorrectly)
+            // Stop searching to avoid matching with unrelated blocks
+            if (stack.length === 0) {
+              return -1;
+            }
           }
-          // Pop this matched block
-          stack.pop();
         }
-        // If closer doesn't match top, don't pop - could be unmatched
       }
+      // else: word is neither opener nor closer (might be middle keyword like else/elseif/when) - ignore it
     }
   }
 
@@ -958,14 +976,17 @@ function findMatchingOpen(
       });
 
       if (closerPair && stack.length > 0) {
-        // Specific closers ONLY close if they match the top of the stack
+        // Specific closers - ONLY close the top of the stack
+        // For error recovery: pop the top even if it doesn't match
         const topPair = stack[stack.length - 1].pair;
 
         if (topPair.close.includes(word)) {
           // This closer matches the top of the stack - pop it
           stack.pop();
+        } else {
+          // Mismatch: pop the top anyway for error recovery
+          stack.pop();
         }
-        // If closer doesn't match top, don't pop - could be unmatched
       } else if (word === 'end' || word === 'enddo') {
         // Generic closers can search the stack
         for (let j = stack.length - 1; j >= 0; j--) {
