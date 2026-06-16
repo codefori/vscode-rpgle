@@ -116,6 +116,21 @@
 				"category": "RPGLE Fixed-Format",
 				"icon": "$(arrow-right)",
 				"when": "editorLangId == rpgle || editorLangId == rpg"
+			},
+			{
+				"command": "vscode-rpgle.commentStatement",
+				"title": "Comment RPG IV Source Line",
+				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.uncommentStatement",
+				"title": "Uncomment RPG IV Source Line",
+				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.toggleComment",
+				"title": "Toggle Line Comment",
+				"category": "RPGLE"
 			}
 		],
 		"keybindings": [
@@ -142,9 +157,27 @@
 				"key": "ctrl+]",
 				"mac": "ctrl+]",
 				"when": "editorLangId == rpgle || editorLangId == rpg"
+			},
+			{
+				"command": "vscode-rpgle.toggleComment",
+				"key": "ctrl+/",
+				"mac": "cmd+/",
+				"when": "editorTextFocus && (editorLangId == 'rpg' || editorLangId == 'rpgle' || editorLangId == 'sqlrpgle' || editorLangId == 'rpginc' || editorLangId == 'rpgleinc')"
 			}
 		],
 		"menus": {
+			"editor/context": [
+				{
+					"command": "vscode-rpgle.commentStatement",
+					"when": "resourceExtname =~ /\\.rpg(le)?|\\.sqlrpgle|\\.rpgleinc/i",
+					"group": "vscode-rpgle@1"
+				},
+				{
+					"command": "vscode-rpgle.uncommentStatement",
+					"when": "resourceExtname =~ /\\.rpg(le)?|\\.sqlrpgle|\\.rpgleinc/i",
+					"group": "vscode-rpgle@2"
+				}
+			],
 			"view/item/context": [
 				{
 					"command": "vscode-rpgle.openLintConfig",
