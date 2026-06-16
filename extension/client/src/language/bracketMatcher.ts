@@ -105,8 +105,7 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
 
 function updateDecorations(editor: vscode.TextEditor) {
   const document = editor.document;
-  const position = editor.selection.active;
-  const text = document.getText();
+
 
   // First, find and highlight ALL mismatched closing keywords in the document
   const allMatches = findAllMatches(text, document);
@@ -800,12 +799,6 @@ function findBlockIndices(
 ): number[] | undefined {
   const currentWord = matches[currentIndex].word;
 
-  // Determine if current keyword is opening, closing, or middle
-  const isOpen = pair.open.includes(currentWord);
-  const isClose = pair.close.includes(currentWord);
-  const isMiddle = pair.middle?.includes(currentWord);
-
-  // Special check for dcl-ds with likeds/likerec - it's NOT a block opener
   if (isOpen && currentWord === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[currentIndex].offset)) {
     // This is a single-line declaration, not a block opener
     return undefined;
@@ -900,15 +893,21 @@ function findMatchingClose(
         }
       }
     } else {
-      // Specific closing keyword (endif, endfor, etc.)
-      // ONLY closes the top of the stack
+      // Specific closing keyword (endif, endfor, end-proc, etc.)
+      // ONLY closes if it matches the top of the stack
       if (stack.length > 0) {
-        if (stack.length === 1 && stack[0].close.includes(word)) {
-          // This closes our target block
-          return i;
+        const topPair = stack[stack.length - 1];
+
+        if (topPair.close.includes(word)) {
+          // This closer matches the top of the stack
+          if (stack.length === 1) {
+            // This closes our target block
+            return i;
+          }
+          // Pop this matched block
+          stack.pop();
         }
-        // Pop the top (even if mismatched - allows error recovery)
-        stack.pop();
+        // If closer doesn't match top, don't pop - could be unmatched
       }
     }
   }
@@ -952,8 +951,14 @@ function findMatchingOpen(
       });
 
       if (closerPair && stack.length > 0) {
-        // Specific closers ONLY close the top of the stack
-        stack.pop();
+        // Specific closers ONLY close if they match the top of the stack
+        const topPair = stack[stack.length - 1].pair;
+
+        if (topPair.close.includes(word)) {
+          // This closer matches the top of the stack - pop it
+          stack.pop();
+        }
+        // If closer doesn't match top, don't pop - could be unmatched
       } else if (word === 'end' || word === 'enddo') {
         // Generic closers can search the stack
         for (let j = stack.length - 1; j >= 0; j--) {
