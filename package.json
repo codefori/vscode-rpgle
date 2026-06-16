@@ -183,7 +183,7 @@
 		"@types/node": "^20.19.41",
 		"@typescript-eslint/eslint-plugin": "^5.30.0",
 		"@typescript-eslint/parser": "^5.30.0",
-		"esbuild-loader": "^4.4.3",
+		"esbuild-loader": "^4.5.0",
 		"eslint": "^8.13.0",
 		"glob": "^7.2.0",
 		"merge-options": "^3.0.4",
