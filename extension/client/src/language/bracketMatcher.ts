@@ -105,6 +105,8 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
 
 function updateDecorations(editor: vscode.TextEditor) {
   const document = editor.document;
+  const position = editor.selection.active;
+  const text = document.getText();
 
 
   // First, find and highlight ALL mismatched closing keywords in the document
@@ -799,6 +801,12 @@ function findBlockIndices(
 ): number[] | undefined {
   const currentWord = matches[currentIndex].word;
 
+  // Determine if current keyword is opening, closing, or middle
+  const isOpen = pair.open.includes(currentWord);
+  const isClose = pair.close.includes(currentWord);
+  const isMiddle = pair.middle?.includes(currentWord);
+
+  // Special check for dcl-ds with likeds/likerec - it's NOT a block opener
   if (isOpen && currentWord === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[currentIndex].offset)) {
     // This is a single-line declaration, not a block opener
     return undefined;
