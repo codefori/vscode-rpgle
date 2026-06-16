@@ -368,8 +368,8 @@ function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatc
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
 
   // Use word boundary that works with hyphens: (?<![a-zA-Z0-9-]) and (?![a-zA-Z0-9-])
-  // Or simpler: match the keyword followed by non-alphanumeric-hyphen character
-  const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
+  // Standard \b doesn't work with hyphens - it treats "end-proc" as two words
+  const regex = new RegExp(`(?<![a-zA-Z0-9-])(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})(?![a-zA-Z0-9-])`, 'gi');
   const matches: BlockMatch[] = [];
 
   let match;
