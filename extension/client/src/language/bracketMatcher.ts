@@ -108,7 +108,6 @@ function updateDecorations(editor: vscode.TextEditor) {
   const position = editor.selection.active;
   const text = document.getText();
 
-
   // First, find and highlight ALL mismatched closing keywords in the document
   const allMatches = findAllMatches(text, document);
   const allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
