@@ -7,3 +7,8 @@ dist
 out
 tsconfig.tsbuildinfo
 tests/private
+
+# Local test files (not for repo)
+ASKDATE.RPGLE
+test_*.rpgle
+PR-*.md
