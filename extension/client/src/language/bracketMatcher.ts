@@ -4,6 +4,9 @@ import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/u
 
 type BracketPair = BlockPair;
 
+// Configuration key for bracket highlighting
+const CONFIG_KEY = 'bracketHighlightingEnabled';
+
 // Comprehensive list of SQL keywords that might conflict with RPG keywords
 // These keywords will be excluded from bracket matching when inside EXEC SQL blocks
 const SQL_KEYWORDS = [
@@ -23,27 +26,69 @@ const SQL_KEYWORDS = [
 ];
 
 // Highlight style for matched brackets
-const decorationType = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
-  border: '1px solid rgba(255, 200, 0, 0.6)', // Darker yellow border
-  borderRadius: '3px',
-  fontWeight: 'bold', // Make text bold
-  fontStyle: 'italic' // Make text italic
-});
+let decorationType: vscode.TextEditorDecorationType | undefined;
 
 // Highlight style for mismatched closing keywords (errors)
-const errorDecorationType = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
-  border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
-  borderRadius: '3px',
-  fontWeight: 'bold',
-  textDecoration: 'wavy underline red'
-});
+let errorDecorationType: vscode.TextEditorDecorationType | undefined;
 
 let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
 
+// Store disposables for cleanup
+let bracketMatcherDisposables: vscode.Disposable[] = [];
+
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
+  // Listen for configuration changes (always register this listener)
+  const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+    if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY)) {
+      const newConfig = vscode.workspace.getConfiguration('vscode-rpgle');
+      const newEnabled = newConfig.get<boolean>(CONFIG_KEY, true);
+
+      if (!newEnabled) {
+        // Feature disabled - dispose and clear decorations
+        disposeBracketMatcher();
+      } else {
+        // Feature enabled - activate if not already active
+        if (bracketMatcherDisposables.length === 0) {
+          activateBracketMatcher();
+        }
+      }
+    }
+  });
+  context.subscriptions.push(configChangeDisposable);
+
+  // Check if feature is enabled initially
+  const config = vscode.workspace.getConfiguration('vscode-rpgle');
+  const isEnabled = config.get<boolean>(CONFIG_KEY, true);
+
+  if (isEnabled) {
+    activateBracketMatcher();
+  }
+}
+
+// Activate the bracket matching feature
+function activateBracketMatcher() {
+  // Create decoration types if they don't exist
+  if (!decorationType) {
+    decorationType = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
+      border: '1px solid rgba(255, 200, 0, 0.6)', // Darker yellow border
+      borderRadius: '3px',
+      fontWeight: 'bold', // Make text bold
+      fontStyle: 'italic' // Make text italic
+    });
+  }
+
+  if (!errorDecorationType) {
+    errorDecorationType = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
+      border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
+      borderRadius: '3px',
+      fontWeight: 'bold',
+      textDecoration: 'wavy underline red'
+    });
+  }
+
   let timeout: any = undefined;
 
   // Register hover provider to show block info
@@ -63,10 +108,10 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(hoverProvider);
+  bracketMatcherDisposables.push(hoverProvider);
 
   // Update decorations when selection changes
-  vscode.window.onDidChangeTextEditorSelection(event => {
+  const selectionChangeDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
     const editor = event.textEditor;
     if (editor && editor.document.languageId === 'rpgle') {
       if (timeout) {
@@ -74,14 +119,16 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
       }
       timeout = setTimeout(() => updateDecorations(editor), 100);
     }
-  }, null, context.subscriptions);
+  });
+  bracketMatcherDisposables.push(selectionChangeDisposable);
 
   // Update decorations when active editor changes
-  vscode.window.onDidChangeActiveTextEditor(editor => {
+  const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
     if (editor && editor.document.languageId === 'rpgle') {
       updateDecorations(editor);
     }
-  }, null, context.subscriptions);
+  });
+  bracketMatcherDisposables.push(editorChangeDisposable);
 
   // Initialize for current editor
   if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
@@ -89,7 +136,34 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
   }
 }
 
+// Dispose of bracket matcher resources
+function disposeBracketMatcher() {
+  // Clear decorations from all visible editors
+  vscode.window.visibleTextEditors.forEach(editor => {
+    if (editor.document.languageId === 'rpgle') {
+      if (decorationType) {
+        editor.setDecorations(decorationType, []);
+      }
+      if (errorDecorationType) {
+        editor.setDecorations(errorDecorationType, []);
+      }
+    }
+  });
+
+  // Dispose all tracked disposables
+  bracketMatcherDisposables.forEach(d => d.dispose());
+  bracketMatcherDisposables = [];
+
+  // Clear current block info
+  currentBlockInfo = undefined;
+}
+
 function updateDecorations(editor: vscode.TextEditor) {
+  // Check if decorations are initialized (feature is enabled)
+  if (!decorationType || !errorDecorationType) {
+    return;
+  }
+
   const document = editor.document;
   const position = editor.selection.active;
   const text = document.getText();
@@ -102,7 +176,13 @@ function updateDecorations(editor: vscode.TextEditor) {
   editor.setDecorations(errorDecorationType, allErrorRanges);
 
   // Get word at cursor position for block highlighting
-  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z][\w-]*/);
+  // Include RPG IV special characters and international CCSID variants:
+  // CCSID 37: #, $, @
+  // CCSID 277 (Norwegian/Danish): Æ, æ, Ø, ø
+  // CCSID 273 (German): §
+  // CCSID 280 (Italian): §, £
+  // CCSID 297 (French): £, à, À
+  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/);
   if (!wordRange) {
     editor.setDecorations(decorationType, []);
     currentBlockInfo = undefined;
@@ -144,7 +224,7 @@ function updateDecorations(editor: vscode.TextEditor) {
 
     if (currentIndex !== -1) {
       // Use findMatchingOpenForClosing to determine which block this closes
-      const openIndex = findMatchingOpenForClosing(allMatches, currentIndex, word);
+      const openIndex = findMatchingOpenForClosing(text, allMatches, currentIndex, word);
       if (openIndex !== -1) {
         const openWord = allMatches[openIndex].word;
         matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
@@ -345,9 +425,20 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   // This ensures 'end-proc' is matched before 'end'
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
 
-  // Use word boundary that works with hyphens: (?<![a-zA-Z0-9-]) and (?![a-zA-Z0-9-])
-  // Or simpler: match the keyword followed by non-alphanumeric-hyphen character
-  const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
+  // Custom word boundary that accounts for RPG IV special characters and international CCSID variants
+  // These characters are valid in RPG IV identifiers, so we need to exclude them from matches
+  // Examples: Wrk@End, #endif, §Betrag, £TaxAmt, àFeld should NOT match embedded keywords
+  // CCSID 37: #, $, @
+  // CCSID 277 (Norwegian/Danish): Æ, æ, Ø, ø
+  // CCSID 273 (German): §
+  // CCSID 280 (Italian): §, £
+  // CCSID 297 (French): £, à, À
+  // Pattern: (?<![A-Za-z0-9_#@$§£ÆæØøàÀ-])keyword(?![A-Za-z0-9_#@$§£ÆæØøàÀ-])
+  const rpgIdentifierChars = '[A-Za-z0-9_#@$§£ÆæØøàÀ-]';
+  const regex = new RegExp(
+    `(?<!${rpgIdentifierChars})(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})(?!${rpgIdentifierChars})`,
+    'gi'
+  );
   const matches: BlockMatch[] = [];
 
   let match;
@@ -384,16 +475,41 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   return matches;
 }
 
+// Helper function to strip comments from a line
+function stripComments(line: string): string {
+  // Remove // comments
+  const commentIndex = line.indexOf('//');
+  if (commentIndex !== -1) {
+    return line.substring(0, commentIndex);
+  }
+  return line;
+}
+
+// Helper function to check if dcl-ds line has likeds() or likerec()
+function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
+  const lineStart = text.lastIndexOf('\n', offset) + 1;
+  const lineEnd = text.indexOf('\n', offset);
+  const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+
+  // Strip comments before checking
+  const lineWithoutComments = stripComments(lineContent).toLowerCase();
+
+  // Check if the line contains likeds() or likerec()
+  return /likeds\s*\(/.test(lineWithoutComments) || /likerec\s*\(/.test(lineWithoutComments);
+}
+
 // Helper function specifically for finding the opening block for an END keyword
 function findMatchingOpenForEnd(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   endIndex: number
 ): number {
-  return findMatchingOpenForClosing(matches, endIndex, 'end');
+  return findMatchingOpenForClosing(text, matches, endIndex, 'end');
 }
 
 // Helper function for finding the opening block for any closing keyword
 function findMatchingOpenForClosing(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   closeIndex: number,
   closingWord: string
@@ -407,6 +523,12 @@ function findMatchingOpenForClosing(
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      // These create single-line declarations that don't require end-ds
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue;
+      }
+
       stack.push({ index: i, pair: openingPair });
     }
 
@@ -473,7 +595,7 @@ function findAllRelatedKeywords(
   if (currentIndex === -1) return [startRange];
 
   // Find block containing current keyword
-  const blockIndices = findBlockIndices(allMatches, currentIndex, pair);
+  const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
   if (!blockIndices) return [startRange];
 
   // Convert indices to ranges
@@ -539,7 +661,7 @@ function findAllRelatedKeywordsWithValidation(
   if (currentIndex === -1) return { validRanges: [startRange], errorRanges: [] };
 
   // Find block containing current keyword
-  const blockIndices = findBlockIndices(allMatches, currentIndex, pair);
+  const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
   if (!blockIndices) return { validRanges: [startRange], errorRanges: [] };
 
   // Validate all closing keywords in the block
@@ -651,6 +773,12 @@ function findMatchingOpenForAnyClosing(
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      // These create single-line declarations that don't require end-ds
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue;
+      }
+
       stack.push({ index: i, pair: openingPair });
     }
 
@@ -733,6 +861,7 @@ function findMatchingOpenForAnyClosing(
 
 // Find all indices of keywords belonging to the same block
 function findBlockIndices(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   currentIndex: number,
   pair: BracketPair
@@ -744,22 +873,28 @@ function findBlockIndices(
   const isClose = pair.close.includes(currentWord);
   const isMiddle = pair.middle?.includes(currentWord);
 
+  // Special check for dcl-ds with likeds/likerec - it's NOT a block opener
+  if (isOpen && currentWord === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[currentIndex].offset)) {
+    // This is a single-line declaration, not a block opener
+    return undefined;
+  }
+
   let openIndex = -1;
   let closeIndex = -1;
 
   if (isOpen) {
     // If opening, find matching close
     openIndex = currentIndex;
-    closeIndex = findMatchingClose(matches, currentIndex, pair);
+    closeIndex = findMatchingClose(text, matches, currentIndex, pair);
   } else if (isClose) {
     // If closing, find matching open
     closeIndex = currentIndex;
-    openIndex = findMatchingOpen(matches, currentIndex, pair);
+    openIndex = findMatchingOpen(text, matches, currentIndex, pair);
   } else if (isMiddle) {
     // If middle keyword, find both open and close
-    openIndex = findMatchingOpen(matches, currentIndex, pair);
+    openIndex = findMatchingOpen(text, matches, currentIndex, pair);
     if (openIndex !== -1) {
-      closeIndex = findMatchingClose(matches, openIndex, pair);
+      closeIndex = findMatchingClose(text, matches, openIndex, pair);
     }
   }
 
@@ -793,6 +928,7 @@ function findBlockIndices(
 
 // Find closing keyword index for an opening keyword
 function findMatchingClose(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   openIndex: number,
   pair: BracketPair
@@ -807,6 +943,11 @@ function findMatchingClose(
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue; // Skip this dcl-ds, it's not a block opener
+      }
+
       stack.push(openingPair);
       continue;
     }
@@ -848,6 +989,7 @@ function findMatchingClose(
 
 // Find opening keyword index for a closing or middle keyword
 function findMatchingOpen(
+  text: string,
   matches: { offset: number; word: string; length: number }[],
   startIndex: number,
   pair: BracketPair
@@ -865,6 +1007,11 @@ function findMatchingOpen(
       // Check if this word opens any block
       const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
       if (openingPair) {
+        // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+        if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+          continue; // Skip this dcl-ds, it's not a block opener
+        }
+
         stack.push({ index: i, pair: openingPair });
       }
 

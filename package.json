@@ -60,6 +60,11 @@
 						"All messages including debug output"
 					],
 					"description": "Controls the verbosity of RPGLE language server logging output."
+				},
+				"vscode-rpgle.bracketHighlightingEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable bracket/block highlighting and hover information in RPGLE editors."
 				}
 			}
 		},
@@ -116,6 +121,21 @@
 				"category": "RPGLE Fixed-Format",
 				"icon": "$(arrow-right)",
 				"when": "editorLangId == rpgle || editorLangId == rpg"
+			},
+			{
+				"command": "vscode-rpgle.commentStatement",
+				"title": "Comment RPG IV Source Line",
+				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.uncommentStatement",
+				"title": "Uncomment RPG IV Source Line",
+				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.toggleComment",
+				"title": "Comment (toggle)",
+				"category": "RPGLE"
 			}
 		],
 		"keybindings": [
@@ -142,9 +162,22 @@
 				"key": "ctrl+]",
 				"mac": "ctrl+]",
 				"when": "editorLangId == rpgle || editorLangId == rpg"
+			},
+			{
+				"command": "vscode-rpgle.toggleComment",
+				"key": "ctrl+/",
+				"mac": "cmd+/",
+				"when": "editorTextFocus && (editorLangId == 'rpg' || editorLangId == 'rpgle' || editorLangId == 'sqlrpgle' || editorLangId == 'rpginc' || editorLangId == 'rpgleinc')"
 			}
 		],
 		"menus": {
+			"editor/context": [
+				{
+					"command": "vscode-rpgle.toggleComment",
+					"when": "resourceExtname =~ /\\.rpg(le)?|\\.sqlrpgle|\\.rpgleinc/i",
+					"group": "9_cutcopypaste@100"
+				}
+			],
 			"view/item/context": [
 				{
 					"command": "vscode-rpgle.openLintConfig",
