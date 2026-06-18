@@ -4,28 +4,73 @@ import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/u
 
 type BracketPair = BlockPair;
 
+// Configuration key for bracket highlighting
+const CONFIG_KEY = 'bracketHighlightingEnabled';
+
 // Highlight style for matched brackets
-const decorationType = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
-  border: '1px solid rgba(255, 200, 0, 0.6)', // Darker yellow border
-  borderRadius: '3px',
-  fontWeight: 'bold', // Make text bold
-  fontStyle: 'italic' // Make text italic
-});
+let decorationType: vscode.TextEditorDecorationType | undefined;
 
 // Highlight style for mismatched closing keywords (errors)
-const errorDecorationType = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
-  border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
-  borderRadius: '3px',
-  fontWeight: 'bold',
-  textDecoration: 'wavy underline red'
-});
+let errorDecorationType: vscode.TextEditorDecorationType | undefined;
 
 let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
 
+// Store disposables for cleanup
+let bracketMatcherDisposables: vscode.Disposable[] = [];
+
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
+  // Listen for configuration changes (always register this listener)
+  const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+    if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY)) {
+      const newConfig = vscode.workspace.getConfiguration('vscode-rpgle');
+      const newEnabled = newConfig.get<boolean>(CONFIG_KEY, true);
+
+      if (!newEnabled) {
+        // Feature disabled - dispose and clear decorations
+        disposeBracketMatcher();
+      } else {
+        // Feature enabled - activate if not already active
+        if (bracketMatcherDisposables.length === 0) {
+          activateBracketMatcher();
+        }
+      }
+    }
+  });
+  context.subscriptions.push(configChangeDisposable);
+
+  // Check if feature is enabled initially
+  const config = vscode.workspace.getConfiguration('vscode-rpgle');
+  const isEnabled = config.get<boolean>(CONFIG_KEY, true);
+
+  if (isEnabled) {
+    activateBracketMatcher();
+  }
+}
+
+// Activate the bracket matching feature
+function activateBracketMatcher() {
+  // Create decoration types if they don't exist
+  if (!decorationType) {
+    decorationType = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
+      border: '1px solid rgba(255, 200, 0, 0.6)', // Darker yellow border
+      borderRadius: '3px',
+      fontWeight: 'bold', // Make text bold
+      fontStyle: 'italic' // Make text italic
+    });
+  }
+
+  if (!errorDecorationType) {
+    errorDecorationType = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
+      border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
+      borderRadius: '3px',
+      fontWeight: 'bold',
+      textDecoration: 'wavy underline red'
+    });
+  }
+
   let timeout: any = undefined;
 
   // Register hover provider to show block info
@@ -45,10 +90,10 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(hoverProvider);
+  bracketMatcherDisposables.push(hoverProvider);
 
   // Update decorations when selection changes
-  vscode.window.onDidChangeTextEditorSelection(event => {
+  const selectionChangeDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
     const editor = event.textEditor;
     if (editor && editor.document.languageId === 'rpgle') {
       if (timeout) {
@@ -56,14 +101,16 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
       }
       timeout = setTimeout(() => updateDecorations(editor), 100);
     }
-  }, null, context.subscriptions);
+  });
+  bracketMatcherDisposables.push(selectionChangeDisposable);
 
   // Update decorations when active editor changes
-  vscode.window.onDidChangeActiveTextEditor(editor => {
+  const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
     if (editor && editor.document.languageId === 'rpgle') {
       updateDecorations(editor);
     }
-  }, null, context.subscriptions);
+  });
+  bracketMatcherDisposables.push(editorChangeDisposable);
 
   // Initialize for current editor
   if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
@@ -71,7 +118,34 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
   }
 }
 
+// Dispose of bracket matcher resources
+function disposeBracketMatcher() {
+  // Clear decorations from all visible editors
+  vscode.window.visibleTextEditors.forEach(editor => {
+    if (editor.document.languageId === 'rpgle') {
+      if (decorationType) {
+        editor.setDecorations(decorationType, []);
+      }
+      if (errorDecorationType) {
+        editor.setDecorations(errorDecorationType, []);
+      }
+    }
+  });
+
+  // Dispose all tracked disposables
+  bracketMatcherDisposables.forEach(d => d.dispose());
+  bracketMatcherDisposables = [];
+
+  // Clear current block info
+  currentBlockInfo = undefined;
+}
+
 function updateDecorations(editor: vscode.TextEditor) {
+  // Check if decorations are initialized (feature is enabled)
+  if (!decorationType || !errorDecorationType) {
+    return;
+  }
+
   const document = editor.document;
   const position = editor.selection.active;
   const text = document.getText();
@@ -84,7 +158,8 @@ function updateDecorations(editor: vscode.TextEditor) {
   editor.setDecorations(errorDecorationType, allErrorRanges);
 
   // Get word at cursor position for block highlighting
-  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z][\w-]*/);
+  // Include RPG IV special characters (#, @, $) in the word pattern
+  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$][\w#@$-]*/);
   if (!wordRange) {
     editor.setDecorations(decorationType, []);
     currentBlockInfo = undefined;
@@ -244,9 +319,15 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   // This ensures 'end-proc' is matched before 'end'
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
 
-  // Use word boundary that works with hyphens: (?<![a-zA-Z0-9-]) and (?![a-zA-Z0-9-])
-  // Or simpler: match the keyword followed by non-alphanumeric-hyphen character
-  const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
+  // Custom word boundary that accounts for RPG IV special characters (#, @, $)
+  // These characters are valid in RPG IV identifiers, so we need to exclude them
+  // from matches (e.g., Wrk@End, #endif, Wrk$End should NOT match)
+  // Pattern: (?<![A-Za-z0-9_#@$-])keyword(?![A-Za-z0-9_#@$-])
+  const rpgIdentifierChars = '[A-Za-z0-9_#@$-]';
+  const regex = new RegExp(
+    `(?<!${rpgIdentifierChars})(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})(?!${rpgIdentifierChars})`,
+    'gi'
+  );
   const matches: BlockMatch[] = [];
 
   let match;
