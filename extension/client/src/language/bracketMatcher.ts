@@ -93,7 +93,7 @@ function activateBracketMatcher() {
 
   // Register hover provider to show block info
   const hoverProvider = vscode.languages.registerHoverProvider('rpgle', {
-    provideHover(document, position) {
+    provideHover(_document, position) {
       if (!currentBlockInfo) return undefined;
 
       // Check if cursor is on a highlighted keyword
@@ -412,7 +412,7 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   return false;
 }
 
-function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
+function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
@@ -1055,6 +1055,6 @@ function findMatchingOpen(
 }
 
 export function deactivateBracketMatcher() {
-  decorationType.dispose();
-  errorDecorationType.dispose();
+  decorationType?.dispose();
+  errorDecorationType?.dispose();
 }
