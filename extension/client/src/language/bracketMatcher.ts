@@ -158,8 +158,13 @@ function updateDecorations(editor: vscode.TextEditor) {
   editor.setDecorations(errorDecorationType, allErrorRanges);
 
   // Get word at cursor position for block highlighting
-  // Include RPG IV special characters (#, @, $) in the word pattern
-  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$][\w#@$-]*/);
+  // Include RPG IV special characters and international CCSID variants:
+  // CCSID 37: #, $, @
+  // CCSID 277 (Norwegian/Danish): Æ, æ, Ø, ø
+  // CCSID 273 (German): §
+  // CCSID 280 (Italian): §, £
+  // CCSID 297 (French): £, à, À
+  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/);
   if (!wordRange) {
     editor.setDecorations(decorationType, []);
     currentBlockInfo = undefined;
@@ -319,11 +324,16 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   // This ensures 'end-proc' is matched before 'end'
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
 
-  // Custom word boundary that accounts for RPG IV special characters (#, @, $)
-  // These characters are valid in RPG IV identifiers, so we need to exclude them
-  // from matches (e.g., Wrk@End, #endif, Wrk$End should NOT match)
-  // Pattern: (?<![A-Za-z0-9_#@$-])keyword(?![A-Za-z0-9_#@$-])
-  const rpgIdentifierChars = '[A-Za-z0-9_#@$-]';
+  // Custom word boundary that accounts for RPG IV special characters and international CCSID variants
+  // These characters are valid in RPG IV identifiers, so we need to exclude them from matches
+  // Examples: Wrk@End, #endif, §Betrag, £TaxAmt, àFeld should NOT match embedded keywords
+  // CCSID 37: #, $, @
+  // CCSID 277 (Norwegian/Danish): Æ, æ, Ø, ø
+  // CCSID 273 (German): §
+  // CCSID 280 (Italian): §, £
+  // CCSID 297 (French): £, à, À
+  // Pattern: (?<![A-Za-z0-9_#@$§£ÆæØøàÀ-])keyword(?![A-Za-z0-9_#@$§£ÆæØøàÀ-])
+  const rpgIdentifierChars = '[A-Za-z0-9_#@$§£ÆæØøàÀ-]';
   const regex = new RegExp(
     `(?<!${rpgIdentifierChars})(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})(?!${rpgIdentifierChars})`,
     'gi'
