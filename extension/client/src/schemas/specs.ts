@@ -267,7 +267,45 @@ export const opmSpecs: {[spec: string]: SpecFieldDef[]} = {
     {start: 34, end: 42, name: `Reserved`, id: `reserved`}
   ],
   H: [
-    {start: 6, end: 73, name: `Control Options`, id: `options`}
+    {start: 6, end: 6, name: `Form Type`, id: `formType`},
+    {start: 15, end: 15, name: `Debug`, id: `debug`, values: [
+      { value: ``, text: `DEBUG and DUMP operations are not used. Compiler-generated symbols are not placed in the symbol table.`},
+      { value: `1`, text: `DEBUG and DUMP operations are used. Compiler-generated symbols are placed in the symbol table.`}
+    ]},
+    {start: 18, end: 18, name: `Currency Symbol`, id: `currencySymbol`},
+    {start: 19, end: 19, name: `Date Format (User Dates)`, id: `dateFormat`, values: [
+      { value: ``, text: `Month/day/year format (mmddyy) if position 21 is blank. If position 21 contains D, I, or J, day/month/year (ddmmyy) is used.`},
+      { value: `M`, text: `Month/day/year (mmddyy). Separator depends on positions 20 or 21.`},
+      { value: `D`, text: `Day/month/year (ddmmyy). Separator depends on positions 20 or 21.`},
+      { value: `Y`, text: `Year/month/day (yymmdd). Separator depends on positions 20 or 21.`}
+    ]},
+    {start: 20, end: 20, name: `Date Edit (Y Edit Code)`, id: `dateEdit`},
+    {start: 21, end: 21, name: `Decimal Notation`, id: `decimalNotation`, values: [
+      { value: ``, text: `Uses period as decimal notation and comma for separators. If position 19 is blank, uses mmddyy. If position 20 is blank, uses slash (/) separator for date.`},
+      { value: `I`, text: `Uses comma as decimal notation and period as separator. If position 19 is blank, uses ddmmyy. If position 20 is blank, uses period (.) separator for date.`},
+      { value: `J`, text: `Uses comma as decimal notation and period as separator. If position 19 is blank, uses ddmmyy. If position 20 is blank, uses period (.) separator for date.`},
+      { value: `D`, text: `Uses period as decimal notation and comma as separator. If position 19 is blank, uses ddmmyy. If position 20 is blank, uses slash (/) separator for date.`}
+    ]},
+    {start: 26, end: 26, name: `Alternate Collating Sequence`, id: `altCollatingSequence`, values: [
+      { value: ``, text: `Normal collating sequence is used.`},
+      { value: `S`, text: `Alternate collating sequence is used.`}
+    ]},
+    {start: 40, end: 40, name: `Sign Handling`, id: `signHandling`, values: [
+      { value: ``, text: `Sign is always forced on input and output of zoned numeric fields.`}
+    ]},
+    {start: 41, end: 41, name: `Forms Alignment`, id: `formsAlignment`, values: [
+      { value: ``, text: `First line is printed only once.`},
+      { value: `1`, text: `First line can be printed repeatedly.`}
+    ]},
+    {start: 43, end: 43, name: `File Translation`, id: `fileTranslation`, values: [
+      { value: ``, text: `No file translation is requested.`},
+      { value: `F`, text: `Files are to be translated.`}
+    ]},
+    {start: 57, end: 57, name: `Transparency Check`, id: `transparencyCheck`, values: [
+      { value: ``, text: `No check for DBCS in literals.`},
+      { value: `1`, text: `Check for DBCS in literals.`}
+    ]},
+    {start: 75, end: 80, name: `Program Identification`, id: `programId`}
   ],
   I: [
     {start: 6, end: 13, name: `Filename/Structure`, id: `fileName`},
@@ -297,12 +335,12 @@ export const opmSpecs: {[spec: string]: SpecFieldDef[]} = {
   ]
 };
 
-// OPM RPG III rulers (different from RPGLE)
+// OPM RPG III rulers (different from ILE RPG IV)
 export const opmSpecRulers: {[spec: string]: string} = {
   C: `.....CL0N01N02N03Factor1+++OpcdeFactor2+++Result+++LenDXHiLoEq........`,
   E: `.....EFromfile++To-file+++++XxNEnLEnAlternating...........`,
   F: `.....FFilename+IPEASFBBBBLLLLLLLMKAAAAAASSSSSKKKKKSSSSS++CC`,
-  H: `.....H.........................................................Keywords`,
+  H: `.....H........D..$Y/D....A.............SF.T.............C.................PgmId6`,
   I: `.....IFilename+SqNODataarea+++++++++PDPFROMT0DField+++++++++++++++....`,
   O: `.....OFilename+DTAAIndIndIndField++++EBPAAADCONSTANT/EDITWORD+++++++...`
 };
