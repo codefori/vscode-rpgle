@@ -339,7 +339,7 @@ export const opmSpecs: {[spec: string]: SpecFieldDef[]} = {
 export const opmSpecRulers: {[spec: string]: string} = {
   C: `.....CL0N01N02N03Factor1+++OpcdeFactor2+++Result+++LenDXHiLoEq........`,
   E: `.....EFromfile++To-file+++++XxNEnLEnAlternating...........`,
-  F: `.....FFilename+IPEASFBBBBLLLLLLLMKAAAAAASSSSSKKKKKSSSSS++CC`,
+  F: `.....FFilenameTDESF....RLenLKLAOOvKLocXDevice+......CRtnNm6......A....FC..Cmnts6`,
   H: `.....H........D..$Y/D....A.............SF.T.............C.................PgmId6`,
   I: `.....IFilename+SqNODataarea+++++++++PDPFROMT0DField+++++++++++++++....`,
   O: `.....OFilename+DTAAIndIndIndField++++EBPAAADCONSTANT/EDITWORD+++++++...`
