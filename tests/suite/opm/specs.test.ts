@@ -71,4 +71,16 @@ describe("Specs Parser", () => {
     expect(constantSpec.described).toBe("constant");
     expect(constantSpec.constantName.value).toBe("CRTLF");
   });
+
+  it('I DS with no name gets *N', () => {
+    const line = `     I            DS`;
+    const iSpec = parseSpecification(line) as InputDataStructureEntry;
+
+    expect(iSpec).toBeDefined();
+    expect(iSpec.type).toBe("input");
+    expect(iSpec.subtype).toBe("record");
+    expect(iSpec.described).toBe("structure");
+    expect(iSpec.name).toBeDefined();
+    expect(iSpec.name.value).toBe("*N");
+  });
 });
