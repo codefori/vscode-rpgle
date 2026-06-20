@@ -1,5 +1,5 @@
 import { DocumentSymbol, DocumentSymbolParams, Range, SymbolKind } from 'vscode-languageserver';
-import { documents, parser, prettyKeywords, getParser } from '.';
+import { documents, prettyKeywords, getParser } from '.';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import Document from '../../../../language/ile/document';
@@ -130,6 +130,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 	};
 
 	if (document) {
+		const parser = getParser(currentPath);
 		const doc = await parser.getDocs(currentPath, document.getText());
 		const text = document.getText();
 

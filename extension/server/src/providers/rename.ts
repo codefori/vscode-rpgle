@@ -1,5 +1,5 @@
 
-import { documents, getWordRangeAtPosition, parser } from '.';
+import { documents, getWordRangeAtPosition, getParser } from '.';
 import { PrepareRenameParams, Range, RenameParams, TextEdit, WorkspaceEdit } from "vscode-languageserver";
 import Linter from '../../../../language/ile/linter';
 import Cache from '../../../../language/models/cache';
@@ -11,6 +11,7 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
   const document = documents.get(uri);
 
   if (document) {
+    const parser = getParser(uri);
     const doc = await parser.getDocs(uri, document.getText());
 
     if (doc) {
@@ -46,6 +47,7 @@ export async function renameRequestProvider(params: RenameParams): Promise<Works
   if (document) {
     const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 
+    const parser = getParser(uri);
     const doc = await parser.getDocs(uri, document.getText());
 
     if (doc) {

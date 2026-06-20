@@ -13,6 +13,7 @@ export interface IParser {
   getDocs(uri: string, content: string, options?: any): Promise<Cache>;
   setTableFetch(promise: tablePromise): void;
   setIncludeFileFetch(promise: includeFilePromise): void;
+  includeFileFetch: includeFilePromise | undefined;
   clearParsedCache?(path: string): void;
   clearTableCache?(): void;
 }

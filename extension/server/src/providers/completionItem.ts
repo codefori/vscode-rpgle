@@ -1,6 +1,6 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
+import { documents, getWordRangeAtPosition, getParser, prettyKeywords } from '.';
 import Cache, { RpgleType, RpgleVariableType } from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import * as ileExports from './apis';
@@ -40,6 +40,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 	const document = documents.get(currentPath);
 
 	if (document) {
+		const parser = getParser(currentPath);
 		const doc = await parser.getDocs(currentPath, document.getText());
 		if (doc) {
 			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);

@@ -1,5 +1,5 @@
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
-import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywords } from '.';
+import { documents, getParser, getReturnValue, getWordRangeAtPosition, prettyKeywords } from '.';
 import Parser from '../../../../language/ile/parser';
 import { URI } from 'vscode-uri';
 import { Keywords } from '../../../../language/ile/parserTypes';
@@ -11,6 +11,7 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 	const document = documents.get(currentPath);
 
 	if (document) {
+		const parser = getParser(currentPath);
 		const doc = await parser.getDocs(currentPath, document.getText());
 		if (doc) {
 			const word = getWordRangeAtPosition(document, params.position);

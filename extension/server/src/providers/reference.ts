@@ -1,5 +1,5 @@
 import { Location, Range, ReferenceParams } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser } from '.';
+import { documents, getWordRangeAtPosition, getParser } from '.';
 import Linter from '../../../../language/ile/linter';
 import { calculateOffset } from './linter';
 
@@ -18,6 +18,7 @@ export async function referenceProvider(params: ReferenceParams): Promise<Locati
 		const document = documents.get(uri);
 	
 		if (document) {
+			const parser = getParser(uri);
 			const doc = await parser.getDocs(uri, document.getText());
 	
 			if (doc) {

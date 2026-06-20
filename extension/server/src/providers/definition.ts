@@ -1,5 +1,5 @@
 import { DefinitionParams, Location, Definition, Range } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, parser } from '.';
+import { documents, getWordRangeAtPosition, getParser } from '.';
 import Parser from '../../../../language/ile/parser';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
@@ -10,6 +10,7 @@ export default async function definitionProvider(handler: DefinitionParams): Pro
 	const document = documents.get(currentUri);
 
 	if (document) {
+		const parser = getParser(currentUri);
 		const doc = await parser.getDocs(currentUri, document.getText());
 		if (doc) {
 			const editingLine = document.getText(Range.create(lineNumber, 0, lineNumber, 200));
