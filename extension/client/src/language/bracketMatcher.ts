@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
 import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/utils/blockParser';
+import * as rpgle from '../rpgtools-comment-helpers';
 
 type BracketPair = BlockPair;
 
@@ -183,6 +184,13 @@ function updateDecorations(editor: vscode.TextEditor) {
   const position = editor.selection.active;
   const text = document.getText();
 
+  // Never run selection-based block matching/decorations on comment lines.
+  if (rpgle.isComment(document.lineAt(position.line).text, document)) {
+    editor.setDecorations(decorationType, []);
+    currentBlockInfo = undefined;
+    return;
+  }
+
   // First, find and highlight ALL mismatched closing keywords in the document
   const allMatches = findAllMatches(text, document);
   const allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
@@ -356,9 +364,16 @@ function isInCompilerDirective(text: string, offset: number): boolean {
 // Helper function to check if a keyword is actually being used as a variable
 // This handles cases like: end = 5; end += 1; dow (x < end); dcl-s end int(10); etc.
 function isVariableContext(text: string, matchOffset: number, matchLength: number): boolean {
-  const matchWord = text.substring(matchOffset, matchOffset + matchLength);
-  const afterKeyword = text.substring(matchOffset + matchLength);
-  const beforeKeyword = text.substring(0, matchOffset);
+  // Restrict context checks to the current physical line so punctuation in
+  // previous comment lines cannot influence keyword classification.
+  const lineStart = text.lastIndexOf('\n', matchOffset) + 1;
+  const lineEndIndex = text.indexOf('\n', matchOffset);
+  const lineEnd = lineEndIndex === -1 ? text.length : lineEndIndex;
+  const lineText = text.substring(lineStart, lineEnd);
+
+  const localOffset = matchOffset - lineStart;
+  const beforeKeyword = lineText.substring(0, localOffset);
+  const afterKeyword = lineText.substring(localOffset + matchLength);
 
   // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, dcl-subf, dcl-parm, etc.)
   // ALL dcl- keywords indicate the next word is an identifier, not a keyword
@@ -418,7 +433,6 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   if (nextChar === '(' || nextChar === '.') {
     // Only treat as variable if preceded by operators that indicate it's being used as a value
     if (beforeMatch) {
-      const op = beforeMatch[1];
       return true;
     } else {
       // Not preceded by operator context → it's a control flow keyword like if (condition)
@@ -428,14 +442,13 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
 
   // Check for other operator contexts
   if (beforeMatch) {
-    const op = beforeMatch[1];
     return true;
   }
 
   return false;
 }
 
-function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatch[] {
+function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
@@ -468,6 +481,12 @@ function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatc
   regex.lastIndex = 0;
   while ((match = regex.exec(text)) !== null) {
     const matchWord = match[0].toLowerCase();
+
+    // Skip keywords found on RPG comment lines (fixed-format '*' comments and // comments).
+    const lineNumber = document.positionAt(match.index).line;
+    if (rpgle.isComment(document.lineAt(lineNumber).text, document)) {
+      continue;
+    }
 
     if (isInCommentOrString(text, match.index)) continue;
 
@@ -615,11 +634,11 @@ function findAllRelatedKeywords(
     }
   }
 
-  if (currentIndex === -1) return [startRange];
+  if (currentIndex === -1) return [];
 
   // Find block containing current keyword
   const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
-  if (!blockIndices) return [startRange];
+  if (!blockIndices) return [];
 
   // Convert indices to ranges
   const ranges: vscode.Range[] = [];
@@ -684,7 +703,7 @@ function findAllRelatedKeywordsWithValidation(
     }
   }
 
-  if (currentIndex === -1) return { validRanges: [startRange], errorRanges: [] };
+  if (currentIndex === -1) return { validRanges: [], errorRanges: [] };
 
   // Find block containing current keyword
   const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
@@ -1103,6 +1122,12 @@ function findMatchingOpen(
       if (lastBlock.pair.close.includes(startWord)) {
         return lastBlock.index;
       }
+
+      // Middle keywords (else/elseif/when/on-error/etc.) belong to the nearest
+      // active block of the same pair and should highlight that whole block.
+      if (pair.middle?.includes(startWord) && lastBlock.pair === pair) {
+        return lastBlock.index;
+      }
     }
   }
 
@@ -1110,6 +1135,12 @@ function findMatchingOpen(
 }
 
 export function deactivateBracketMatcher() {
-  decorationType.dispose();
-  errorDecorationType.dispose();
+  if (decorationType) {
+    decorationType.dispose();
+    decorationType = undefined;
+  }
+  if (errorDecorationType) {
+    errorDecorationType.dispose();
+    errorDecorationType = undefined;
+  }
 }
