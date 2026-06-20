@@ -4,6 +4,24 @@ import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/u
 
 type BracketPair = BlockPair;
 
+// Comprehensive list of SQL keywords that might conflict with RPG keywords
+// These keywords will be excluded from bracket matching when inside EXEC SQL blocks
+const SQL_KEYWORDS = [
+  'select', 'from', 'where', 'join', 'inner', 'outer', 'left', 'right', 'full',
+  'insert', 'update', 'delete', 'into', 'set', 'values',
+  'declare', 'cursor', 'open', 'fetch', 'close',
+  'for', 'when', 'case', 'end', 'then', 'else', 'elseif',
+  'if', 'and', 'or', 'not', 'in', 'exists', 'between', 'like',
+  'order', 'group', 'having', 'union', 'intersect', 'except',
+  'create', 'alter', 'drop', 'table', 'index', 'view',
+  'as', 'on', 'using', 'with', 'option',
+  'commit', 'rollback', 'savepoint',
+  'json_table', 'json_object', 'json_array',
+  'distinct', 'all', 'any', 'some',
+  'begin', 'do', 'while', 'loop', 'repeat', 'until',
+  'call', 'return', 'exit', 'continue'
+];
+
 // Highlight style for matched brackets
 const decorationType = vscode.window.createTextEditorDecorationType({
   backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
@@ -15,22 +33,36 @@ const decorationType = vscode.window.createTextEditorDecorationType({
 
 // Highlight style for mismatched closing keywords (errors)
 const errorDecorationType = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
-  border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
+  border: '2px solid rgba(255, 0, 0, 0.3)', // Red border
   borderRadius: '3px',
   fontWeight: 'bold',
   textDecoration: 'wavy underline red'
 });
 
 let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
+let currentErrorRanges: { range: vscode.Range; keyword: string }[] = [];
 
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
   let timeout: any = undefined;
 
-  // Register hover provider to show block info
+  // Register hover provider to show block info and error info
   const hoverProvider = vscode.languages.registerHoverProvider('rpgle', {
-    provideHover(document, position) {
+    provideHover(_document, position) {
+      // First check if hovering over an error (unmatched keyword)
+      for (const errorInfo of currentErrorRanges) {
+        if (errorInfo.range.contains(position)) {
+          const keyword = errorInfo.keyword.toUpperCase();
+          const markdown = new vscode.MarkdownString();
+          markdown.appendText(`⚠️ Unmatched ${keyword} statement\n\n`);
+          markdown.appendText('This ENDxx keyword has no matching opening block.\n\n');
+          markdown.appendText('If it is a DS subfield: use DCL-SUBF\n\n');
+          markdown.appendText('If it is a parameter: use DCL-PARM');
+          return new vscode.Hover(markdown);
+        }
+      }
+
+      // Then check if hovering over a matched block
       if (!currentBlockInfo) return undefined;
 
       // Check if cursor is on a highlighted keyword
@@ -78,7 +110,11 @@ function updateDecorations(editor: vscode.TextEditor) {
 
   // First, find and highlight ALL mismatched closing keywords in the document
   const allMatches = findAllMatches(text, document);
-  const allErrorRanges = findAllMismatchedClosingKeywords(document, allMatches);
+  const allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
+  const allErrorRanges = allErrorRangesWithInfo.map(e => e.range);
+
+  // Store error ranges for hover provider
+  currentErrorRanges = allErrorRangesWithInfo;
 
   // Always show errors in red
   editor.setDecorations(errorDecorationType, allErrorRanges);
@@ -93,22 +129,11 @@ function updateDecorations(editor: vscode.TextEditor) {
 
   const word = document.getText(wordRange).toLowerCase();
 
-  // Check if we're clicking on SELECT inside an SQL block
-  if (word === 'select') {
+  // Check if we're clicking on any SQL keyword inside an SQL block
+  if (SQL_KEYWORDS.includes(word)) {
     const offset = document.offsetAt(position);
     if (isInSqlBlock(text, offset)) {
-      // Don't highlight SELECT inside SQL blocks
-      editor.setDecorations(decorationType, []);
-      currentBlockInfo = undefined;
-      return;
-    }
-  }
-
-  // Check if we're clicking on FOR inside an SQL block
-  if (word === 'for') {
-    const offset = document.offsetAt(position);
-    if (isInSqlBlock(text, offset)) {
-      // Don't highlight FOR inside SQL blocks
+      // Don't highlight SQL keywords inside SQL blocks
       editor.setDecorations(decorationType, []);
       currentBlockInfo = undefined;
       return;
@@ -231,7 +256,105 @@ function extractBlockCondition(document: vscode.TextDocument, lineNumber: number
   return text;
 }
 
-function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
+// Helper function to check if a position is in a compiler directive
+function isInCompilerDirective(text: string, offset: number): boolean {
+  // Find the start of the line
+  let lineStart = offset;
+  while (lineStart > 0 && text[lineStart - 1] !== '\n' && text[lineStart - 1] !== '\r') {
+    lineStart--;
+  }
+
+  // Get the text from line start to the offset
+  const lineBeforeOffset = text.substring(lineStart, offset + 1);
+
+  // Check if the line starts with / (compiler directive)
+  // Pattern: optional whitespace, then /, then optional whitespace, then the keyword
+  return /^\s*\//.test(lineBeforeOffset);
+}
+
+// Helper function to check if a keyword is actually being used as a variable
+// This handles cases like: end = 5; end += 1; dow (x < end); dcl-s end int(10); etc.
+function isVariableContext(text: string, matchOffset: number, matchLength: number): boolean {
+  const matchWord = text.substring(matchOffset, matchOffset + matchLength);
+  const afterKeyword = text.substring(matchOffset + matchLength);
+  const beforeKeyword = text.substring(0, matchOffset);
+
+  // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, dcl-subf, dcl-parm, etc.)
+  // ALL dcl- keywords indicate the next word is an identifier, not a keyword
+  // Examples:
+  //   dcl-s end pointer;        - standalone variable
+  //   dcl-proc end;             - procedure name
+  //   dcl-subf end int(10);     - data structure subfield with keyword name
+  //   dcl-parm end char(10);    - parameter with keyword name
+  const declMatch = beforeKeyword.match(/\b(dcl-[a-z]+)\s+$/i);
+  if (declMatch) {
+    return true;
+  }
+
+  // Check if preceded by FOR loop clause keywords (to, downto, by)
+  // These indicate the next word is an expression/value, not a control keyword
+  // Pattern: for i = 1 to end; or for i = 10 downto end by 2;
+  const forClauseMatch = beforeKeyword.match(/\b(to|downto|by)\s+$/i);
+  if (forClauseMatch) {
+
+    return true;
+  }
+
+  // Check what comes after the keyword (skipping whitespace)
+  const afterMatch = afterKeyword.match(/^\s*(.)/);
+  if (!afterMatch) {
+    return false;
+  }
+
+  const nextChar = afterMatch[1];
+
+  // If followed by closing paren or comma, it's likely a variable in expression/parameter
+  // e.g., dow (x < end) or func(a, end)
+  if (nextChar === ')' || nextChar === ',') {
+    return true;
+  }
+
+  // If followed by assignment operators, it's a variable
+  // Matches: =, +=, -=, *=, /=
+  if (nextChar === '=' || nextChar === '+' || nextChar === '-' || nextChar === '*' || nextChar === '/') {
+    const twoChars = afterKeyword.substring(afterMatch[0].length - 1, afterMatch[0].length + 1);
+    if (twoChars === '+=' || twoChars === '-=' || twoChars === '*=' || twoChars === '/=' || nextChar === '=') {
+      return true;
+    }
+  }
+
+  // Check what comes BEFORE the keyword - look for comparison operators or other expression contexts
+  // e.g., dow (x < end) or if (y > end) or result = x + end
+  const beforeMatch = beforeKeyword.match(/([<>=+\-*/.(,])\s*$/);
+
+  // If followed by opening parenthesis or dot, check if it's actually array/DS access
+  // vs. control flow keyword with condition
+  // Examples:
+  //   arr(if)      → preceded by '(', followed by ')' → VARIABLE
+  //   ds.if(x)     → preceded by '.', followed by '(' → VARIABLE
+  //   func(x, if)  → preceded by ',', followed by ')' → VARIABLE
+  //   if (cond)    → NOT preceded by '.,(', followed by '(' → KEYWORD (control flow)
+  if (nextChar === '(' || nextChar === '.') {
+    // Only treat as variable if preceded by operators that indicate it's being used as a value
+    if (beforeMatch) {
+      const op = beforeMatch[1];
+      return true;
+    } else {
+      // Not preceded by operator context → it's a control flow keyword like if (condition)
+      return false;
+    }
+  }
+
+  // Check for other operator contexts
+  if (beforeMatch) {
+    const op = beforeMatch[1];
+    return true;
+  }
+
+  return false;
+}
+
+function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
@@ -245,8 +368,8 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
 
   // Use word boundary that works with hyphens: (?<![a-zA-Z0-9-]) and (?![a-zA-Z0-9-])
-  // Or simpler: match the keyword followed by non-alphanumeric-hyphen character
-  const regex = new RegExp(`\\b(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})\\b`, 'gi');
+  // Standard \b doesn't work with hyphens - it treats "end-proc" as two words
+  const regex = new RegExp(`(?<![a-zA-Z0-9-])(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})(?![a-zA-Z0-9-])`, 'gi');
   const matches: BlockMatch[] = [];
 
   let match;
@@ -256,9 +379,20 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
 
     if (isInCommentOrString(text, match.index)) continue;
 
+    // Skip compiler directives (e.g., /END-FREE, /FREE, /COPY)
+    if (isInCompilerDirective(text, match.index)) {
+      continue;
+    }
+
     // Skip SQL keywords when inside EXEC SQL blocks
-    const sqlKeywords = ['select', 'for', 'when', 'case', 'end', 'then', 'else'];
-    if (sqlKeywords.includes(matchWord) && isInSqlBlock(text, match.index)) {
+    if (SQL_KEYWORDS.includes(matchWord) && isInSqlBlock(text, match.index)) {
+      continue;
+    }
+
+    // Skip keywords that are actually variables in expression/assignment context
+    // Only check for simple keywords (no hyphens) that could be valid variable names
+    // Keywords with hyphens (end-proc, dcl-proc, etc.) cannot be variables
+    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length)) {
       continue;
     }
 
@@ -411,8 +545,8 @@ function findAllRelatedKeywords(
 function findAllMismatchedClosingKeywords(
   document: vscode.TextDocument,
   matches: { offset: number; word: string; length: number }[]
-): vscode.Range[] {
-  const errorRanges: vscode.Range[] = [];
+): { range: vscode.Range; keyword: string }[] {
+  const errorRanges: { range: vscode.Range; keyword: string }[] = [];
   const text = document.getText();
 
   // Check each closing keyword
@@ -426,7 +560,10 @@ function findAllMismatchedClosingKeywords(
       if (!isValid) {
         const start = document.positionAt(match.offset);
         const end = document.positionAt(match.offset + match.length);
-        errorRanges.push(new vscode.Range(start, end));
+        errorRanges.push({
+          range: new vscode.Range(start, end),
+          keyword: match.word
+        });
       }
     }
   }
@@ -611,15 +748,17 @@ function findMatchingOpenForAnyClosing(
       });
 
       if (closerPair && stack.length > 0) {
-        // For specific closers, search the stack for a matching block type
-        // This maintains stack integrity by removing the block even when nesting is incorrect
-        // The validation of correctness happens in validateClosingKeyword
-        for (let j = stack.length - 1; j >= 0; j--) {
-          if (stack[j].pair === closerPair) {
-            stack.splice(j, 1);
-            break;
-          }
-        }
+        // For specific closers, ONLY close the top of the stack
+        // Check if it matches - if so, this is a valid closure
+        // If not, it's a mismatch - pop anyway so subsequent closers can match correctly
+        const topPair = stack[stack.length - 1].pair;
+        const isMatch = (topPair === closerPair ||
+                        (topPair.close.includes(word) && closerPair.close.includes(word)));
+
+        stack.pop();
+
+        // IMPORTANT: Mismatch doesn't get to search deeper in the stack
+        // It consumes the top block (for error recovery) but that's it
       }
     }
   }
@@ -750,23 +889,9 @@ function findMatchingClose(
     }
 
     // Check if this word closes a block
-    // For 'END', it closes the most recent block that accepts 'end' as closer
-    if (word === 'end') {
-      // Find the most recent block that can be closed by 'END'
-      for (let j = stack.length - 1; j >= 0; j--) {
-        if (stack[j].close.includes('end')) {
-          if (j === 0) {
-            // This END closes our target block
-            return i;
-          }
-          // Remove this block from stack
-          stack.splice(j, 1);
-          break;
-        }
-      }
-    } else {
-      // Specific closing keyword (endif, enddo, etc.)
-      // Find the most recent block that can be closed by this keyword
+    // For 'END' or 'ENDDO', find the most recent block that accepts it
+    if (word === 'end' || word === 'enddo') {
+      // Generic closers: search stack for matching block
       for (let j = stack.length - 1; j >= 0; j--) {
         if (stack[j].close.includes(word)) {
           if (j === 0) {
@@ -778,6 +903,41 @@ function findMatchingClose(
           break;
         }
       }
+    } else {
+      // Check if this word is actually a closing keyword
+      const closingPair = RPGLE_BLOCK_PAIRS.find(p => p.close.includes(word));
+
+      if (closingPair) {
+        // Specific closing keyword (endif, endfor, end-proc, etc.)
+        // ONLY close the top of the stack, maintaining proper LIFO discipline
+        // For error recovery: pop the top even if it doesn't match (the mismatch
+        // will be caught by validateClosingKeyword), allowing subsequent closers
+        // to find their correct matches
+        if (stack.length > 0) {
+          const topPair = stack[stack.length - 1];
+
+          if (topPair.close.includes(word)) {
+            // This closer matches the top of the stack
+            if (stack.length === 1) {
+              // This closes our target block
+              return i;
+            }
+            // Pop this matched block
+            stack.pop();
+          } else {
+            // Mismatch: pop the top anyway for error recovery
+            // The mismatch will be highlighted by validateClosingKeyword
+            stack.pop();
+
+            // If stack is now empty, our target block was closed (incorrectly)
+            // Stop searching to avoid matching with unrelated blocks
+            if (stack.length === 0) {
+              return -1;
+            }
+          }
+        }
+      }
+      // else: word is neither opener nor closer (might be middle keyword like else/elseif/when) - ignore it
     }
   }
 
@@ -793,57 +953,63 @@ function findMatchingOpen(
 ): number {
   const startWord = matches[startIndex].word;
 
-  // Special handling for 'END' - find the most recent compatible opening
-  if (startWord === 'end') {
-    // Build a stack to track all open blocks
-    const stack: { index: number; pair: BracketPair }[] = [];
+  // Use stack-based approach for ALL closing keywords to properly handle
+  // nested blocks and error recovery (mirrors findMatchingClose logic)
+  const stack: { index: number; pair: BracketPair }[] = [];
 
-    for (let i = 0; i < startIndex; i++) {
-      const word = matches[i].word;
+  for (let i = 0; i < startIndex; i++) {
+    const word = matches[i].word;
 
-      // Check if this word opens any block
-      const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
-      if (openingPair) {
-        // Special handling for dcl-ds: skip if it uses likeds() or likerec()
-        if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
-          continue; // Skip this dcl-ds, it's not a block opener
-        }
-
-        stack.push({ index: i, pair: openingPair });
+    // Check if this word opens any block
+    const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
+    if (openingPair) {
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
+      if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        continue; // Skip this dcl-ds, it's not a block opener
       }
 
-      // Check if this word closes a block
-      // Find the most recent block that can be closed by this keyword
+      stack.push({ index: i, pair: openingPair });
+      continue;
+    }
+
+    // Check if this word closes a block
+    if (word === 'end' || word === 'enddo') {
+      // Generic closers: search stack for matching block
       for (let j = stack.length - 1; j >= 0; j--) {
         if (stack[j].pair.close.includes(word)) {
           stack.splice(j, 1);
           break;
         }
       }
-    }
+    } else {
+      // Check if this word is actually a closing keyword
+      const closingPair = RPGLE_BLOCK_PAIRS.find(p => p.close.includes(word));
 
-    // Find the most recent unclosed block that can be closed by 'END'
+      if (closingPair && stack.length > 0) {
+        // Specific closing keyword (endif, endfor, end-proc, etc.)
+        // ONLY close the top of the stack, maintaining proper LIFO discipline
+        // For error recovery: pop the top even if it doesn't match
+        stack.pop();
+      }
+      // else: word is neither opener nor closer (might be middle keyword) - ignore it
+    }
+  }
+
+  // Find the most recent unclosed block that can be closed by startWord
+  if (startWord === 'end' || startWord === 'enddo') {
+    // Generic closers: find any block that accepts this closer
     for (let j = stack.length - 1; j >= 0; j--) {
-      if (stack[j].pair.close.includes('end')) {
+      if (stack[j].pair.close.includes(startWord)) {
         return stack[j].index;
       }
     }
-
-    return -1;
-  }
-
-  // Standard logic for specific closing keywords (endif, enddo, etc.)
-  let depth = 1;
-
-  for (let i = startIndex - 1; i >= 0; i--) {
-    const word = matches[i].word;
-
-    if (pair.close.includes(word)) {
-      depth++;
-    } else if (pair.open.includes(word)) {
-      depth--;
-      if (depth === 0) {
-        return i;
+  } else {
+    // Specific closers: can ONLY close the last block if it's of the correct type
+    if (stack.length > 0) {
+      const lastBlock = stack[stack.length - 1];
+      // Check if the last unclosed block can be closed by this keyword
+      if (lastBlock.pair.close.includes(startWord)) {
+        return lastBlock.index;
       }
     }
   }
