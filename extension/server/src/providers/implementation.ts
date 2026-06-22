@@ -1,10 +1,14 @@
 import { Definition, ImplementationParams, Location, Range } from 'vscode-languageserver';
 import { documents, parser, getWordRangeAtPosition } from '.';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 import * as Project from './project';
 
 export default async function implementationProvider(params: ImplementationParams): Promise<Definition | undefined> {
 	const currentPath = params.textDocument.uri;
+
+	if (ParserFactory.isOpmFile(currentPath)) return;
+
 	const document = documents.get(currentPath);
 
 	// We only handle local implementations here.

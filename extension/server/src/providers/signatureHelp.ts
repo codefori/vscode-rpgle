@@ -4,9 +4,13 @@ import Parser from "../../../../language/ile/parser";
 import { IleFunction, IleFunctionParameter, getBuiltIn } from "./apis/bif";
 import Statement from "../../../../language/ile/statement";
 import Cache, { RpgleType } from "../../../../language/models/cache";
+import { ParserFactory } from '../../../../language/parserFactory';
 
 export async function signatureHelpProvider(handler: SignatureHelpParams): Promise<SignatureHelp | undefined> {
   const currentPath = handler.textDocument.uri;
+
+  if (ParserFactory.isOpmFile(currentPath)) return;
+
   const document = documents.get(currentPath);
 
   if (document) {

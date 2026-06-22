@@ -3,9 +3,13 @@ import { documents, getWordRangeAtPosition, parser } from '.';
 import Parser from '../../../../language/ile/parser';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 export default async function definitionProvider(handler: DefinitionParams): Promise<Definition|null> {
 	const currentUri = handler.textDocument.uri;
+
+	if (ParserFactory.isOpmFile(currentUri)) return null;
+
 	const lineNumber = handler.position.line;
 	const document = documents.get(currentUri);
 
