@@ -387,6 +387,23 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     return true;
   }
 
+  // Handle wrapped declarations where the DCL-* keyword is on the previous line.
+  // Example:
+  //   dcl-s
+  //     end pointer;
+  if (/^\s*$/.test(beforeKeyword)) {
+    const prevLineEnd = lineStart - 1;
+    if (prevLineEnd > 0) {
+      const prevLineStart = text.lastIndexOf('\n', prevLineEnd - 1) + 1;
+      const prevLineText = text.substring(prevLineStart, prevLineEnd).replace(/\r$/, '');
+      const prevLineWithoutComments = stripComments(prevLineText);
+
+      if (/^\s*dcl-[a-z]+\s*$/i.test(prevLineWithoutComments)) {
+        return true;
+      }
+    }
+  }
+
   // Check if preceded by FOR loop clause keywords (to, downto, by)
   // These indicate the next word is an expression/value, not a control keyword
   // Pattern: for i = 1 to end; or for i = 10 downto end by 2;
