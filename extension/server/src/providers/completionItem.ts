@@ -1,6 +1,6 @@
 import path = require('path');
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
-import { documents, getWordRangeAtPosition, getParser, prettyKeywords } from '.';
+import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Cache, { RpgleType, RpgleVariableType } from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import * as ileExports from './apis';
@@ -10,6 +10,7 @@ import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/ile/parser';
 import { Token } from '../../../../language/types';
 import { getBuiltIn, getBuiltIns, getBuiltInsForType } from './apis/bif';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -37,10 +38,12 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 	const trigger = handler.context?.triggerCharacter;
 	const currentPath = handler.textDocument.uri;
+	
+	if (ParserFactory.isOpmFile(currentPath)) return items;
+
 	const document = documents.get(currentPath);
 
 	if (document) {
-		const parser = getParser(currentPath);
 		const doc = await parser.getDocs(currentPath, document.getText());
 		if (doc) {
 			const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
