@@ -402,6 +402,15 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
         return true;
       }
     }
+
+    // Inside an open DCL-DS block, a first token followed by declaration text
+    // is typically a subfield name (for example: "end pointer;", "endif pointer;").
+    const afterTrimmed = afterKeyword.trimStart();
+    if (afterTrimmed.length > 0 &&
+        afterTrimmed[0] !== ';' &&
+        isInsideOpenDclDsBlock(text, lineStart)) {
+      return true;
+    }
   }
 
   // Check if preceded by FOR loop clause keywords (to, downto, by)
@@ -460,6 +469,39 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   // Check for other operator contexts
   if (beforeMatch) {
     return true;
+  }
+
+  return false;
+}
+
+function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
+  const priorText = text.substring(0, lineStart);
+  const lines = priorText.split(/\r?\n/);
+  let depth = 0;
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = stripComments(lines[i]).trim().toLowerCase();
+    if (!line) {
+      continue;
+    }
+
+    if (/^end-ds\b/.test(line)) {
+      depth++;
+      continue;
+    }
+
+    if (/^dcl-ds\b/.test(line)) {
+      // dcl-ds with likeds()/likerec() is a single-line declaration, not a block.
+      if (/likeds\s*\(|likerec\s*\(/.test(line)) {
+        continue;
+      }
+
+      if (depth === 0) {
+        return true;
+      }
+
+      depth--;
+    }
   }
 
   return false;
