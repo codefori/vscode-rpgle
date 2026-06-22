@@ -10,7 +10,7 @@ export type includeFilePromise = (baseFile: string, includeString: string) => Pr
  * Common interface for both parsers
  */
 export interface IParser {
-  getDocs(uri: string, content: string, options?: any): Promise<Cache>;
+  getDocs(uri: string, content: string, options?: any): Promise<Cache | undefined>;
   setTableFetch(promise: tablePromise): void;
   setIncludeFileFetch(promise: includeFilePromise): void;
   clearParsedCache?(path: string): void;
@@ -28,19 +28,35 @@ export class ParserFactory {
    */
   static getParser(uri: string): IParser {
     const extension = uri.toLowerCase().split('.').pop();
-    
+
     if (extension === 'rpg' || extension === 'sqlrpg') {
       return new OpmParser();
     }
-    
+
+    // Deprecated source types
+    if (extension === 'rpg36' || extension === 'rpg38' || extension === 'sqlrpg38') {
+      return new OpmParser();
+    }
+
     // Default to ILE parser for .rpgle, .sqlrpgle, etc.
     return new Parser();
   }
-  
+
   static isOpmFile(uri: string): boolean {
-    return uri.toLowerCase().endsWith('.rpg') || uri.toLowerCase().endsWith('.sqlrpg');
+    const lower = uri.toLowerCase();
+
+    if (lower.endsWith('.rpg') || lower.endsWith('.sqlrpg')) {
+      return true;
+    }
+
+    // Deprecated source types
+    if (lower.endsWith('.rpg36') || lower.endsWith('.rpg38') || lower.endsWith('.sqlrpg38')) {
+      return true;
+    }
+
+    return false;
   }
-  
+
   static isIleFile(uri: string): boolean {
     const lower = uri.toLowerCase();
     return lower.endsWith('.rpgle') || lower.endsWith('.sqlrpgle');
