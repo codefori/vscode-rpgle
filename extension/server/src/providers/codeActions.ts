@@ -4,9 +4,13 @@ import { documents, parser } from '.';
 import Cache from '../../../../language/models/cache';
 import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[] | undefined> {
 	const uri = params.textDocument.uri;
+
+	if (ParserFactory.isOpmFile(uri)) return;
+
 	const range = params.range;
 	const document = documents.get(uri);
 

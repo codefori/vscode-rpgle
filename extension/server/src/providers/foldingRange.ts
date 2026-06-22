@@ -2,9 +2,13 @@ import { FoldingRange, FoldingRangeParams, FoldingRangeKind } from 'vscode-langu
 import { documents } from '.';
 import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
 import { RPGLE_BLOCK_PAIRS, BlockPair } from '../../../../language/utils/blockParser';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 // Provides folding ranges for RPGLE code blocks
 export default function foldingRangeProvider(params: FoldingRangeParams): FoldingRange[] {
+
+  if (ParserFactory.isOpmFile(params.textDocument.uri)) return [];
+
   const document = documents.get(params.textDocument.uri);
   if (!document) return [];
 

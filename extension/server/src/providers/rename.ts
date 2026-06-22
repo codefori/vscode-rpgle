@@ -44,6 +44,9 @@ export async function renamePrepareProvider(params: PrepareRenameParams): Promis
 
 export async function renameRequestProvider(params: RenameParams): Promise<WorkspaceEdit | undefined> {
   const uri = params.textDocument.uri;
+
+  if (ParserFactory.isOpmFile(uri)) return;
+
   const currentPos = params.position;
   const document = documents.get(uri);
 
