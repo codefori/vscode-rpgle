@@ -60,6 +60,11 @@
 						"All messages including debug output"
 					],
 					"description": "Controls the verbosity of RPGLE language server logging output."
+				},
+				"vscode-rpgle.bracketHighlightingEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable bracket/block highlighting and hover information in RPGLE editors."
 				}
 			}
 		},

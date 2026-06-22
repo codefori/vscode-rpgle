@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
 import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
 import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/utils/blockParser';
+import * as rpgle from '../rpgtools-comment-helpers';
 
 type BracketPair = BlockPair;
+
+// Configuration key for bracket highlighting
+const CONFIG_KEY = 'bracketHighlightingEnabled';
 
 // Comprehensive list of SQL keywords that might conflict with RPG keywords
 // These keywords will be excluded from bracket matching when inside EXEC SQL blocks
@@ -23,27 +27,70 @@ const SQL_KEYWORDS = [
 ];
 
 // Highlight style for matched brackets
-const decorationType = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
-  border: '1px solid rgba(255, 200, 0, 0.6)', // Darker yellow border
-  borderRadius: '3px',
-  fontWeight: 'bold', // Make text bold
-  fontStyle: 'italic' // Make text italic
-});
+let decorationType: vscode.TextEditorDecorationType | undefined;
 
 // Highlight style for mismatched closing keywords (errors)
-const errorDecorationType = vscode.window.createTextEditorDecorationType({
-  border: '2px solid rgba(255, 0, 0, 0.3)', // Red border
-  borderRadius: '3px',
-  fontWeight: 'bold',
-  textDecoration: 'wavy underline red'
-});
+let errorDecorationType: vscode.TextEditorDecorationType | undefined;
 
 let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
 let currentErrorRanges: { range: vscode.Range; keyword: string }[] = [];
 
+// Store disposables for cleanup
+let bracketMatcherDisposables: vscode.Disposable[] = [];
+
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
+  // Listen for configuration changes (always register this listener)
+  const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+    if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY)) {
+      const newConfig = vscode.workspace.getConfiguration('vscode-rpgle');
+      const newEnabled = newConfig.get<boolean>(CONFIG_KEY, true);
+
+      if (!newEnabled) {
+        // Feature disabled - dispose and clear decorations
+        disposeBracketMatcher();
+      } else {
+        // Feature enabled - activate if not already active
+        if (bracketMatcherDisposables.length === 0) {
+          activateBracketMatcher();
+        }
+      }
+    }
+  });
+  context.subscriptions.push(configChangeDisposable);
+
+  // Check if feature is enabled initially
+  const config = vscode.workspace.getConfiguration('vscode-rpgle');
+  const isEnabled = config.get<boolean>(CONFIG_KEY, true);
+
+  if (isEnabled) {
+    activateBracketMatcher();
+  }
+}
+
+// Activate the bracket matching feature
+function activateBracketMatcher() {
+  // Create decoration types if they don't exist
+  if (!decorationType) {
+    decorationType = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(255, 255, 0, 0.2)', // Light yellow with transparency
+      border: '1px solid rgba(255, 200, 0, 0.6)', // Darker yellow border
+      borderRadius: '3px',
+      fontWeight: 'bold', // Make text bold
+      fontStyle: 'italic' // Make text italic
+    });
+  }
+
+  if (!errorDecorationType) {
+    errorDecorationType = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
+      border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
+      borderRadius: '3px',
+      fontWeight: 'bold',
+      textDecoration: 'wavy underline red'
+    });
+  }
+
   let timeout: any = undefined;
 
   // Register hover provider to show block info and error info
@@ -77,10 +124,10 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(hoverProvider);
+  bracketMatcherDisposables.push(hoverProvider);
 
   // Update decorations when selection changes
-  vscode.window.onDidChangeTextEditorSelection(event => {
+  const selectionChangeDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
     const editor = event.textEditor;
     if (editor && editor.document.languageId === 'rpgle') {
       if (timeout) {
@@ -88,14 +135,16 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
       }
       timeout = setTimeout(() => updateDecorations(editor), 100);
     }
-  }, null, context.subscriptions);
+  });
+  bracketMatcherDisposables.push(selectionChangeDisposable);
 
   // Update decorations when active editor changes
-  vscode.window.onDidChangeActiveTextEditor(editor => {
+  const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
     if (editor && editor.document.languageId === 'rpgle') {
       updateDecorations(editor);
     }
-  }, null, context.subscriptions);
+  });
+  bracketMatcherDisposables.push(editorChangeDisposable);
 
   // Initialize for current editor
   if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
@@ -103,10 +152,44 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
   }
 }
 
+// Dispose of bracket matcher resources
+function disposeBracketMatcher() {
+  // Clear decorations from all visible editors
+  vscode.window.visibleTextEditors.forEach(editor => {
+    if (editor.document.languageId === 'rpgle') {
+      if (decorationType) {
+        editor.setDecorations(decorationType, []);
+      }
+      if (errorDecorationType) {
+        editor.setDecorations(errorDecorationType, []);
+      }
+    }
+  });
+
+  // Dispose all tracked disposables
+  bracketMatcherDisposables.forEach(d => d.dispose());
+  bracketMatcherDisposables = [];
+
+  // Clear current block info
+  currentBlockInfo = undefined;
+}
+
 function updateDecorations(editor: vscode.TextEditor) {
+  // Check if decorations are initialized (feature is enabled)
+  if (!decorationType || !errorDecorationType) {
+    return;
+  }
+
   const document = editor.document;
   const position = editor.selection.active;
   const text = document.getText();
+
+  // Never run selection-based block matching/decorations on comment lines.
+  if (rpgle.isComment(document.lineAt(position.line).text, document)) {
+    editor.setDecorations(decorationType, []);
+    currentBlockInfo = undefined;
+    return;
+  }
 
   // First, find and highlight ALL mismatched closing keywords in the document
   const allMatches = findAllMatches(text, document);
@@ -120,7 +203,13 @@ function updateDecorations(editor: vscode.TextEditor) {
   editor.setDecorations(errorDecorationType, allErrorRanges);
 
   // Get word at cursor position for block highlighting
-  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z][\w-]*/);
+  // Include RPG IV special characters and international CCSID variants:
+  // CCSID 37: #, $, @
+  // CCSID 277 (Norwegian/Danish): Æ, æ, Ø, ø
+  // CCSID 273 (German): §
+  // CCSID 280 (Italian): §, £
+  // CCSID 297 (French): £, à, À
+  const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/);
   if (!wordRange) {
     editor.setDecorations(decorationType, []);
     currentBlockInfo = undefined;
@@ -275,9 +364,16 @@ function isInCompilerDirective(text: string, offset: number): boolean {
 // Helper function to check if a keyword is actually being used as a variable
 // This handles cases like: end = 5; end += 1; dow (x < end); dcl-s end int(10); etc.
 function isVariableContext(text: string, matchOffset: number, matchLength: number): boolean {
-  const matchWord = text.substring(matchOffset, matchOffset + matchLength);
-  const afterKeyword = text.substring(matchOffset + matchLength);
-  const beforeKeyword = text.substring(0, matchOffset);
+  // Restrict context checks to the current physical line so punctuation in
+  // previous comment lines cannot influence keyword classification.
+  const lineStart = text.lastIndexOf('\n', matchOffset) + 1;
+  const lineEndIndex = text.indexOf('\n', matchOffset);
+  const lineEnd = lineEndIndex === -1 ? text.length : lineEndIndex;
+  const lineText = text.substring(lineStart, lineEnd);
+
+  const localOffset = matchOffset - lineStart;
+  const beforeKeyword = lineText.substring(0, localOffset);
+  const afterKeyword = lineText.substring(localOffset + matchLength);
 
   // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, dcl-subf, dcl-parm, etc.)
   // ALL dcl- keywords indicate the next word is an identifier, not a keyword
@@ -289,6 +385,32 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   const declMatch = beforeKeyword.match(/\b(dcl-[a-z]+)\s+$/i);
   if (declMatch) {
     return true;
+  }
+
+  // Handle wrapped declarations where the DCL-* keyword is on the previous line.
+  // Example:
+  //   dcl-s
+  //     end pointer;
+  if (/^\s*$/.test(beforeKeyword)) {
+    const prevLineEnd = lineStart - 1;
+    if (prevLineEnd > 0) {
+      const prevLineStart = text.lastIndexOf('\n', prevLineEnd - 1) + 1;
+      const prevLineText = text.substring(prevLineStart, prevLineEnd).replace(/\r$/, '');
+      const prevLineWithoutComments = stripComments(prevLineText);
+
+      if (/^\s*dcl-[a-z]+\s*$/i.test(prevLineWithoutComments)) {
+        return true;
+      }
+    }
+
+    // Inside an open DCL-DS block, a first token followed by declaration text
+    // is typically a subfield name (for example: "end pointer;", "endif pointer;").
+    const afterTrimmed = afterKeyword.trimStart();
+    if (afterTrimmed.length > 0 &&
+        afterTrimmed[0] !== ';' &&
+        isInsideOpenDclDsBlock(text, lineStart)) {
+      return true;
+    }
   }
 
   // Check if preceded by FOR loop clause keywords (to, downto, by)
@@ -337,7 +459,6 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   if (nextChar === '(' || nextChar === '.') {
     // Only treat as variable if preceded by operators that indicate it's being used as a value
     if (beforeMatch) {
-      const op = beforeMatch[1];
       return true;
     } else {
       // Not preceded by operator context → it's a control flow keyword like if (condition)
@@ -347,14 +468,46 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
 
   // Check for other operator contexts
   if (beforeMatch) {
-    const op = beforeMatch[1];
     return true;
   }
 
   return false;
 }
 
-function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatch[] {
+function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
+  const priorText = text.substring(0, lineStart);
+  const lines = priorText.split(/\r?\n/);
+  let depth = 0;
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = stripComments(lines[i]).trim().toLowerCase();
+    if (!line) {
+      continue;
+    }
+
+    if (/^end-ds\b/.test(line)) {
+      depth++;
+      continue;
+    }
+
+    if (/^dcl-ds\b/.test(line)) {
+      // dcl-ds with likeds()/likerec() is a single-line declaration, not a block.
+      if (/likeds\s*\(|likerec\s*\(/.test(line)) {
+        continue;
+      }
+
+      if (depth === 0) {
+        return true;
+      }
+
+      depth--;
+    }
+  }
+
+  return false;
+}
+
+function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
@@ -367,15 +520,32 @@ function findAllMatches(text: string, _document: vscode.TextDocument): BlockMatc
   // This ensures 'end-proc' is matched before 'end'
   const sortedKeywords = allKeywords.sort((a, b) => b.length - a.length);
 
-  // Use word boundary that works with hyphens: (?<![a-zA-Z0-9-]) and (?![a-zA-Z0-9-])
-  // Standard \b doesn't work with hyphens - it treats "end-proc" as two words
-  const regex = new RegExp(`(?<![a-zA-Z0-9-])(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})(?![a-zA-Z0-9-])`, 'gi');
+  // Custom word boundary that accounts for RPG IV special characters and international CCSID variants
+  // These characters are valid in RPG IV identifiers, so we need to exclude them from matches
+  // Examples: Wrk@End, #endif, §Betrag, £TaxAmt, àFeld should NOT match embedded keywords
+  // CCSID 37: #, $, @
+  // CCSID 277 (Norwegian/Danish): Æ, æ, Ø, ø
+  // CCSID 273 (German): §
+  // CCSID 280 (Italian): §, £
+  // CCSID 297 (French): £, à, À
+  // Pattern: (?<![A-Za-z0-9_#@$§£ÆæØøàÀ-])keyword(?![A-Za-z0-9_#@$§£ÆæØøàÀ-])
+  const rpgIdentifierChars = '[A-Za-z0-9_#@$§£ÆæØøàÀ-]';
+  const regex = new RegExp(
+    `(?<!${rpgIdentifierChars})(${sortedKeywords.map(k => k.replace(/-/g, '\\-')).join('|')})(?!${rpgIdentifierChars})`,
+    'gi'
+  );
   const matches: BlockMatch[] = [];
 
   let match;
   regex.lastIndex = 0;
   while ((match = regex.exec(text)) !== null) {
     const matchWord = match[0].toLowerCase();
+
+    // Skip keywords found on RPG comment lines (fixed-format '*' comments and // comments).
+    const lineNumber = document.positionAt(match.index).line;
+    if (rpgle.isComment(document.lineAt(lineNumber).text, document)) {
+      continue;
+    }
 
     if (isInCommentOrString(text, match.index)) continue;
 
@@ -523,11 +693,11 @@ function findAllRelatedKeywords(
     }
   }
 
-  if (currentIndex === -1) return [startRange];
+  if (currentIndex === -1) return [];
 
   // Find block containing current keyword
   const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
-  if (!blockIndices) return [startRange];
+  if (!blockIndices) return [];
 
   // Convert indices to ranges
   const ranges: vscode.Range[] = [];
@@ -592,7 +762,7 @@ function findAllRelatedKeywordsWithValidation(
     }
   }
 
-  if (currentIndex === -1) return { validRanges: [startRange], errorRanges: [] };
+  if (currentIndex === -1) return { validRanges: [], errorRanges: [] };
 
   // Find block containing current keyword
   const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
@@ -1011,6 +1181,12 @@ function findMatchingOpen(
       if (lastBlock.pair.close.includes(startWord)) {
         return lastBlock.index;
       }
+
+      // Middle keywords (else/elseif/when/on-error/etc.) belong to the nearest
+      // active block of the same pair and should highlight that whole block.
+      if (pair.middle?.includes(startWord) && lastBlock.pair === pair) {
+        return lastBlock.index;
+      }
     }
   }
 
@@ -1018,6 +1194,12 @@ function findMatchingOpen(
 }
 
 export function deactivateBracketMatcher() {
-  decorationType.dispose();
-  errorDecorationType.dispose();
+  if (decorationType) {
+    decorationType.dispose();
+    decorationType = undefined;
+  }
+  if (errorDecorationType) {
+    errorDecorationType.dispose();
+    errorDecorationType = undefined;
+  }
 }
