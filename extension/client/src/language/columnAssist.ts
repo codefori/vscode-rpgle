@@ -2,6 +2,7 @@
 import { commands, DecorationOptions, ExtensionContext, Range, Selection, TextDocument, ThemeColor, window } from 'vscode';
 import * as Configuration from "../configuration";
 import { loadBase } from '../base';
+import { isIleFileByUri, isOpmFileByUri } from '../../../../language/utils/fileRouting';
 
 const currentArea = window.createTextEditorDecorationType({
   backgroundColor: `rgba(242, 242, 109, 0.3)`,
@@ -19,6 +20,20 @@ let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || 
 let currentEditorLine = -1;
 
 import { SpecFieldDef, SpecFieldValue, SpecRulers, specs, opmSpecs, opmSpecRulers } from '../schemas/specs';
+
+function documentType(document: TextDocument): 'opm' | 'ile' | undefined {
+  const uri = document.uri.toString();
+
+  if (isOpmFileByUri(uri) || document.languageId === 'rpg') {
+    return 'opm';
+  }
+
+  if (isIleFileByUri(uri) || document.languageId === 'rpgle') {
+    return 'ile';
+  }
+
+  return undefined;
+}
 
 const getAreasForLine = (line: string, index: number, languageId: string = 'rpgle') => {
   if (line.length < 6) return undefined;
@@ -49,12 +64,14 @@ const getAreasForLine = (line: string, index: number, languageId: string = 'rpgl
 }
 
 function documentIsFree(document: TextDocument) {
-  if (document.languageId === `rpgle`) {
-    const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
-    return line === `**FREE`;
-  } else if (document.languageId === `rpg`) {
+  const type = documentType(document);
+
+  if (type === 'opm') {
     // OPM RPG is always fixed-format
     return false;
+  } else if (type === 'ile') {
+    const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
+    return line === `**FREE`;
   }
 
   return false;
@@ -67,7 +84,8 @@ export function registerColumnAssist(context: ExtensionContext) {
       if (editor) {
         const document = editor.document;
 
-        if (document.languageId === `rpgle` || document.languageId === `rpg`) {
+        const type = documentType(document);
+        if (type) {
           if (!documentIsFree(document)) {
             const lineNumber = editor.selection.start.line;
             const positionIndex = editor.selection.start.character;
@@ -75,7 +93,7 @@ export function registerColumnAssist(context: ExtensionContext) {
             const positionsData = await promptLine(
               document.getText(new Range(lineNumber, 0, lineNumber, 100)),
               positionIndex,
-              document.languageId
+              type === 'opm' ? 'rpg' : 'rpgle'
             );
 
             if (positionsData) {
@@ -119,15 +137,17 @@ export function registerColumnAssist(context: ExtensionContext) {
 }
 
 function moveFromPosition(direction: "left"|"right", editor = window.activeTextEditor) {
-  if (editor && (editor.document.languageId === `rpgle` || editor.document.languageId === `rpg`) && !documentIsFree(editor.document)) {
+  if (editor && !documentIsFree(editor.document)) {
     const document = editor.document;
+    const type = documentType(document);
+    if (!type) return;
     const lineNumber = editor.selection.start.line;
     const positionIndex = editor.selection.start.character;
 
     const positionsData = getAreasForLine(
       document.getText(new Range(lineNumber, 0, lineNumber, 100)),
       positionIndex,
-      document.languageId
+      type === 'opm' ? 'rpg' : 'rpgle'
     );
 
     if (positionsData) {
@@ -154,7 +174,8 @@ function updateRuler(editor = window.activeTextEditor) {
 
   if (editor) {
     const document = editor.document;
-    if (document.languageId === `rpgle` || document.languageId === `rpg`) {
+    const type = documentType(document);
+    if (type) {
       if (!documentIsFree(document)) {
         const lineNumber = editor.selection.start.line;
         const positionIndex = editor.selection.start.character;
@@ -162,7 +183,7 @@ function updateRuler(editor = window.activeTextEditor) {
         const positionsData = getAreasForLine(
           document.getText(new Range(lineNumber, 0, lineNumber, 100)),
           positionIndex,
-          document.languageId
+          type === 'opm' ? 'rpg' : 'rpgle'
         );
 
         if (positionsData) {
