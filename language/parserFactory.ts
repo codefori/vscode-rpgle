@@ -26,8 +26,18 @@ export class ParserFactory {
    * .rpg → OPM Parser
    * .rpgle, .sqlrpgle → ILE Parser
    */
+  /**
+   * Extract the file extension from a URI, stripping any query string or fragment first.
+   * e.g. "file.rpgle?readonly%3Dfalse" → "rpgle"
+   */
+  private static getExtension(uri: string): string {
+    const path = uri.split('?')[0];
+    const dotIndex = path.lastIndexOf('.');
+    return dotIndex !== -1 ? path.substring(dotIndex + 1).toLowerCase() : '';
+  }
+
   static getParser(uri: string): IParser {
-    const extension = uri.toLowerCase().split('.').pop();
+    const extension = ParserFactory.getExtension(uri);
 
     if (extension === 'rpg' || extension === 'sqlrpg') {
       return new OpmParser();
@@ -43,14 +53,14 @@ export class ParserFactory {
   }
 
   static isOpmFile(uri: string): boolean {
-    const lower = uri.toLowerCase();
+    const extension = ParserFactory.getExtension(uri);
 
-    if (lower.endsWith('.rpg') || lower.endsWith('.sqlrpg')) {
+    if (extension === 'rpg' || extension === 'sqlrpg') {
       return true;
     }
 
     // Deprecated source types
-    if (lower.endsWith('.rpg36') || lower.endsWith('.rpg38') || lower.endsWith('.sqlrpg38')) {
+    if (extension === 'rpg36' || extension === 'rpg38' || extension === 'sqlrpg38') {
       return true;
     }
 
@@ -58,7 +68,7 @@ export class ParserFactory {
   }
 
   static isIleFile(uri: string): boolean {
-    const lower = uri.toLowerCase();
-    return lower.endsWith('.rpgle') || lower.endsWith('.sqlrpgle');
+    const extension = ParserFactory.getExtension(uri);
+    return extension === 'rpgle' || extension === 'sqlrpgle';
   }
 }
