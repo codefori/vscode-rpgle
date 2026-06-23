@@ -3,9 +3,6 @@ import Parser from './ile/parser';
 import Cache from './models/cache';
 import Declaration from './models/declaration';
 import {
-  ILE_EXTENSIONS,
-  OPM_EXTENSIONS,
-  DEPRECATED_OPM_EXTENSIONS,
   isIleFileByUri,
   isOpmFileByUri,
 } from './utils/fileRouting';
@@ -28,10 +25,6 @@ export interface IParser {
  * Factory to get appropriate parser based on file extension
  */
 export class ParserFactory {
-  static ILE_EXTENSIONS = ILE_EXTENSIONS;
-  static OPM_EXTENSIONS = OPM_EXTENSIONS;
-  static DEPRECATED_OPM_EXTENSIONS = DEPRECATED_OPM_EXTENSIONS;
-
   static getParser(uri: string): IParser {
     if (ParserFactory.isOpmFile(uri)) {
       return new OpmParser();
