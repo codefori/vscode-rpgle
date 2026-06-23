@@ -1,8 +1,8 @@
 
 import { commands, DecorationOptions, ExtensionContext, Range, Selection, TextDocument, ThemeColor, window } from 'vscode';
-import { URI } from 'vscode-uri';
 import * as Configuration from "../configuration";
 import { loadBase } from '../base';
+import { isIleFileByUri, isOpmFileByUri } from '../../../../language/utils/fileRouting';
 
 const currentArea = window.createTextEditorDecorationType({
   backgroundColor: `rgba(242, 242, 109, 0.3)`,
@@ -21,24 +21,18 @@ let currentEditorLine = -1;
 
 import { SpecFieldDef, SpecFieldValue, SpecRulers, specs, opmSpecs, opmSpecRulers } from '../schemas/specs';
 
-const ILE_EXTENSIONS: readonly string[] = ['.rpgle', '.sqlrpgle'];
-const OPM_EXTENSIONS: readonly string[] = ['.rpg', '.sqlrpg'];
-const DEPRECATED_OPM_EXTENSIONS: readonly string[] = ['.rpg36', '.rpg38', '.sqlrpg38'];
+function documentType(document: TextDocument): 'opm' | 'ile' | undefined {
+  const uri = document.uri.toString();
 
-function getExtension(uri: string): string {
-  const parsed = URI.parse(uri);
-  const dotIndex = parsed.path.lastIndexOf('.');
-  return dotIndex !== -1 ? parsed.path.substring(dotIndex).toLowerCase() : '';
-}
+  if (isOpmFileByUri(uri) || document.languageId === 'rpg') {
+    return 'opm';
+  }
 
-function isOpmFile(uri: string): boolean {
-  const extension = getExtension(uri);
-  return [...OPM_EXTENSIONS, ...DEPRECATED_OPM_EXTENSIONS].includes(extension);
-}
+  if (isIleFileByUri(uri) || document.languageId === 'rpgle') {
+    return 'ile';
+  }
 
-function isIleFile(uri: string): boolean {
-  const extension = getExtension(uri);
-  return ILE_EXTENSIONS.includes(extension);
+  return undefined;
 }
 
 const getAreasForLine = (line: string, index: number, languageId: string = 'rpgle') => {
@@ -70,10 +64,12 @@ const getAreasForLine = (line: string, index: number, languageId: string = 'rpgl
 }
 
 function documentIsFree(document: TextDocument) {
-  if (isOpmFile(document.uri.toString())) {
+  const type = documentType(document);
+
+  if (type === 'opm') {
     // OPM RPG is always fixed-format
     return false;
-  } else if (isIleFile(document.uri.toString())) {
+  } else if (type === 'ile') {
     const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
     return line === `**FREE`;
   }
@@ -88,8 +84,8 @@ export function registerColumnAssist(context: ExtensionContext) {
       if (editor) {
         const document = editor.document;
 
-        const isOpm = isOpmFile(document.uri.toString());
-        if (isOpm || isIleFile(document.uri.toString())) {
+        const type = documentType(document);
+        if (type) {
           if (!documentIsFree(document)) {
             const lineNumber = editor.selection.start.line;
             const positionIndex = editor.selection.start.character;
@@ -97,7 +93,7 @@ export function registerColumnAssist(context: ExtensionContext) {
             const positionsData = await promptLine(
               document.getText(new Range(lineNumber, 0, lineNumber, 100)),
               positionIndex,
-              isOpm ? 'rpg' : 'rpgle'
+              type === 'opm' ? 'rpg' : 'rpgle'
             );
 
             if (positionsData) {
@@ -143,15 +139,15 @@ export function registerColumnAssist(context: ExtensionContext) {
 function moveFromPosition(direction: "left"|"right", editor = window.activeTextEditor) {
   if (editor && !documentIsFree(editor.document)) {
     const document = editor.document;
-    const isOpm = isOpmFile(document.uri.toString());
-    if (!isOpm && !isIleFile(document.uri.toString())) return;
+    const type = documentType(document);
+    if (!type) return;
     const lineNumber = editor.selection.start.line;
     const positionIndex = editor.selection.start.character;
 
     const positionsData = getAreasForLine(
       document.getText(new Range(lineNumber, 0, lineNumber, 100)),
       positionIndex,
-      isOpm ? 'rpg' : 'rpgle'
+      type === 'opm' ? 'rpg' : 'rpgle'
     );
 
     if (positionsData) {
@@ -178,8 +174,8 @@ function updateRuler(editor = window.activeTextEditor) {
 
   if (editor) {
     const document = editor.document;
-    const isOpm = isOpmFile(document.uri.toString());
-    if (isOpm || isIleFile(document.uri.toString())) {
+    const type = documentType(document);
+    if (type) {
       if (!documentIsFree(document)) {
         const lineNumber = editor.selection.start.line;
         const positionIndex = editor.selection.start.character;
@@ -187,7 +183,7 @@ function updateRuler(editor = window.activeTextEditor) {
         const positionsData = getAreasForLine(
           document.getText(new Range(lineNumber, 0, lineNumber, 100)),
           positionIndex,
-          isOpm ? 'rpg' : 'rpgle'
+          type === 'opm' ? 'rpg' : 'rpgle'
         );
 
         if (positionsData) {
