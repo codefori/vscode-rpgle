@@ -1,3 +1,5 @@
+import { URI } from 'vscode-uri';
+import * as path from 'path';
 import { OpmParser } from './opm/parser';
 import Parser from './ile/parser';
 import Cache from './models/cache';
@@ -17,34 +19,35 @@ export interface IParser {
   clearTableCache?(): void;
 }
 
+export const ILE_EXTENSIONS: readonly string[] = ['.rpgle', '.sqlrpgle'];
+export const OPM_EXTENSIONS: readonly string[] = ['.rpg', '.sqlrpg'];
+export const DEPRECATED_OPM_EXTENSIONS: readonly string[] = ['.rpg36', '.rpg38', '.sqlrpg38'];
+
 /**
  * Factory to get appropriate parser based on file extension
  */
 export class ParserFactory {
+  static ILE_EXTENSIONS = ILE_EXTENSIONS;
+  static OPM_EXTENSIONS = OPM_EXTENSIONS;
+  static DEPRECATED_OPM_EXTENSIONS = DEPRECATED_OPM_EXTENSIONS;
+
   /**
    * Get parser for file based on extension
    * .rpg → OPM Parser
    * .rpgle, .sqlrpgle → ILE Parser
    */
   /**
-   * Extract the file extension from a URI, stripping any query string or fragment first.
-   * e.g. "file.rpgle?readonly%3Dfalse" → "rpgle"
+   * Extract the file extension from a URI using vscode-uri to correctly
+   * handle query strings, fragments, and encoding.
+   * e.g. "file.rpgle?readonly%3Dfalse" → ".rpgle"
    */
   private static getExtension(uri: string): string {
-    const path = uri.split('?')[0];
-    const dotIndex = path.lastIndexOf('.');
-    return dotIndex !== -1 ? path.substring(dotIndex + 1).toLowerCase() : '';
+    const parsed = URI.parse(uri);
+    return path.extname(parsed.path).toLowerCase();
   }
 
   static getParser(uri: string): IParser {
-    const extension = ParserFactory.getExtension(uri);
-
-    if (extension === 'rpg' || extension === 'sqlrpg') {
-      return new OpmParser();
-    }
-
-    // Deprecated source types
-    if (extension === 'rpg36' || extension === 'rpg38' || extension === 'sqlrpg38') {
+    if (ParserFactory.isOpmFile(uri)) {
       return new OpmParser();
     }
 
@@ -54,21 +57,11 @@ export class ParserFactory {
 
   static isOpmFile(uri: string): boolean {
     const extension = ParserFactory.getExtension(uri);
-
-    if (extension === 'rpg' || extension === 'sqlrpg') {
-      return true;
-    }
-
-    // Deprecated source types
-    if (extension === 'rpg36' || extension === 'rpg38' || extension === 'sqlrpg38') {
-      return true;
-    }
-
-    return false;
+    return [...ParserFactory.OPM_EXTENSIONS, ...ParserFactory.DEPRECATED_OPM_EXTENSIONS].includes(extension);
   }
 
   static isIleFile(uri: string): boolean {
     const extension = ParserFactory.getExtension(uri);
-    return extension === 'rpgle' || extension === 'sqlrpgle';
+    return ParserFactory.ILE_EXTENSIONS.includes(extension);
   }
 }
