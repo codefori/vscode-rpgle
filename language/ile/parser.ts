@@ -17,6 +17,7 @@ export type tablePromise = (name: string, aliases?: boolean) => Promise<Declarat
 export type includeFilePromise = (baseFile: string, includeString: string) => Promise<{found: boolean, uri?: string, content?: string}>;
 export type TableDetail = {[name: string]: {fetched: number, fetching?: boolean, recordFormats: Declaration[]}};
 export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean};
+type IncludeFetchResult = {found: boolean, uri?: string, content?: string};
 
 const PROGRAMPARMS_NAME = `PROGRAMPARMS`;
 
@@ -281,6 +282,29 @@ export default class Parser {
     let currentGroup: "structs"|"procedures"|"constants"|"parameters";
 
     let definedMacros: string[] = [];
+
+    // Deduplicate include loads within this parse pass.
+    // Key is based on parent directory context + include literal so repeated
+    // include graph paths (a -> b,c -> d) do not trigger duplicate fetches.
+    const includeFetchCache = new Map<string, Promise<IncludeFetchResult>>();
+    const getIncludeFetchKey = (baseFileUri: string, includePath: string): string => {
+      const cleanBase = baseFileUri.split(`?`)[0];
+      const slashIndex = Math.max(cleanBase.lastIndexOf(`/`), cleanBase.lastIndexOf(`\\`));
+      const baseDir = slashIndex >= 0 ? cleanBase.substring(0, slashIndex) : cleanBase;
+      return `${baseDir}::${includePath.toLowerCase()}`;
+    };
+
+    const fetchIncludeOnce = async (baseFileUri: string, includePath: string): Promise<IncludeFetchResult> => {
+      const key = getIncludeFetchKey(baseFileUri, includePath);
+      let inFlight = includeFetchCache.get(key);
+
+      if (!inFlight) {
+        inFlight = this.includeFileFetch(baseFileUri, includePath);
+        includeFetchCache.set(key, inFlight);
+      }
+
+      return inFlight;
+    };
 
     /**
      * Parse the tokens and add references to the definitions
@@ -792,7 +816,7 @@ export default class Parser {
                     // 1. Correct parent file is logged for nested includes
                     // 2. Member/streamfile resolution caches are scoped per requesting file
                     // 3. Workspace context resolution uses the actual requesting file
-                    const include = await this.includeFileFetch(fileUri, includePath);
+                    const include = await fetchIncludeOnce(fileUri, includePath);
                     if (include.found && include.uri && include.content !== undefined) {
                       if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
                         scopes[0].includes.push({
