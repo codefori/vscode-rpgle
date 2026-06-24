@@ -2,7 +2,6 @@
 
 All notable changes to the "vscode-rpgle" extension can be found in the
 [Releases](https://github.com/codefori/vscode-rpgle/releases) section of the GitHub repository.
-
 ## [Unreleased]
 
 ### Added - OPM RPG Language Support
@@ -55,8 +54,6 @@ All notable changes to the "vscode-rpgle" extension can be found in the
 - All language server providers now use `getParser(uri)` for dynamic parser selection
 - Extension now supports both ILE RPG (`.rpgle`/`.sqlrpgle`) and OPM RPG (`.rpg`/`.sqlrpg`) language variants
 
-
-
 ### Added - Previous ILE RPG Enhancements
 
 - **Input specification (`I` spec) parsing** (fixed-format ILE RPG): the parser now recognises and processes all four I spec sub-types — `programRecord`, `programField`, `externalRecord`, and `externalField`.
@@ -72,6 +69,23 @@ All notable changes to the "vscode-rpgle" extension can be found in the
 ### Fixed
 
 - **Linter diagnostics not clearing when `**FREE` is removed**: previously, if a source file was opened as `**FREE` (activating the linter) and `**FREE` was later removed or the file was re-opened without it, stale linter diagnostics persisted indefinitely. `refreshLinterDiagnostics` now explicitly sends an empty diagnostics notification when the file is not `**FREE`, clearing any previously published warnings.
+- **Shift+F4 ruler incorrectly shown on legacy embedded SQL lines**: the fixed-format spec ruler is no longer painted on C spec SQL continuation lines (column 7 = `+`, e.g. `.....C+ FROM qiws.qcustcdt;`), matching the existing behaviour for directive lines (column 7 = `/`).
+- **Shift+F4 ruler persists when Cmd+Shift+F4 Column Assistant opens**: the ruler is now cleared immediately when the active editor changes (e.g. focus moves to the SEU-style Column Assistant webview panel), preventing it from staying frozen over the source until the next cursor move.
+- **Shift+F4 ruler overlaps Source Change Date columns**: the opaque ruler background is now capped at 80 columns wide, so it no longer paints over the Source Change Date text that IBM i source physical files carry beyond column 80.
+- Fixed type inference for fixed-format D-specifications when the data type position (40) is blank
+  - Correctly distinguishes between "no decimals specified" and "decimals = 0"
+  - Applies proper RPGLE type inference rules:
+    - Standalone fields (S) with decimals → Packed
+    - Standalone fields (S) without decimals → Char
+    - Subfields with decimals → Zoned
+    - Subfields without decimals → Char
+  - Resolves 5 failing test cases in fixed-format parser tests
+- Fixed hover tooltips not displaying for data structure subfields
+  - Added support for qualified data structures (accessed as `DS.FIELD`)
+  - Added support for unqualified data structures (accessed as standalone `FIELD`)
+  - Hover text now displays parent structure context: `parent.field Type QUALIFIED` or `*UNQUALIFIED` or `*UNNAMED`
+  - Shows description tags from external file metadata when available
+  - Displays reference count in hover information
 
 ### Changed
 
