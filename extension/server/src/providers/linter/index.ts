@@ -99,6 +99,18 @@ enum ResolvedState {
 };
 
 let boundLintConfig: {[workingUri: string]: {resolved: ResolvedState, uri: string}} = {};
+const ignoredLibraries = (process.env.LINT_IGNORE_LIBRARIES || ``)
+	.split(`;`)
+	.map(lib => lib.trim().toUpperCase())
+	.filter(Boolean);
+
+function shouldLintUri(uri: string) {
+	const parsed = URI.parse(uri);
+	if (parsed.scheme !== `member`) return true;
+
+	const memberPath = parseMemberUri(parsed.path);
+	return !(memberPath.library && ignoredLibraries.includes(memberPath.library.toUpperCase()));
+}
 
 export async function getLintConfigUri(workingUri: string) {
 	const uri = URI.parse(workingUri);
@@ -110,23 +122,57 @@ export async function getLintConfigUri(workingUri: string) {
 		return cached.resolved === ResolvedState.Found ? cached.uri : undefined;
 	}
 
+	if (uri.scheme === `member`) {
+		const globalPath = process.env.GLOBAL_LINT_CONFIG_PATH;
+		if (globalPath) {
+			cleanString = URI.from({ scheme: `member`, path: globalPath }).toString();
+			cleanString = await validateUri(cleanString, `member`);
+			if (cleanString) {
+				boundLintConfig[workingUri] = {
+					resolved: ResolvedState.Found,
+					uri: cleanString
+				};
+				return cleanString;
+			}
+		}
+	}
+
 	switch (uri.scheme) {
 		case `member`:
-			const memberPath = parseMemberUri(uri.path);
-			cleanString = [
-				``,
-				memberPath.library,
-				`VSCODE`,
-				`RPGLINT.JSON`
-			].join(`/`);
+			// Check if global lint config is enabled
+			let useGlobal = false;
+			try {
+				const config = await connection.workspace.getConfiguration('vscode-rpgle');
+				useGlobal = config?.useGlobalLintConfig === true;
+			} catch (e) { /* default to per-library */ }
 
-			cleanString = URI.from({
-				scheme: `member`,
-				path: cleanString
-			}).toString();
+			if (useGlobal) {
+				// Use /etc/vscode/rpglint.json via streamfile scheme
+				cleanString = URI.from({
+					scheme: `streamfile`,
+					path: `/etc/vscode/rpglint.json`
+				}).toString();
 
-			if (jsonCache[cleanString]) return cleanString;
-			cleanString = await validateUri(cleanString);
+				if (jsonCache[cleanString]) return cleanString;
+				cleanString = await validateUri(cleanString, `streamfile`);
+			} else {
+				// Per-library config (existing behaviour)
+				const memberPath = parseMemberUri(uri.path);
+				cleanString = [
+					``,
+					memberPath.library,
+					`VSCODE`,
+					`RPGLINT.JSON`
+				].join(`/`);
+
+				cleanString = URI.from({
+					scheme: `member`,
+					path: cleanString
+				}).toString();
+
+				if (jsonCache[cleanString]) return cleanString;
+				cleanString = await validateUri(cleanString);
+			}
 			break;
 		
 		case `streamfile`:
@@ -188,6 +234,26 @@ export async function getLintOptions(workingUri: string): Promise<Rules> {
 const hintDiagnositcs: (keyof Rules)[] = [`SQLRunner`, `StringLiteralDupe`]
 
 export async function refreshLinterDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
+	// Check if this member's library is excluded from linting
+	const docUri = URI.parse(document.uri);
+	if (docUri.scheme === `member`) {
+		try {
+			const config = await connection.workspace.getConfiguration('vscode-rpgle');
+			const excludeLibraries: string[] = config?.lintExcludeLibraries || [];
+			if (excludeLibraries.length > 0) {
+				const memberPath = parseMemberUri(docUri.path);
+				const memberLib = (memberPath.library || ``).toUpperCase();
+				const excluded = excludeLibraries.map((l: string) => l.trim().toUpperCase());
+				if (excluded.includes(memberLib)) {
+					if (updateDiagnostics) {
+						connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
+					}
+					return;
+				}
+			}
+		} catch (e) { /* continue with linting if config read fails */ }
+	}
+
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 	if (isFree) {
 		const text = document.getText();
