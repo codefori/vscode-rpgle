@@ -21,7 +21,7 @@ describe('sqlDetection', () => {
     it('should not detect position after SQL block ends', () => {
       const code = `exec sql
   select * from table;
-  
+
 if x > 0;
   y = 1;
 endif;`;
@@ -53,7 +53,7 @@ endif;`;
       const offset1 = code.indexOf('table1');
       const offset2 = code.indexOf('if x');
       const offset3 = code.indexOf('table2');
-      
+
       expect(isInSqlBlock(code, offset1)).to.be.true;
       expect(isInSqlBlock(code, offset2)).to.be.false;
       expect(isInSqlBlock(code, offset3)).to.be.true;
@@ -70,6 +70,57 @@ endif;`;
       const code = `EXEC SQL SELECT * FROM TABLE;`;
       const offset = code.indexOf('SELECT');
       expect(isInSqlBlock(code, offset)).to.be.true;
+    });
+
+    it('should detect position in fixed-format C/EXEC SQL block', () => {
+      const code = `     C/EXEC SQL
+     C+ Set Option COMMIT = *NONE
+     C/END-EXEC
+     C                   IF        FLAG <> ''
+     C                   ENDIF`;
+      const sqlOffset = code.indexOf('Option');
+      expect(isInSqlBlock(code, sqlOffset)).to.be.true;
+    });
+
+    it('should not detect position after fixed-format C/END-EXEC', () => {
+      const code = `     C/EXEC SQL
+     C+ Set Option COMMIT = *NONE
+     C/END-EXEC
+     C                   IF        FLAG <> ''
+     C                   ENDIF`;
+      const ifOffset = code.indexOf('IF        FLAG');
+      expect(isInSqlBlock(code, ifOffset)).to.be.false;
+    });
+
+    it('should not keep fixed SQL mode active for following fixed-form code', () => {
+      const code = `     C/EXEC SQL
+     C+ Set Option COMMIT = *NONE
+     C/END-EXEC
+
+     CSR   ELAB          BEGSR
+     C                   IF        IDARIF <> ''
+     C                   ENDIF
+     C                   ENDSR`;
+
+      const begsrOffset = code.indexOf('BEGSR');
+      const endifOffset = code.indexOf('ENDIF');
+
+      expect(isInSqlBlock(code, begsrOffset)).to.be.false;
+      expect(isInSqlBlock(code, endifOffset)).to.be.false;
+    });
+
+    it('should detect fixed-format SQL with column-6 C markers and sequence prefixes', () => {
+      const code = `00001C/EXEC SQL
+00002C+ Set Option COMMIT = *NONE
+00003C/END-EXEC
+00004C                   IF        FLAG <> ''
+00005C                   ENDIF`;
+
+      const sqlOffset = code.indexOf('Option');
+      const ifOffset = code.indexOf('IF        FLAG');
+
+      expect(isInSqlBlock(code, sqlOffset)).to.be.true;
+      expect(isInSqlBlock(code, ifOffset)).to.be.false;
     });
   });
 
@@ -103,7 +154,7 @@ endif;`;
       const offset1 = code.indexOf('hello');
       const offset2 = code.indexOf('+');
       const offset3 = code.indexOf('world');
-      
+
       expect(isInCommentOrString(code, offset1)).to.be.true;
       expect(isInCommentOrString(code, offset2)).to.be.false;
       expect(isInCommentOrString(code, offset3)).to.be.true;
@@ -119,7 +170,7 @@ endif;`;
       const code = `msg = 'hello'; // comment`;
       const offset1 = code.indexOf('hello');
       const offset2 = code.indexOf('comment');
-      
+
       expect(isInCommentOrString(code, offset1)).to.be.true;
       expect(isInCommentOrString(code, offset2)).to.be.true;
     });
@@ -155,10 +206,10 @@ select;
   when x = 1;
     y = 1;
 endsl;`;
-      
+
       const sqlSelectOffset = code.indexOf('select *');
       const rpgleSelectOffset = code.indexOf('select;');
-      
+
       expect(isInSqlBlock(code, sqlSelectOffset)).to.be.true;
       expect(isInSqlBlock(code, rpgleSelectOffset)).to.be.false;
     });
@@ -168,10 +219,10 @@ endsl;`;
 if x > 0;
   y = 1;
 endif;`;
-      
+
       const commentedSqlOffset = code.indexOf('select');
       const ifOffset = code.indexOf('if x');
-      
+
       expect(isInCommentOrString(code, commentedSqlOffset)).to.be.true;
       expect(isInCommentOrString(code, ifOffset)).to.be.false;
     });
@@ -179,7 +230,7 @@ endif;`;
     it('should handle SQL in string literal', () => {
       const code = `msg = 'exec sql select * from table';`;
       const offset = code.indexOf('select');
-      
+
       expect(isInCommentOrString(code, offset)).to.be.true;
       expect(isInSqlBlock(code, offset)).to.be.false;
     });
