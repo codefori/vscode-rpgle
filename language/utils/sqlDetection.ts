@@ -41,7 +41,7 @@ export function isInSqlBlock(text: string, offset: number): boolean {
     if (!inSql) {
       const fixedExecMatch = lineToProcess.match(fixedExecRegex);
       if (fixedExecMatch) {
-        const startIndex = lineStart + fixedExecMatch.index;
+        const startIndex = lineStart + (fixedExecMatch.index ?? 0);
         if (!isInCommentOrString(text, startIndex)) {
           inSql = true;
           sqlMode = 'fixed';
@@ -49,7 +49,7 @@ export function isInSqlBlock(text: string, offset: number): boolean {
       } else {
         const freeExecMatch = lineToProcess.match(freeExecRegex);
         if (freeExecMatch) {
-          const startIndex = lineStart + freeExecMatch.index;
+          const startIndex = lineStart + (freeExecMatch.index ?? 0);
           if (!isInCommentOrString(text, startIndex)) {
             inSql = true;
             sqlMode = 'free';
@@ -70,7 +70,7 @@ export function isInSqlBlock(text: string, offset: number): boolean {
     } else if (sqlMode === 'fixed') {
       const fixedEndMatch = lineToProcess.match(fixedEndExecRegex);
       if (fixedEndMatch) {
-        const endIndex = lineStart + fixedEndMatch.index;
+        const endIndex = lineStart + (fixedEndMatch.index ?? 0);
         if (!isInCommentOrString(text, endIndex)) {
           inSql = false;
           sqlMode = undefined;
