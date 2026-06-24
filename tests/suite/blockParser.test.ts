@@ -77,7 +77,7 @@ endif;`;
     it('should skip SELECT in SQL blocks', () => {
       const code = `exec sql
   select * from table;
-  
+
 if x > 0;
   y = 1;
 endif;`;
@@ -98,6 +98,25 @@ endsl;`;
       expect(matches).to.have.lengthOf(2);
       expect(matches[0].word).to.equal('select');
       expect(matches[1].word).to.equal('endsl');
+    });
+
+    it('should not treat ENDIF and ENDSR after fixed-format SQL as SQL content', () => {
+      const code = `00001C/EXEC SQL
+00002C+ Set Option COMMIT = *NONE
+00003C/END-EXEC
+
+00004CSR   ELAB          BEGSR
+00005C                   IF        IDARIF <> ''
+00006C                   ENDIF
+00007C                   ENDSR`;
+
+      const matches = findAllBlockMatches(code, isInCommentOrString, isInSqlBlock);
+      const words = matches.map(match => match.word);
+
+      expect(words).to.include('begsr');
+      expect(words).to.include('if');
+      expect(words).to.include('endif');
+      expect(words).to.include('endsr');
     });
 
     it('should find FOR-EACH blocks', () => {
