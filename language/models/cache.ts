@@ -188,7 +188,8 @@ export default class Cache {
         // Scan symbols in reverse to determine the most recently defined
         const symbol = symbols[i];
         if (specificType && symbol.type !== specificType) {
-          return undefined;
+          // Type mismatch — keep scanning for a matching type instead of failing early
+          continue;
         }
 
         if (symbol.name.toUpperCase() === name) {

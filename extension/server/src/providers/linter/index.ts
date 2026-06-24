@@ -13,6 +13,12 @@ import { connection, getDisplayName, getFileRequest, getWorkingDirectory, valida
 import { parseMemberUri } from '../../data';
 
 export let jsonCache: { [uri: string]: string } = {};
+/** Parsed (object) lint config cache — avoids repeated JSON.parse on every lint run */
+let parsedLintCache: { [uri: string]: Rules } = {};
+/** In-flight fetch promises — deduplicates concurrent getLintOptions calls for the same URI */
+let lintFetchInProgress: { [uri: string]: Promise<string | undefined> } = {};
+/** In-flight validateUri promises — deduplicates concurrent getLintConfigUri calls */
+let lintConfigUriInProgress: { [key: string]: Promise<string | undefined> } = {};
 
 export function isLinterEnabled() {
 	return true;
@@ -34,9 +40,11 @@ export function initialise(connection: _Connection) {
 				const validKey = Object.keys(jsonCache).find(key => key.toLowerCase() === lowerUri);
 				if (validKey && jsonCache[validKey]) {
 					delete jsonCache[validKey];
+					delete parsedLintCache[validKey];
 				}
 
 				boundLintConfig = {};
+				lintConfigUriInProgress = {};
 
 				runLinter = true;
 			}
@@ -69,11 +77,13 @@ export function initialise(connection: _Connection) {
 		const uri = URI.parse(uriString);
 
 		// If we open a new RPGLE file that is remote
-		// we need to refresh the lint config so we can 
+		// we need to refresh the lint config so we can
 		// make sure it's the latest.
 		if ([`member`, `streamfile`].includes(uri.scheme)) {
 			boundLintConfig = {};
-			jsonCache = {}
+			lintConfigUriInProgress = {};
+			jsonCache = {};
+			parsedLintCache = {};
 		}
 	})
 
@@ -86,7 +96,7 @@ export function initialise(connection: _Connection) {
 
 export function calculateOffset(document: TextDocument, error: IssueRange) {
 	const offset = error.offset;
-	
+
 	return Range.create(
 		document.positionAt(error.offset.start),
 		document.positionAt(error.offset.end)
@@ -110,6 +120,10 @@ export async function getLintConfigUri(workingUri: string) {
 		return cached.resolved === ResolvedState.Found ? cached.uri : undefined;
 	}
 
+	// Compute a scheme-level dedup key so that concurrent calls for different
+	// documents of the same scheme share one in-flight validateUri call.
+	let dedupKey: string | undefined;
+
 	switch (uri.scheme) {
 		case `member`:
 			const memberPath = parseMemberUri(uri.path);
@@ -126,9 +140,15 @@ export async function getLintConfigUri(workingUri: string) {
 			}).toString();
 
 			if (jsonCache[cleanString]) return cleanString;
-			cleanString = await validateUri(cleanString);
+			dedupKey = cleanString;
+			if (!lintConfigUriInProgress[dedupKey]) {
+				lintConfigUriInProgress[dedupKey] = validateUri(cleanString).finally(() => {
+					delete lintConfigUriInProgress[dedupKey!];
+				});
+			}
+			cleanString = await lintConfigUriInProgress[dedupKey];
 			break;
-		
+
 		case `streamfile`:
 			const workingDir = await getWorkingDirectory();
 			if (workingDir) {
@@ -136,13 +156,25 @@ export async function getLintConfigUri(workingUri: string) {
 					scheme: `streamfile`,
 					path: path.posix.join(workingDir, `.vscode`, `rpglint.json`)
 				}).toString();
-				
-				cleanString = await validateUri(cleanString, uri.scheme);
+
+				dedupKey = cleanString;
+				if (!lintConfigUriInProgress[dedupKey]) {
+					lintConfigUriInProgress[dedupKey] = validateUri(cleanString, uri.scheme).finally(() => {
+						delete lintConfigUriInProgress[dedupKey!];
+					});
+				}
+				cleanString = await lintConfigUriInProgress[dedupKey];
 			}
 			break;
 
 		case `file`:
-			cleanString = await validateUri(`rpglint.json`, uri.scheme);
+			dedupKey = `file:rpglint.json`;
+			if (!lintConfigUriInProgress[dedupKey]) {
+				lintConfigUriInProgress[dedupKey] = validateUri(`rpglint.json`, uri.scheme).finally(() => {
+					delete lintConfigUriInProgress[dedupKey!];
+				});
+			}
+			cleanString = await lintConfigUriInProgress[dedupKey];
 			break;
 	}
 
@@ -163,26 +195,35 @@ export async function getLintConfigUri(workingUri: string) {
 
 export async function getLintOptions(workingUri: string): Promise<Rules> {
 	const possibleUri = await getLintConfigUri(workingUri);
-	let result = {};
+	if (!possibleUri) return {};
 
-	if (possibleUri) {
-		if (jsonCache[possibleUri]) return JSON.parse(jsonCache[possibleUri]);
-		try {
-			jsonCache[possibleUri] = `{}`;
-			const fileContent = await getFileRequest(possibleUri);
-			if (fileContent) {
-				result = JSON.parse(fileContent);
-				jsonCache[possibleUri] = fileContent;
-			}
-		} catch (e: any) {
-			delete jsonCache[possibleUri];
-			// Maybe some default options?
-			console.log(`Error getting lint config for ${possibleUri}: ${e.message}`);
-			console.log(e.stack);
-		}
+	// Return parsed object directly if we have it
+	if (parsedLintCache[possibleUri]) return parsedLintCache[possibleUri];
+
+	// Deduplicate concurrent fetches for the same config URI
+	if (!lintFetchInProgress[possibleUri]) {
+		lintFetchInProgress[possibleUri] = getFileRequest(possibleUri).finally(() => {
+			delete lintFetchInProgress[possibleUri];
+		});
 	}
 
-	return result;
+	try {
+		const fileContent = await lintFetchInProgress[possibleUri];
+		if (fileContent) {
+			const parsed = JSON.parse(fileContent) as Rules;
+			jsonCache[possibleUri] = fileContent;
+			parsedLintCache[possibleUri] = parsed;
+			return parsed;
+		}
+	} catch (e: any) {
+		delete jsonCache[possibleUri];
+		delete parsedLintCache[possibleUri];
+		// Maybe some default options?
+		console.log(`Error getting lint config for ${possibleUri}: ${e.message}`);
+		console.log(e.stack);
+	}
+
+	return {};
 }
 
 const hintDiagnositcs: (keyof Rules)[] = [`SQLRunner`, `StringLiteralDupe`]
@@ -207,7 +248,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 
 		// Turn on for SQLRunner suggestions
 		options.SQLRunner = true;
-		
+
 		options.StringLiteralDupe = true;
 
 		try {

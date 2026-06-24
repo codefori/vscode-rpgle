@@ -18,7 +18,7 @@ import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 import foldingRangeProvider from './providers/foldingRange';
 
-import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp } from "./connection";
+import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp, applyRemoteCacheSettings } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
@@ -35,6 +35,9 @@ import genericCodeActionsProvider from './providers/codeActions';
 import { isLinterEnabled } from './providers/linter';
 import { signatureHelpProvider } from './providers/signatureHelp';
 
+import { CacheMetrics } from '../../../language/ile/parser';
+import { log } from 'console';
+
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
@@ -48,6 +51,17 @@ let projectEnabled = false;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
+
+	// Apply cache settings passed from the VS Code client as initializationOptions
+	const opts = params.initializationOptions as { fileTTLSeconds?: number, fileMaxEntries?: number} | undefined;
+	if (opts) {
+		const ttlMs = (opts.fileTTLSeconds ?? 300) * 1000;
+		const maxEntries = opts.fileMaxEntries ?? 200;
+		applyRemoteCacheSettings(ttlMs, maxEntries);
+		includeCacheTTL = ttlMs;
+		includeCacheMaxSize = maxEntries * 2;
+		console.log(`Cache settings applied: TTL=${ttlMs}ms, max=${maxEntries} `);
+	}
 
 	console.log(capabilities.textDocument?.completion);
 
@@ -143,21 +157,65 @@ const tableFetch = async (table: string, aliases = false): Promise<Declaration[]
 parser.setTableFetch(tableFetch);
 opmParser.setTableFetch(tableFetch);
 
-let fetchingInProgress: { [fetchKey: string]: boolean } = {};
+/** In-flight include resolution promises — concurrent fetches for the same key share one Promise */
+let fetchingInProgress: { [fetchKey: string]: Promise<{found: boolean, uri?: string, content?: string}> } = {};
+
+/** Short-lived cache of resolved include results keyed by "baseUri::includeString".
+ *
+ * Tuning knobs — controlled via VS Code settings (vscode-rpgle.cache.*).
+ * Values are set at server startup from initializationOptions.
+ */
+let includeCacheTTL = 5 * 60 * 1000;    // 5 minutes default
+let includeCacheMaxSize = 500;
+let resolvedIncludeCache: Map<string, {result: {found: boolean, uri?: string, content?: string}, fetched: number}> = new Map();
+
+function clearAllCaches() {
+	parser.clearTableCache();
+
+	for (const uri of Object.keys(parser.parsedCache)) {
+		parser.clearParsedCache(uri);
+	}
+
+	resolvedIncludeCache.clear();
+	fetchingInProgress = {};
+	CacheMetrics.reset();
+}
+
+connection.onRequest(`clearAllCache`, () => {
+	clearAllCaches();
+});
 
 const includeFileFetch = async (stringUri: string, includeString: string) => {
+	const fetchKey = `${stringUri}::${includeString}`;
+	const now = Date.now();
 	const currentUri = URI.parse(stringUri);
 	const uriPath = currentUri.fsPath;
 	// Extract clean filename without query parameters
 	const parentFileName = getDisplayName(stringUri);
 	const fetchStartTime = Date.now();
 
-	let cleanString: string | undefined;
-	let validUri: string | undefined;
+	// Check short-lived resolved cache first
+	const cached = resolvedIncludeCache.get(fetchKey);
+	if (cached && now <= cached.fetched + includeCacheTTL) {
+		CacheMetrics.includeHits++;
+		logWithTimestamp(`[cache] include-hit for ${fetchKey}`, LogLevel.DEBUG);
+		return cached.result;
+	}
+	CacheMetrics.includeMisses++;
+	logWithTimestamp(`[cache] include-miss for ${fetchKey}`, LogLevel.DEBUG);
 
-	if (!fetchingInProgress[includeString]) {
-		fetchingInProgress[includeString] = true;
-		logWithTimestamp(`Include fetch started: ${includeString} (from ${parentFileName})`, LogLevel.DEBUG);
+	// Deduplicate concurrent fetches for the same key
+	if (fetchingInProgress[fetchKey] !== undefined) {
+		logWithTimestamp(`Include fetch already in progress for: ${includeString} (from ${parentFileName}), awaiting existing fetch`, LogLevel.DEBUG);
+		return fetchingInProgress[fetchKey];
+	}
+
+	const resolveInclude = async (): Promise<{found: boolean, uri?: string, content?: string}> => {
+		const currentUri = URI.parse(stringUri);
+		const uriPath = currentUri.fsPath;
+
+		let cleanString: string | undefined;
+		let validUri: string | undefined;
 
 		// Right now we are resolving based on the base file schema.
 		// This is likely bad since you can include across file systems.
@@ -211,7 +269,6 @@ const includeFileFetch = async (stringUri: string, includeString: string) => {
 				// Resolving IFS path from member or streamfile
 
 				// IFS fetch
-
 				if (cleanString.startsWith(`/`)) {
 					// Path from root
 					validUri = URI.from({
@@ -220,11 +277,8 @@ const includeFileFetch = async (stringUri: string, includeString: string) => {
 					}).toString();
 
 				} else {
-					// TODO: Instead of searching for `.*`, search for:
-					//   - `${cleanString}`
-					//   - `${cleanString}.rpgleinc`
-					//   - `${cleanString}.rpgle`
-					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
+					// Search for the include with common extensions
+					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`, `${cleanString}.sqlrplge`];
 
 					// Path from home directory?
 					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
@@ -289,35 +343,37 @@ const includeFileFetch = async (stringUri: string, includeString: string) => {
 			}
 		}
 
+		let result: {found: boolean, uri?: string, content?: string};
+
 		if (validUri) {
 			const validSource = await getFileRequest(validUri, true); // true = skip debounce for include files
 			if (validSource) {
-				const duration = Date.now() - fetchStartTime;
-				const fileName = getDisplayName(validUri);
-				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`, LogLevel.INFO);
-				fetchingInProgress[includeString] = false;
-				return {
-					found: true,
-					uri: validUri,
-					content: validSource
-				};
+				result = { found: true, uri: validUri, content: validSource };
+			} else {
+				result = { found: false, uri: validUri };
+			}
+		} else {
+			result = { found: false, uri: validUri };
+		}
+
+		// Store in short-lived cache; evict oldest entries when over max size
+		resolvedIncludeCache.set(fetchKey, { result, fetched: Date.now() });
+		if (resolvedIncludeCache.size > includeCacheMaxSize) {
+			const oldestKey = resolvedIncludeCache.keys().next().value;
+			if (oldestKey) {
+				resolvedIncludeCache.delete(oldestKey);
 			}
 		}
 
-		const duration = Date.now() - fetchStartTime;
-		logWithTimestamp(`Include fetch completed: ${includeString} (${duration}ms, NOT FOUND)`, LogLevel.WARN);
-		fetchingInProgress[includeString] = false;
-		return {
-			found: false,
-			uri: validUri
-		};
-	} else {
-		logWithTimestamp(`Include fetch skipped: ${includeString} (already fetching)`, LogLevel.DEBUG);
-		return {
-			found: false,
-			uri: validUri
-		};
-	}
+		return result;
+	};
+
+	fetchingInProgress[fetchKey] = resolveInclude().finally(() => {
+		delete fetchingInProgress[fetchKey];
+		logWithTimestamp(`Include fetch completed: ${includeString} (from ${parentFileName}), fetch promise cleared`, LogLevel.DEBUG);
+	});
+
+	return fetchingInProgress[fetchKey];
 };
 
 parser.setIncludeFileFetch(includeFileFetch);
@@ -391,13 +447,17 @@ function executeParse(uri: string, parseId: number, document: any) {
 		if (cache && isLatest) {
 			Linter.refreshLinterDiagnostics(document, cache);
 
-			// When includes are changed, clear cache for any files that reference it
-			for (const [thePath, cache] of Object.entries(parser.parsedCache)) {
-				if (cache) {
-					const includePaths = cache.includes.map(include => include.toPath);
-					if (includePaths.includes(document.uri)) {
-						parser.clearParsedCache(thePath);
-					}
+			// When includes are changed, use the reverse dependency index for targeted invalidation
+			// instead of scanning all cached files (O(dependents) vs O(all cached))
+			for (const depPath of parser.getDependents(uri)) {
+				parser.clearParsedCache(depPath);
+			}
+
+			// Evict stale resolved-include cache entries for the changed file
+			for (const key of resolvedIncludeCache.keys()) {
+				const entry = resolvedIncludeCache.get(key);
+				if (entry?.result?.uri === uri) {
+					resolvedIncludeCache.delete(key);
 				}
 			}
 

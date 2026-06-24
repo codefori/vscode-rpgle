@@ -19,7 +19,7 @@ import {
 	TransportKind
 } from 'vscode-languageclient/node';
 
-import { projectFilesGlob } from './configuration';
+import { projectFilesGlob, getCacheSettings } from './configuration';
 import { clearTableCache, buildRequestHandlers } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
 import { checkAndWait, loadBase, onCodeForIBMiConfigurationChange } from './base';
@@ -63,7 +63,8 @@ export function activate(context: ExtensionContext) {
 				workspace.createFileSystemWatcher('**/rpglint.json'),
 				workspace.createFileSystemWatcher(projectFilesGlob),
 			]
-		}
+		},
+		initializationOptions: getCacheSettings()
 	};
 
 	// Create the language client and start the client.
@@ -95,6 +96,15 @@ export function activate(context: ExtensionContext) {
 		}
 	});
 
+	// Restart the language server when cache settings change so it picks up the new values
+	context.subscriptions.push(
+		workspace.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration(`vscode-rpgle.cache`)) {
+				client.stop().then(() => client.start());
+			}
+		})
+	);
+
 	// Start the client. This will also launch the server
 	client.start();
 
@@ -106,7 +116,7 @@ export function activate(context: ExtensionContext) {
 	registerToggleCommentCommand(context);
 	
 	registerCommands(context, client);
-	
+
 	context.subscriptions.push(getServerSymbolProvider());
 	context.subscriptions.push(getServerImplementationProvider());
 	context.subscriptions.push(setLanguageSettings());
