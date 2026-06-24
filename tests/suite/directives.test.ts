@@ -794,3 +794,47 @@ test('editing around include directives maintains offsets', async () => {
   // LocalVar should shift down by 1 line
   expect(localVarLine2).toBe(localVarLine1! + 1);
 });
+
+test('include graph should fetch shared include once per parse pass (issue 503)', async () => {
+  const graphParser = new Parser();
+
+  const includeContents: { [name: string]: string } = {
+    'b.rpgleinc': [`**FREE`, `/copy 'd.rpgleinc'`].join(`\n`),
+    'c.rpgleinc': [`**FREE`, `/copy 'd.rpgleinc'`].join(`\n`),
+    'd.rpgleinc': [`**FREE`, `Dcl-S SharedValue Int(10);`].join(`\n`),
+  };
+
+  const fetchCounts: { [name: string]: number } = {};
+
+  graphParser.setIncludeFileFetch(async (_baseFile: string, includeFile: string) => {
+    const normalized = includeFile.replace(/^['"]|['"]$/g, ``).toLowerCase();
+    fetchCounts[normalized] = (fetchCounts[normalized] || 0) + 1;
+
+    const content = includeContents[normalized];
+    if (content) {
+      return {
+        found: true,
+        uri: `mock://${normalized}`,
+        content,
+      };
+    }
+
+    return {
+      found: false,
+    };
+  });
+
+  const entry = [
+    `**FREE`,
+    `/copy 'b.rpgleinc'`,
+    `/copy 'c.rpgleinc'`,
+    `return;`,
+  ].join(`\n`);
+
+  const cache = await graphParser.getDocs(`a.rpgle`, entry, { withIncludes: true, ignoreCache: true });
+
+  expect(cache).toBeDefined();
+  expect(fetchCounts[`b.rpgleinc`]).toBe(1);
+  expect(fetchCounts[`c.rpgleinc`]).toBe(1);
+  expect(fetchCounts[`d.rpgleinc`]).toBe(1);
+});
