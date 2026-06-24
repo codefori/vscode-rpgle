@@ -1,4 +1,4 @@
-import path from "path";
+import * as path from "path";
 import { test, expect } from "vitest";
 import { readFile } from "fs/promises";
 import Parser from "../../language/ile/parser";
