@@ -407,8 +407,8 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     // is typically a subfield name (for example: "end pointer;", "endif pointer;").
     const afterTrimmed = afterKeyword.trimStart();
     if (afterTrimmed.length > 0 &&
-        afterTrimmed[0] !== ';' &&
-        isInsideOpenDclDsBlock(text, lineStart)) {
+      afterTrimmed[0] !== ';' &&
+      isInsideOpenDclDsBlock(text, lineStart)) {
       return true;
     }
   }
@@ -586,6 +586,20 @@ function stripComments(line: string): string {
   return line;
 }
 
+// Helper function to check whether END-DS is coded inline on the same DCL-DS statement.
+function hasInlineEndDsOnDclDsLine(text: string, offset: number): boolean {
+  const lineStart = text.lastIndexOf('\n', offset) + 1;
+  const lineEnd = text.indexOf('\n', offset);
+  const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+  const lineWithoutComments = stripComments(lineContent).toLowerCase();
+
+  if (!/\bdcl-ds\b/.test(lineWithoutComments)) {
+    return false;
+  }
+
+  return /\bend-ds\b/.test(lineWithoutComments);
+}
+
 // Helper function to check if dcl-ds line has likeds() or likerec()
 function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   const lineStart = text.lastIndexOf('\n', offset) + 1;
@@ -595,8 +609,40 @@ function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   // Strip comments before checking
   const lineWithoutComments = stripComments(lineContent).toLowerCase();
 
+  // If END-DS is coded on the same statement, this declaration is explicitly closed.
+  if (/\bend-ds\b/.test(lineWithoutComments)) {
+    return false;
+  }
+
   // Check if the line contains likeds() or likerec()
   return /likeds\s*\(/.test(lineWithoutComments) || /likerec\s*\(/.test(lineWithoutComments);
+}
+
+function hasPriorLikedsOrLikerecDclDs(
+  text: string,
+  matches: { offset: number; word: string; length: number }[],
+  closeIndex: number
+): boolean {
+  for (let i = closeIndex - 1; i >= 0; i--) {
+    const word = matches[i].word;
+
+    // Avoid crossing procedure boundaries when looking for a related declaration.
+    if (word === 'dcl-proc' || word === 'end-proc') {
+      break;
+    }
+
+    if (word === 'dcl-ds') {
+      if (hasInlineEndDsOnDclDsLine(text, matches[i].offset)) {
+        continue;
+      }
+
+      if (isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 // Helper function specifically for finding the opening block for an END keyword
@@ -810,6 +856,13 @@ function validateClosingKeyword(
   const openIndex = findMatchingOpenForAnyClosing(text, matches, closeIndex);
 
   if (openIndex === -1) {
+    // Be conservative for DCL-DS + LIKEDS/LIKEREC cases:
+    // these can be written in forms where END-DS handling is ambiguous for
+    // lightweight bracket scanning, so avoid false "unmatched END-DS" errors.
+    if (closeWord === 'end-ds' && hasPriorLikedsOrLikerecDclDs(text, matches, closeIndex)) {
+      return true;
+    }
+
     // No matching opening found - this is an error
     return false;
   }
@@ -923,7 +976,7 @@ function findMatchingOpenForAnyClosing(
         // If not, it's a mismatch - pop anyway so subsequent closers can match correctly
         const topPair = stack[stack.length - 1].pair;
         const isMatch = (topPair === closerPair ||
-                        (topPair.close.includes(word) && closerPair.close.includes(word)));
+          (topPair.close.includes(word) && closerPair.close.includes(word)));
 
         stack.pop();
 
