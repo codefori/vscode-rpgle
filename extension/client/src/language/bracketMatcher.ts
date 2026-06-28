@@ -615,7 +615,53 @@ function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   }
 
   // Check if the line contains likeds() or likerec()
-  return /likeds\s*\(/.test(lineWithoutComments) || /likerec\s*\(/.test(lineWithoutComments);
+  if (!/likeds\s*\(/.test(lineWithoutComments) && !/likerec\s*\(/.test(lineWithoutComments)) {
+    return false;
+  }
+
+  // Even with likeds/likerec, an explicit END-DS on a subsequent line makes this a block.
+  const nextLineStart = lineEnd === -1 ? text.length : lineEnd + 1;
+  return !hasExplicitEndDsBlock(text, nextLineStart);
+}
+
+// Returns true if there is a matching END-DS before the next procedure end
+function hasExplicitEndDsBlock(text: string, startOffset: number): boolean {
+  let pos = startOffset;
+  let depth = 0;
+
+  while (pos < text.length) {
+    const lineEnd = text.indexOf('\n', pos);
+    const lineActualEnd = lineEnd === -1 ? text.length : lineEnd;
+    const stripped = stripComments(text.substring(pos, lineActualEnd)).trim().toLowerCase();
+
+    if (stripped) {
+      if (/^dcl-proc\b/.test(stripped) || /^end-proc\b/.test(stripped)) {
+        break;
+      }
+
+      if (/^dcl-ds\b/.test(stripped) && !/\bend-ds\b/.test(stripped)) {
+        if (/likeds\s*\(/.test(stripped) || /likerec\s*\(/.test(stripped)) {
+          const nestedNext = lineActualEnd === text.length ? text.length : lineActualEnd + 1;
+          if (hasExplicitEndDsBlock(text, nestedNext)) {
+            depth++;
+          }
+        } else {
+          depth++;
+        }
+      } else if (/\bend-ds\b/.test(stripped)) {
+        if (depth > 0) {
+          depth--;
+        } else {
+          return true;
+        }
+      }
+    }
+
+    if (lineEnd === -1) break;
+    pos = lineEnd + 1;
+  }
+
+  return false;
 }
 
 function hasPriorLikedsOrLikerecDclDs(
