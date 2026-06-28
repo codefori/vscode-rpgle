@@ -324,6 +324,25 @@ end-ds;
 
       expect(code).toContain('dcl-ds myds3 likeds(outputData_t);  // Clicking here');
     });
+
+    it('should keep end-proc valid when a rogue end-ds appears before it', () => {
+      // Rogue END-DS should be flagged locally and not cascade to END-PROC.
+      const code = `
+**free
+
+dcl-proc qualifiedNaming;
+  dcl-ds localDs likeds(pravda);
+    field1 int(10);
+    field2 int(10);
+  end-ds;  // Rogue closer in this context
+  dcl-s dataf1 varchar(10);
+  return;
+end-proc;
+      `.trim();
+
+      expect(code).toContain('end-ds;  // Rogue closer in this context');
+      expect(code).toContain('end-proc;');
+    });
   });
 });
 

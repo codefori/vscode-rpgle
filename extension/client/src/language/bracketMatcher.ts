@@ -974,17 +974,16 @@ function findMatchingOpenForAnyClosing(
       });
 
       if (closerPair && stack.length > 0) {
-        // For specific closers, ONLY close the top of the stack
-        // Check if it matches - if so, this is a valid closure
-        // If not, it's a mismatch - pop anyway so subsequent closers can match correctly
+        // For specific closers, only close the top of the stack when it matches.
+        // If it does not match, treat it as a local mismatch and do not consume
+        // outer block state (prevents mismatch cascade to later ENDxx tokens).
         const topPair = stack[stack.length - 1].pair;
         const isMatch = (topPair === closerPair ||
           (topPair.close.includes(word) && closerPair.close.includes(word)));
 
-        stack.pop();
-
-        // IMPORTANT: Mismatch doesn't get to search deeper in the stack
-        // It consumes the top block (for error recovery) but that's it
+        if (isMatch) {
+          stack.pop();
+        }
       }
     }
   }
@@ -1141,9 +1140,8 @@ function findMatchingClose(
       if (closingPair) {
         // Specific closing keyword (endif, endfor, end-proc, etc.)
         // ONLY close the top of the stack, maintaining proper LIFO discipline
-        // For error recovery: pop the top even if it doesn't match (the mismatch
-        // will be caught by validateClosingKeyword), allowing subsequent closers
-        // to find their correct matches
+        // If it does not match, keep stack state intact so the mismatch remains
+        // local and does not invalidate downstream valid closers.
         if (stack.length > 0) {
           const topPair = stack[stack.length - 1];
 
@@ -1155,16 +1153,6 @@ function findMatchingClose(
             }
             // Pop this matched block
             stack.pop();
-          } else {
-            // Mismatch: pop the top anyway for error recovery
-            // The mismatch will be highlighted by validateClosingKeyword
-            stack.pop();
-
-            // If stack is now empty, our target block was closed (incorrectly)
-            // Stop searching to avoid matching with unrelated blocks
-            if (stack.length === 0) {
-              return -1;
-            }
           }
         }
       }
@@ -1223,9 +1211,12 @@ function findMatchingOpen(
 
       if (closingPair && stack.length > 0) {
         // Specific closing keyword (endif, endfor, end-proc, etc.)
-        // ONLY close the top of the stack, maintaining proper LIFO discipline
-        // For error recovery: pop the top even if it doesn't match
-        stack.pop();
+        // ONLY close the top of the stack when it matches. If it does not match,
+        // keep stack state intact to avoid propagating mismatch to later closers.
+        const topPair = stack[stack.length - 1].pair;
+        if (topPair.close.includes(word)) {
+          stack.pop();
+        }
       }
       // else: word is neither opener nor closer (might be middle keyword) - ignore it
     }
