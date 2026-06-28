@@ -195,6 +195,7 @@
 		}
 	},
 	"scripts": {
+		"build": "npm run webpack",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"package": "vsce package",

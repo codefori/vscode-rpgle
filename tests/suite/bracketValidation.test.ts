@@ -155,6 +155,38 @@ end-proc;  // Should correctly close dcl-proc
       expect(code).toContain('end-proc;  // Should correctly close dcl-proc');
     });
 
+    it('should not treat dcl-ds with likeds() and inline end-ds as a block opener', () => {
+      // Inline END-DS on a LIKEDS declaration is still a one-line declaration.
+      const code = `
+**free
+
+dcl-proc qualifiedNaming;
+  dcl-ds localDs likeds(pravda) end-ds;
+  dcl-s dataf1 varchar(10);
+  return;
+end-proc;
+      `.trim();
+
+      expect(code).toContain('dcl-ds localDs likeds(pravda) end-ds;');
+      expect(code).toContain('end-proc;');
+    });
+
+    it('should not treat dcl-ds with likerec() and inline end-ds as a block opener', () => {
+      // Inline END-DS should not change LIKEREC single-line behavior.
+      const code = `
+**free
+
+dcl-proc readRecord;
+  dcl-ds recDs likerec(custrec : *input) end-ds;
+  dcl-s status int(10);
+  return;
+end-proc;
+      `.trim();
+
+      expect(code).toContain('dcl-ds recDs likerec(custrec : *input) end-ds;');
+      expect(code).toContain('end-proc;');
+    });
+
     it('should still treat multi-line dcl-ds as a block opener', () => {
       // dcl-ds WITHOUT likeds/likerec creates a multi-line block
       const code = `

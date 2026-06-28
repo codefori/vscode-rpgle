@@ -600,6 +600,9 @@ function hasInlineEndDsOnDclDsLine(text: string, offset: number): boolean {
   return /\bend-ds\b/.test(lineWithoutComments);
 }
 
+function isInlineEndDsForLikedsOrLikerec(text: string, offset: number): boolean {
+  return hasInlineEndDsOnDclDsLine(text, offset) && isDclDsWithLikedsOrLikerec(text, offset);
+}
 // Helper function to check if dcl-ds line has likeds() or likerec()
 function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   const lineStart = text.lastIndexOf('\n', offset) + 1;
@@ -609,12 +612,8 @@ function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   // Strip comments before checking
   const lineWithoutComments = stripComments(lineContent).toLowerCase();
 
-  // If END-DS is coded on the same statement, this declaration is explicitly closed.
-  if (/\bend-ds\b/.test(lineWithoutComments)) {
-    return false;
-  }
-
-  // Check if the line contains likeds() or likerec()
+  // LIKEDS/LIKEREC declarations are one-line and should not be treated as block openers,
+  // regardless of whether END-DS is written inline on the same statement.
   return /likeds\s*\(/.test(lineWithoutComments) || /likerec\s*\(/.test(lineWithoutComments);
 }
 
@@ -856,10 +855,9 @@ function validateClosingKeyword(
   const openIndex = findMatchingOpenForAnyClosing(text, matches, closeIndex);
 
   if (openIndex === -1) {
-    // Be conservative for DCL-DS + LIKEDS/LIKEREC cases:
-    // these can be written in forms where END-DS handling is ambiguous for
-    // lightweight bracket scanning, so avoid false "unmatched END-DS" errors.
-    if (closeWord === 'end-ds' && hasPriorLikedsOrLikerecDclDs(text, matches, closeIndex)) {
+    // DCL-DS LIKEDS/LIKEREC can include inline END-DS on the declaration line.
+    // That token is syntactic noise for block matching and should not be flagged.
+    if (closeWord === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[closeIndex].offset)) {
       return true;
     }
 
@@ -926,6 +924,11 @@ function findMatchingOpenForAnyClosing(
 
   for (let i = 0; i < closeIndex; i++) {
     const word = matches[i].word;
+
+    // Ignore inline END-DS written on LIKEDS/LIKEREC one-line declarations.
+    if (word === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[i].offset)) {
+      continue;
+    }
 
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
@@ -1099,6 +1102,11 @@ function findMatchingClose(
   for (let i = openIndex + 1; i < matches.length; i++) {
     const word = matches[i].word;
 
+    // Ignore inline END-DS written on LIKEDS/LIKEREC one-line declarations.
+    if (word === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[i].offset)) {
+      continue;
+    }
+
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
@@ -1182,6 +1190,11 @@ function findMatchingOpen(
 
   for (let i = 0; i < startIndex; i++) {
     const word = matches[i].word;
+
+    // Ignore inline END-DS written on LIKEDS/LIKEREC one-line declarations.
+    if (word === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[i].offset)) {
+      continue;
+    }
 
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
