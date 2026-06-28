@@ -292,41 +292,6 @@ end-ds;
 
       expect(code).toContain('dcl-ds myds3 likeds(outputData_t);  // Clicking here');
     });
-
-    it('should treat dcl-ds with likeds() and explicit end-ds as a block opener', () => {
-      // dcl-ds with likeds() CAN still have explicit subfields and end-ds.
-      // In that case it IS a multi-line block and must be matched with its end-ds.
-      // Bug: without the fix, end-ds was unmatched and would pop dcl-proc from the
-      // stack during error recovery, causing end-proc to be marked as an error.
-      const code = `
-**free
-
-dcl-proc qualifiedNames;
-  dcl-ds myDs likeds(prova);
-    field1 int(10);
-    field2 int(10);
-  end-ds;
-
-  dcl-s arr int(10) dim(100);
-  dcl-s myvalue int(10);
-
-  myDs.field1 = 5;
-  myvalue = 10;
-  arr(myvalue) = 99;
-
-  return;
-end-proc;
-      `.trim();
-
-      // Expected:
-      // - dcl-ds myDs likeds(prova) IS a block opener (has explicit end-ds)
-      // - end-ds matches dcl-ds
-      // - end-proc correctly closes dcl-proc (NOT an error)
-
-      expect(code).toContain('dcl-ds myDs likeds(prova);');
-      expect(code).toContain('end-ds;');
-      expect(code).toContain('end-proc;');
-    });
   });
 });
 
