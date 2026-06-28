@@ -1,8 +1,8 @@
 import path = require('path');
 import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from 'vscode';
-import {getInstance} from './base';
+import { getInstance } from './base';
 
-import {DEFAULT_SCHEMA} from "./schemas/linter"
+import { DEFAULT_SCHEMA } from "./schemas/linter";
 
 export function initialise(context: ExtensionContext) {
 	context.subscriptions.push(
@@ -47,7 +47,7 @@ export function initialise(context: ExtensionContext) {
 
 			} else if (instance && instance.getConnection()) {
 				const connection = instance.getConnection();
-				const content = instance.getContent();
+				const content = connection.getContent();
 
 				/** @type {"member"|"streamfile"} */
 				let type = `member`;
@@ -142,7 +142,7 @@ export function initialise(context: ExtensionContext) {
 												try {
 													console.log(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);
 
-													await content.uploadMemberContent(undefined, memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
+													await content.uploadMemberContent(memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
 													await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
 												} catch (e) {
 													console.log(e);
@@ -155,7 +155,7 @@ export function initialise(context: ExtensionContext) {
 											console.log(`IFS path: ${configPath}`);
 
 											try {
-												await content.writeStreamfile(configPath, jsonString);
+												await content.writeStreamfileRaw(configPath, jsonString, "utf-8");
 												await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
 											} catch (e) {
 												console.log(e);
