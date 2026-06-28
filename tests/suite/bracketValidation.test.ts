@@ -155,8 +155,9 @@ end-proc;  // Should correctly close dcl-proc
       expect(code).toContain('end-proc;  // Should correctly close dcl-proc');
     });
 
-    it('should not treat dcl-ds with likeds() and inline end-ds as a block opener', () => {
-      // Inline END-DS on a LIKEDS declaration is still a one-line declaration.
+    it('should treat inline end-ds on likeds() as invalid while preserving procedure matching', () => {
+      // Inline END-DS on a LIKEDS declaration is invalid syntax.
+      // It should be flagged as unmatched without breaking END-PROC matching.
       const code = `
 **free
 
@@ -171,8 +172,9 @@ end-proc;
       expect(code).toContain('end-proc;');
     });
 
-    it('should not treat dcl-ds with likerec() and inline end-ds as a block opener', () => {
-      // Inline END-DS should not change LIKEREC single-line behavior.
+    it('should treat inline end-ds on likerec() as invalid while preserving procedure matching', () => {
+      // Inline END-DS on a LIKEREC declaration is invalid syntax.
+      // It should be flagged as unmatched without breaking END-PROC matching.
       const code = `
 **free
 

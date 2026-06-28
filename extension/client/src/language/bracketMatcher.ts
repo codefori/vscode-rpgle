@@ -101,10 +101,20 @@ function activateBracketMatcher() {
         if (errorInfo.range.contains(position)) {
           const keyword = errorInfo.keyword.toUpperCase();
           const markdown = new vscode.MarkdownString();
-          markdown.appendText(`⚠️ Unmatched ${keyword} statement\n\n`);
-          markdown.appendText('This ENDxx keyword has no matching opening block.\n\n');
-          markdown.appendText('If it is a DS subfield: use DCL-SUBF\n\n');
-          markdown.appendText('If it is a parameter: use DCL-PARM');
+
+          // Bold first line, while keeping keyword safely as plain text.
+          markdown.appendMarkdown('**Unmatched ');
+          markdown.appendText(keyword);
+          markdown.appendMarkdown(' statement**\n');
+          markdown.appendMarkdown(
+            [
+              'This ENDxx keyword has no matching opening block.',
+              '',
+              '- For DS subfields, use **DCL-SUBF**',
+              '- For parms, use **DCL-PARM**',
+              '- For DCL-DS with either **LIKEDS(...)** or **LIKEREC(...)** an END-DS is **not** allowed.'
+            ].join('\n')
+          );
           return new vscode.Hover(markdown);
         }
       }
@@ -855,12 +865,6 @@ function validateClosingKeyword(
   const openIndex = findMatchingOpenForAnyClosing(text, matches, closeIndex);
 
   if (openIndex === -1) {
-    // DCL-DS LIKEDS/LIKEREC can include inline END-DS on the declaration line.
-    // That token is syntactic noise for block matching and should not be flagged.
-    if (closeWord === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[closeIndex].offset)) {
-      return true;
-    }
-
     // No matching opening found - this is an error
     return false;
   }
