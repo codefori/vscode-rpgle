@@ -334,8 +334,13 @@ function preloadCache(document: vscode.TextDocument) {
     const text = document.getText();
 
     // Detect format once and cache it (avoid recalculating on every cursor move)
-    // FREE FORMAT: starts with **FREE in columns 1-6 (case-insensitive)
-    const isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
+    // FREE FORMAT: starts with **FREE in columns 1-6 OR contains ctl-opt/dcl-s/dcl-ds early in file
+    let isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
+    if (!isFreeFormat) {
+      // Check first 30 lines for free-format indicators (ctl-opt, dcl-s, dcl-ds, dcl-proc, for, endfor, etc.)
+      const firstLines = text.split('\n').slice(0, 30).join('\n').toUpperCase();
+      isFreeFormat = /\b(CTL-OPT|DCL-S|DCL-DS|DCL-PROC|DCL-PR|DCL-PI|DCL-ENUM|FOR\s|ENDFOR|ENDIF|ENDDO|SELECT|ENDSL)\b/.test(firstLines);
+    }
 
     const matches = findAllMatches(text, document, isFreeFormat);
 
@@ -789,11 +794,17 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
 
 function findAllMatches(text: string, document: vscode.TextDocument, isFreeFormat?: boolean): BlockMatch[] {
   // Use provided isFreeFormat or detect it if not provided
-  // Detect format by checking if document starts with **FREE in columns 1-6
-  const format: boolean = isFreeFormat !== undefined ? isFreeFormat : 
-    (text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE');
-
-  const allKeywords: string[] = [];
+  // Detect format by checking for **FREE at start OR free-format indicators in first 30 lines
+  let format: boolean;
+  if (isFreeFormat !== undefined) {
+    format = isFreeFormat;
+  } else {
+    format = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
+    if (!format) {
+      const firstLines = text.split('\n').slice(0, 30).join('\n').toUpperCase();
+      format = /\b(CTL-OPT|DCL-S|DCL-DS|DCL-PROC|DCL-PR|DCL-PI|DCL-ENUM|FOR\s|ENDFOR|ENDIF|ENDDO|SELECT|ENDSL)\b/.test(firstLines);
+    }
+  }
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
     if (pair.middle) {

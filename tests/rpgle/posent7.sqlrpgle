@@ -2746,7 +2746,7 @@ U2804C                   MOVE      D2CEXG        ODCEXG
 
                  prepareORDER();
 
-                 IF (addItem = 'N');
+ x                IF (addItem = 'N');
                    SCREEN = 'ORDCONFIRM';
                    IF (WSTYP = 'Q');
                      screen = 'POS03';
@@ -2774,7 +2774,7 @@ U2804C                   MOVE      D2CEXG        ODCEXG
      C*
      C* SHOW SCREEN 1 WHILE DSPLY1 = ON
      C*
-     C                   DOW       SHOW = 'Y'
+ x   C                   DOW       SHOW = 'Y'
      C* SDD                EXSR CLRCTL
      C                   EXFMT     confirmDel
      C* EXIT SCREEN
