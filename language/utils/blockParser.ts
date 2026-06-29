@@ -67,11 +67,16 @@ export function findAllBlockMatches(
     // Fixed-format comments: * in column 7 (index 6)
     // Directives: / in column 7 followed by non-/ (like /COPY, /FREE, etc.)
     // SQL continuation: + in column 7 (index 6), optionally preceded by C in column 6 (index 5)
-    if (/^\s*\/\//.test(currentLine) ||  // Free-form comment //
-      (currentLine.length > 6 && currentLine[6] === '*') ||  // Fixed-format comment *
-      (currentLine.length > 6 && currentLine[6] === '/' && currentLine[7] !== '/') ||  // Directive /
-      (currentLine.length > 6 && currentLine[6] === '+')) {  // SQL continuation + in column 7
-      // Current line is a comment, directive, or continuation - don't treat keyword as anything special
+    try {
+      if (/^\s*\/\//.test(currentLine) ||  // Free-form comment //
+        (currentLine.length > 6 && currentLine[6] === '*') ||  // Fixed-format comment *
+        (currentLine.length > 6 && currentLine[6] === '/' && (currentLine.length <= 7 || currentLine[7] !== '/')) ||  // Directive /
+        (currentLine.length > 6 && currentLine[6] === '+')) {  // SQL continuation + in column 7
+        // Current line is a comment, directive, or continuation - don't treat keyword as anything special
+        return false;
+      }
+    } catch (e) {
+      // If anything goes wrong with line analysis, treat as not a variable context
       return false;
     }
 
