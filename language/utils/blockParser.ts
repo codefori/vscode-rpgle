@@ -78,6 +78,14 @@ export function findAllBlockMatches(
       }
     }
 
+    // Check if at the start of a line (preceded only by whitespace and newlines)
+    // If so, it's a statement keyword, NOT a variable in an expression
+    const lineStart = beforeKeyword.match(/[\n\r]\s*$/);
+    if (lineStart) {
+      // Keyword is at the start of a line → it's a statement keyword
+      return false;
+    }
+
     // Check what comes BEFORE the keyword - look for comparison operators or expression contexts
     const beforeMatch = beforeKeyword.match(/([<>=+\-*/.(,])\s*$/);
 
