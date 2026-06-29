@@ -14,6 +14,7 @@ const JUMP_ENABLED_KEY = 'bracketJumpEnabled';
 interface CacheEntry {
   version: number;
   text: string;
+  isFreeFormat: boolean;  // Cached format detection (true if **FREE in columns 1-6)
   matches: BlockMatch[];
   errorRanges: { range: vscode.Range; keyword: string }[];
   // O(1) lookup maps built at preload time so cursor moves never re-scan
@@ -331,7 +332,12 @@ function preloadCache(document: vscode.TextDocument) {
     if (analysisCache.has(docUri) && analysisCache.get(docUri)!.version === document.version) return;
 
     const text = document.getText();
-    const matches = findAllMatches(text, document);
+
+    // Detect format once and cache it (avoid recalculating on every cursor move)
+    // FREE FORMAT: starts with **FREE in columns 1-6 (case-insensitive)
+    const isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
+
+    const matches = findAllMatches(text, document, isFreeFormat);
 
     // true/true or true/false → full cache including errorRanges (O(n²) mismatch scan)
     // false/true → partial cache: matches + maps only, skip errorRanges
@@ -344,6 +350,7 @@ function preloadCache(document: vscode.TextDocument) {
     analysisCache.set(docUri, {
       version: document.version,
       text: text,
+      isFreeFormat: isFreeFormat,
       matches: matches,
       errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword })),
       matchIndexByOffset,
@@ -620,7 +627,7 @@ function isInCompilerDirective(text: string, offset: number): boolean {
 
 // Helper function to check if a keyword is actually being used as a variable
 // This handles cases like: end = 5; end += 1; dow (x < end); dcl-s end int(10); etc.
-function isVariableContext(text: string, matchOffset: number, matchLength: number): boolean {
+function isVariableContext(text: string, matchOffset: number, matchLength: number, isFreeFormat: boolean): boolean {
   // Restrict context checks to the current physical line so punctuation in
   // previous comment lines cannot influence keyword classification.
   const lineStart = text.lastIndexOf('\n', matchOffset) + 1;
@@ -702,6 +709,22 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     }
   }
 
+  // Format-aware line-start check: keyword at logical/physical line start → statement keyword
+  if (isFreeFormat) {
+    // FREE FORMAT: Check if keyword is at the start of a line (preceded only by whitespace/newlines)
+    if (/^\s*$/.test(beforeKeyword)) {
+      // Keyword is at the start of a line → it's a statement keyword, NOT a variable
+      return false;
+    }
+  } else {
+    // FIXED FORMAT: Check if keyword starts at column 7 (index 6)
+    // In fixed-format, columns 1-6 are reserved (line numbers in 1-5, spec type in 6)
+    if (localOffset === 6) {
+      // Keyword starts at column 7 → it's a statement keyword, NOT a variable
+      return false;
+    }
+  }
+
   // Check what comes BEFORE the keyword - look for comparison operators or other expression contexts
   // e.g., dow (x < end) or if (y > end) or result = x + end
   const beforeMatch = beforeKeyword.match(/([<>=+\-*/.(,])\s*$/);
@@ -764,7 +787,12 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
   return false;
 }
 
-function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
+function findAllMatches(text: string, document: vscode.TextDocument, isFreeFormat?: boolean): BlockMatch[] {
+  // Use provided isFreeFormat or detect it if not provided
+  if (isFreeFormat === undefined) {
+    isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
+  }
+
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
@@ -819,7 +847,7 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
     // Skip keywords that are actually variables in expression/assignment context
     // Only check for simple keywords (no hyphens) that could be valid variable names
     // Keywords with hyphens (end-proc, dcl-proc, etc.) cannot be variables
-    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length)) {
+    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length, isFreeFormat)) {
       continue;
     }
 
