@@ -80,6 +80,15 @@ export function findAllBlockMatches(
       return false;
     }
 
+    // CRITICAL: Check if at the start of a line (preceded only by whitespace and newlines)
+    // If so, it's definitively a statement keyword, NOT a variable in an expression
+    // This check must be early to prevent later checks from misclassifying statement keywords
+    const lineStartMatch = beforeKeyword.match(/[\n\r]\s*$/);
+    if (lineStartMatch) {
+      // Keyword is at the start of a line → it's a statement keyword
+      return false;
+    }
+
     // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, etc.)
     // ALL dcl- keywords indicate the next word is an identifier, not a keyword
     const declMatch = beforeKeyword.match(/\b(dcl-[a-z]+)\s+$/i);
@@ -104,14 +113,6 @@ export function findAllBlockMatches(
       if (twoChars === '+=' || twoChars === '-=' || twoChars === '*=' || twoChars === '/=' || nextChar === '=') {
         return true;
       }
-    }
-
-    // Check if at the start of a line (preceded only by whitespace and newlines)
-    // If so, it's a statement keyword, NOT a variable in an expression
-    const lineStartMatch = beforeKeyword.match(/[\n\r]\s*$/);
-    if (lineStartMatch) {
-      // Keyword is at the start of a line → it's a statement keyword
-      return false;
     }
 
     // Check what comes BEFORE the keyword - look for comparison operators or expression contexts
