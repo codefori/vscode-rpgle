@@ -62,14 +62,16 @@ export function findAllBlockMatches(
     if (lineEnd === -1) lineEnd = text.length;
     const currentLine = text.substring(lineStart, lineEnd);
 
-    // Check if the current line is a comment or directive (should not analyze variable context)
+    // Check if the current line is a comment, directive, or SQL continuation
     // Free-form comments: // anywhere on the line
     // Fixed-format comments: * in column 7 (index 6)
     // Directives: / in column 7 followed by non-/ (like /COPY, /FREE, etc.)
+    // SQL continuation: + in column 7 (index 6), optionally preceded by C in column 6 (index 5)
     if (/^\s*\/\//.test(currentLine) ||  // Free-form comment //
       (currentLine.length > 6 && currentLine[6] === '*') ||  // Fixed-format comment *
-      (currentLine.length > 6 && currentLine[6] === '/' && currentLine[7] !== '/')) {  // Directive /
-      // Current line is a comment or directive - don't treat keyword as anything special
+      (currentLine.length > 6 && currentLine[6] === '/' && currentLine[7] !== '/') ||  // Directive /
+      (currentLine.length > 6 && currentLine[6] === '+')) {  // SQL continuation + in column 7
+      // Current line is a comment, directive, or continuation - don't treat keyword as anything special
       return false;
     }
 
