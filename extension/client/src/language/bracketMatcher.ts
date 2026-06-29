@@ -333,14 +333,10 @@ function preloadCache(document: vscode.TextDocument) {
 
     const text = document.getText();
 
-    // Detect format once and cache it (avoid recalculating on every cursor move)
-    // FREE FORMAT: starts with **FREE in columns 1-6 OR contains ctl-opt/dcl-s/dcl-ds early in file
-    let isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
-    if (!isFreeFormat) {
-      // Check first 30 lines for free-format indicators (ctl-opt, dcl-s, dcl-ds, dcl-proc, for, endfor, etc.)
-      const firstLines = text.split('\n').slice(0, 30).join('\n').toUpperCase();
-      isFreeFormat = /\b(CTL-OPT|DCL-S|DCL-DS|DCL-PROC|DCL-PR|DCL-PI|DCL-ENUM|FOR\s|ENDFOR|ENDIF|ENDDO|SELECT|ENDSL)\b/.test(firstLines);
-    }
+    // All modern RPG IV (both **FREE and hybrid/no-**FREE) is treated as free-format
+    // for keyword detection: in hybrid files, columns 1-7 are reserved whitespace/indicators,
+    // so statement keywords always appear preceded only by whitespace — same check as **FREE.
+    const isFreeFormat = true;
 
     const matches = findAllMatches(text, document, isFreeFormat);
 
@@ -793,18 +789,13 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
 }
 
 function findAllMatches(text: string, document: vscode.TextDocument, isFreeFormat?: boolean): BlockMatch[] {
-  // Use provided isFreeFormat or detect it if not provided
-  // Detect format by checking for **FREE at start OR free-format indicators in first 30 lines
-  let format: boolean;
-  if (isFreeFormat !== undefined) {
-    format = isFreeFormat;
-  } else {
-    format = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
-    if (!format) {
-      const firstLines = text.split('\n').slice(0, 30).join('\n').toUpperCase();
-      format = /\b(CTL-OPT|DCL-S|DCL-DS|DCL-PROC|DCL-PR|DCL-PI|DCL-ENUM|FOR\s|ENDFOR|ENDIF|ENDDO|SELECT|ENDSL)\b/.test(firstLines);
-    }
-  }
+  // All modern RPG IV is treated as free-format for keyword detection purposes:
+  // - **FREE files: fully free (columns 1+)
+  // - Hybrid files (no **FREE): free-format syntax in columns 8-80, columns 1-7 are whitespace/indicators
+  // In both cases, a statement keyword is always preceded only by whitespace — same check applies.
+  const format: boolean = isFreeFormat !== undefined ? isFreeFormat : true;
+
+  const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
     if (pair.middle) {
