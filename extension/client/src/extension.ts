@@ -28,6 +28,16 @@ import { setLanguageSettings } from './language/config';
 
 let client: LanguageClient;
 
+// GLOBAL ERROR HANDLERS - catch unhandled promise rejections and exceptions
+if (process) {
+	process.on('uncaughtException', (error) => {
+		console.error('[vscode-rpgle] UNCAUGHT EXCEPTION:', error);
+	});
+	process.on('unhandledRejection', (reason, promise) => {
+		console.error('[vscode-rpgle] UNHANDLED REJECTION:', reason, 'promise:', promise);
+	});
+}
+
 export function activate(context: ExtensionContext) {
 	console.log('[vscode-rpgle] extension.activate: STARTING');
 	// The server is implemented in node
