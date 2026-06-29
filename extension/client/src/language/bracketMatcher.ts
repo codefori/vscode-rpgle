@@ -72,6 +72,7 @@ let currentErrorRanges: { range: vscode.Range; keyword: string }[] = [];
 
 // Store disposables for cleanup
 let bracketMatcherDisposables: vscode.Disposable[] = [];
+let bracketMatcherActive = false;
 
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
@@ -197,7 +198,7 @@ function activateBracketMatcher() {
       if (timeout) {
         clearTimeout(timeout);
       }
-      timeout = setTimeout(() => updateDecorations(editor), 100);
+      timeout = setTimeout(() => { if (bracketMatcherActive) updateDecorations(editor); }, 100);
     }
   });
   bracketMatcherDisposables.push(selectionChangeDisposable);
@@ -210,25 +211,28 @@ function activateBracketMatcher() {
   });
   bracketMatcherDisposables.push(editorChangeDisposable);
 
+  bracketMatcherActive = true;
+
   // Initialize for current editor (defer off activation path)
   setTimeout(() => {
-    if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
-      updateDecorations(vscode.window.activeTextEditor);
-    }
-
-    // Preload bracket analysis for all currently visible RPGLE documents
-    // Runs after activation completes so it doesn't block the extension host
-    vscode.window.visibleTextEditors.forEach(editor => {
-      if (editor.document.languageId === 'rpgle') {
-        preloadCache(editor.document);
+    if (!bracketMatcherActive) return;
+    try {
+      if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
+        updateDecorations(vscode.window.activeTextEditor);
       }
-    });
+      // Preload bracket analysis for all currently visible RPGLE documents
+      vscode.window.visibleTextEditors.forEach(editor => {
+        if (bracketMatcherActive && editor.document.languageId === 'rpgle') {
+          preloadCache(editor.document);
+        }
+      });
+    } catch { /* swallow — extension host may be tearing down */ }
   }, 0);
 
   // Also preload when any new document is opened (deferred to avoid blocking)
   const openDocDisposable = vscode.workspace.onDidOpenTextDocument(document => {
     if (document.languageId === 'rpgle') {
-      setTimeout(() => preloadCache(document), 0);
+      setTimeout(() => { if (bracketMatcherActive) preloadCache(document); }, 0);
     }
   });
   bracketMatcherDisposables.push(openDocDisposable);
@@ -312,6 +316,8 @@ function disposeBracketMatcher() {
     }
   });
 
+  bracketMatcherActive = false;
+
   // Dispose all tracked disposables
   bracketMatcherDisposables.forEach(d => d.dispose());
   bracketMatcherDisposables = [];
@@ -356,7 +362,7 @@ function updateDecorations(editor: vscode.TextEditor) {
     // Schedule a deferred preloadCache so the NEXT cursor move is a full cache hit
     allMatches = findAllMatches(text, document);
     allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
-    setTimeout(() => preloadCache(document), 0);
+    if (bracketMatcherActive) setTimeout(() => preloadCache(document), 0);
     // matchIndexByOffset / blockIndicesByMatch remain undefined; fallback path used below
   }
 
