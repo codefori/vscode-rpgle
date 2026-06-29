@@ -213,8 +213,8 @@ function activateBracketMatcher() {
       updateDecorations(vscode.window.activeTextEditor);
     }
 
-    // Preload bracket analysis for all currently visible RPGLE documents
-    // Runs after activation completes so it doesn't block the extension host
+    // Preload bracket analysis for all currently open RPGLE documents
+    // This warms up the cache to prevent lag on first interaction
     vscode.window.visibleTextEditors.forEach(editor => {
       if (editor.document.languageId === 'rpgle') {
         preloadCache(editor.document);
@@ -222,31 +222,27 @@ function activateBracketMatcher() {
     });
   }, 0);
 
-  // Also preload when any new document is opened (deferred to avoid blocking)
+  // Also preload when any new document is opened
   const openDocDisposable = vscode.workspace.onDidOpenTextDocument(document => {
     if (document.languageId === 'rpgle') {
-      setTimeout(() => preloadCache(document), 0);
+      preloadCache(document);
     }
   });
   bracketMatcherDisposables.push(openDocDisposable);
 }
 
 function preloadCache(document: vscode.TextDocument) {
-  try {
-    const docUri = document.uri.toString();
-    if (!analysisCache.has(docUri) || analysisCache.get(docUri)!.version !== document.version) {
-      const text = document.getText();
-      const matches = findAllMatches(text, document);
-      const errorRanges = findAllMismatchedClosingKeywords(document, matches);
-      analysisCache.set(docUri, {
-        version: document.version,
-        text: text,
-        matches: matches,
-        errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword }))
-      });
-    }
-  } catch {
-    // Silently ignore errors during background preload — cache miss on first use is acceptable
+  const docUri = document.uri.toString();
+  if (!analysisCache.has(docUri) || analysisCache.get(docUri)!.version !== document.version) {
+    const text = document.getText();
+    const matches = findAllMatches(text, document);
+    const errorRanges = findAllMismatchedClosingKeywords(document, matches);
+    analysisCache.set(docUri, {
+      version: document.version,
+      text: text,
+      matches: matches,
+      errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword }))
+    });
   }
 }
 
@@ -385,7 +381,8 @@ function updateDecorations(editor: vscode.TextEditor) {
   }
 
   // Find all related keywords in the block (only valid ones for yellow highlighting)
-  const relatedRanges = findAllRelatedKeywords(document, wordRange, matchingPair);
+  // Pass the already-cached allMatches to avoid re-parsing the document
+  const relatedRanges = findAllRelatedKeywords(document, wordRange, matchingPair, allMatches);
 
   if (relatedRanges.length > 0) {
     // Highlight valid keywords in yellow (excluding error ranges)
@@ -791,13 +788,14 @@ function findMatchingOpenForClosing(
 function findAllRelatedKeywords(
   document: vscode.TextDocument,
   startRange: vscode.Range,
-  pair: BracketPair
+  pair: BracketPair,
+  precomputedMatches?: BlockMatch[]
 ): vscode.Range[] {
   const text = document.getText();
   const startOffset = document.offsetAt(startRange.start);
 
-  // Use findAllMatches to get ALL keywords in the document
-  const allMatches = findAllMatches(text, document);
+  // Use pre-computed matches from cache if provided, otherwise compute
+  const allMatches = precomputedMatches ?? findAllMatches(text, document);
 
   // Find index of current match
   let currentIndex = -1;

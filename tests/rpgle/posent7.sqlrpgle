@@ -681,6 +681,7 @@
              orddes = 'REQUEST\QUOTE\RETURN';
              *IN69 = *ON;
            screen = 'ORDDETAIL';
+
            ENDIF;
            WSDraw = 0;
            wsYMD = %dec(%date() : *YMD);
