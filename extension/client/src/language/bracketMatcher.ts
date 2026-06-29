@@ -1606,10 +1606,10 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
       const blockIndices = blockIndicesByMatch.get(matchIndex);
       if (!blockIndices || blockIndices.length < 2) return;
 
-      // Determine which end to jump to: opener \u2192 closer, anything else \u2192 opener
-      const openerWord = allMatches[blockIndices[0]].word;
-      const isOpen = allMatches[matchIndex].word === openerWord && matchIndex === blockIndices[0];
-      const targetIndex = isOpen ? blockIndices[1] : blockIndices[0];
+      // blockIndices is sorted by position: [opener, ...middles..., closer]
+      // Always jump opener → closer (last element), or closer/middle → opener (first element).
+      const isOpen = matchIndex === blockIndices[0];
+      const targetIndex = isOpen ? blockIndices[blockIndices.length - 1] : blockIndices[0];
 
       const targetMatch = allMatches[targetIndex];
       if (!targetMatch) return;
