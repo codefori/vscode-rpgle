@@ -1455,7 +1455,7 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
       const targetRange = new vscode.Range(targetPos, document.positionAt(targetMatch.offset + targetMatch.length));
 
       editor.selection = new vscode.Selection(targetPos, targetPos);
-      editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenter);
+      editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
     }
   );
   context.subscriptions.push(jumpCommand);
