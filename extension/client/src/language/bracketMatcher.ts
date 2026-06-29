@@ -3,8 +3,6 @@ import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sq
 import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/utils/blockParser';
 import * as rpgle from '../rpgtools-comment-helpers';
 
-console.log('[vscode-rpgle] bracketMatcher.ts: MODULE LOADED (after imports)');
-
 type BracketPair = BlockPair;
 
 // Configuration keys for bracket matching features
@@ -78,10 +76,8 @@ let bracketMatcherActive = false;
 
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
-  console.log('[vscode-rpgle] registerBracketMatcher: STARTING');
   // Listen for configuration changes (always register this listener)
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-    console.log('[vscode-rpgle] registerBracketMatcher: onDidChangeConfiguration fired');
     if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY) ||
       e.affectsConfiguration('vscode-rpgle.' + JUMP_ENABLED_KEY)) {
       const newConfig = vscode.workspace.getConfiguration('vscode-rpgle');
@@ -127,16 +123,12 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
 
   // Activate decoration/listener infrastructure only when at least one feature needs it
   if (highlightingEnabled || jumpEnabled) {
-    console.log('[vscode-rpgle] registerBracketMatcher: calling activateBracketMatcher()');
     activateBracketMatcher();
-    console.log('[vscode-rpgle] registerBracketMatcher: activateBracketMatcher() returned');
   }
-  console.log('[vscode-rpgle] registerBracketMatcher: COMPLETED');
 }
 
 // Activate the bracket matching feature
 function activateBracketMatcher() {
-  console.log('[vscode-rpgle] activateBracketMatcher: STARTING');
   // Create decoration types if they don't exist
   if (!decorationType) {
     decorationType = vscode.window.createTextEditorDecorationType({
@@ -204,11 +196,11 @@ function activateBracketMatcher() {
               markdown.appendMarkdown(' statement**\n');
               markdown.appendMarkdown(
                 [
-                  'This ENDxx keyword has no matching opening block.',
-                  '',
-                  '- For DS subfields, use **DCL-SUBF**',
-                  '- For parms, use **DCL-PARM**',
-                  '- For DCL-DS with either **LIKEDS(...)** or **LIKEREC(...)** an END-DS is **not** allowed.'
+                  'This ENDxx keyword has no matching opening block.\n',
+                  'Possible issues may include:',
+                  '- If this is a DS subfield, use **DCL-SUBF**',
+                  '- If this is a parameter, use **DCL-PARM**',
+                  '- If this is a DCL-DS with either **LIKEDS(...)** or **LIKEREC(...)** an END-DS is **not** allowed.'
                 ].join('\n')
               );
               return new vscode.Hover(markdown);
@@ -326,7 +318,6 @@ function buildLookupMaps(
 }
 
 function preloadCache(document: vscode.TextDocument) {
-  console.log('[vscode-rpgle] preloadCache: starting for', document.fileName);
   const config = vscode.workspace.getConfiguration('vscode-rpgle');
   const highlightingEnabled = config.get<boolean>(CONFIG_KEY, true);
   const jumpEnabled = config.get<boolean>(JUMP_ENABLED_KEY, true);
@@ -365,7 +356,6 @@ function preloadCache(document: vscode.TextDocument) {
 
 // Dispose of bracket matcher resources
 function disposeBracketMatcher() {
-  console.log('[vscode-rpgle] disposeBracketMatcher: starting');
   // Clear decorations from all visible editors
   vscode.window.visibleTextEditors.forEach(editor => {
     if (editor.document.languageId === 'rpgle') {
@@ -386,11 +376,9 @@ function disposeBracketMatcher() {
 
   // Clear current block info
   currentBlockInfo = undefined;
-  console.log('[vscode-rpgle] disposeBracketMatcher: completed');
 }
 
 function updateDecorations(editor: vscode.TextEditor) {
-  console.log('[vscode-rpgle] updateDecorations: called for', editor.document.fileName);
   try {
     updateDecorationsImpl(editor);
   } catch (err) {
@@ -405,12 +393,8 @@ function updateDecorations(editor: vscode.TextEditor) {
 }
 
 function updateDecorationsImpl(editor: vscode.TextEditor) {
-  console.log('[vscode-rpgle] updateDecorationsImpl: starting for', editor.document.fileName);
   // Check if decorations are initialized (feature is enabled)
-  if (!decorationType || !errorDecorationType) {
-    console.log('[vscode-rpgle] updateDecorationsImpl: decorations not initialized, returning');
-    return;
-  }
+  if (!decorationType || !errorDecorationType) return;
 
   const document = editor.document;
   const position = editor.selection.active;

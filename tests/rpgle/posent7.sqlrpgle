@@ -164,11 +164,10 @@
          // Then use "QTMP.xxxx" to access the field.
          // where xxxx is the subfield's name.
          // DO NOT declare fields in the Calc specs.
-         dcl-ds qtmp Qualified Inz;
-           bondedStore char(10);
-           sqlLoop int(10);
-           mySQL varchar(2048);
-         end-ds qtmp;
+     D qtmp            DS                  Qualified Inz
+     D  bondedStore                  10A
+     D  sqlLoop                      10I 0
+     D  mySQL                      2048A   Varying
 
          // These few fields definitions are for compiling in NON-bonded environment.
      D H3BOND          S              5A
@@ -207,125 +206,104 @@
 
      D NOOP            S              1N   INZ(*OFF)
 
-         dcl-pr loadPOSDefaults;
-         end-pr loadPOSDefaults;
+     D loadPOSDefaults...
+     D                 PR
 
-         dcl-pr isBondedOrder ind;
-           order packed(7:0) Const;
-         end-pr isBondedOrder;
+     D isBondedOrder   PR             1N
+     D   order                        7P 0 Const
 
-         dcl-pr isBondedCashCust ind;
-           custNo int(10) Const;
-         end-pr isBondedCashCust;
+     D isBondedCashCust...
+     D                 PR             1N
+     D  custNo                       10I 0 Const
 
-         dcl-pr isBondedCashCustA ind;
-           custA char(5) Const;
-         end-pr isBondedCashCustA;
+     D isBondedCashCustA...
+     D                 PR             1N
+     D  custA                         5A   Const
 
-         dcl-pr isCashCust ind;
-           custNo int(10) Const;
-         end-pr isCashCust;
+     D isCashCust      PR             1N
+     D  custNo                       10I 0 Const
 
-         dcl-pr isCashCustA ind;
-           custA char(5) Const;
-         end-pr isCashCustA;
+     D isCashCustA     PR             1N
+     D  custA                         5A   Const
 
-         dcl-pr isNotCashCust ind;
-           custNo int(10) Const;
-         end-pr isNotCashCust;
+     D isNotCashCust   PR             1N
+     D  custNo                       10I 0 Const
 
-         dcl-pr isNotCashCustA ind;
-           custA char(5) Const;
-         end-pr isNotCashCustA;
+     D isNotCashCustA...
+     D                 PR             1N
+     D  custA                         5A   Const
 
-         dcl-pr getBondedInfo;
-         end-pr getBondedInfo;
-         dcl-pr getBondedCashCust;
-         end-pr getBondedCashCust;
-         dcl-pr getBondCust2  extpgm('GETBCUST2');
-           lastName char(25) Const;
-           bondRecNbr char(6);
-           bondNbr char(5);
-           bondExpYear char(4);
-           custNbr packed(5:0);
-         end-pr getBondCust2;
+     D getBondedInfo...
+     D                 PR
+     D getBondedCashCust...
+     D                 PR
+     D getBondCust2    PR                  extpgm('GETBCUST2')
+     D  lastName                     25A   Const
+     D  bondRecNbr                    6A
+     D  bondNbr                       5A
+     D  bondExpYear                   4A
+     D  custNbr                       5P 0
 
           //  NOTE: This version of POSENT contains VAT tax calculations.
           //        To implement VAT, we modernized the code to use
           //        subprocedures for many of the legacy subroutines.
 
-         dcl-pr prepareOrder;
-           bIsAReturn ind Const OPTIONS(*NOPASS);
-         end-pr prepareOrder;
+     D prepareOrder    PR
+     D   bIsAReturn                   1N   Const OPTIONS(*NOPASS)
 
-         dcl-pr clearNewOrder;
-         end-pr clearNewOrder;
-         dcl-pr getPrice;
-         end-pr getPrice;
-         dcl-pr getRegPrice;
-         end-pr getRegPrice;
-         dcl-pr getOtherPrice;
-         end-pr getOtherPrice;
-         dcl-pr getVatCharge packed(7:2);
-           ordernbr packed(7:0) Const;
-           vendor char(3) Const;
-           item char(15) Const;
-           seqNbr packed(7:0) Const;
-           qtySold int(10) Const;
-           soldAtPrice packed(7:2) Const;
-           corePrice packed(7:2) Const;
-         end-pr getVatCharge;
+     D clearNewOrder   PR
+     D getPrice        PR
+     D getRegPrice     PR
+     D getOtherPrice   PR
+     D getVatCharge    PR             7P 2
+     D  ordernbr                      7P 0 Const
+     D  vendor                        3A   Const
+     D  item                         15A   Const
+     D  seqNbr                        7P 0 Const
+     D  qtySold                      10I 0 Const
+     D  soldAtPrice...
+     D                                7P 2 Const
+     D  corePrice...
+     D                                7P 2 Const
 
-         dcl-pr move_Item_to_OEDTL;
-           vendor char(3) Const;
-           item char(15) Const;
-         end-pr move_Item_to_OEDTL;
+     D move_Item_to_OEDTL...
+     D                 PR
+     D  vendor                        3A   Const
+     D  item                         15A   Const
 
-         dcl-pr newVatHdr;
-         end-pr newVatHdr;
-         dcl-pr createNewOrder;
-         end-pr createNewOrder;
-         dcl-pr sfClear;
-         end-pr sfClear;
-         dcl-pr deleteOrder;
-           orderNbr int(10) Const;
-         end-pr deleteOrder;
-         dcl-pr deleteLineItem;
-           orderNbr int(10) Const;
-           orderSeqNbr int(10) Const;
-         end-pr deleteLineItem;
+     D newVatHdr       PR
+     D createNewOrder  PR
+     D sfClear         PR
+     D deleteOrder     PR
+     D   orderNbr                    10I 0 Const
+     D deleteLineItem  PR
+     D  orderNbr                     10I 0 Const
+     D  orderSeqNbr                  10I 0 Const
 
-         dcl-pr cmdLineWindow  extPgm('QUSCMDLN');
-         end-pr cmdLineWindow;
+     D cmdLineWindow   PR                  extPgm('QUSCMDLN')
 
-         dcl-pr checkTag ind;
-           dcl-parm tag char(10) Const;
-           order packed(7:0) Const;
-         end-pr checkTag;
+     D checkTag        PR             1N
+     D  tag                          10A   Const
+     D  order                         7P 0 Const
 
-         dcl-pr checkItemHist int(10);
-           InvNbr  Like(ODINV) Const;
-         end-pr checkItemHist;
+     D checkItemHist   PR            10I 0
+     D  InvNbr                             Like(ODINV) Const
 
-          // * Summarize quantity for a Item on all related invoices
-         dcl-pr sumItemQty int(10);
-           InvNbr  Like(ODINV) Const;
-           Vendor  Like(ODVEN) Const;
-           Item  Like(ODITM) Const;
-         end-pr sumItemQty;
+      ** Summarize quantity for a Item on all related invoices
+     D sumItemQty      PR            10I 0
+     D  InvNbr                             Like(ODINV) Const
+     D  Vendor                             Like(ODVEN) Const
+     D  Item                               Like(ODITM) Const
 
-          // * Summarize quantity for a Item on an individual invoice
-         dcl-pr sumInvQty int(10);
-           InvNbr packed(7:0) Const;
-           Vendor char(3) Const;
-           Item char(15) Const;
-         end-pr sumInvQty;
+      ** Summarize quantity for a Item on an individual invoice
+     D sumInvQty       PR            10I 0
+     D  InvNbr                        7P 0 Const
+     D  Vendor                        3A   Const
+     D  Item                         15A   Const
 
-         dcl-pr cstSearch  EXTPGM('CSTSEARCH');
-           searchData char(30) Const OPTIONS(*NOPASS);
-           rtnCust packed(7:0) OPTIONS(*NOPASS);
-         end-pr cstSearch;
-
+     D cstSearch       PR                  EXTPGM('CSTSEARCH')
+     D  searchData                   30A   Const OPTIONS(*NOPASS)
+     D  rtnCust                       7P 0 OPTIONS(*NOPASS)
 
      D custNo          S              5P 0
      D custNo7         S              7P 0
@@ -596,17 +574,17 @@
              elseif (NOT *INLR);
                exsr Dsp00;
              ENDIF;
-
            enddo;
            return;
+      /end-free
            // ENDPGM - Return to caller
 
 
       ******************************************************************
       **  Initialization Routine - Called upon Program Entry
       ******************************************************************
-
-         BEGSR *INZSR;
+     CSR   *INZSR        BEGSR
+      /free
           // AID has a slightly ambiguous nomenclature for POS modes of operation.
           //  Mode='S' Means "Salesman" mode.
           //           More commonly referred to as "Counterman" mode.
@@ -615,8 +593,7 @@
           //           This mode allows sales, including those from quotes.
 
            if (%Parms() >= 1);
-
-              if (operatingMode <> '');
+             if (operatingMode <> '');
                pos_Mode = operatingMode;
              endif;
            endif;
@@ -684,11 +661,11 @@
              orddes = 'REQUEST\QUOTE\RETURN';
              *IN69 = *ON;
            screen = 'ORDDETAIL';
-
            ENDIF;
            WSDraw = 0;
            wsYMD = %dec(%date() : *YMD);
            EXSR CKDRAWER;
+      /END-FREE
      CSR   endInzSr      endSR
 
 
@@ -696,10 +673,11 @@
      C* CHECK SCREEN 1
      C**************************
      CSR   CheckSFL      BEGSR
+      /FREE
            *IN90 = *OFF;
            *IN48 = *OFF;
            clear wsErr;
-           for i = 1 to 10;
+
            //  MUST CREATE ORDER here.
            IF (WSORD = 0);
              createNewOrder();
@@ -707,7 +685,6 @@
              OHORD = WSORD;
              OCORD = WSORD;
            endif;
-          end;
 
            //  CHECK CUSTOMER FIELDS FOR Blanks/Zeros
            IF (S1CUS = *BLANKS or S1CUS = *ZEROS);
@@ -821,7 +798,6 @@
 
            READC ORDDETAIL;
            // CHECK FOR TAG (sales slip) SCAN
-           if (A=B);
            if NOT %EOF();
              if S1LAST = 'Y';
                EXSR CHK1U;
@@ -834,7 +810,6 @@
                endif;
              endif;
            endif;
-           endif;
 
           // CHECK SUBFILE RECORDS
        DOW NOT %EOF(posent);
@@ -846,14 +821,6 @@
          else;
            //  IF UPC=BLANKS THEN NO ITEM KEYED/SCANNED
            IF UPC <> *BLANKS;
-
-            for i = 1 to 10;
-              chain(e) custmast;
-              if %EOF();
-                return;
-              endif;
-              clear inDs;
-            endfor;
 
              //*  If the subfile rec previously contained
              //*  a credit/return, and now it no longer does,
@@ -1239,7 +1206,7 @@
 
      C* MULT TO GET TO 3/3 FIELD NOT 3/0                   DK
      C                   if        S1DKY <> *ZEROS
-end  C     S1DKY         MULT      .001          ODDKY
+     C     S1DKY         MULT      .001          ODDKY
      C                   ENDIF                                                  DK G
      C                   ENDIF                                                  DK END
       /free
