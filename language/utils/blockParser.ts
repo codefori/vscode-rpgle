@@ -32,6 +32,9 @@ export function findAllBlockMatches(
   isInCommentOrString: (text: string, offset: number) => boolean,
   isInSqlBlock: (text: string, offset: number) => boolean
 ): BlockMatch[] {
+  // Detect if document is in free-format (starts with **FREE in columns 1-6)
+  const isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
+
   // Helper function to check if a position is in a compiler directive
   const isInCompilerDirective = (text: string, offset: number): boolean => {
     // Find the start of the line
@@ -80,13 +83,24 @@ export function findAllBlockMatches(
       return false;
     }
 
-    // CRITICAL: Check if at the start of a line (preceded only by whitespace and newlines)
-    // If so, it's definitively a statement keyword, NOT a variable in an expression
-    // This check must be early to prevent later checks from misclassifying statement keywords
-    const lineStartMatch = beforeKeyword.match(/[\n\r]\s*$/);
-    if (lineStartMatch) {
-      // Keyword is at the start of a line → it's a statement keyword
-      return false;
+    // Format-specific keyword classification
+    if (isFreeFormat) {
+      // FREE FORMAT: Check if keyword is at the start of a line (preceded only by whitespace/newlines)
+      // If so, it's definitively a statement keyword, NOT a variable in an expression
+      const lineStartMatch = beforeKeyword.match(/[\n\r]\s*$/);
+      if (lineStartMatch) {
+        // Keyword is at the start of a line → it's a statement keyword
+        return false;
+      }
+    } else {
+      // FIXED FORMAT: Check if keyword starts at column 7 (index 6)
+      // In fixed-format, columns 1-6 are reserved (line numbers in 1-5, spec type in 6)
+      // A keyword at column 7 is a statement keyword, not a variable reference
+      const colOffset = matchOffset - lineStart;
+      if (colOffset === 6) {
+        // Keyword starts at column 7 (index 6) → it's a statement keyword
+        return false;
+      }
     }
 
     // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, etc.)
