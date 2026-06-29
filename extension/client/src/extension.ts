@@ -76,31 +76,50 @@ export function activate(context: ExtensionContext) {
 	);
 
 	client.onReady().then(async () => {
-		buildRequestHandlers(client);
+		try {
+			console.log('[vscode-rpgle] extension.ts: client.onReady callback starting');
+			buildRequestHandlers(client);
 
-		const instance = await checkAndWait();
+			const instance = await checkAndWait();
 
-		// We need to clear table caches when the connection changes
-		if (instance) {
-			// When the connection is established
-			instance.subscribe(context, "connected", "vscode-rpgle", () => {
-				clearTableCache(client);
-			});
-
-			// When the library list changes
-			context.subscriptions.push(
-				onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+			// We need to clear table caches when the connection changes
+			if (instance) {
+				// When the connection is established
+				instance.subscribe(context, "connected", "vscode-rpgle", () => {
 					clearTableCache(client);
-				}),
-			);
+				});
+
+				// When the library list changes
+				context.subscriptions.push(
+					onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+						clearTableCache(client);
+					}),
+				);
+			}
+			console.log('[vscode-rpgle] extension.ts: client.onReady callback completed successfully');
+		} catch (err) {
+			console.error('[vscode-rpgle] extension.ts: client.onReady callback threw error:', err);
 		}
 	});
 
 	// Start the client. This will also launch the server
 	client.start();
 
-	Linter.initialise(context);
-	columnAssist.registerColumnAssist(context);
+	try {
+		console.log('[vscode-rpgle] extension.ts: Linter.initialise starting');
+		Linter.initialise(context);
+		console.log('[vscode-rpgle] extension.ts: Linter.initialise completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: Linter.initialise threw error:', err);
+	}
+
+	try {
+		console.log('[vscode-rpgle] extension.ts: columnAssist.registerColumnAssist starting');
+		columnAssist.registerColumnAssist(context);
+		console.log('[vscode-rpgle] extension.ts: columnAssist.registerColumnAssist completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: columnAssist.registerColumnAssist threw error:', err);
+	}
 
 	try {
 		console.log('[vscode-rpgle] extension.ts: About to call registerBracketMatcher');
@@ -110,17 +129,57 @@ export function activate(context: ExtensionContext) {
 		console.error('[vscode-rpgle] extension.ts: registerBracketMatcher threw error:', err);
 	}
 
-	registerJumpToMatchingBlock(context);
-	registerCommentStatementCommand(context);
-	registerUncommentStatementCommand(context);
-	registerToggleCommentCommand(context);
+	try {
+		console.log('[vscode-rpgle] extension.ts: registerJumpToMatchingBlock starting');
+		registerJumpToMatchingBlock(context);
+		console.log('[vscode-rpgle] extension.ts: registerJumpToMatchingBlock completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: registerJumpToMatchingBlock threw error:', err);
+	}
 
-	registerCommands(context, client);
+	try {
+		console.log('[vscode-rpgle] extension.ts: registerCommentStatementCommand starting');
+		registerCommentStatementCommand(context);
+		console.log('[vscode-rpgle] extension.ts: registerCommentStatementCommand completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: registerCommentStatementCommand threw error:', err);
+	}
 
-	context.subscriptions.push(getServerSymbolProvider());
-	context.subscriptions.push(getServerImplementationProvider());
-	context.subscriptions.push(setLanguageSettings());
-	// context.subscriptions.push(...initBuilder(client));
+	try {
+		console.log('[vscode-rpgle] extension.ts: registerUncommentStatementCommand starting');
+		registerUncommentStatementCommand(context);
+		console.log('[vscode-rpgle] extension.ts: registerUncommentStatementCommand completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: registerUncommentStatementCommand threw error:', err);
+	}
+
+	try {
+		console.log('[vscode-rpgle] extension.ts: registerToggleCommentCommand starting');
+		registerToggleCommentCommand(context);
+		console.log('[vscode-rpgle] extension.ts: registerToggleCommentCommand completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: registerToggleCommentCommand threw error:', err);
+	}
+
+	try {
+		console.log('[vscode-rpgle] extension.ts: registerCommands starting');
+		registerCommands(context, client);
+		console.log('[vscode-rpgle] extension.ts: registerCommands completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: registerCommands threw error:', err);
+	}
+
+	try {
+		console.log('[vscode-rpgle] extension.ts: registerProviders starting');
+		context.subscriptions.push(getServerSymbolProvider());
+		context.subscriptions.push(getServerImplementationProvider());
+		context.subscriptions.push(setLanguageSettings());
+		console.log('[vscode-rpgle] extension.ts: registerProviders completed');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: registerProviders threw error:', err);
+	}
+
+	console.log('[vscode-rpgle] extension.ts: activate() COMPLETED SUCCESSFULLY');
 }
 
 export function deactivate(): Thenable<void> | undefined {
