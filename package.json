@@ -69,7 +69,10 @@
 				"vscode-rpgle.bracketMismatchStyle": {
 					"type": "string",
 					"default": "box",
-					"enum": ["box", "underline"],
+					"enum": [
+						"box",
+						"underline"
+					],
 					"enumDescriptions": [
 						"Display unmatched keywords with red background box",
 						"Display unmatched keywords with red wavy underline only"
