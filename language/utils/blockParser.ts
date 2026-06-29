@@ -5,12 +5,12 @@ export interface BlockPair {
 }
 
 export const RPGLE_BLOCK_PAIRS: BlockPair[] = [
-  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif','end'], middle: ['else', 'elseif'] },
-  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo','end'] },
-  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo','end'] },
-  { open: ['do'], close: ['enddo','end'] },
-  { open: ['for', 'for-each'], close: ['endfor','end'] },
-  { open: ['select'], close: ['endsl','end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
+  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif', 'end'], middle: ['else', 'elseif'] },
+  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo', 'end'] },
+  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo', 'end'] },
+  { open: ['do'], close: ['enddo', 'end'] },
+  { open: ['for', 'for-each'], close: ['endfor', 'end'] },
+  { open: ['select'], close: ['endsl', 'end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
   { open: ['monitor'], close: ['endmon'], middle: ['on-error', 'on-excp'] },
   { open: ['dcl-proc'], close: ['end-proc'] },
   { open: ['dcl-ds'], close: ['end-ds'] },
@@ -52,6 +52,21 @@ export function findAllBlockMatches(
     const afterKeyword = text.substring(matchOffset + matchLength);
     const beforeKeyword = text.substring(0, matchOffset);
 
+    // Find the start of the current line
+    let lineStart = beforeKeyword.lastIndexOf('\n');
+    if (lineStart === -1) lineStart = 0;
+    else lineStart++; // Move past the newline
+
+    // Get the current line
+    const currentLine = text.substring(lineStart, beforeKeyword.length + matchLength + 50);
+    
+    // Check if the current line is a comment (starts with // or * in column 7+)
+    // Also check for /FREE to /END-FREE compiler directives
+    if (/^\s*\/\//.test(currentLine) || /^\s*\*/.test(currentLine)) {
+      // Current line is a comment - don't treat keyword as anything special
+      return false;
+    }
+
     // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, etc.)
     // ALL dcl- keywords indicate the next word is an identifier, not a keyword
     const declMatch = beforeKeyword.match(/\b(dcl-[a-z]+)\s+$/i);
@@ -80,8 +95,8 @@ export function findAllBlockMatches(
 
     // Check if at the start of a line (preceded only by whitespace and newlines)
     // If so, it's a statement keyword, NOT a variable in an expression
-    const lineStart = beforeKeyword.match(/[\n\r]\s*$/);
-    if (lineStart) {
+    const lineStartMatch = beforeKeyword.match(/[\n\r]\s*$/);
+    if (lineStartMatch) {
       // Keyword is at the start of a line → it's a statement keyword
       return false;
     }
