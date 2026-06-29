@@ -614,6 +614,7 @@
           //           This mode allows sales, including those from quotes.
 
            if (%Parms() >= 1);
+
               if (operatingMode <> '');
                pos_Mode = operatingMode;
              endif;

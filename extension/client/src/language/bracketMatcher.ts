@@ -1358,87 +1358,68 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
 
       const document = editor.document;
       const position = editor.selection.active;
-      const line = document.lineAt(position.line);
-      const lineText = line.text;
+      const text = document.getText();
+      const docUri = document.uri.toString();
 
-      // Find all keywords on this line
-      const keywordRegex = /\b(if|else|elseif|endif|do|enddo|for|endfor|select|end-select|dcl-ds|end-ds|dcl-proc|end-proc|begsr|endsr|monitor|endmon|on-error|when|otherwise|end|endif|endfor|enddo)\b/gi;
-      let match;
-      let lineKeywords: { word: string; offset: number; line: number }[] = [];
+      // Use same word detection as updateDecorations
+      const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/);
+      if (!wordRange) return;
 
-      while ((match = keywordRegex.exec(lineText)) !== null) {
-        lineKeywords.push({
-          word: match[0].toLowerCase(),
-          offset: line.range.start.character + match.index,
-          line: position.line
-        });
+      const word = document.getText(wordRange).toLowerCase();
+
+      // Use cached matches if available, else compute
+      let allMatches: BlockMatch[];
+      const cached = analysisCache.get(docUri);
+      if (cached && cached.version === document.version && cached.text === text) {
+        allMatches = cached.matches;
+      } else {
+        allMatches = findAllMatches(text, document);
       }
 
-      if (lineKeywords.length === 0) {
-        return; // No keywords on this line
-      }
-
-      // Find which keyword the cursor is on or closest to
-      let targetKeyword: { word: string; offset: number; line: number } | undefined;
-      const cursorChar = position.character;
-
-      // Check if cursor is directly on a keyword
-      for (const kw of lineKeywords) {
-        if (cursorChar >= kw.offset && cursorChar < kw.offset + kw.word.length) {
-          targetKeyword = kw;
-          break;
-        }
-      }
-
-      // If not on a keyword, use the first one on the line
-      if (!targetKeyword) {
-        targetKeyword = lineKeywords[0];
-      }
-
-      // Convert line/char to document offset for findBlockIndices
-      const offset = document.offsetAt(new vscode.Position(targetKeyword.line, targetKeyword.offset));
-      const fullText = document.getText();
-
-      // Find all matches in document
-      const allMatches = findAllMatches(fullText, document);
-
-      // Find the index of this keyword in all matches
+      // Find the index of the cursor keyword in allMatches
+      const cursorOffset = document.offsetAt(wordRange.start);
       let matchIndex = -1;
       for (let i = 0; i < allMatches.length; i++) {
-        if (allMatches[i].offset === offset && allMatches[i].word === targetKeyword.word) {
+        if (allMatches[i].offset === cursorOffset) {
           matchIndex = i;
           break;
         }
       }
 
-      if (matchIndex === -1) {
-        return; // Couldn't find this keyword in matches
+      if (matchIndex === -1) return;
+
+      // Resolve the bracket pair — mirrors updateDecorations logic
+      let matchingPair: BracketPair | undefined;
+      const isClosingKeyword = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(word));
+
+      if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
+        const openIndex = findMatchingOpenForClosing(text, allMatches, matchIndex, word);
+        if (openIndex !== -1) {
+          const openWord = allMatches[openIndex].word;
+          matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
+        }
+      } else {
+        matchingPair = findMatchingPair(word);
       }
 
-      // Find its matching pair
-      const blockInfo = findBlockIndices(fullText, document, matchIndex);
-      if (blockInfo === -1) {
-        return; // No match found
-      }
+      if (!matchingPair) return;
 
-      // Jump to the matching keyword
-      if (blockInfo < 0 || blockInfo >= allMatches.length) {
-        return; // Invalid block index
-      }
+      // Get all block indices (open, close, middles)
+      const blockIndices = findBlockIndices(text, allMatches, matchIndex, matchingPair);
+      if (!blockIndices || blockIndices.length < 2) return;
 
-      const matchingEntry = allMatches[blockInfo];
-      if (!matchingEntry || !matchingEntry.offset) {
-        return; // Invalid match entry
-      }
+      // Determine which end to jump to: if on the opener jump to closer, else jump to opener
+      const isOpen = matchingPair.open.includes(word);
+      const targetIndex = isOpen ? blockIndices[1] : blockIndices[0];
 
-      const matchingOffset = matchingEntry.offset;
-      const matchingPos = document.positionAt(matchingOffset);
-      const matchingRange = document.getWordRangeAtPosition(matchingPos, /\b[a-z-]+\b/i);
+      const targetMatch = allMatches[targetIndex];
+      if (!targetMatch) return;
 
-      if (matchingRange) {
-        editor.selection = new vscode.Selection(matchingPos, matchingPos);
-        editor.revealRange(matchingRange, vscode.TextEditorRevealType.InCenter);
-      }
+      const targetPos = document.positionAt(targetMatch.offset);
+      const targetRange = new vscode.Range(targetPos, document.positionAt(targetMatch.offset + targetMatch.length));
+
+      editor.selection = new vscode.Selection(targetPos, targetPos);
+      editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenter);
     }
   );
   context.subscriptions.push(jumpCommand);
