@@ -205,7 +205,7 @@ function activateBracketMatcher() {
 
   // Update decorations when active editor changes
   const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
-    if (editor && editor.document.languageId === 'rpgle') {
+    if (bracketMatcherActive && editor && editor.document.languageId === 'rpgle') {
       updateDecorations(editor);
     }
   });
@@ -327,6 +327,20 @@ function disposeBracketMatcher() {
 }
 
 function updateDecorations(editor: vscode.TextEditor) {
+  try {
+    updateDecorationsImpl(editor);
+  } catch (err) {
+    // Log to Debug Console so the root cause can be identified, then recover gracefully
+    console.error('[vscode-rpgle] bracketMatcher error in updateDecorations:', err);
+    try {
+      if (decorationType) editor.setDecorations(decorationType, []);
+      if (errorDecorationType) editor.setDecorations(errorDecorationType, []);
+    } catch { /* ignore */ }
+    currentBlockInfo = undefined;
+  }
+}
+
+function updateDecorationsImpl(editor: vscode.TextEditor) {
   // Check if decorations are initialized (feature is enabled)
   if (!decorationType || !errorDecorationType) {
     return;
