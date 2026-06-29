@@ -78,15 +78,21 @@ let bracketMatcherActive = false;
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
   // Listen for configuration changes (always register this listener)
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-    if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY)) {
+    if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY) ||
+      e.affectsConfiguration('vscode-rpgle.' + JUMP_ENABLED_KEY)) {
       const newConfig = vscode.workspace.getConfiguration('vscode-rpgle');
-      const newEnabled = newConfig.get<boolean>(CONFIG_KEY, true);
+      const highlightingEnabled = newConfig.get<boolean>(CONFIG_KEY, true);
+      const jumpEnabled = newConfig.get<boolean>(JUMP_ENABLED_KEY, true);
 
-      if (!newEnabled) {
-        // Feature disabled - dispose and clear decorations
+      if (!highlightingEnabled && !jumpEnabled) {
+        // Both disabled — dispose everything and clear cache
+        disposeBracketMatcher();
+        analysisCache.clear();
+      } else if (!highlightingEnabled) {
+        // Highlighting off, jump still on — dispose decorations but keep cache
         disposeBracketMatcher();
       } else {
-        // Feature enabled - activate if not already active
+        // Highlighting on — activate if not already active
         if (bracketMatcherDisposables.length === 0) {
           activateBracketMatcher();
         }
@@ -97,9 +103,11 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
 
   // Check if feature is enabled initially
   const config = vscode.workspace.getConfiguration('vscode-rpgle');
-  const isEnabled = config.get<boolean>(CONFIG_KEY, true);
+  const highlightingEnabled = config.get<boolean>(CONFIG_KEY, true);
+  const jumpEnabled = config.get<boolean>(JUMP_ENABLED_KEY, true);
 
-  if (isEnabled) {
+  // Activate decoration/listener infrastructure only when at least one feature needs it
+  if (highlightingEnabled || jumpEnabled) {
     activateBracketMatcher();
   }
 }
@@ -281,22 +289,37 @@ function buildLookupMaps(
 }
 
 function preloadCache(document: vscode.TextDocument) {
+  const config = vscode.workspace.getConfiguration('vscode-rpgle');
+  const highlightingEnabled = config.get<boolean>(CONFIG_KEY, true);
+  const jumpEnabled = config.get<boolean>(JUMP_ENABLED_KEY, true);
+
+  // Matrix optimization: only build what the active settings actually need
+  // false/false → nothing needed, skip entirely
+  if (!highlightingEnabled && !jumpEnabled) return;
+
   try {
     const docUri = document.uri.toString();
-    if (!analysisCache.has(docUri) || analysisCache.get(docUri)!.version !== document.version) {
-      const text = document.getText();
-      const matches = findAllMatches(text, document);
-      const errorRanges = findAllMismatchedClosingKeywords(document, matches);
-      const { matchIndexByOffset, blockIndicesByMatch } = buildLookupMaps(text, matches);
-      analysisCache.set(docUri, {
-        version: document.version,
-        text: text,
-        matches: matches,
-        errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword })),
-        matchIndexByOffset,
-        blockIndicesByMatch
-      });
-    }
+    if (analysisCache.has(docUri) && analysisCache.get(docUri)!.version === document.version) return;
+
+    const text = document.getText();
+    const matches = findAllMatches(text, document);
+
+    // true/true or true/false → full cache including errorRanges (O(n²) mismatch scan)
+    // false/true → partial cache: matches + maps only, skip errorRanges
+    const errorRanges = highlightingEnabled
+      ? findAllMismatchedClosingKeywords(document, matches)
+      : [];
+
+    const { matchIndexByOffset, blockIndicesByMatch } = buildLookupMaps(text, matches);
+
+    analysisCache.set(docUri, {
+      version: document.version,
+      text: text,
+      matches: matches,
+      errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword })),
+      matchIndexByOffset,
+      blockIndicesByMatch
+    });
   } catch {
     // Silently ignore errors during background preload — cache miss on first use is acceptable
   }
