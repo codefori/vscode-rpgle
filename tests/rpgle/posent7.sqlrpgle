@@ -605,6 +605,7 @@
       ******************************************************************
       **  Initialization Routine - Called upon Program Entry
       ******************************************************************
+
          BEGSR *INZSR;
           // AID has a slightly ambiguous nomenclature for POS modes of operation.
           //  Mode='S' Means "Salesman" mode.
