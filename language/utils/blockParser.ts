@@ -57,13 +57,19 @@ export function findAllBlockMatches(
     if (lineStart === -1) lineStart = 0;
     else lineStart++; // Move past the newline
 
-    // Get the current line
-    const currentLine = text.substring(lineStart, beforeKeyword.length + matchLength + 50);
-    
-    // Check if the current line is a comment (starts with // or * in column 7+)
-    // Also check for /FREE to /END-FREE compiler directives
-    if (/^\s*\/\//.test(currentLine) || /^\s*\*/.test(currentLine)) {
-      // Current line is a comment - don't treat keyword as anything special
+    // Get the current line up to end of line
+    let lineEnd = text.indexOf('\n', lineStart);
+    if (lineEnd === -1) lineEnd = text.length;
+    const currentLine = text.substring(lineStart, lineEnd);
+
+    // Check if the current line is a comment or directive (should not analyze variable context)
+    // Free-form comments: // anywhere on the line
+    // Fixed-format comments: * in column 7 (index 6)
+    // Directives: / in column 7 followed by non-/ (like /COPY, /FREE, etc.)
+    if (/^\s*\/\//.test(currentLine) ||  // Free-form comment //
+      (currentLine.length > 6 && currentLine[6] === '*') ||  // Fixed-format comment *
+      (currentLine.length > 6 && currentLine[6] === '/' && currentLine[7] !== '/')) {  // Directive /
+      // Current line is a comment or directive - don't treat keyword as anything special
       return false;
     }
 
