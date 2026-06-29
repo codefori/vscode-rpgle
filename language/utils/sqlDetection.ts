@@ -78,6 +78,8 @@ export function isInSqlBlock(text: string, offset: number): boolean {
           sqlStringChar = '';
         }
       }
+      // In fixed-format SQL, we remain in the block until we see C/END-EXEC
+      // Continuation lines (+ in column 7 or C+ in columns 6-7) keep us in the SQL context
     } else if (sqlMode === 'free') {
       if (scanForSqlTerminator(lineToProcess, (state) => {
         inSqlString = state.inString;
