@@ -1361,12 +1361,6 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
       const text = document.getText();
       const docUri = document.uri.toString();
 
-      // Use same word detection as updateDecorations
-      const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/);
-      if (!wordRange) return;
-
-      const word = document.getText(wordRange).toLowerCase();
-
       // Use cached matches if available, else compute
       let allMatches: BlockMatch[];
       const cached = analysisCache.get(docUri);
@@ -1376,13 +1370,36 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
         allMatches = findAllMatches(text, document);
       }
 
-      // Find the index of the cursor keyword in allMatches
-      const cursorOffset = document.offsetAt(wordRange.start);
+      // First try the word directly under the cursor, then fall back to scanning
+      // the entire current line — so the jump works even when the cursor is
+      // anywhere on the same line as the keyword (not just on top of it).
+      const wordPattern = /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/;
       let matchIndex = -1;
-      for (let i = 0; i < allMatches.length; i++) {
-        if (allMatches[i].offset === cursorOffset) {
-          matchIndex = i;
-          break;
+      let word = '';
+
+      const wordRangeAtCursor = document.getWordRangeAtPosition(position, wordPattern);
+      if (wordRangeAtCursor) {
+        const candidateOffset = document.offsetAt(wordRangeAtCursor.start);
+        const idx = allMatches.findIndex(m => m.offset === candidateOffset);
+        if (idx !== -1 && (findMatchingPair(allMatches[idx].word) || RPGLE_BLOCK_PAIRS.some(p => p.close.includes(allMatches[idx].word)))) {
+          matchIndex = idx;
+          word = allMatches[idx].word;
+        }
+      }
+
+      // Fall back: first block keyword found on the current line
+      if (matchIndex === -1) {
+        const lineStart = document.offsetAt(new vscode.Position(position.line, 0));
+        const lineEnd = document.offsetAt(new vscode.Position(position.line + 1, 0));
+        for (let i = 0; i < allMatches.length; i++) {
+          if (allMatches[i].offset >= lineStart && allMatches[i].offset < lineEnd) {
+            const candidate = allMatches[i].word;
+            if (findMatchingPair(candidate) || RPGLE_BLOCK_PAIRS.some(p => p.close.includes(candidate))) {
+              matchIndex = i;
+              word = candidate;
+              break;
+            }
+          }
         }
       }
 
