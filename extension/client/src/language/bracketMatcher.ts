@@ -14,7 +14,6 @@ const JUMP_ENABLED_KEY = 'bracketJumpEnabled';
 interface CacheEntry {
   version: number;
   text: string;
-  isFreeFormat: boolean;  // Always true — both **FREE and hybrid RPG IV use the same whitespace check
   matches: BlockMatch[];
   errorRanges: { range: vscode.Range; keyword: string }[];
   // O(1) lookup maps built at preload time so cursor moves never re-scan
@@ -346,7 +345,6 @@ function preloadCache(document: vscode.TextDocument) {
     analysisCache.set(docUri, {
       version: document.version,
       text: text,
-      isFreeFormat: true,
       matches: matches,
       errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword })),
       matchIndexByOffset,
