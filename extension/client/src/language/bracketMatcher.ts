@@ -774,6 +774,10 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
       if (/likeds\s*\(|likerec\s*\(/.test(line)) {
         continue;
       }
+      // dcl-ds with an inline end-ds on the same line is also a closed single-line declaration.
+      if (/\bend-ds\b/.test(line)) {
+        continue;
+      }
 
       if (depth === 0) {
         return true;
