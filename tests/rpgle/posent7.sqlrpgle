@@ -2613,7 +2613,7 @@ U2804C                   MOVE      D2CEXG        ODCEXG
 
 
       **  SHOW SCREEN 1 WHILE DSPLY1 = ON
-     C                   DOW       SCREEN = 'ORDDETAIL'
+IFEQ C                   DOW       SCREEN = 'ORDDETAIL'
       **  INITIALIZE FIELDS
      C                   WRITE     POS99
       /free

@@ -713,16 +713,19 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     }
   } else {
     // Hybrid RPG IV (no **FREE):
-    //   - Cols 1-5: sequence numbers (digits), ignored by compiler.
-    //   - Col 6:    blank on free-format lines (spec letter C/D/F on fixed-spec lines).
-    //   - Col 7:    blank on free-format lines (* = comment, / = directive — earlier guards).
-    //   - Col 8+:   free-format statement (localOffset >= 7).
-    // A keyword at col 8+ whose preceding cols 6-7 (index 5+) are all whitespace
-    // is a free-format statement start.
-    // Note: when seq numbers are present (e.g. '00100  for'), localOffset may be > 7
-    // and beforeKeyword.substring(5) is still all whitespace, so this fires correctly.
-    // If it doesn't fire (e.g. spec letter in col 6), beforeMatch below handles it.
-    if (localOffset >= 7 && /^\s*$/.test(beforeKeyword.substring(5))) {
+    //   - Cols 1-5: sequence numbers — may spell out keywords (e.g. ENDIF, ELSE, FOR).
+    //               These MUST be ignored; they are not statements.
+    //   - Col 6:    spec type or blank (C/D/F = fixed spec; blank = free-format line).
+    //   - Col 7:    indicator or blank (* = comment, / = directive — earlier guards).
+    //   - Col 8+:   free-format statement area (localOffset >= 7).
+    // Any match in cols 1-7 (localOffset < 7) is in the reserved column area — ignore it.
+    if (localOffset < 7) {
+      return true; // In sequence/spec/indicator area — never a statement keyword
+    }
+    // A keyword at col 8+ with blank cols 6-7 (beforeKeyword.substring(5) all-whitespace)
+    // is a free-format statement start. Covers seq-number prefixes like
+    // 'ENDIF    endfor' where endfor's beforeKeyword.substring(5) is all blank.
+    if (/^\s*$/.test(beforeKeyword.substring(5))) {
       return false;
     }
   }
