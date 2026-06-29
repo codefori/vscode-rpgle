@@ -346,7 +346,7 @@ function preloadCache(document: vscode.TextDocument) {
     analysisCache.set(docUri, {
       version: document.version,
       text: text,
-      isFreeFormat: isFreeFormat,
+      isFreeFormat: true,
       matches: matches,
       errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword })),
       matchIndexByOffset,
