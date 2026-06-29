@@ -14,7 +14,7 @@ const JUMP_ENABLED_KEY = 'bracketJumpEnabled';
 interface CacheEntry {
   version: number;
   text: string;
-  isFreeFormat: boolean;  // Cached format detection (true if **FREE in columns 1-6)
+  isFreeFormat: boolean;  // Always true — both **FREE and hybrid RPG IV use the same whitespace check
   matches: BlockMatch[];
   errorRanges: { range: vscode.Range; keyword: string }[];
   // O(1) lookup maps built at preload time so cursor moves never re-scan
@@ -333,12 +333,7 @@ function preloadCache(document: vscode.TextDocument) {
 
     const text = document.getText();
 
-    // All modern RPG IV (both **FREE and hybrid/no-**FREE) is treated as free-format
-    // for keyword detection: in hybrid files, columns 1-7 are reserved whitespace/indicators,
-    // so statement keywords always appear preceded only by whitespace — same check as **FREE.
-    const isFreeFormat = true;
-
-    const matches = findAllMatches(text, document, isFreeFormat);
+    const matches = findAllMatches(text, document);
 
     // true/true or true/false → full cache including errorRanges (O(n²) mismatch scan)
     // false/true → partial cache: matches + maps only, skip errorRanges
@@ -628,7 +623,7 @@ function isInCompilerDirective(text: string, offset: number): boolean {
 
 // Helper function to check if a keyword is actually being used as a variable
 // This handles cases like: end = 5; end += 1; dow (x < end); dcl-s end int(10); etc.
-function isVariableContext(text: string, matchOffset: number, matchLength: number, isFreeFormat: boolean): boolean {
+function isVariableContext(text: string, matchOffset: number, matchLength: number): boolean {
   // Restrict context checks to the current physical line so punctuation in
   // previous comment lines cannot influence keyword classification.
   const lineStart = text.lastIndexOf('\n', matchOffset) + 1;
@@ -710,20 +705,14 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     }
   }
 
-  // Format-aware line-start check: keyword at logical/physical line start → statement keyword
-  if (isFreeFormat) {
-    // FREE FORMAT: Check if keyword is at the start of a line (preceded only by whitespace/newlines)
-    if (/^\s*$/.test(beforeKeyword)) {
-      // Keyword is at the start of a line → it's a statement keyword, NOT a variable
-      return false;
-    }
-  } else {
-    // FIXED FORMAT: Check if keyword starts at column 7 (index 6)
-    // In fixed-format, columns 1-6 are reserved (line numbers in 1-5, spec type in 6)
-    if (localOffset === 6) {
-      // Keyword starts at column 7 → it's a statement keyword, NOT a variable
-      return false;
-    }
+  // Line-start check: if the keyword is preceded only by whitespace it is a statement keyword.
+  // This works for both **FREE (fully free) and hybrid RPG IV (no **FREE):
+  //   **FREE   — code may start at column 1; whitespace before = logical line start.
+  //   Hybrid   — free-format statements require col 6 AND col 7 to be blank, so columns
+  //              1-7 are always whitespace before the first token (col 8+). A spec letter
+  //              in col 6 (C, D, F…) would show up in beforeKeyword, preventing this match.
+  if (/^\s*$/.test(beforeKeyword)) {
+    return false;
   }
 
   // Check what comes BEFORE the keyword - look for comparison operators or other expression contexts
@@ -788,13 +777,7 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
   return false;
 }
 
-function findAllMatches(text: string, document: vscode.TextDocument, isFreeFormat?: boolean): BlockMatch[] {
-  // All modern RPG IV is treated as free-format for keyword detection purposes:
-  // - **FREE files: fully free (columns 1+)
-  // - Hybrid files (no **FREE): free-format syntax in columns 8-80, columns 1-7 are whitespace/indicators
-  // In both cases, a statement keyword is always preceded only by whitespace — same check applies.
-  const format: boolean = isFreeFormat !== undefined ? isFreeFormat : true;
-
+function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch[] {
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
     allKeywords.push(...pair.open, ...pair.close);
@@ -849,7 +832,7 @@ function findAllMatches(text: string, document: vscode.TextDocument, isFreeForma
     // Skip keywords that are actually variables in expression/assignment context
     // Only check for simple keywords (no hyphens) that could be valid variable names
     // Keywords with hyphens (end-proc, dcl-proc, etc.) cannot be variables
-    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length, format)) {
+    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length)) {
       continue;
     }
 
