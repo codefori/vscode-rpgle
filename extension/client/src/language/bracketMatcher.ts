@@ -789,9 +789,9 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
 
 function findAllMatches(text: string, document: vscode.TextDocument, isFreeFormat?: boolean): BlockMatch[] {
   // Use provided isFreeFormat or detect it if not provided
-  if (isFreeFormat === undefined) {
-    isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
-  }
+  // Detect format by checking if document starts with **FREE in columns 1-6
+  const format: boolean = isFreeFormat !== undefined ? isFreeFormat : 
+    (text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE');
 
   const allKeywords: string[] = [];
   RPGLE_BLOCK_PAIRS.forEach(pair => {
@@ -847,7 +847,7 @@ function findAllMatches(text: string, document: vscode.TextDocument, isFreeForma
     // Skip keywords that are actually variables in expression/assignment context
     // Only check for simple keywords (no hyphens) that could be valid variable names
     // Keywords with hyphens (end-proc, dcl-proc, etc.) cannot be variables
-    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length, isFreeFormat)) {
+    if (!matchWord.includes('-') && isVariableContext(text, match.index, match[0].length, format)) {
       continue;
     }
 
