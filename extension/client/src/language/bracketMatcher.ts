@@ -705,12 +705,21 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     }
   }
 
-  // Line-start check: if the keyword is preceded only by whitespace it is a statement keyword.
-  // This works for both **FREE (fully free) and hybrid RPG IV (no **FREE):
-  //   **FREE   — code may start at column 1; whitespace before = logical line start.
-  //   Hybrid   — free-format statements require col 6 AND col 7 to be blank, so columns
-  //              1-7 are always whitespace before the first token (col 8+). A spec letter
-  //              in col 6 (C, D, F…) would show up in beforeKeyword, preventing this match.
+  // Line-start check: keyword is at the start of the code area → statement keyword.
+  //
+  // **FREE (fully free-format):
+  //   Code may start at column 1. beforeKeyword is all whitespace = line start.
+  //
+  // Hybrid RPG IV (no **FREE):
+  //   - Columns 1-5: sequence numbers (e.g. 00100). May contain digits, ignored by compiler.
+  //   - Column 6: blank (a spec letter like C/D/F would appear here for fixed specs).
+  //   - Column 7: blank (* = comment line, / = directive — caught by earlier guards).
+  //   - Column 8+: the free-format statement.
+  //   For a free-format statement, cols 6-7 are blank so beforeKeyword ends in whitespace.
+  //   Sequence number digits (cols 1-5) contain no operator characters, so beforeMatch
+  //   stays null and the function correctly falls through to return false (= keyword).
+  //   A spec letter in col 6 (fixed-format line) appears in beforeKeyword and causes
+  //   beforeMatch to potentially fire, keeping that keyword from being mis-classified.
   if (/^\s*$/.test(beforeKeyword)) {
     return false;
   }
