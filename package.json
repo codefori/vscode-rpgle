@@ -69,7 +69,10 @@
 				"vscode-rpgle.bracketMismatchStyle": {
 					"type": "string",
 					"default": "box",
-					"enum": ["box", "underline"],
+					"enum": [
+						"box",
+						"underline"
+					],
 					"enumDescriptions": [
 						"Display unmatched keywords with red background box",
 						"Display unmatched keywords with red wavy underline only"
@@ -225,6 +228,7 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"package": "vsce package",
+		"build": "npm run webpack",
 		"vscode:prepublish": "npm run webpack",
 		"webpack": "npm run clean && webpack --mode production --config ./extension/client/webpack.config.js && webpack --mode production --config ./extension/server/webpack.config.js",
 		"webpack:dev": "npm run clean && webpack --mode none --config ./extension/client/webpack.config.js && webpack --mode none --config ./extension/server/webpack.config.js",

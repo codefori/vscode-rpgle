@@ -207,10 +207,30 @@ function activateBracketMatcher() {
   });
   bracketMatcherDisposables.push(editorChangeDisposable);
 
-  // Initialize for current editor
+  // Initialize for current editor and preload cache for all open documents
   if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
     updateDecorations(vscode.window.activeTextEditor);
   }
+
+  // Preload bracket analysis for all currently open RPGLE documents
+  // This warms up the cache to prevent lag on first interaction
+  vscode.window.visibleTextEditors.forEach(editor => {
+    if (editor.document.languageId === 'rpgle') {
+      const docUri = editor.document.uri.toString();
+      // Only preload if not already cached
+      if (!analysisCache.has(docUri)) {
+        const text = editor.document.getText();
+        const matches = findAllMatches(text, editor.document);
+        const errorRanges = findAllMismatchedClosingKeywords(editor.document, matches);
+        analysisCache.set(docUri, {
+          version: editor.document.version,
+          text: text,
+          matches: matches,
+          errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword }))
+        });
+      }
+    }
+  });
 }
 
 // Dispose of bracket matcher resources
@@ -1402,7 +1422,16 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
       }
 
       // Jump to the matching keyword
-      const matchingOffset = allMatches[blockInfo].offset;
+      if (blockInfo < 0 || blockInfo >= allMatches.length) {
+        return; // Invalid block index
+      }
+
+      const matchingEntry = allMatches[blockInfo];
+      if (!matchingEntry || !matchingEntry.offset) {
+        return; // Invalid match entry
+      }
+
+      const matchingOffset = matchingEntry.offset;
       const matchingPos = document.positionAt(matchingOffset);
       const matchingRange = document.getWordRangeAtPosition(matchingPos, /\b[a-z-]+\b/i);
 

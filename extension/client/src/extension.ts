@@ -105,9 +105,9 @@ export function activate(context: ExtensionContext) {
 	registerCommentStatementCommand(context);
 	registerUncommentStatementCommand(context);
 	registerToggleCommentCommand(context);
-	
+
 	registerCommands(context, client);
-	
+
 	context.subscriptions.push(getServerSymbolProvider());
 	context.subscriptions.push(getServerImplementationProvider());
 	context.subscriptions.push(setLanguageSettings());

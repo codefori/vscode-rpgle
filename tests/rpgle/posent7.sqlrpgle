@@ -326,6 +326,7 @@
            rtnCust packed(7:0) OPTIONS(*NOPASS);
          end-pr cstSearch;
 
+
      D custNo          S              5P 0
      D custNo7         S              7P 0
 
@@ -595,7 +596,7 @@
              elseif (NOT *INLR);
                exsr Dsp00;
              ENDIF;
-             endfor;
+
            enddo;
            return;
            // ENDPGM - Return to caller
