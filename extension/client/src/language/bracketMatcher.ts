@@ -341,8 +341,8 @@ function updateDecorations(editor: vscode.TextEditor) {
   // Check cache for this document
   let allMatches: BlockMatch[];
   let allErrorRangesWithInfo: { range: vscode.Range; keyword: string }[];
-  let matchIndexByOffset: Map<number, number>;
-  let blockIndicesByMatch: Map<number, number[]>;
+  let matchIndexByOffset: Map<number, number> | undefined;
+  let blockIndicesByMatch: Map<number, number[]> | undefined;
 
   const cached = analysisCache.get(docUri);
   if (cached && cached.version === document.version && cached.text === text) {
@@ -352,20 +352,12 @@ function updateDecorations(editor: vscode.TextEditor) {
     matchIndexByOffset = cached.matchIndexByOffset;
     blockIndicesByMatch = cached.blockIndicesByMatch;
   } else {
-    // Cache miss — compute everything and store with lookup maps
+    // Cache miss — compute matches and errors only (no buildLookupMaps on hot path)
+    // Schedule a deferred preloadCache so the NEXT cursor move is a full cache hit
     allMatches = findAllMatches(text, document);
     allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
-    const maps = buildLookupMaps(text, allMatches);
-    matchIndexByOffset = maps.matchIndexByOffset;
-    blockIndicesByMatch = maps.blockIndicesByMatch;
-    analysisCache.set(docUri, {
-      version: document.version,
-      text: text,
-      matches: allMatches,
-      errorRanges: allErrorRangesWithInfo,
-      matchIndexByOffset,
-      blockIndicesByMatch
-    });
+    setTimeout(() => preloadCache(document), 0);
+    // matchIndexByOffset / blockIndicesByMatch remain undefined; fallback path used below
   }
 
   const allErrorRanges = allErrorRangesWithInfo.map(e => e.range);
@@ -403,55 +395,93 @@ function updateDecorations(editor: vscode.TextEditor) {
   }
 
   // O(1) lookup: find the match index for the cursor offset
+  // Falls back to linear scan if maps aren't built yet (cache miss path)
   const cursorOffset = document.offsetAt(wordRange.start);
-  const matchIndex = matchIndexByOffset.get(cursorOffset);
 
-  if (matchIndex === undefined) {
-    // Cursor is on a word that isn't a tracked block keyword
-    editor.setDecorations(decorationType, []);
-    currentBlockInfo = undefined;
-    return;
-  }
+  if (matchIndexByOffset && blockIndicesByMatch) {
+    // Fast path — O(1) map lookups
+    const matchIndex = matchIndexByOffset.get(cursorOffset);
+    if (matchIndex === undefined) {
+      editor.setDecorations(decorationType, []);
+      currentBlockInfo = undefined;
+      return;
+    }
 
-  // O(1) lookup: get the precomputed block indices for this keyword
-  const blockIndices = blockIndicesByMatch.get(matchIndex);
+    const blockIndices = blockIndicesByMatch.get(matchIndex);
+    if (!blockIndices) {
+      editor.setDecorations(decorationType, []);
+      currentBlockInfo = undefined;
+      return;
+    }
 
-  if (!blockIndices) {
-    // Keyword has no matching block (unmatched, LIKEDS, etc.)
-    editor.setDecorations(decorationType, []);
-    currentBlockInfo = undefined;
-    return;
-  }
+    const openerWord = allMatches[blockIndices[0]].word;
+    const matchingPair = findMatchingPair(openerWord);
+    if (!matchingPair) {
+      editor.setDecorations(decorationType, []);
+      currentBlockInfo = undefined;
+      return;
+    }
 
-  // Derive the pair from the opener word (always blockIndices[0])
-  const openerWord = allMatches[blockIndices[0]].word;
-  const matchingPair = findMatchingPair(openerWord);
-  if (!matchingPair) {
-    editor.setDecorations(decorationType, []);
-    currentBlockInfo = undefined;
-    return;
-  }
+    const relatedRanges = blockIndices.map(idx => {
+      const m = allMatches[idx];
+      return new vscode.Range(document.positionAt(m.offset), document.positionAt(m.offset + m.length));
+    });
 
-  // Convert precomputed indices to ranges — O(k) where k = block keyword count (typically 2-5)
-  const relatedRanges = blockIndices.map(idx => {
-    const m = allMatches[idx];
-    return new vscode.Range(document.positionAt(m.offset), document.positionAt(m.offset + m.length));
-  });
+    const validRanges = relatedRanges.filter(range =>
+      !allErrorRanges.some((errorRange: vscode.Range) => errorRange.isEqual(range))
+    );
+    editor.setDecorations(decorationType, validRanges);
 
-  // Highlight valid keywords in yellow (excluding error ranges)
-  const validRanges = relatedRanges.filter(range =>
-    !allErrorRanges.some((errorRange: vscode.Range) => errorRange.isEqual(range))
-  );
-  editor.setDecorations(decorationType, validRanges);
-
-  if (validRanges.length > 0) {
-    const blockType = getBlockTypeName(matchingPair);
-    const startLine = relatedRanges[0].start.line;
-    const endLine = relatedRanges[relatedRanges.length - 1].start.line;
-    const condition = extractBlockCondition(document, startLine);
-    currentBlockInfo = { startLine, endLine, ranges: relatedRanges, blockType, condition };
+    if (validRanges.length > 0) {
+      const blockType = getBlockTypeName(matchingPair);
+      const startLine = relatedRanges[0].start.line;
+      const endLine = relatedRanges[relatedRanges.length - 1].start.line;
+      const condition = extractBlockCondition(document, startLine);
+      currentBlockInfo = { startLine, endLine, ranges: relatedRanges, blockType, condition };
+    } else {
+      currentBlockInfo = undefined;
+    }
   } else {
-    currentBlockInfo = undefined;
+    // Fallback path — maps not ready yet (first render after cache miss)
+    // Uses direct findBlockIndices call; preloadCache is scheduled to build maps for next time
+    let matchingPair: BracketPair | undefined;
+    const isClosingKeyword = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(word));
+    if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
+      let currentIndex = -1;
+      for (let i = 0; i < allMatches.length; i++) {
+        if (allMatches[i].offset === cursorOffset) { currentIndex = i; break; }
+      }
+      if (currentIndex !== -1) {
+        const openIndex = findMatchingOpenForClosing(text, allMatches, currentIndex, word);
+        if (openIndex !== -1) {
+          matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(allMatches[openIndex].word));
+        }
+      }
+    } else {
+      matchingPair = findMatchingPair(word);
+    }
+
+    if (!matchingPair) {
+      editor.setDecorations(decorationType, []);
+      currentBlockInfo = undefined;
+      return;
+    }
+
+    const relatedRanges = findAllRelatedKeywords(document, wordRange, matchingPair, allMatches);
+    const validRanges = relatedRanges.filter(range =>
+      !allErrorRanges.some((errorRange: vscode.Range) => errorRange.isEqual(range))
+    );
+    editor.setDecorations(decorationType, validRanges.length > 0 ? validRanges : []);
+
+    if (validRanges.length > 0) {
+      const blockType = getBlockTypeName(matchingPair);
+      const startLine = relatedRanges[0].start.line;
+      const endLine = relatedRanges[relatedRanges.length - 1].start.line;
+      const condition = extractBlockCondition(document, startLine);
+      currentBlockInfo = { startLine, endLine, ranges: relatedRanges, blockType, condition };
+    } else {
+      currentBlockInfo = undefined;
+    }
   }
 }
 
