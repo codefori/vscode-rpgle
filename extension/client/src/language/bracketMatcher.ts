@@ -88,14 +88,29 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
         // Both disabled — dispose everything and clear cache
         disposeBracketMatcher();
         analysisCache.clear();
-      } else if (!highlightingEnabled) {
-        // Highlighting off, jump still on — dispose decorations but keep cache
+      } else if (!highlightingEnabled && jumpEnabled) {
+        // Highlighting off, jump on — dispose decorations but preload cache for jump command
         disposeBracketMatcher();
+        setTimeout(() => {
+          vscode.window.visibleTextEditors.forEach(editor => {
+            if (editor && editor.document.languageId === 'rpgle') {
+              preloadCache(editor.document);
+            }
+          });
+        }, 0);
       } else {
         // Highlighting on — activate if not already active
         if (bracketMatcherDisposables.length === 0) {
           activateBracketMatcher();
         }
+        // When either setting toggles ON, preload cache for all visible documents
+        setTimeout(() => {
+          vscode.window.visibleTextEditors.forEach(editor => {
+            if (bracketMatcherActive && editor && editor.document.languageId === 'rpgle') {
+              preloadCache(editor.document);
+            }
+          });
+        }, 0);
       }
     }
   });
@@ -132,17 +147,25 @@ function activateBracketMatcher() {
   // Listen for mismatch style configuration changes
   const styleChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
     if (e.affectsConfiguration('vscode-rpgle.' + MISMATCH_STYLE_KEY)) {
-      // Dispose old decoration type and create new one
-      if (errorDecorationType) {
-        errorDecorationType.dispose();
-        errorDecorationType = createErrorDecorationType();
-      }
-      // Update all visible editors
-      vscode.window.visibleTextEditors.forEach(editor => {
-        if (editor.document.languageId === 'rpgle') {
-          updateDecorations(editor);
+      try {
+        // Dispose old decoration type and create new one
+        if (errorDecorationType) {
+          errorDecorationType.dispose();
+          errorDecorationType = createErrorDecorationType();
         }
-      });
+        // Update all visible editors (defer to avoid blocks during init)
+        if (bracketMatcherActive) {
+          setTimeout(() => {
+            if (bracketMatcherActive) {
+              vscode.window.visibleTextEditors.forEach(editor => {
+                if (editor && editor.document.languageId === 'rpgle') {
+                  updateDecorations(editor);
+                }
+              });
+            }
+          }, 0);
+        }
+      } catch { /* ignore */ }
     }
   });
   bracketMatcherDisposables.push(styleChangeDisposable);
@@ -159,41 +182,47 @@ function activateBracketMatcher() {
   // Register hover provider to show block info and error info
   const hoverProvider = vscode.languages.registerHoverProvider('rpgle', {
     provideHover(_document, position) {
-      // First check if hovering over an error (unmatched keyword)
-      for (const errorInfo of currentErrorRanges) {
-        if (errorInfo.range.contains(position)) {
-          const keyword = errorInfo.keyword.toUpperCase();
-          const markdown = new vscode.MarkdownString();
+      try {
+        // First check if hovering over an error (unmatched keyword)
+        if (currentErrorRanges && currentErrorRanges.length > 0) {
+          for (const errorInfo of currentErrorRanges) {
+            if (errorInfo && errorInfo.range && errorInfo.range.contains(position)) {
+              const keyword = errorInfo.keyword.toUpperCase();
+              const markdown = new vscode.MarkdownString();
 
-          // Bold first line, while keeping keyword safely as plain text.
-          markdown.appendMarkdown('**Unmatched ');
-          markdown.appendText(keyword);
-          markdown.appendMarkdown(' statement**\n');
-          markdown.appendMarkdown(
-            [
-              'This ENDxx keyword has no matching opening block.',
-              '',
-              '- For DS subfields, use **DCL-SUBF**',
-              '- For parms, use **DCL-PARM**',
-              '- For DCL-DS with either **LIKEDS(...)** or **LIKEREC(...)** an END-DS is **not** allowed.'
-            ].join('\n')
-          );
-          return new vscode.Hover(markdown);
+              // Bold first line, while keeping keyword safely as plain text.
+              markdown.appendMarkdown('**Unmatched ');
+              markdown.appendText(keyword);
+              markdown.appendMarkdown(' statement**\n');
+              markdown.appendMarkdown(
+                [
+                  'This ENDxx keyword has no matching opening block.',
+                  '',
+                  '- For DS subfields, use **DCL-SUBF**',
+                  '- For parms, use **DCL-PARM**',
+                  '- For DCL-DS with either **LIKEDS(...)** or **LIKEREC(...)** an END-DS is **not** allowed.'
+                ].join('\n')
+              );
+              return new vscode.Hover(markdown);
+            }
+          }
         }
+
+        // Then check if hovering over a matched block
+        if (!currentBlockInfo) return undefined;
+
+        // Check if cursor is on a highlighted keyword
+        const isOnHighlightedWord = currentBlockInfo.ranges && currentBlockInfo.ranges.some(range => range && range.contains(position));
+
+        if (isOnHighlightedWord) {
+          const hoverText = `${currentBlockInfo.condition}\n\nStart: line ${currentBlockInfo.startLine + 1}\nEnd: line ${currentBlockInfo.endLine + 1}`;
+          return new vscode.Hover(hoverText);
+        }
+
+        return undefined;
+      } catch {
+        return undefined;
       }
-
-      // Then check if hovering over a matched block
-      if (!currentBlockInfo) return undefined;
-
-      // Check if cursor is on a highlighted keyword
-      const isOnHighlightedWord = currentBlockInfo.ranges.some(range => range.contains(position));
-
-      if (isOnHighlightedWord) {
-        const hoverText = `${currentBlockInfo.condition}\n\nStart: line ${currentBlockInfo.startLine + 1}\nEnd: line ${currentBlockInfo.endLine + 1}`;
-        return new vscode.Hover(hoverText);
-      }
-
-      return undefined;
     }
   });
 
