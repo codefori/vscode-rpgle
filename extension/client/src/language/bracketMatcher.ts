@@ -3,6 +3,8 @@ import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sq
 import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/utils/blockParser';
 import * as rpgle from '../rpgtools-comment-helpers';
 
+console.log('[vscode-rpgle] bracketMatcher.ts: MODULE LOADED (after imports)');
+
 type BracketPair = BlockPair;
 
 // Configuration keys for bracket matching features

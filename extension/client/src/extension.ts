@@ -29,6 +29,7 @@ import { setLanguageSettings } from './language/config';
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
+	console.log('[vscode-rpgle] extension.activate: STARTING');
 	// The server is implemented in node
 	const serverModule = context.asAbsolutePath(
 		path.join('out', 'server.js')
@@ -100,7 +101,15 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
-	registerBracketMatcher(context);
+
+	try {
+		console.log('[vscode-rpgle] extension.ts: About to call registerBracketMatcher');
+		registerBracketMatcher(context);
+		console.log('[vscode-rpgle] extension.ts: registerBracketMatcher completed successfully');
+	} catch (err) {
+		console.error('[vscode-rpgle] extension.ts: registerBracketMatcher threw error:', err);
+	}
+
 	registerJumpToMatchingBlock(context);
 	registerCommentStatementCommand(context);
 	registerUncommentStatementCommand(context);
