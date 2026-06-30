@@ -11,7 +11,7 @@ import Declaration from "../models/declaration";
 import { IRange, Token } from "./types";
 import { NO_NAME } from "./statement";
 
-const BANNED_FROM_INCLUDES = [`NoUnreferenced`];
+const BANNED_FROM_INCLUDES: (`NoUnreferenced`)[] = [`NoUnreferenced`];
 const INCLUDE_EXTENSIONS = [`rpgleinc`, `rpgleh`];
 
 const errorText = {
@@ -56,16 +56,22 @@ const skipRules = {
   singleRules: 3, // Skips rule check
 };
 
+type IndentError = {
+  line: number,
+  expectedIndent: number,
+  currentIndent: number,
+};
+
 export default class Linter {
-  static getErrorText(error) {
+  static getErrorText(error: keyof typeof errorText): string {
     return errorText[error];
   }
 
-  static getErrors(data: { uri: string, content: string, availableIncludes?: string[] }, rules: Rules, globalScope?: Cache) {
+  static getErrors(data: { uri: string, content: string, availableIncludes?: string[] }, rules: Rules, globalScope?: Cache): { indentErrors: IndentError[], errors: IssueRange[], doc: Document } {
     const indentEnabled = rules.indent !== undefined;
     const indent = rules.indent || 2;
 
-    let uriExtension = data.uri.split('.').pop().toLowerCase();
+    let uriExtension = (data.uri.split('.').pop() || ``).toLowerCase();
     if (uriExtension.includes(`?`)) {
       uriExtension = uriExtension.split(`?`)[0];
     }
@@ -94,8 +100,7 @@ export default class Linter {
 
     let lineNumber = -1;
 
-    /** @type {{line: number, expectedIndent: number, currentIndent: number}[]} */
-    const indentErrors = [];
+    const indentErrors: IndentError[] = [];
 
     // Offset is always the offset within the range
 
@@ -125,6 +130,12 @@ export default class Linter {
     for (let si = 0; si < doc.statements.length; si++) {
       const docStatement = doc.statements[si];
       const statement = docStatement.tokens.some(t => t.type === `newline`) ? docStatement.tokens.filter(t => t.type !== `newline`) : docStatement.tokens;
+      if (statement.length === 0) {
+        continue;
+      }
+
+      const firstToken = statement[0];
+      const firstValue = firstToken.value || ``;
       lineNumber = docStatement.range.line;
       currentIndent = docStatement.indent;
 
@@ -132,8 +143,8 @@ export default class Linter {
         skipIndentCheck = false;
 
         // Comment checking
-        if (statement[0].type === `comment`) {
-          const comment = statement[0].value.substring(2).trimEnd();
+        if (firstToken.type === `comment`) {
+          const comment = firstValue.substring(2).trimEnd();
           if (rules.PrettyComments) {
             // We check for the slash because the documentation requires ///.
             if (comment && comment[0] !== `/`) {
@@ -141,7 +152,7 @@ export default class Linter {
 
               if (startSpaces === 0) {
                 errors.push({
-                  offset: { start: statement[0].range.start, end: statement[0].range.start + 2 },
+                  offset: { start: firstToken.range.start, end: firstToken.range.start + 2 },
                   type: `PrettyComments`,
                   newValue: `// `,
                 });
@@ -170,14 +181,14 @@ export default class Linter {
 
           const currentScope = globalScope;
 
-          let value;
+          let value: string | undefined;
           let isEmbeddedSQL = false;
 
-          const isDirective = statement[0].type === `directive`;
+          const isDirective = firstToken.type === `directive`;
 
           if (statement.length >= 1) {
             if (isDirective) {
-              const directive = statement[0].value.toUpperCase();
+              const directive = firstValue.toUpperCase();
               // We only want to process the EOF if it is not inside an IF scope
               if (directive === `/EOF` && directiveScope === 0) {
                 // End of parsing for this file
@@ -193,12 +204,12 @@ export default class Linter {
                   }
             }
 
-            switch (statement[0].type) {
+            switch (firstToken.type) {
               case `format`:
-                if (lineNumber > 0 && statement[0].value.startsWith(`**`)) {
+                if (lineNumber > 0 && firstValue.startsWith(`**`)) {
                   if (rules.NoCTDATA) {
                     errors.push({
-                      offset: statement[0].range,
+                      offset: firstToken.range,
                       type: `NoCTDATA`,
                     });
                   }
@@ -206,15 +217,15 @@ export default class Linter {
                 break;
 
               case `directive`:
-                value = statement[0].value;
+                value = firstValue;
 
                 if (rules.CopybookDirective || rules.IncludeMustBeRelative) {
-                  if ([`/COPY`, `/INCLUDE`].includes(value.toUpperCase())) {
+                  if (value && [`/COPY`, `/INCLUDE`].includes(value.toUpperCase())) {
                     if (rules.IncludeMustBeRelative) {
                       if (statement.length === 2) {
                         const path = statement[1];
 
-                        if (path.type === `word`) {
+                        if (path.type === `word` && typeof path.value === `string`) {
                           // /INCLUDE MEMBER
                           // This is bad.
                           const pathValue = path.value.substring(1, path.value.length - 1).trim().toUpperCase();
@@ -225,7 +236,7 @@ export default class Linter {
                             type: `IncludeMustBeRelative`,
                             newValue: possibleValue ? `'${possibleValue}'` : undefined
                           });
-                        } else if (path.type === `string`) {
+                        } else if (path.type === `string` && typeof path.value === `string`) {
                           // /INCLUDE 'path/to/file'
                           const pathValue = path.value.substring(1, path.value.length - 1).trim();
 
@@ -260,7 +271,7 @@ export default class Linter {
                         // we can still include members.
 
                         if (data.availableIncludes && data.availableIncludes.length > 0) {
-                          const pathValue = `${statement[1].value}/${statement[3].value}`.toUpperCase();
+                          const pathValue = `${statement[1].value || ``}/${statement[3].value || ``}`.toUpperCase();
                           const possibleValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue));
                           if (possibleValue) {
                             // This means there was a possible match
@@ -280,7 +291,7 @@ export default class Linter {
                         // /INCLUDE or /COPY is way to long.
                         errors.push({
                           type: `IncludeMustBeRelative`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                            offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
                         });
                       }
                     }
@@ -294,7 +305,7 @@ export default class Linter {
                       }
                       if (correctValue !== correctDirective) {
                         errors.push({
-                          offset: statement[0].range,
+                          offset: firstToken.range,
                           type: `CopybookDirective`,
                           newValue: correctDirective
                         });
@@ -304,9 +315,9 @@ export default class Linter {
                 }
 
                 if (rules.DirectiveCase === `lower`) {
-                  if (value !== value.toLowerCase()) {
+                  if (value && value !== value.toLowerCase()) {
                     errors.push({
-                      offset: statement[0].range,
+                      offset: firstToken.range,
                       type: `DirectiveCase`,
                       newValue: value.toLowerCase()
                     });
@@ -314,9 +325,9 @@ export default class Linter {
                 }
 
                 if (rules.DirectiveCase === `upper`) {
-                  if (value !== value.toUpperCase()) {
+                  if (value && value !== value.toUpperCase()) {
                     errors.push({
-                      offset: statement[0].range,
+                      offset: firstToken.range,
                       type: `DirectiveCase`,
                       newValue: value.toUpperCase()
                     });
@@ -328,20 +339,20 @@ export default class Linter {
                 if (statement.length < 2) break;
 
                 if (rules.SpecificCasing) {
-                  const caseRule = rules.SpecificCasing.find(rule => [statement[0].value.toUpperCase(), `*DECLARE`].includes(rule.operation.toUpperCase()));
+                  const caseRule = rules.SpecificCasing.find(rule => [firstValue.toUpperCase(), `*DECLARE`].includes(rule.operation.toUpperCase()));
                   if (caseRule) {
                     let expected = caseRule.expected;
                     switch (expected.toUpperCase()) {
                       case `*UPPER`:
-                        expected = statement[0].value.toUpperCase();
+                        expected = firstValue.toUpperCase();
                         break;
                       case `*LOWER`:
-                        expected = statement[0].value.toLowerCase();
+                        expected = firstValue.toLowerCase();
                         break;
                     }
-                    if (statement[0].value !== expected) {
+                    if (firstValue !== expected) {
                       errors.push({
-                        offset: statement[0].range,
+                        offset: firstToken.range,
                         type: `SpecificCasing`,
                         newValue: expected
                       });
@@ -351,14 +362,14 @@ export default class Linter {
 
                 value = statement[1].value;
 
-                if (value.match(/^\d/)) {
+                if (value && value.match(/^\d/)) {
                   errors.push({
                     offset: { start: statement[1].range.start, end: statement[1].range.end },
                     type: `InvalidDeclareNumber`,
                   });
                 }
 
-                switch (statement[0].value.toUpperCase()) {
+                switch (firstValue.toUpperCase()) {
                   case `BEGSR`:
                     if (inSubroutine) {
                       errors.push({
@@ -367,7 +378,7 @@ export default class Linter {
                       });
                     }
 
-                    inSubroutine = {name: statement[1].value, skipRules: statement[1].type === `special`};
+                    inSubroutine = {name: statement[1].value || NO_NAME, skipRules: statement[1].type === `special`};
 
                     if (inProcedure) {
                       if (rules.NoLocalSubroutines) {
@@ -377,9 +388,9 @@ export default class Linter {
                         });
                       }
                     } else {
-                      if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
+                      if (rules.NoGlobalSubroutines && inSubroutine && inSubroutine.skipRules !== true) {
                         errors.push({
-                          offset: statement[0].range,
+                          offset: firstToken.range,
                           type: `NoGlobalSubroutines`
                         });
                       }
@@ -394,16 +405,17 @@ export default class Linter {
                     }
 
                     value = statement[1].value;
-                    inProcedure = {name: value};
+                    inProcedure = {name: value || NO_NAME};
 
                     if (statement.length < 2) break;
                     if (rules.RequiresProcedureDescription) {
-                      const procDef = globalProcs.find(def => def.name.toUpperCase() === value.toUpperCase());
+                      const procName = value;
+                      const procDef = procName ? globalProcs.find(def => def.name.toUpperCase() === procName.toUpperCase()) : undefined;
                       if (procDef) {
                         if (!procDef.tags.some(tag => tag.tag === `description`)) {
                           errors.push({
                             type: `RequiresProcedureDescription`,
-                            offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                            offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
                           });
                         }
                       }
@@ -411,7 +423,7 @@ export default class Linter {
                     break;
                   case `DCL-C`:
                     if (rules.UppercaseConstants) {
-                      if (value !== value.toUpperCase()) {
+                      if (value && value !== value.toUpperCase()) {
                         errors.push({
                           offset: { start: statement[1].range.start, end: statement[1].range.end },
                           type: `UppercaseConstants`,
@@ -455,7 +467,9 @@ export default class Linter {
                     break;
 
                   case `DCL-ENUM`:
-                    inStruct.push(value);
+                    if (value) {
+                      inStruct.push(value);
+                    }
                     break;
 
                   case `DCL-DS`:
@@ -478,7 +492,7 @@ export default class Linter {
                     }
 
                     if (rules.BlankStructNamesCheck) {
-                      if (statement.some(part => part.type === `special` && part.value.toUpperCase() === `*N`)) {
+                      if (statement.some(part => part.type === `special` && part.value?.toUpperCase() === `*N`)) {
                         errors.push({
                           type: `BlankStructNamesCheck`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
@@ -487,7 +501,7 @@ export default class Linter {
                     }
 
                     if (rules.NoCTDATA) {
-                      if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value.toUpperCase()))) {
+                      if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value?.toUpperCase() || ``))) {
                         errors.push({
                           type: `NoCTDATA`,
                           offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
@@ -496,8 +510,10 @@ export default class Linter {
                     }
 
                     // If no one line ender is used, push current ds to scope
-                    if (!oneLineTriggers["DCL-DS"].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
-                      inStruct.push(value);
+                    if (!oneLineTriggers["DCL-DS"].some(trigger => statement.map(t => (t.value || ``).toUpperCase()).includes(trigger))) {
+                      if (value) {
+                        inStruct.push(value);
+                      }
                     }
                     break;
 
@@ -521,7 +537,7 @@ export default class Linter {
                 break;
 
               case `end`:
-                value = statement[0].value.toUpperCase();
+                value = firstValue.toUpperCase();
 
                 if (rules.SpecificCasing) {
                   const caseRule = rules.SpecificCasing.find(rule => [value, `*DECLARE`].includes(rule.operation.toUpperCase()));
@@ -529,15 +545,15 @@ export default class Linter {
                     let expected = caseRule.expected;
                     switch (expected.toUpperCase()) {
                       case `*UPPER`:
-                        expected = statement[0].value.toUpperCase();
+                        expected = firstValue.toUpperCase();
                         break;
                       case `*LOWER`:
-                        expected = statement[0].value.toLowerCase();
+                        expected = firstValue.toLowerCase();
                         break;
                     }
-                    if (statement[0].value !== expected) {
+                    if (firstValue !== expected) {
                       errors.push({
-                        offset: statement[0].range,
+                        offset: firstToken.range,
                         type: `SpecificCasing`,
                         newValue: expected
                       });
@@ -550,7 +566,7 @@ export default class Linter {
                     if (inProcedure === undefined && inSubroutine) {
                       if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
                         errors.push({
-                          offset: statement[0].range,
+                          offset: firstToken.range,
                           type: `NoGlobalSubroutines`
                         });
                       }
@@ -558,14 +574,14 @@ export default class Linter {
 
                     if (!inSubroutine) {
                       errors.push({
-                        offset: statement[0].range,
+                        offset: firstToken.range,
                         type: `UnexpectedEnd`,
                       });
                     } else {
                       inSubroutine = undefined;
                     }
                     break;
-                    
+
                   case `END-DS`:
                   case `END-ENUM`:
                     inStruct.pop();
@@ -574,7 +590,7 @@ export default class Linter {
                   case `END-PROC`:
                     if (inProcedure === undefined || inSubroutine) {
                       errors.push({
-                        offset: statement[0].range,
+                        offset: firstToken.range,
                         type: `UnexpectedEnd`,
                       });
                     }
@@ -585,7 +601,7 @@ export default class Linter {
                   case `END-PI`:
                     if (inPrototype === false) {
                       errors.push({
-                        offset: statement[0].range,
+                        offset: firstToken.range,
                         type: `UnexpectedEnd`,
                       });
                     }
@@ -596,7 +612,7 @@ export default class Linter {
                 break;
 
               case `word`:
-                value = statement[0].value.toUpperCase();
+                value = firstValue.toUpperCase();
 
                 if (rules.SpecificCasing) {
                   const caseRule = rules.SpecificCasing.find(rule => value === rule.operation.toUpperCase());
@@ -604,15 +620,15 @@ export default class Linter {
                     let expected = caseRule.expected;
                     switch (expected.toUpperCase()) {
                       case `*UPPER`:
-                        expected = statement[0].value.toUpperCase();
+                        expected = firstValue.toUpperCase();
                         break;
                       case `*LOWER`:
-                        expected = statement[0].value.toLowerCase();
+                        expected = firstValue.toLowerCase();
                         break;
                     }
-                    if (statement[0].value !== expected) {
+                    if (firstValue !== expected) {
                       errors.push({
-                        offset: statement[0].range,
+                        offset: firstToken.range,
                         type: `SpecificCasing`,
                         newValue: expected
                       });
@@ -643,10 +659,10 @@ export default class Linter {
                   case `EXSR`:
                     if (rules.NoGlobalSubroutines) {
                       if (statement.length === 2) {
-                        if (globalScope.subroutines.find(sub => sub.name.toUpperCase() === statement[1].value.toUpperCase())) {
+                        if (statement[1].value && globalScope.subroutines.find(sub => sub.name.toUpperCase() === statement[1].value!.toUpperCase())) {
                           errors.push({
                             type: `NoGlobalSubroutines`,
-                            offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                            offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
                           });
                         }
                       }
@@ -654,7 +670,7 @@ export default class Linter {
                     break;
 
                   case `EXEC`:
-                    const statementOffset = { start: statement[0].range.start, end: statement[statement.length - 1].range.end };
+                    const statementOffset = { start: firstToken.range.start, end: statement[statement.length - 1].range.end };
                     isEmbeddedSQL = true;
 
                     if (rules.NoSELECTAll) {
@@ -695,7 +711,7 @@ export default class Linter {
 
                     if (rules.SQLHostVarCheck) {
                       statement.forEach((part, index) => {
-                        if (part.type === `word` && currentScope.findDefinition(lineNumber, part.value)) {
+                        if (part.type === `word` && part.value && currentScope.findDefinition(lineNumber, part.value)) {
                           const prior = statement[index - 1];
                           if (prior && ![`dot`, `seperator`].includes(prior.type)) {
                             errors.push({
@@ -710,7 +726,8 @@ export default class Linter {
 
                     if (rules.SQLRunner) {
                       // For running SQL statements
-                      const validStatements = [`declare`, `with`, `select`, `merge`, `update`].includes(statement.find((t, i) => i >= 2 && t.type !== `newline`)?.value.toLowerCase());
+                      const sqlStatementType = statement.find((t, i) => i >= 2 && t.type !== `newline`)?.value?.toLowerCase();
+                      const validStatements = sqlStatementType ? [`declare`, `with`, `select`, `merge`, `update`].includes(sqlStatementType) : false;
                       if (validStatements) {
                         errors.push({
                           type: `SQLRunner`,
@@ -724,7 +741,7 @@ export default class Linter {
                   case `SELECT`:
                     selectBlocks.push({
                       otherBlockExists: false,
-                      offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                      offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
                     });
                     break;
                   case `OTHER`:
@@ -740,7 +757,7 @@ export default class Linter {
                       if (rules.RequireOtherBlock && latestSelect && !latestSelect.otherBlockExists) {
                         errors.push({
                           type: `RequireOtherBlock`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                          offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
                         });
                       }
                     }
@@ -778,18 +795,19 @@ export default class Linter {
                 switch (part.type) {
                   case `builtin`:
                     if (rules.SpecificCasing) {
-                      const caseRule = rules.SpecificCasing.find(rule => [part.value.toUpperCase(), `*BIF`].includes(rule.operation.toUpperCase()));
+                      const partValue = part.value;
+                      const caseRule = rules.SpecificCasing.find(rule => [partValue.toUpperCase(), `*BIF`].includes(rule.operation.toUpperCase()));
                       if (caseRule) {
                         let expected = caseRule.expected;
                         switch (expected.toUpperCase()) {
                           case `*UPPER`:
-                            expected = part.value.toUpperCase();
+                            expected = partValue.toUpperCase();
                             break;
                           case `*LOWER`:
-                            expected = part.value.toLowerCase();
+                            expected = partValue.toLowerCase();
                             break;
                         }
-                        if (part.value !== expected) {
+                        if (partValue !== expected) {
                           errors.push({
                             offset: part.range,
                             type: `SpecificCasing`,
@@ -882,13 +900,13 @@ export default class Linter {
         }
 
         // We don't want to lint CTDATA... so that's the end
-        if (statement[0].type === `format` && statement[0].value.toUpperCase() === `**CTDATA`) {
+        if (firstToken.type === `format` && firstValue.toUpperCase() === `**CTDATA`) {
           break;
         }
 
         // Next, check for indentation errors
 
-        // Check to see if we are ending a multi-line conditional 
+        // Check to see if we are ending a multi-line conditional
         // and now need to increase the expected indent level
 
         if (!skipIndentCheck) {
@@ -901,7 +919,7 @@ export default class Linter {
 
         if (doc.statements[si - 1] === undefined || (doc.statements[si - 1].range.line !== lineNumber)) {
           if (indentEnabled && skipIndentCheck === false) {
-            opcode = statement[0].value.toUpperCase();
+            opcode = firstValue.toUpperCase();
 
             if ([
               `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ON-EXCP`, `ENDMON`, `ENDSR`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `END-ENUM`, `ENDSL`
@@ -933,7 +951,9 @@ export default class Linter {
             if ([
               `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXCP`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`, `DCL-ENUM`
             ].includes(opcode)) {
-              if ([`DCL-DS`, `DCL-PI`, `DCL-PR`].includes(opcode) && oneLineTriggers[opcode].some(trigger => statement.map(t => t.value.toUpperCase()).includes(trigger))) {
+              const oneLineTriggerOps = [`DCL-DS`, `DCL-PI`, `DCL-PR`] as const;
+              const isOneLineTriggerOp = (oneLineTriggerOps as readonly string[]).includes(opcode);
+              if (isOneLineTriggerOp && oneLineTriggers[opcode as keyof typeof oneLineTriggers].some((trigger: string) => statement.map(t => (t.value || ``).toUpperCase()).includes(trigger))) {
                 //No change
               }
               else if (opcode === `SELECT`) {
@@ -972,10 +992,11 @@ export default class Linter {
       });
     }
 
-    if (rules.NoExternalTo && rules.NoExternalTo.length) {
+    const noExternalToRules = rules.NoExternalTo;
+    if (noExternalToRules && noExternalToRules.length) {
       [
         globalScope,
-        ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
+        ...globalScope.procedures.map(proc => proc.scope).filter((scope): scope is Cache => scope !== undefined)
       ].forEach(scope => {
         scope.procedures.forEach(localDef => {
           if (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]) {
@@ -990,7 +1011,7 @@ export default class Linter {
             // Remove potential string around value
             callLoc = (callLoc.startsWith(`'`) && callLoc.endsWith(`'`) ? callLoc.substring(1, callLoc.length - 1) : callLoc);
 
-            if (rules.NoExternalTo.includes(callLoc)) {
+            if (noExternalToRules.includes(callLoc)) {
               const possibleStatement = doc.getStatementByLine(localDef.position.range.line);
               if (possibleStatement) {
                 errors.push({
@@ -1039,7 +1060,7 @@ export default class Linter {
 
       [
         globalScope,
-        ...globalScope.procedures.filter(proc => proc.scope !== undefined).map(proc => proc.scope)
+        ...globalScope.procedures.map(proc => proc.scope).filter((scope): scope is Cache => scope !== undefined)
       ].forEach(dec => {
         [...dec.constants, ...dec.variables]
           .forEach(def => {

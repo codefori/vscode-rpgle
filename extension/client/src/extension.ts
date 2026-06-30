@@ -8,7 +8,7 @@ import { workspace, ExtensionContext } from 'vscode';
 
 import * as Linter from "./linter";
 import * as columnAssist from "./language/columnAssist";
-import { registerBracketMatcher } from "./language/bracketMatcher";
+import { registerBracketMatcher, registerJumpToMatchingBlock } from "./language/bracketMatcher";
 import { registerCommentStatementCommand, registerUncommentStatementCommand, registerToggleCommentCommand } from './commentStmt';
 
 
@@ -27,6 +27,16 @@ import { registerCommands } from './commands';
 import { setLanguageSettings } from './language/config';
 
 let client: LanguageClient;
+
+// GLOBAL ERROR HANDLERS - catch unhandled promise rejections and exceptions
+if (process) {
+	process.on('uncaughtException', (error) => {
+		console.error('[vscode-rpgle] UNCAUGHT EXCEPTION:', error);
+	});
+	process.on('unhandledRejection', (reason, promise) => {
+		console.error('[vscode-rpgle] UNHANDLED REJECTION:', reason, 'promise:', promise);
+	});
+}
 
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -75,42 +85,90 @@ export function activate(context: ExtensionContext) {
 	);
 
 	client.onReady().then(async () => {
-		buildRequestHandlers(client);
+		try {
+			buildRequestHandlers(client);
 
-		const instance = await checkAndWait();
+			const instance = await checkAndWait();
 
-		// We need to clear table caches when the connection changes
-		if (instance) {
-			// When the connection is established
-			instance.subscribe(context, "connected", "vscode-rpgle", () => {
-				clearTableCache(client);
-			});
-
-			// When the library list changes
-			context.subscriptions.push(
-				onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+			// We need to clear table caches when the connection changes
+			if (instance) {
+				// When the connection is established
+				instance.subscribe(context, "connected", "vscode-rpgle", () => {
 					clearTableCache(client);
-				}),
-			);
+				});
+
+				// When the library list changes
+				context.subscriptions.push(
+					onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+						clearTableCache(client);
+					}),
+				);
+			}
+		} catch (err) {
+			console.error('[vscode-rpgle] Unhandled error in client.onReady:', err);
 		}
+	}).catch((err) => {
+		console.error('[vscode-rpgle] Unhandled error in client.onReady promise:', err);
 	});
 
 	// Start the client. This will also launch the server
 	client.start();
 
-	Linter.initialise(context);
-	columnAssist.registerColumnAssist(context);
-	registerBracketMatcher(context);
-	registerCommentStatementCommand(context);
-	registerUncommentStatementCommand(context);
-	registerToggleCommentCommand(context);
-	
-	registerCommands(context, client);
-	
-	context.subscriptions.push(getServerSymbolProvider());
-	context.subscriptions.push(getServerImplementationProvider());
-	context.subscriptions.push(setLanguageSettings());
-	// context.subscriptions.push(...initBuilder(client));
+	try {
+		Linter.initialise(context);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in Linter.initialise:', err);
+	}
+
+	try {
+		columnAssist.registerColumnAssist(context);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in columnAssist.registerColumnAssist:', err);
+	}
+
+	try {
+		registerBracketMatcher(context);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in registerBracketMatcher:', err);
+	}
+
+	try {
+		registerJumpToMatchingBlock(context);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in registerJumpToMatchingBlock:', err);
+	}
+
+	try {
+		registerCommentStatementCommand(context);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in registerCommentStatementCommand:', err);
+	}
+
+	try {
+		registerUncommentStatementCommand(context);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in registerUncommentStatementCommand:', err);
+	}
+
+	try {
+		registerToggleCommentCommand(context);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in registerToggleCommentCommand:', err);
+	}
+
+	try {
+		registerCommands(context, client);
+	} catch (err) {
+		console.error('[vscode-rpgle] Error in registerCommands:', err);
+	}
+
+	try {
+		context.subscriptions.push(getServerSymbolProvider());
+		context.subscriptions.push(getServerImplementationProvider());
+		context.subscriptions.push(setLanguageSettings());
+	} catch (err) {
+		console.error('[vscode-rpgle] Error registering providers:', err);
+	}
 }
 
 export function deactivate(): Thenable<void> | undefined {

@@ -7,6 +7,30 @@ import { readFile } from "fs/promises";
 const parser = setupParser();
 const uri = `source.rpgle`;
 
+const assertCache = <T>(value: T | undefined): T => {
+  expect(value).toBeDefined();
+  if (value === undefined) {
+    throw new Error(`Expected parser cache to be defined`);
+  }
+  return value;
+};
+
+const assertFound = <T>(value: T | undefined, name: string): T => {
+  expect(value, `${name} should exist`).toBeDefined();
+  if (value === undefined) {
+    throw new Error(`Expected ${name} to exist`);
+  }
+  return value;
+};
+
+const assertScope = (value: Cache | undefined, name: string): Cache => {
+  expect(value, `${name} scope should exist`).toBeDefined();
+  if (value === undefined) {
+    throw new Error(`Expected ${name} scope to exist`);
+  }
+  return value;
+};
+
 const bigLines = [
   `**free`,
   ``,
@@ -57,101 +81,101 @@ const bigLines = [
 ].join(`\n`);
 
 test("references_1_const", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const falseConstIndex = bigLines.indexOf(`dcl-c FALSE`) + 7;
 
-  const falseConst = Cache.referenceByOffset(uri, cache, falseConstIndex);
+  const falseConst = assertFound(Cache.referenceByOffset(uri, cache, falseConstIndex), ``);
   expect(falseConst.name).toBe(`FALSE`);
   expect(falseConst.references.length).not.toBe(0);
 });
 
 test("references_2_const", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const trueConstIndex = bigLines.indexOf(`var1 = TRUE`) + 7;
 
-  const trueConst = Cache.referenceByOffset(uri, cache, trueConstIndex);
+  const trueConst = assertFound(Cache.referenceByOffset(uri, cache, trueConstIndex), ``);
   expect(trueConst.name).toBe(`TRUE`);
   expect(trueConst.references.length).toBe(2);
 });
 
 test("references_3_enum", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const colorsConstIndex = bigLines.indexOf(`var1 = COLORS`) + 7;
 
-  const colorsConst = Cache.referenceByOffset(uri, cache, colorsConstIndex);
+  const colorsConst = assertFound(Cache.referenceByOffset(uri, cache, colorsConstIndex), ``);
   expect(colorsConst.name).toBe(`COLORS`);
   expect(colorsConst.references.length).toBe(2);
 });
 
 test("references_4_subfield_a", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const greenSubfieldIndex = bigLines.indexOf(`var1 = COLORS.GREEN`) + 17;
 
-  const greenConst = Cache.referenceByOffset(uri, cache, greenSubfieldIndex);
+  const greenConst = assertFound(Cache.referenceByOffset(uri, cache, greenSubfieldIndex), ``);
 
   expect(greenConst.references.length).toBe(2);
 });
 
 test("references_4_subfield_b", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const greenSubfieldIndex = bigLines.indexOf(` GREEN 1`) + 3;
 
-  const greenConst = Cache.referenceByOffset(uri, cache, greenSubfieldIndex);
+  const greenConst = assertFound(Cache.referenceByOffset(uri, cache, greenSubfieldIndex), ``);
   expect(greenConst.name).toBe(`GREEN`);
   expect(greenConst.references.length).toBe(2);
 
 
 
-  const colours = cache.find(`COLORS`);
+  const colours = assertFound(cache.find(`COLORS`), `COLORS`);
   const red = colours.subItems.find(sub => sub.name === `RED`);
 
 
 
   const refSubfieldIndex = bigLines.indexOf(` RED 2`) + 3;
-  const redConst = Cache.referenceByOffset(uri, cache, refSubfieldIndex);
+  const redConst = assertFound(Cache.referenceByOffset(uri, cache, refSubfieldIndex), ``);
 
   expect(redConst.name).toBe(`RED`);
   expect(redConst.references.length).toBe(1);
 });
 
 test("references_5", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const var1Index = bigLines.indexOf(`var1 = TRUE`);
 
-  const var1Var = Cache.referenceByOffset(uri, cache, var1Index);
+  const var1Var = assertFound(Cache.referenceByOffset(uri, cache, var1Index), ``);
   expect(var1Var.name).toBe(`var1`);
   expect(var1Var.references.length).toBe(5);
 });
 
 test("references_6_subfield_dim", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const baseIndex = bigLines.indexOf(`var4 = varColors(1).red`);
   const varColorsIndex = baseIndex + 9;
   const redSubfieldIndex = baseIndex + 22;
 
-  const varColors = Cache.referenceByOffset(uri, cache, varColorsIndex);
+  const varColors = assertFound(Cache.referenceByOffset(uri, cache, varColorsIndex), ``);
   expect(varColors.name).toBe(`varColors`);
-  
+
   expect(varColors.references.length).toBe(2);
 
-  const redSubfield = Cache.referenceByOffset(uri, cache, redSubfieldIndex);
+  const redSubfield = assertFound(Cache.referenceByOffset(uri, cache, redSubfieldIndex), ``);
   expect(redSubfield.name).toBe(`red`);
   expect(redSubfield.references.length).toBe(2);
 });
 
 test("references_7", async () => {
-  const cache = await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
 
   const declareAbcIndex = bigLines.indexOf(`dcl-proc abc`) + 10;
 
-  const varColors = Cache.referenceByOffset(uri, cache, declareAbcIndex);
+  const varColors = assertFound(Cache.referenceByOffset(uri, cache, declareAbcIndex), ``);
   expect(varColors.name).toEqual(`abc`);
   expect(varColors.references.length).toEqual(1);
 });
@@ -168,13 +192,13 @@ test("reference from file (#406)", async () => {
     `dsply deptname;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, collectReferences: true}));
 
-  const deptname = cache.find(`deptname`);
+  const deptname = assertFound(cache.find(`deptname`), `deptname`);
   expect(deptname.name).toEqual(`DEPTNAME`);
   expect(deptname.references.length).toEqual(2);
 
-  const reference = Cache.referenceByOffset(uri, cache, lines.indexOf(`deptname`));
+  const reference = assertFound(Cache.referenceByOffset(uri, cache, lines.indexOf(`deptname`)), ``);
   expect(reference).toMatchObject(deptname);
 });
 
@@ -261,16 +285,16 @@ test("references_8", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
 
-  const subfa = cache.find(`subfa`);
+  const subfa = assertFound(cache.find(`subfa`), `subfa`);
   expect(subfa.references.length).toBe(2);
   expect(subfa.references[1]).toEqual({
     offset: { start: 469, end: 474, line: 33 },
     uri: uri
   });
 
-  const structYesAlso = cache.find(`structYesAlso`);
+  const structYesAlso = assertFound(cache.find(`structYesAlso`), `structYesAlso`);
   expect(structYesAlso.references.length).toBe(2);
   expect(structYesAlso.references[1]).toEqual({
     offset: { start: 485, end: 498, line: 34 },
@@ -281,7 +305,7 @@ test("references_8", async () => {
   expect(subfc.name).toBe(`subfc`);
   expect(subfc.references.length).toBe(1);
 
-  const qualStructYes = cache.find(`qualStructYes`);
+  const qualStructYes = assertFound(cache.find(`qualStructYes`), `qualStructYes`);
   expect(qualStructYes.references.length).toBe(2);
   expect(qualStructYes.references[1]).toEqual({
     offset: { start: 516, end: 529, line: 36 },
@@ -302,7 +326,7 @@ test("references_8", async () => {
     uri: uri
   });
 
-  const procYes = cache.find(`procYes`);
+  const procYes = assertFound(cache.find(`procYes`), `procYes`);
   const subProc = procYes.scope;
 
   const localStructYes = subProc.find(`localStructYes`);
@@ -323,7 +347,7 @@ test("references_8", async () => {
     uri: uri
   });
 
-  const qualDimStructYup = cache.find(`qualDimStructYup`);
+  const qualDimStructYup = assertFound(cache.find(`qualDimStructYup`), `qualDimStructYup`);
   expect(qualDimStructYup.references.length).toBe(4)
 
   expect(qualDimStructYup.references[1]).toEqual({
@@ -400,9 +424,9 @@ test("references_9", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
 
-  const procedure = cache.find(`InputIsValid`);
+  const procedure = assertFound(cache.find(`InputIsValid`), `InputIsValid`);
 
   const validationResult = procedure.scope.find(`validationResult`);
   expect(validationResult.references.length).toEqual(7);
@@ -429,7 +453,7 @@ test('references_10', async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
 
   const rangeRefs = cache.referencesInRange(uri, {start: 220, end: 260});
   expect(rangeRefs.length).toBe(2);
@@ -481,9 +505,9 @@ test("references_11_issue_175", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
 
-  const procedure = cache.find(`SubProc`);
+  const procedure = assertFound(cache.find(`SubProc`), `SubProc`);
   expect(procedure).toBeDefined();
   expect(procedure.references.length).toBe(2);
 });
@@ -501,11 +525,11 @@ test('references_12_fixed_1', async () => {
     `     C                   eval      *inlr = *on`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
   expect(cache.variables.length).to.equal(2);
 
-  const wkInvoice = cache.find(`wkInvoice`);
+  const wkInvoice = assertFound(cache.find(`wkInvoice`), `wkInvoice`);
 
   for (const ref of wkInvoice.references) {
     // console.log({
@@ -711,17 +735,17 @@ test('references_13_fixed_2', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const TYPEMST_T = cache.find(`TYPEMST_T`);
+  const TYPEMST_T = assertFound(cache.find(`TYPEMST_T`), `TYPEMST_T`);
   expect(TYPEMST_T.references.length).toBe(2);
   expect(TYPEMST_T.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `TYPEMST_T`)).toBe(true);
 
-  const TYPEMST_Ds = cache.find(`TYPEMST_Ds`);
+  const TYPEMST_Ds = assertFound(cache.find(`TYPEMST_Ds`), `TYPEMST_Ds`);
   expect(TYPEMST_Ds.references.length).toBe(1);
   expect(TYPEMST_Ds.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `TYPEMST_Ds`)).toBe(true);
 
-  const TYPEMST_Dim = cache.find(`TYPEMST_Dim`);
+  const TYPEMST_Dim = assertFound(cache.find(`TYPEMST_Dim`), `TYPEMST_Dim`);
   expect(TYPEMST_Dim.references.length).toBe(5);
   expect(TYPEMST_Dim.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `TYPEMST_Dim`)).toBe(true);
 });
@@ -816,9 +840,9 @@ test('references_14_fixed_3', async () => {
     `     C                   seton                                        LR`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const per = cache.find(`per`);
+  const per = assertFound(cache.find(`per`), `per`);
   expect(per.references.length).toBe(7);
 
   // for (const ref of per.references) {
@@ -831,15 +855,15 @@ test('references_14_fixed_3', async () => {
 
   expect(per.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `per`)).toBe(true);
 
-  const pmyy = cache.find(`pmyy`);
+  const pmyy = assertFound(cache.find(`pmyy`), `pmyy`);
   expect(pmyy.references.length).toBe(2);
   expect(pmyy.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `pmyy`)).toBe(true);
 
-  const filedt = cache.find(`filedt`);
+  const filedt = assertFound(cache.find(`filedt`), `filedt`);
   expect(filedt.references.length).toBe(3);
   expect(filedt.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `filedt`)).toBe(true);
 
-  const lr = cache.find(`INLR`);
+  const lr = assertFound(cache.find(`INLR`), `INLR`);
   expect(lr.references.length).toBe(1);
 });
 
@@ -856,9 +880,9 @@ test('indicators1', async () => {
     `Return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true}));
 
-  const in10 = cache.find(`IN10`);
+  const in10 = assertFound(cache.find(`IN10`), `IN10`);
   expect(in10.references.length).toBe(2);
 });
 
@@ -912,17 +936,17 @@ test('references_15_fixed_4', async () => {
     `      *---------------------------------------------------------------*?`,
   ].join(`\r\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
   const EntryParm = cache.find(`EntryParm`)
   expect(EntryParm.references.length).toBe(2);
   expect(EntryParm.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `EntryParm`)).toBe(true);
 
-  const r_transf = cache.find(`r_transf`);
+  const r_transf = assertFound(cache.find(`r_transf`), `r_transf`);
   expect(r_transf.references.length).toBe(3);
   expect(r_transf.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `r_transf`)).toBe(true);
 
-  const r_long_lue = cache.find(`r_long_lue`);
+  const r_long_lue = assertFound(cache.find(`r_long_lue`), `r_long_lue`);
   expect(r_long_lue.references.length).toBe(1);
 });
 
@@ -1125,29 +1149,29 @@ test('references_16_fixed_5', async () => {
     `     C                   enddo`,
   ].join(`\r\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const MinEur2 = cache.find(`MinEur2`);
+  const MinEur2 = assertFound(cache.find(`MinEur2`), `MinEur2`);
   expect(MinEur2.references.length).toBe(2);
   expect(MinEur2.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `MINEUR2`)).toBe(true);
 
-  const MinEur = cache.find(`MinEur`);
+  const MinEur = assertFound(cache.find(`MinEur`), `MinEur`);
   expect(MinEur.references.length).toBe(12);
   expect(MinEur.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `MINEUR`)).toBe(true);
 
-  const line = cache.find(`line`);
+  const line = assertFound(cache.find(`line`), `line`);
   expect(line.references.length).toBe(4);
   expect(line.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `line`)).toBe(true);
 
-  const DadpIn = cache.find(`DadpIn`);
+  const DadpIn = assertFound(cache.find(`DadpIn`), `DadpIn`);
   expect(DadpIn.references.length).toBe(4);
   expect(DadpIn.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `DADPIN`)).toBe(true);
 
-  const mntJtot = cache.find(`mntJtot`);
+  const mntJtot = assertFound(cache.find(`mntJtot`), `mntJtot`);
   expect(mntJtot.references.length).toBe(2);
   expect(mntJtot.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `mntJtot`)).toBe(true);
 
-  const syde = cache.find(`syde`);
+  const syde = assertFound(cache.find(`syde`), `syde`);
   expect(syde.references.length).toBe(2);
   expect(syde.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `syde`)).toBe(true);
 });
@@ -1268,9 +1292,9 @@ test('references_17_fixed_6', async () => {
     `      /end-free`,
   ].join(`\r\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const automat = cache.find(`automat`);
+  const automat = assertFound(cache.find(`automat`), `automat`);
   expect(automat.references.length).toBe(4);
   expect(automat.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `automat`)).toBe(true);
 });
@@ -1290,9 +1314,9 @@ test('references_18_fixed_7', async () => {
     ``,
   ].join(`\r\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const las = cache.find(`LAS`);
+  const las = assertFound(cache.find(`LAS`), `LAS`);
   expect(las.references.length).toBe(3);
   expect(las.references.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `LAS`)).toBe(true);
 });
@@ -1368,13 +1392,13 @@ test('references_19_fixed_8', async () => {
     `            and whoops > 0 ;`,
   ].join(`\r\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const data = cache.find(`data`);
+  const data = assertFound(cache.find(`data`), `data`);
   expect(data.references.length).toBe(3);
   expect(data.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `data`)).toBe(true);
 
-  const sumy = cache.find(`sumy`);
+  const sumy = assertFound(cache.find(`sumy`), `sumy`);
   expect(sumy.references.length).toBe(1);
   const aroundSumy = lines.substring(sumy.references[0].offset.start - 10, sumy.references[0].offset.end + 10);
   expect(aroundSumy).toContain(`d   sumy`);
@@ -1391,9 +1415,9 @@ test(`references_20`, async () => {
     `dsply MyVar;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const Length_t = cache.find(`LENGTH_t`);
+  const Length_t = assertFound(cache.find(`LENGTH_t`), `LENGTH_t`);
   expect(Length_t.references.length).toBe(3);
 
   expect(Length_t.position.path).not.toBe(uri);
@@ -1438,9 +1462,9 @@ test(`references_21_fixed_exec1`, async () => {
     `     c/end-exec`,
   ].join(`\r\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
-  
-  const tlst = cache.find(`tlst`);
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
+
+  const tlst = assertFound(cache.find(`tlst`), `tlst`);
   expect(tlst.references.length).toBe(4);
   expect(tlst.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `tlst`)).toBe(true);
 });
@@ -1477,9 +1501,9 @@ test(`references_22_long_lines`, async () => {
   `end-proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const jsonRequest = cache.find(`jsonRequest`);
+  const jsonRequest = assertFound(cache.find(`jsonRequest`), `jsonRequest`);
   const pReq = jsonRequest.scope.find(`pReq`);
   expect(pReq.references.length).toBe(3);
   expect(pReq.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `pReq`)).toBe(true);
@@ -1505,9 +1529,9 @@ test('references_23_before_spaces', async () => {
     `   );`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const id = cache.find(`id`);
+  const id = assertFound(cache.find(`id`), `id`);
   expect(id.references.length).toBe(2);
   expect(id.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `id`)).toBe(true);
 });
@@ -1596,8 +1620,8 @@ test('references_24_comment_in_statement', async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
-  const freeFormatEvaluationFound = cache.find(`freeFormatEvaluationFound`);
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
+  const freeFormatEvaluationFound = assertFound(cache.find(`freeFormatEvaluationFound`), `freeFormatEvaluationFound`);
   const code = freeFormatEvaluationFound.scope.find(`code`);
   expect(code).toBeDefined();
   expect(code.references.length).toBe(25);
@@ -1620,8 +1644,8 @@ test('references_25_fixed_string', async () => {
     `         endif;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
-  const http = cache.find(`http`);
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
+  const http = assertFound(cache.find(`http`), `http`);
   expect(http.references.length).toBe(1);
   expect(http.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `http`)).toBe(true);
 });
@@ -1645,8 +1669,8 @@ test('references_26_fixed_tag', async () => {
     `     C                   ENDSR`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
-  const updok = cache.find(`UPDKO`);
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
+  const updok = assertFound(cache.find(`UPDKO`), `UPDKO`);
   expect(updok.references.length).toBe(2);
   expect(updok.references.every(ref => lines.substring(ref.offset.start, ref.offset.end) === `UPDKO`)).toBe(true);
 });
@@ -1834,10 +1858,10 @@ test('references_27_fixed_reference', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
   expect(cache.includes.length).toBe (5);
 
-  const wCfgKey = cache.find(`wCfgKey`);
+  const wCfgKey = assertFound(cache.find(`wCfgKey`), `wCfgKey`);
   const baseRefs = wCfgKey.references.filter(r => r.uri === uri);
   expect(baseRefs.every(ref => lines.substring(ref.offset.start, ref.offset.end).toUpperCase() === `WCFGKEY`)).toBe(true);
   expect(baseRefs.length).toBe(21);
@@ -1849,7 +1873,7 @@ test('references_27_fixed_reference', async () => {
     if (refUri === uri) {
       cachedFiles[refUri] = lines;
     }
-    
+
     if (!cachedFiles[refUri]) {
       cachedFiles[refUri] = await getFileContent(refUri);
     }
@@ -1901,9 +1925,9 @@ test('reference_28_parameters', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const deptno = cache.find(`deptno`);
+  const deptno = assertFound(cache.find(`deptno`), `deptno`);
   expect(deptno).toBeDefined();
   expect(deptno.type).toBe(`parameter`);
   expect(deptno.references.length).toBe(2);
@@ -1942,7 +1966,7 @@ test('broken free format code', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
   expect(cache).toBeDefined();
 });
@@ -1980,12 +2004,12 @@ test('references_prototype', async () => {
     `end-proc;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
   const procedures = cache.procedures;
   expect(procedures.length).toBe(3);
 
-  const actualProcedure = cache.find(`add`);
+  const actualProcedure = assertFound(cache.find(`add`), `add`);
   expect(actualProcedure).toBeDefined();
   expect(actualProcedure.prototype).toBeFalsy();
   expect(actualProcedure.references.length).toBe(3);
@@ -2054,8 +2078,8 @@ test('references in procedure', async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
-  const getDeptDetail = cache.find(`getDeptDetail`);
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
+  const getDeptDetail = assertFound(cache.find(`getDeptDetail`), `getDeptDetail`);
   expect(getDeptDetail).toBeDefined();
 
   const department_detail = getDeptDetail.scope.find(`department_detail`);
@@ -2070,9 +2094,9 @@ test('variable reference', async () => {
     `       RtvQryF(Qry:Lib:Input:OutPut:Stat);`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const input = cache.find(`InPut`);
+  const input = assertFound(cache.find(`InPut`), `InPut`);
   expect(input).toBeDefined();
   expect(input.references.length).toBe(2);
 });
@@ -2114,8 +2138,8 @@ test('sql prepare reference', async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
   // console.log(cache);
-  const getGenerationTime = cache.find(`getGenerationTime`);
+  const getGenerationTime = assertFound(cache.find(`getGenerationTime`), `getGenerationTime`);
   const sqlReferences = getGenerationTime.scope.sqlReferences;
-}) 
+})

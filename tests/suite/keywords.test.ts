@@ -6,6 +6,22 @@ import { test, expect } from "vitest";
 const parser = setupParser();
 const uri = `source.rpgle`;
 
+const assertCache = <T>(value: T | undefined): T => {
+  expect(value).toBeDefined();
+  if (value === undefined) {
+    throw new Error(`Expected parser cache to be defined`);
+  }
+  return value;
+};
+
+const assertFound = <T>(value: T | undefined, name: string): T => {
+  expect(value, `${name} should exist`).toBeDefined();
+  if (value === undefined) {
+    throw new Error(`Expected ${name} to exist`);
+  }
+  return value;
+};
+
 test("qualified1", async () => {
   const lines = [
     `**FREE`,
@@ -16,12 +32,12 @@ test("qualified1", async () => {
     ``,
     `Return`,
   ].join(`\n`);
-  
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
   const { errors } = Linter.getErrors({uri, content: lines}, {
     QualifiedCheck: true,
   }, cache);
-  
+
   expect(errors.length).toBe(0);
 });
 
@@ -89,7 +105,7 @@ test("ctdata1", async () => {
     `order by RMLPID ,LTID ,EFFDATE`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
     indent: 2
   }, cache);
@@ -119,7 +135,7 @@ test("ctdata2", async () => {
     `Regina         12:33:00Vancouver      13:20:00`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
 
   expect(Object.keys(cache.keyword).length).toBe(2);
   expect(cache.keyword[`DEBUG`]).toBe(true);
@@ -149,8 +165,8 @@ test("ctdata3", async () => {
     `SStatutory    Statut.`,
     `VVoluntary    Volntry`,
   ].join(`\n`);
-  
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
 
   expect(cache.files.length).toBe(1);
   expect(cache.variables.length).toBe(3);
@@ -169,12 +185,12 @@ test("likeds1", async () => {
     `//Yes`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
 
   expect(cache.variables.length).toBe(2);
   expect(cache.structs.length).toBe(2);
 
-  const MyOtherStruct = cache.find(`MyOtherStruct`);
+  const MyOtherStruct = assertFound(cache.find(`MyOtherStruct`), `MyOtherStruct`);
   expect(MyOtherStruct.name).toBe(`MyOtherStruct`);
   expect(MyOtherStruct.position.range.line).toBe(7);
   expect(MyOtherStruct.subItems.length).toBe(2);
@@ -200,13 +216,13 @@ test("likeds2", async () => {
     `End-Proc;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
 
   expect(cache.variables.length).toBe(2);
   expect(cache.structs.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
 
-  const myProc = cache.find(`myprocedure`);
+  const myProc = assertFound(cache.find(`myprocedure`), `myprocedure`);
   expect(myProc.name).toBe(`myprocedure`);
   expect(myProc.position.range.line).toBe(9);
   expect(myProc.subItems.length).toBe(1);
@@ -243,7 +259,7 @@ test("overload1", async () => {
     `End-PR;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
 
   const { indentErrors } = Linter.getErrors({uri, content: lines}, {
     indent: 2,
@@ -264,7 +280,7 @@ test(`extproc1`, async () => {
     `end-pr;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
 
   expect(cache.procedures.length).toBe(1);
   expect(cache.procedures[0].name).toBe(`APIVAL01S_iws_validate`);

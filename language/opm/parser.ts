@@ -30,14 +30,14 @@ function getRpgDataType(type: string): string {
  * Helper function to find the most recently added symbol of a given type
  */
 function findPriorType(
-  cache: Cache, 
+  cache: Cache,
   type: DeclarationType | DeclarationType[]
 ): Declaration | undefined {
   const symbols = cache.symbols;
   for (let i = symbols.length - 1; i >= 0; i--) {
     const symbol = symbols[i];
-    const isMatch = Array.isArray(type) 
-      ? type.includes(symbol.type) 
+    const isMatch = Array.isArray(type)
+      ? type.includes(symbol.type)
       : symbol.type === type;
     if (isMatch) {
       return symbol;
@@ -77,7 +77,7 @@ function createDeclaration(
   declaration.references = [];
   declaration.tags = [];
   declaration.readParms = false;
-  
+
   return declaration;
 }
 
@@ -86,7 +86,7 @@ function createDeclaration(
  */
 function trimQuotes(input: string, value = '\'\''): string {
   const quote = value[0];
-  
+
   if (input.startsWith(quote)) {
     input = input.substring(1);
   }
@@ -118,7 +118,7 @@ export class OpmParser {
    */
   async getDocs(fileUri: string, baseContent: string, options: ParseOptions = {}): Promise<Cache> {
     const cache = new Cache({}, true); // Don't add default indicators for OPM
-    
+
     const parseContent = async (fileUri: string, content: string) => {
       let index = 0;
       const EOL = content.includes(`\r\n`) ? `\r\n` : `\n`;
@@ -137,7 +137,7 @@ export class OpmParser {
 
       for (let lineI = 0; lineI < lines.length; lineI++) {
         const line = lines[lineI];
-        
+
         // Break when we find Local Data Area(LDA) or compile time array
         if (line.startsWith("**")) {
           break;
@@ -190,8 +190,11 @@ export class OpmParser {
 
             case `file`:
               if (spec.fileName) {
-                const fileName = String(spec.fileName.value);
-                
+                const fileName = String(spec.fileName.value ?? ``).trim();
+                if (!fileName) {
+                  break;
+                }
+
                 const declaration = createDeclaration(
                   `file`,
                   fileName,
@@ -203,7 +206,7 @@ export class OpmParser {
 
                 if (this.tableFetch) {
                   const recordFormats = await this.tableFetch(fileName);
-                  
+
                   // Update positions for record formats and fields
                   for (const recordFormat of recordFormats) {
                     recordFormat.position = {
@@ -225,7 +228,7 @@ export class OpmParser {
                         }
                       };
                     }
-                    
+
                     declaration.subItems.push(recordFormat);
                   }
                 }
@@ -264,7 +267,7 @@ export class OpmParser {
               // Handle operation-based symbols
               if (spec.operation) {
                 const operation = spec.operation.value.toString().toUpperCase();
-                
+
                 const operationTypeMap: { [op: string]: DeclarationType } = {
                   'PLIST': 'plist',
                   'KLIST': 'klist',
@@ -280,7 +283,7 @@ export class OpmParser {
                     index,
                     line.length
                   );
-                  
+
                   cache.addSymbol(declaration);
                 } else if (operation === `ENDSR`) {
                   const lastSubroutine = findPriorType(cache, `subroutine`);
@@ -296,7 +299,7 @@ export class OpmParser {
                     index,
                     line.length
                   );
-                  
+
                   cache.addSymbol(declaration);
                 } else if ((operation === `PARM` || operation === `KFLD`) && spec.resultField) {
                   if (!defined) {
@@ -348,9 +351,9 @@ export class OpmParser {
                     const keyword = spec.keywords.value as string;
                     inputField.keyword[keyword] = true;
                   } else {
-                    length = spec.from && spec.to ? 
+                    length = spec.from && spec.to ?
                       (Number(spec.to.value) - Number(spec.from.value) + 1) : 0;
-                    type = spec.internalDataFormat ? 
+                    type = spec.internalDataFormat ?
                       getRpgDataType(spec.internalDataFormat.value.toString()) : `char`;
                     inputField.keyword[type] = String(length);
                   }
@@ -388,7 +391,7 @@ export class OpmParser {
                       index,
                       line.length
                     );
-                    
+
                     cache.addSymbol(constantSpec);
                   }
                 }
@@ -402,7 +405,7 @@ export class OpmParser {
     };
 
     await parseContent(fileUri, baseContent);
-    
+
     return cache;
   }
 

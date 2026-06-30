@@ -5,12 +5,12 @@ export interface BlockPair {
 }
 
 export const RPGLE_BLOCK_PAIRS: BlockPair[] = [
-  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif','end'], middle: ['else', 'elseif'] },
-  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo','end'] },
-  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo','end'] },
-  { open: ['do'], close: ['enddo','end'] },
-  { open: ['for', 'for-each'], close: ['endfor','end'] },
-  { open: ['select'], close: ['endsl','end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
+  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif', 'end'], middle: ['else', 'elseif'] },
+  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo', 'end'] },
+  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo', 'end'] },
+  { open: ['do'], close: ['enddo', 'end'] },
+  { open: ['for', 'for-each'], close: ['endfor', 'end'] },
+  { open: ['select'], close: ['endsl', 'end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
   { open: ['monitor'], close: ['endmon'], middle: ['on-error', 'on-excp'] },
   { open: ['dcl-proc'], close: ['end-proc'] },
   { open: ['dcl-ds'], close: ['end-ds'] },
@@ -32,6 +32,9 @@ export function findAllBlockMatches(
   isInCommentOrString: (text: string, offset: number) => boolean,
   isInSqlBlock: (text: string, offset: number) => boolean
 ): BlockMatch[] {
+  // Detect if document is in free-format (starts with **FREE in columns 1-6)
+  const isFreeFormat = text.length >= 6 && text.substring(0, 6).toUpperCase() === '**FREE';
+
   // Helper function to check if a position is in a compiler directive
   const isInCompilerDirective = (text: string, offset: number): boolean => {
     // Find the start of the line
@@ -51,6 +54,54 @@ export function findAllBlockMatches(
   const isVariableContext = (text: string, matchOffset: number, matchLength: number): boolean => {
     const afterKeyword = text.substring(matchOffset + matchLength);
     const beforeKeyword = text.substring(0, matchOffset);
+
+    // Find the start of the current line
+    let lineStart = beforeKeyword.lastIndexOf('\n');
+    if (lineStart === -1) lineStart = 0;
+    else lineStart++; // Move past the newline
+
+    // Get the current line up to end of line
+    let lineEnd = text.indexOf('\n', lineStart);
+    if (lineEnd === -1) lineEnd = text.length;
+    const currentLine = text.substring(lineStart, lineEnd);
+
+    // Check if the current line is a comment, directive, or SQL continuation
+    // Free-form comments: // anywhere on the line
+    // Fixed-format comments: * in column 7 (index 6)
+    // Directives: / in column 7 followed by non-/ (like /COPY, /FREE, etc.)
+    // SQL continuation: + in column 7 (index 6), optionally preceded by C in column 6 (index 5)
+    try {
+      if (/^\s*\/\//.test(currentLine) ||  // Free-form comment //
+        (currentLine.length > 6 && currentLine[6] === '*') ||  // Fixed-format comment *
+        (currentLine.length > 6 && currentLine[6] === '/' && (currentLine.length <= 7 || currentLine[7] !== '/')) ||  // Directive /
+        (currentLine.length > 6 && currentLine[6] === '+')) {  // SQL continuation + in column 7
+        // Current line is a comment, directive, or continuation - don't treat keyword as anything special
+        return false;
+      }
+    } catch (e) {
+      // If anything goes wrong with line analysis, treat as not a variable context
+      return false;
+    }
+
+    // Format-specific keyword classification
+    if (isFreeFormat) {
+      // FREE FORMAT: Check if keyword is at the start of a line (preceded only by whitespace/newlines)
+      // If so, it's definitively a statement keyword, NOT a variable in an expression
+      const lineStartMatch = beforeKeyword.match(/[\n\r]\s*$/);
+      if (lineStartMatch) {
+        // Keyword is at the start of a line → it's a statement keyword
+        return false;
+      }
+    } else {
+      // FIXED FORMAT: Check if keyword starts at column 7 (index 6)
+      // In fixed-format, columns 1-6 are reserved (line numbers in 1-5, spec type in 6)
+      // A keyword at column 7 is a statement keyword, not a variable reference
+      const colOffset = matchOffset - lineStart;
+      if (colOffset === 6) {
+        // Keyword starts at column 7 (index 6) → it's a statement keyword
+        return false;
+      }
+    }
 
     // Check if preceded by declaration keywords (dcl-s, dcl-c, dcl-pr, dcl-proc, dcl-pi, etc.)
     // ALL dcl- keywords indicate the next word is an identifier, not a keyword

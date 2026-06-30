@@ -1,10 +1,26 @@
 
-import path from "path";
+import * as path from "path";
 import setupParser from "../parserSetup";
 import { test, expect } from "vitest";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
+
+const assertCache = <T>(value: T | undefined): T => {
+  expect(value).toBeDefined();
+  if (value === undefined) {
+    throw new Error(`Expected parser cache to be defined`);
+  }
+  return value;
+};
+
+const assertFound = <T>(value: T | undefined, name: string): T => {
+  expect(value, `${name} should exist`).toBeDefined();
+  if (value === undefined) {
+    throw new Error(`Expected ${name} to exist`);
+  }
+  return value;
+};
 
 test('fixed1', async () => {
   const lines = [
@@ -19,7 +35,7 @@ test('fixed1', async () => {
     `     C                   eval      *inlr = *on`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.files.length).to.equal(1);
   expect(cache.variables.length).to.equal(2);
@@ -59,7 +75,7 @@ test('fixed2', async () => {
     `     `,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).to.equal(13);
 
@@ -85,7 +101,7 @@ test('fixed3', async () => {
     `     d  MsgQueNbr             25     28B 0`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).to.equal(1);
   expect(cache.structs.length).to.equal(1);
@@ -122,12 +138,12 @@ test('fixed4', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).to.equal(2);
   expect(cache.structs.length).to.equal(1);
 
-  const InType = cache.find(`InType`);
+  const InType = assertFound(cache.find(`InType`), `InType`);
   expect(InType.name).to.equal(`InType`);
   expect(InType.position.range.line).to.equal(1);
 
@@ -182,7 +198,7 @@ test('fixed5', async () => {
     `     d  InpRcdFmt             49     58`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).to.equal(2);
   expect(cache.structs.length).to.equal(2);
@@ -209,22 +225,22 @@ test('fixed6', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).to.equal(8);
 
-  const lenVar = cache.find(`len`);
+  const lenVar = assertFound(cache.find(`len`), `len`);
   expect(lenVar.name).to.equal(`len`);
   expect(lenVar.position.range.line).to.equal(6);
   expect(lenVar.keyword[`INT`]).to.equal(`5`);
 
-  const date2Var = cache.find(`DATE2`);
+  const date2Var = assertFound(cache.find(`DATE2`), `DATE2`);
   expect(date2Var.name).to.equal(`DATE2`);
   expect(date2Var.position.range.line).to.equal(3);
   expect(date2Var.keyword[`DATE`]).to.equal(true);
   expect(date2Var.keyword[`DATFMT`]).to.equal(`*JIS`);
 
-  const time0Var = cache.find(`TIME0`);
+  const time0Var = assertFound(cache.find(`TIME0`), `TIME0`);
   expect(time0Var.name).to.equal(`TIME0`);
   expect(time0Var.position.range.line).to.equal(7);
   expect(time0Var.keyword[`TIME`]).to.equal(true);
@@ -250,11 +266,11 @@ test('fixed7', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.procedures.length).to.equal(1);
 
-  const Obj_Next = cache.find(`Obj_Next`);
+  const Obj_Next = assertFound(cache.find(`Obj_Next`), `Obj_Next`);
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.range.line).to.equal(3);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
@@ -313,7 +329,7 @@ test('fixed8', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.subroutines.length).to.equal(2);
   expect(cache.subroutines[0].name).to.equal(`$QUSCRTUS`);
@@ -341,19 +357,19 @@ test('fixed9', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.includes.length).to.equal(1);
   expect(cache.procedures.length).to.equal(2);
 
-  const Obj_Next = cache.find(`Obj_Next`);
+  const Obj_Next = assertFound(cache.find(`Obj_Next`), `Obj_Next`);
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.range.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
   expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
-  const theExtProcedure = cache.find(`theExtProcedure`);
+  const theExtProcedure = assertFound(cache.find(`theExtProcedure`), `theExtProcedure`);
   expect(theExtProcedure.name).to.equal(`theExtProcedure`);
   expect(theExtProcedure.position.range.line).to.equal(2);
   expect(theExtProcedure.keyword[`EXTPROC`]).to.equal(true);
@@ -381,19 +397,19 @@ test('fixed9_2', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.includes.length).to.equal(1);
   expect(cache.procedures.length).to.equal(2);
 
-  const Obj_Next = cache.find(`Obj_Next`);
+  const Obj_Next = assertFound(cache.find(`Obj_Next`), `Obj_Next`);
   expect(Obj_Next.name).to.equal(`Obj_Next`);
   expect(Obj_Next.position.range.line).to.equal(5);
   expect(Obj_Next.keyword[`EXPORT`]).to.equal(true);
   expect(Obj_Next.keyword[`LIKEDS`]).to.equal(`ObjectDs`);
   expect(Obj_Next.subItems.length).to.equal(0);
 
-  const theExtProcedure = cache.find(`theExtProcedure`);
+  const theExtProcedure = assertFound(cache.find(`theExtProcedure`), `theExtProcedure`);
   expect(theExtProcedure.name).to.equal(`theExtProcedure`);
   expect(theExtProcedure.position.range.line).to.equal(2);
   expect(theExtProcedure.keyword[`EXTPROC`]).to.equal(true);
@@ -416,14 +432,14 @@ test('fixed9_3', async () => {
     `         Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.includes.length).to.equal(1);
   expect(cache.variables.length).to.equal(1, `Expect length of 1`);
   expect(cache.constants.length).to.equal(1, `Expect length of 1`);
   expect(cache.procedures.length).to.equal(1, `Expect length of 1`);
 
-  const uppercase = cache.find(`UPPERCASE`);
+  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
 
   const baseNameInclude = path.basename(uppercase.position.path);
   expect(baseNameInclude).to.equal(`eof4.rpgle`);
@@ -442,16 +458,16 @@ test('fixed10', async () => {
     `         return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
-  const dataDs = cache.find(`data`);
+  const dataDs = assertFound(cache.find(`data`), `data`);
   expect(dataDs.name).to.equal(`data`);
   expect(dataDs.subItems.length).to.equal(4);
 
   expect(dataDs.range.start).to.equal(0);
   expect(dataDs.range.end).to.equal(4);
 
-  const rrn02 = cache.find(`rrn02`);
+  const rrn02 = assertFound(cache.find(`rrn02`), `rrn02`);
   expect(rrn02.name).to.equal(`rrn02`);
   expect(rrn02.keyword[`PACKED`]).to.equal(`7:2`);
 
@@ -516,7 +532,7 @@ test('fixedfree1', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).to.equal(3);
   expect(cache.variables.find(i => !i.keyword[`CHAR`])).to.be.undefined;
@@ -525,7 +541,7 @@ test('fixedfree1', async () => {
 
   expect(cache.procedures.length).to.equal(1);
 
-  const Obj_List = cache.find(`Obj_List`);
+  const Obj_List = assertFound(cache.find(`Obj_List`), `Obj_List`);
   expect(Obj_List.name).to.equal(`Obj_List`);
   expect(Obj_List.range.start).to.equal(6);
   expect(Obj_List.range.end).to.equal(50);
@@ -556,9 +572,9 @@ test('fixed11', async () => {
     `     D  VIEW                          1A`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
-  const F4DATE = cache.find(`F4DATE`);
+  const F4DATE = assertFound(cache.find(`F4DATE`), `F4DATE`);
   expect(F4DATE.subItems.length).to.equal(4);
   expect(F4DATE.range.start).to.equal(0);
   expect(F4DATE.range.end).to.equal(4);
@@ -577,7 +593,7 @@ test('fixed11', async () => {
   expect(parm4.keyword[`CHAR`]).to.equal(`1`);
   expect(parm4.keyword[`OPTIONS`]).to.equal(`*NOPASS`);
 
-  const F4DATEDS = cache.find(`F4DATEDS`);
+  const F4DATEDS = assertFound(cache.find(`F4DATEDS`), `F4DATEDS`);
   expect(F4DATEDS.subItems.length).to.equal(4);
   expect(F4DATEDS.range.start).to.equal(6);
   expect(F4DATEDS.range.end).to.equal(10);
@@ -601,23 +617,23 @@ test('columnFix', async () => {
     `       end-pr;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.procedures.length).to.equal(3);
 
-  const abcd1 = cache.find(`abcd1`);
+  const abcd1 = assertFound(cache.find(`abcd1`), `abcd1`);
   expect(abcd1.range).to.deep.equal({
     start: 0,
     end: 4
   });
 
-  const abcd2 = cache.find(`abcd2`);
+  const abcd2 = assertFound(cache.find(`abcd2`), `abcd2`);
   expect(abcd2.range).to.deep.equal({
     start: 5,
     end: 10
   });
 
-  const abcd3 = cache.find(`abcd3`);
+  const abcd3 = assertFound(cache.find(`abcd3`), `abcd3`);
   expect(abcd3.range).to.deep.equal({
     start: 11,
     end: 13
@@ -661,46 +677,46 @@ test('comments1', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.procedures.length).to.equal(6);
 
-  const SndMsgPgmQ = cache.find(`SndMsgPgmQ`);
+  const SndMsgPgmQ = assertFound(cache.find(`SndMsgPgmQ`), `SndMsgPgmQ`);
   expect(SndMsgPgmQ.subItems.length).to.equal(4);
   expect(SndMsgPgmQ.range).to.deep.equal({
     start: 2,
     end: 7
   });
 
-  const ClrMsgPgmQ = cache.find(`ClrMsgPgmQ`);
+  const ClrMsgPgmQ = assertFound(cache.find(`ClrMsgPgmQ`), `ClrMsgPgmQ`);
   expect(ClrMsgPgmQ.subItems.length).to.equal(1);
   expect(ClrMsgPgmQ.range).to.deep.equal({
     start: 9,
     end: 10
   });
 
-  const SndEscMsg = cache.find(`SndEscMsg`);
+  const SndEscMsg = assertFound(cache.find(`SndEscMsg`), `SndEscMsg`);
   expect(SndEscMsg.subItems.length).to.equal(1);
   expect(SndEscMsg.range).to.deep.equal({
     start: 13,
     end: 14
   });
 
-  const SndInfMsg = cache.find(`SndInfMsg`);
+  const SndInfMsg = assertFound(cache.find(`SndInfMsg`), `SndInfMsg`);
   expect(SndInfMsg.subItems.length).to.equal(1);
   expect(SndInfMsg.range).to.deep.equal({
     start: 17,
     end: 18
   });
 
-  const JobLogMsg = cache.find(`JobLogMsg`);
+  const JobLogMsg = assertFound(cache.find(`JobLogMsg`), `JobLogMsg`);
   expect(JobLogMsg.subItems.length).to.equal(1);
   expect(JobLogMsg.range).to.deep.equal({
     start: 21,
     end: 22
   });
 
-  const Show = cache.find(`Show`);
+  const Show = assertFound(cache.find(`Show`), `Show`);
   expect(Show.subItems.length).to.equal(3);
   expect(Show.range).to.deep.equal({
     start: 25,
@@ -761,15 +777,15 @@ test('ranges', async () => {
     `     D*                                             Page Fault Count`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
-  const QUSLWT = cache.find(`QUSLWT`);
+  const QUSLWT = assertFound(cache.find(`QUSLWT`), `QUSLWT`);
   expect(QUSLWT.keyword[`UNS`]).to.equal(`20`);
 
-  const QUSUUDBP = cache.find(`QUSUUDBP`);
+  const QUSUUDBP = assertFound(cache.find(`QUSUUDBP`), `QUSUUDBP`);
   expect(QUSUUDBP.keyword[`INT`]).to.equal(`10`);
 
-  const QUSUN19 = cache.find(`QUSUN19`);
+  const QUSUN19 = assertFound(cache.find(`QUSUN19`), `QUSUN19`);
   expect(QUSUN19.keyword[`CHAR`]).to.equal(`10`);
 });
 
@@ -964,21 +980,21 @@ test('def_ranges', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
-  const TYPEMST_T = cache.find(`TYPEMST_T`);
+  const TYPEMST_T = assertFound(cache.find(`TYPEMST_T`), `TYPEMST_T`);
   expect(TYPEMST_T.range).to.deep.equal({
     start: 16,
     end: 16
   });
 
-  const TYPEMST_Ds = cache.find(`TYPEMST_Ds`);
+  const TYPEMST_Ds = assertFound(cache.find(`TYPEMST_Ds`), `TYPEMST_Ds`);
   expect(TYPEMST_Ds.range).to.deep.equal({
     start: 37,
     end: 39
   });
 
-  const TYPEMST_F = cache.find(`TYPEMST_F`);
+  const TYPEMST_F = assertFound(cache.find(`TYPEMST_F`), `TYPEMST_F`);
   expect(TYPEMST_F.range).to.deep.equal({
     start: 41,
     end: 41
@@ -1021,7 +1037,7 @@ test('ctl_opt_fixed', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).to.equal(2);
   expect(cache.structs.length).to.equal(1);
@@ -1057,7 +1073,7 @@ test('call_opcode', async () => {
     ``
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.subroutines.length).to.equal(1);
   expect(cache.procedures.length).to.equal(1);
@@ -1082,16 +1098,16 @@ test('file_keywords', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.files.length).to.equal(4);
 
-  const tmpdetord = cache.find(`Tmpdetord`);
+  const tmpdetord = assertFound(cache.find(`Tmpdetord`), `Tmpdetord`);
   expect(tmpdetord.keyword[`EXTDESC`]).to.equal(`'DETORD'`);
   expect(tmpdetord.keyword[`EXTFILE`]).to.equal(`*EXTDESC`);
   expect(tmpdetord.keyword[`RENAME`]).to.equal(`fdeto:tmprec`);
 
-  const ord100d = cache.find(`ord100d`);
+  const ord100d = assertFound(cache.find(`ord100d`), `ord100d`);
   expect(ord100d.keyword[`INDDS`]).to.equal(`indds`);
   expect(ord100d.keyword[`SFILE`]).to.equal(`sfl01:rrn01`);
   expect(ord100d.keyword[`INFDS`]).to.equal(`Info`);
@@ -1142,17 +1158,17 @@ test('plist_test', async () => {
     ``
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).toBe(11);
 
-  const atPGMID = cache.find(`@PGMID`);
+  const atPGMID = assertFound(cache.find(`@PGMID`), `@PGMID`);
   expect(atPGMID.keyword[`CHAR`]).toBe(`10`);
 
-  const atSON = cache.find(`@SQN`);
+  const atSON = assertFound(cache.find(`@SQN`), `@SQN`);
   expect(atSON.keyword[`PACKED`]).toBe(`2:0`);
 
-  const atPVSELECTION = cache.find(`@PVSELECTION`);
+  const atPVSELECTION = assertFound(cache.find(`@PVSELECTION`), `@PVSELECTION`);
   expect(atPVSELECTION.keyword[`CHAR`]).toBe(`256`);
 });
 
@@ -1168,9 +1184,9 @@ test(`range test 2`, async () => {
     `     D  $i_Pointer                     *   Const`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
-  const TYPEMST_F = cache.find(`TYPEMST_F`);
+  const TYPEMST_F = assertFound(cache.find(`TYPEMST_F`), `TYPEMST_F`);
   expect(TYPEMST_F.range).to.deep.equal({
     start: 0,
     end: 0
@@ -1293,12 +1309,12 @@ test('subroutine with C spec definitions', async () => {
     `000031060091121152182213244274305335 `,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true }));
 
   expect(cache.subroutines.length).toBe(2);
   expect(cache.variables.length).toBe(16);
 
-  const SRCJUL = cache.find(`SRCJUL`);
+  const SRCJUL = assertFound(cache.find(`SRCJUL`), `SRCJUL`);
   expect(SRCJUL).toBeDefined();
   expect(SRCJUL.references.length).toBe(2);
 });
@@ -1317,10 +1333,10 @@ test('f spec range', async () => {
     `          Dcl-S Rrn          Zoned(4:0) Inz;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false }));
   expect(cache.files.length).to.equal(1);
 
-  const depts = cache.find(`depts`);
+  const depts = assertFound(cache.find(`depts`), `depts`);
   expect(depts).toBeDefined();
   expect(depts.keyword[`SFILE`]).to.equal(`SFLDta:Rrn`);
   expect(depts.keyword[`INDDS`]).to.equal(`WkStnInd`);
@@ -1359,13 +1375,13 @@ test('multiline procedure names', async () => {
     `     P                 E`,
   ];
 
-  const cache = await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: true }));
   expect(cache.procedures.length).to.equal(4);
   expect(cache.procedures[0].name).to.equal(`abcTest`);
   expect(cache.procedures[2].name).to.equal(`Test`);
   expect(cache.procedures[3].name).to.equal(`TestA`);
 
-  const abcxyzTest = cache.find(`abcxyzTest`);
+  const abcxyzTest = assertFound(cache.find(`abcxyzTest`), `abcxyzTest`);
   expect(abcxyzTest).toBeDefined();
   expect(abcxyzTest.name).to.equal(`abcxyzTest`);
 
@@ -1407,7 +1423,7 @@ test('incorrect range on prototypes and procedures (#412)', async () => {
     `      ******************************************`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache).toBeDefined();
 
@@ -1442,7 +1458,7 @@ test('missing subroutines #443', async () => {
     `     C                   ENDSR`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache).toBeDefined();
 
