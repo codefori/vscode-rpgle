@@ -155,6 +155,40 @@ end-proc;  // Should correctly close dcl-proc
       expect(code).toContain('end-proc;  // Should correctly close dcl-proc');
     });
 
+    it('should treat inline end-ds on likeds() as invalid while preserving procedure matching', () => {
+      // Inline END-DS on a LIKEDS declaration is invalid syntax.
+      // It should be flagged as unmatched without breaking END-PROC matching.
+      const code = `
+**free
+
+dcl-proc qualifiedNaming;
+  dcl-ds localDs likeds(pravda) end-ds;
+  dcl-s dataf1 varchar(10);
+  return;
+end-proc;
+      `.trim();
+
+      expect(code).toContain('dcl-ds localDs likeds(pravda) end-ds;');
+      expect(code).toContain('end-proc;');
+    });
+
+    it('should treat inline end-ds on likerec() as invalid while preserving procedure matching', () => {
+      // Inline END-DS on a LIKEREC declaration is invalid syntax.
+      // It should be flagged as unmatched without breaking END-PROC matching.
+      const code = `
+**free
+
+dcl-proc readRecord;
+  dcl-ds recDs likerec(custrec : *input) end-ds;
+  dcl-s status int(10);
+  return;
+end-proc;
+      `.trim();
+
+      expect(code).toContain('dcl-ds recDs likerec(custrec : *input) end-ds;');
+      expect(code).toContain('end-proc;');
+    });
+
     it('should still treat multi-line dcl-ds as a block opener', () => {
       // dcl-ds WITHOUT likeds/likerec creates a multi-line block
       const code = `
@@ -291,6 +325,25 @@ end-ds;
       // 4. Return undefined/empty for highlighting
 
       expect(code).toContain('dcl-ds myds3 likeds(outputData_t);  // Clicking here');
+    });
+
+    it('should keep end-proc valid when a rogue end-ds appears before it', () => {
+      // Rogue END-DS should be flagged locally and not cascade to END-PROC.
+      const code = `
+**free
+
+dcl-proc qualifiedNaming;
+  dcl-ds localDs likeds(pravda);
+    field1 int(10);
+    field2 int(10);
+  end-ds;  // Rogue closer in this context
+  dcl-s dataf1 varchar(10);
+  return;
+end-proc;
+      `.trim();
+
+      expect(code).toContain('end-ds;  // Rogue closer in this context');
+      expect(code).toContain('end-proc;');
     });
   });
 });
