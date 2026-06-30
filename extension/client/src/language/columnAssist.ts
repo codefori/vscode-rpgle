@@ -1,336 +1,520 @@
-
-import { commands, DecorationOptions, ExtensionContext, Range, Selection, TextDocument, ThemeColor, window } from 'vscode';
+import { commands, DecorationOptions, ExtensionContext, Range, Selection, TextDocument, ThemeColor, window, workspace } from 'vscode';
 import * as Configuration from "../configuration";
 import { loadBase } from '../base';
 import { isIleFileByUri, isOpmFileByUri } from '../../../../language/utils/fileRouting';
 
 const currentArea = window.createTextEditorDecorationType({
-  backgroundColor: `rgba(242, 242, 109, 0.3)`,
-  border: `1px solid grey`,
+    backgroundColor: `rgba(242, 242, 109, 0.3)`,
+    border: `1px solid grey`,
 });
 
 const notCurrentArea = window.createTextEditorDecorationType({
-  backgroundColor: `rgba(242, 242, 109, 0.1)`,
-  border: `1px solid grey`,
+    backgroundColor: `rgba(242, 242, 109, 0.1)`,
+    border: `1px solid grey`,
 });
 
+const outlineBarFill = window.createTextEditorDecorationType({});
 const outlineBar = window.createTextEditorDecorationType({});
 
-let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || false
+let rulerEnabled = Configuration.get(Configuration.RULER_ENABLED_BY_DEFAULT) || false;
 let currentEditorLine = -1;
+let overlayRevision = 0;
 
 import { SpecFieldDef, SpecFieldValue, SpecRulers, specs, opmSpecs, opmSpecRulers } from '../schemas/specs';
 
+function sourceDatesVisible(): boolean {
+    const codeForIbmiConfig = workspace.getConfiguration(`codeforibmi`);
+    const vscodeIbmiConfig = workspace.getConfiguration(`vscode-ibmi`);
+
+    return codeForIbmiConfig.get<boolean>(`enableSourceDates`) === true
+        || vscodeIbmiConfig.get<boolean>(`enableSourceDates`) === true;
+}
+
 function documentType(document: TextDocument): 'opm' | 'ile' | undefined {
-  const uri = document.uri.toString();
+    const uri = document.uri.toString();
 
-  if (isOpmFileByUri(uri) || document.languageId === 'rpg') {
-    return 'opm';
-  }
+    if (isOpmFileByUri(uri) || document.languageId === 'rpg') {
+        return 'opm';
+    }
 
-  if (isIleFileByUri(uri) || document.languageId === 'rpgle') {
-    return 'ile';
-  }
+    if (isIleFileByUri(uri) || document.languageId === 'rpgle') {
+        return 'ile';
+    }
 
-  return undefined;
+    return undefined;
+}
+
+function getOutputRulerKey(line: string): 'OX' | 'OC' | 'O' | 'OP' {
+    const src = line.padEnd(80, ` `);
+
+    const andOrKeyword = src.substring(15, 20).trim().toUpperCase();
+    if (andOrKeyword === `AND` || andOrKeyword === `OR`) {
+        return `OC`;
+    }
+
+    const filename = src.substring(6, 16).trim();
+    const type = src.substring(16, 17).trim();
+    const fieldName = src.substring(29, 43).trim();
+    const endPos = src.substring(46, 51).trim();
+    const constant = src.substring(52).trim();
+
+    if (filename || type) return `O`;
+    if (endPos && (fieldName || constant)) return `OP`;
+    if (!fieldName && constant) return `OP`;
+    if (fieldName) return `OP`;
+
+    return `OX`;
+}
+
+function getInputRulerKey(line: string): 'I' | 'IC' | 'IJ' | 'IX' | 'JX' {
+    const src = line.padEnd(80, ` `);
+
+    const andOr = src.substring(15, 18).toUpperCase().trim();
+    if (andOr === `AND` || andOr === `OR` || andOr === `AN`) {
+        return `IC`;
+    }
+
+    const fromPos = src.substring(36, 41).trim();
+    const toPos = src.substring(41, 46).trim();
+    if (/^\d+$/.test(fromPos) || /^\d+$/.test(toPos)) {
+        return `IJ`;
+    }
+
+    const seqType = src.substring(16, 18).trim();
+    const ricArea = src.substring(22, 46).trim();
+    if (seqType.length > 0 || ricArea.length > 0) {
+        return `I`;
+    }
+
+    const fileName = src.substring(6, 16).trim();
+    const extField = src.substring(20, 30).trim();
+    if (!fileName && !!extField) {
+        return `JX`;
+    }
+
+    return `IX`;
+}
+
+function getDefinitionRulerKey(line: string): 'D' | 'DX' {
+    const src = line.padEnd(80, ` `);
+    const markerToken = src.substring(6, 80).trim();
+    const markerBody = markerToken.endsWith(`...`)
+        ? markerToken.slice(0, -3)
+        : (markerToken.endsWith(`…`) ? markerToken.slice(0, -1) : ``);
+
+    if (markerBody && !/\s/.test(markerBody)) {
+        return `DX`;
+    }
+
+    return `D`;
+}
+
+const EXTENDED_FACTOR2_OPCODES = new Set([
+    `CALLP`,
+    `DATA-GEN`,
+    `DATA-INTO`,
+    `DOU`,
+    `DOW`,
+    `ELSEIF`,
+    `EVAL`,
+    `EVAL-CORR`,
+    `EVALR`,
+    `FOR`,
+    `FOR-EACH`,
+    `IF`,
+    `ON-ERROR`,
+    `ON-EXCP`,
+    `ON-EXIT`,
+    `RETURN`,
+    `SND-MSG`,
+    `SORTA`,
+    `WHEN`,
+    `XML-INTO`,
+    `XML-SAX`,
+]);
+
+function getCalculationRulerKey(line: string): 'C' | 'CX' {
+    const src = line.padEnd(80, ` `);
+
+    const opRaw = src.substring(25, 35).trim().toUpperCase();
+    const opcode = opRaw.replace(/\(.*\)/, ``).trim();
+
+    const condIndicators = src.substring(8, 11).trim();
+    const factor1 = src.substring(11, 25).trim();
+    const extendedFactor2 = src.substring(35, 80).trim();
+    const preExtendedZone = src.substring(6, 35).trim();
+
+    if (opcode.length === 0) {
+        if (condIndicators.length === 0 && factor1.length === 0 && extendedFactor2.length > 0) {
+            return `CX`;
+        }
+        return `C`;
+    }
+
+    if (!EXTENDED_FACTOR2_OPCODES.has(opcode)) {
+        return `C`;
+    }
+
+    if (extendedFactor2.length > 0 || preExtendedZone.length === 0) {
+        return `CX`;
+    }
+
+    return `C`;
 }
 
 const getAreasForLine = (line: string, index: number, languageId: string = 'rpgle') => {
-  if (line.length < 6) return undefined;
-  if (line[6] === `*` || line[6] === `/`) return undefined;
+    if (line.length < 6) return undefined;
+    if (line[6] === `*` || line[6] === `/`) return undefined;
 
-  // Use OPM specs for .rpg files, ILE specs for .rpgle files
-  const specDefinitions = languageId === 'rpg' ? opmSpecs : specs;
-  const rulerDefinitions = languageId === 'rpg' ? opmSpecRulers : SpecRulers;
+    const specDefinitions = languageId === 'rpg' ? opmSpecs : specs;
+    const rulerDefinitions = languageId === 'rpg' ? opmSpecRulers : SpecRulers;
 
-  const specLetter = line[5].toUpperCase();
-  if (specDefinitions[specLetter]) {
-    const specification = specDefinitions[specLetter];
+    const specLetter = line[5].toUpperCase();
+    const rulerKey = languageId !== 'rpg'
+        ? (specLetter === `O`
+            ? getOutputRulerKey(line)
+            : (specLetter === `I`
+                ? getInputRulerKey(line)
+                : (specLetter === `D`
+                    ? getDefinitionRulerKey(line)
+                    : (specLetter === `C` ? getCalculationRulerKey(line) : specLetter))))
+        : specLetter;
+    const specKey = specDefinitions[rulerKey] ? rulerKey : specLetter;
 
-    const active = specification.findIndex((box: any) => index >= box.start && index <= box.end);
+    if (specDefinitions[specKey]) {
+        const specification = specDefinitions[specKey];
+        const active = specification.findIndex((box: any) => index >= box.start && index <= box.end);
 
-    return {
-      specification,
-      active,
-      outline: rulerDefinitions[specLetter]
-    };
-  } else if (rulerDefinitions[specLetter]) {
-    return {
-      specification: [] as SpecFieldDef[],
-      active: -1,
-      outline: rulerDefinitions[specLetter]
-    };
-  }
-}
+        return {
+            specification,
+            active,
+            outline: rulerDefinitions[rulerKey] || rulerDefinitions[specKey] || rulerDefinitions[specLetter],
+        };
+    } else if (rulerDefinitions[rulerKey] || rulerDefinitions[specKey] || rulerDefinitions[specLetter]) {
+        return {
+            specification: [] as SpecFieldDef[],
+            active: -1,
+            outline: rulerDefinitions[rulerKey] || rulerDefinitions[specKey] || rulerDefinitions[specLetter],
+        };
+    }
+};
 
 function documentIsFree(document: TextDocument) {
-  const type = documentType(document);
+    const type = documentType(document);
 
-  if (type === 'opm') {
-    // OPM RPG is always fixed-format
+    if (type === 'opm') {
+        return false;
+    } else if (type === 'ile') {
+        const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
+        return line === `**FREE`;
+    }
+
     return false;
-  } else if (type === 'ile') {
-    const line = document.getText(new Range(0, 0, 0, 6)).toUpperCase();
-    return line === `**FREE`;
-  }
-
-  return false;
 }
 
 export function registerColumnAssist(context: ExtensionContext) {
-  context.subscriptions.push(
-    commands.registerCommand(`vscode-rpgle.assist.launchUI`, async () => {
-      const editor = window.activeTextEditor;
-      if (editor) {
-        const document = editor.document;
+    context.subscriptions.push(
+        commands.registerCommand(`vscode-rpgle.assist.launchUI`, async () => {
+            const editor = window.activeTextEditor;
+            if (editor) {
+                const document = editor.document;
 
-        const type = documentType(document);
-        if (type) {
-          if (!documentIsFree(document)) {
-            const lineNumber = editor.selection.start.line;
-            const positionIndex = editor.selection.start.character;
+                const type = documentType(document);
+                if (type) {
+                    if (!documentIsFree(document)) {
+                        const lineNumber = editor.selection.start.line;
+                        const positionIndex = editor.selection.start.character;
 
-            const positionsData = await promptLine(
-              document.getText(new Range(lineNumber, 0, lineNumber, 100)),
-              positionIndex,
-              type === 'opm' ? 'rpg' : 'rpgle'
-            );
+                        const positionsData = await promptLine(
+                            document.getText(new Range(lineNumber, 0, lineNumber, 100)),
+                            positionIndex,
+                            type === 'opm' ? 'rpg' : 'rpgle'
+                        );
 
-            if (positionsData) {
-              window.showTextDocument(document).then(newEditor => {
-                newEditor.edit(editBuilder => {
-                  editBuilder.replace(new Range(lineNumber, 0, lineNumber, 80), positionsData);
-                });
-              })
+                        if (positionsData) {
+                            window.showTextDocument(document).then(newEditor => {
+                                newEditor.edit(editBuilder => {
+                                    editBuilder.replace(new Range(lineNumber, 0, lineNumber, 80), positionsData);
+                                });
+                            });
+                        }
+                    }
+                }
             }
-          }
-        }
-      }
-    }),
+        }),
 
-    commands.registerCommand(`vscode-rpgle.assist.toggleFixedRuler`, async () => {
-      rulerEnabled = !rulerEnabled;
+        commands.registerCommand(`vscode-rpgle.assist.toggleFixedRuler`, async () => {
+            rulerEnabled = !rulerEnabled;
+            currentEditorLine = -1;
 
-      if (rulerEnabled) {
-        updateRuler();
-      } else {
-        clearRulers();
-      }
-    }),
+            if (rulerEnabled) {
+                updateRuler();
+            } else {
+                clearRulers();
+            }
+        }),
 
-    commands.registerCommand(`vscode-rpgle.assist.moveLeft`, () => {
-      moveFromPosition(`left`);
-    }),
-    commands.registerCommand(`vscode-rpgle.assist.moveRight`, () => {
-      moveFromPosition(`right`);
-    }),
+        commands.registerCommand(`vscode-rpgle.assist.moveLeft`, () => {
+            moveFromPosition(`left`);
+        }),
+        commands.registerCommand(`vscode-rpgle.assist.moveRight`, () => {
+            moveFromPosition(`right`);
+        }),
 
-    window.onDidChangeTextEditorSelection(e => {
-      const editor = e.textEditor;
-      if (rulerEnabled) {
-        updateRuler(editor);
-      } else {
-        clearRulers(editor);
-      }
-    }),
-  )
-}
+        workspace.onDidChangeTextDocument(e => {
+            if (!rulerEnabled) return;
 
-function moveFromPosition(direction: "left"|"right", editor = window.activeTextEditor) {
-  if (editor && !documentIsFree(editor.document)) {
-    const document = editor.document;
-    const type = documentType(document);
-    if (!type) return;
-    const lineNumber = editor.selection.start.line;
-    const positionIndex = editor.selection.start.character;
+            const editor = window.visibleTextEditors.find(item => item.document.uri.toString() === e.document.uri.toString()) || window.activeTextEditor;
+            if (!editor || editor.document.uri.toString() !== e.document.uri.toString()) return;
 
-    const positionsData = getAreasForLine(
-      document.getText(new Range(lineNumber, 0, lineNumber, 100)),
-      positionIndex,
-      type === 'opm' ? 'rpg' : 'rpgle'
+            overlayRevision++;
+            updateRuler(editor);
+        }),
+
+        window.onDidChangeTextEditorSelection(e => {
+            const editor = e.textEditor;
+            if (rulerEnabled) {
+                updateRuler(editor);
+            } else {
+                clearRulers(editor);
+            }
+        }),
+
+        window.onDidChangeActiveTextEditor(editor => {
+            if (!editor) return;
+
+            if (rulerEnabled) {
+                overlayRevision++;
+                updateRuler(editor);
+            } else {
+                clearRulers(editor);
+            }
+        }),
+
+        window.onDidChangeTextEditorVisibleRanges(e => {
+            if (rulerEnabled) {
+                overlayRevision++;
+                updateRuler(e.textEditor);
+            }
+        }),
     );
-
-    if (positionsData) {
-      let newIndex: number|undefined;
-      if (direction === `left`) {
-        newIndex = positionsData.active - 1;
-      } else
-      if (direction === `right`) {
-        newIndex = positionsData.active + 1;
-      }
-
-      if (newIndex !== undefined && newIndex >= 0 && newIndex < positionsData.specification.length) {
-        const box = positionsData.specification[newIndex];
-        if (box) {
-          editor.selection = new Selection(lineNumber, box.start, lineNumber, box.start);
-        }
-      }
-    }
-  }
 }
 
-function updateRuler(editor = window.activeTextEditor) {
-  let clear = true;
-
-  if (editor) {
-    const document = editor.document;
-    const type = documentType(document);
-    if (type) {
-      if (!documentIsFree(document)) {
+function moveFromPosition(direction: "left" | "right", editor = window.activeTextEditor) {
+    if (editor && !documentIsFree(editor.document)) {
+        const document = editor.document;
+        const type = documentType(document);
+        if (!type) return;
         const lineNumber = editor.selection.start.line;
         const positionIndex = editor.selection.start.character;
 
         const positionsData = getAreasForLine(
-          document.getText(new Range(lineNumber, 0, lineNumber, 100)),
-          positionIndex,
-          type === 'opm' ? 'rpg' : 'rpgle'
+            document.getText(new Range(lineNumber, 0, lineNumber, 100)),
+            positionIndex,
+            type === 'opm' ? 'rpg' : 'rpgle'
         );
 
         if (positionsData) {
-          let decorations: DecorationOptions[] = [];
-
-          positionsData.specification.forEach((box: any, index: number) => {
-            if (index === positionsData.active) {
-              //There should only be one current.
-              editor.setDecorations(currentArea, [{
-                hoverMessage: box.name,
-                range: new Range(lineNumber, box.start, lineNumber, box.end+1)
-              }]);
-
-            } else {
-              decorations.push({
-                hoverMessage: box.name,
-                range: new Range(lineNumber, box.start, lineNumber, box.end+1)
-              })
+            let newIndex: number | undefined;
+            if (direction === `left`) {
+                newIndex = positionsData.active - 1;
+            } else if (direction === `right`) {
+                newIndex = positionsData.active + 1;
             }
-          });
 
-          editor.setDecorations(notCurrentArea, decorations);
-
-          editor.setDecorations(outlineBar, [
-            {
-              range: new Range(lineNumber, 0, lineNumber, 0),
-              renderOptions: {
-                before: {
-                  contentText: positionsData.outline,
-                  color: new ThemeColor(`editorLineNumber.foreground`),
-                  textDecoration: `none; position: absolute; top: -1.4em; background-color: var(--vscode-editor-background); width: 100vw;`,
+            if (newIndex !== undefined && newIndex >= 0 && newIndex < positionsData.specification.length) {
+                const box = positionsData.specification[newIndex];
+                if (box) {
+                    editor.selection = new Selection(lineNumber, box.start, lineNumber, box.start);
                 }
-              }
-            },
-          ]);
-
-          clear = false;
+            }
         }
-
-        currentEditorLine = lineNumber;
-      }
     }
-  }
+}
 
-  if (clear) {
-    clearRulers(editor);
-  }
+function updateRuler(editor = window.activeTextEditor) {
+    let clear = true;
+
+    if (editor) {
+        const document = editor.document;
+        const type = documentType(document);
+        if (type) {
+            if (!documentIsFree(document)) {
+                const lineNumber = editor.selection.start.line;
+                const positionIndex = editor.selection.start.character;
+
+                const positionsData = getAreasForLine(
+                    document.getText(new Range(lineNumber, 0, lineNumber, 100)),
+                    positionIndex,
+                    type === 'opm' ? 'rpg' : 'rpgle'
+                );
+
+                if (positionsData) {
+                    const decorations: DecorationOptions[] = [];
+
+                    positionsData.specification.forEach((box: any, index: number) => {
+                        if (index === positionsData.active) {
+                            editor.setDecorations(currentArea, [{
+                                hoverMessage: box.name,
+                                range: new Range(lineNumber, box.start, lineNumber, box.end + 1)
+                            }]);
+                        } else {
+                            decorations.push({
+                                hoverMessage: box.name,
+                                range: new Range(lineNumber, box.start, lineNumber, box.end + 1)
+                            });
+                        }
+                    });
+
+                    editor.setDecorations(notCurrentArea, decorations);
+
+                    const repaintNonce = ((lineNumber + positionIndex + overlayRevision) % 2) === 0 ? `\u200B` : `\u200C`;
+                    const fillText = `${`█`.repeat(240)}${repaintNonce}`;
+                    const outlineText = `${positionsData.outline}${repaintNonce}`;
+                    const rulerStart = sourceDatesVisible() ? 7 : 0;
+
+                    editor.setDecorations(outlineBarFill, [{
+                        range: new Range(lineNumber, rulerStart, lineNumber, rulerStart),
+                        renderOptions: {
+                            before: {
+                                contentText: fillText,
+                                color: new ThemeColor(`editor.background`),
+                                backgroundColor: new ThemeColor(`editor.background`),
+                                textDecoration: `none; position: absolute; top: -1.4em; opacity: 1; white-space: pre; display: inline-block; line-height: 1.4em;`,
+                            }
+                        }
+                    }]);
+
+                    editor.setDecorations(outlineBar, [{
+                        range: new Range(lineNumber, rulerStart, lineNumber, rulerStart),
+                        renderOptions: {
+                            before: {
+                                contentText: outlineText,
+                                color: new ThemeColor(`editorLineNumber.foreground`),
+                                textDecoration: `none; position: absolute; top: -1.4em; opacity: 1; white-space: pre; display: inline-block; line-height: 1.4em;`,
+                            }
+                        }
+                    }]);
+
+                    clear = false;
+                }
+
+                currentEditorLine = lineNumber;
+            }
+        }
+    }
+
+    if (clear) {
+        clearRulers(editor);
+    }
 }
 
 function clearRulers(editor = window.activeTextEditor) {
-  if (editor) {
-    editor.setDecorations(currentArea, []);
-    editor.setDecorations(notCurrentArea, []);
-    editor.setDecorations(outlineBar, []);
-  }
+    currentEditorLine = -1;
+    if (editor) {
+        editor.setDecorations(currentArea, []);
+        editor.setDecorations(notCurrentArea, []);
+        editor.setDecorations(outlineBarFill, []);
+        editor.setDecorations(outlineBar, []);
+    }
 }
 
 interface FieldBox {
-  id: string,
-  text: string,
-  content: string
-  values?: SpecFieldValue[],
-  maxLength?: number
+    id: string,
+    text: string,
+    content: string
+    values?: SpecFieldValue[],
+    maxLength?: number
 }
 
-async function promptLine (line: string, _index: number, languageId: string = 'rpgle'): Promise<string|undefined> {
-  const base = loadBase();
+async function promptLine(line: string, _index: number, languageId: string = 'rpgle'): Promise<string | undefined> {
+    const base = loadBase();
 
-  if (!base) {
-    window.showErrorMessage(`Code for IBM i is not installed. It is required due to required UI tools.`);
-    return undefined;
-  };
+    if (!base) {
+        window.showErrorMessage(`Code for IBM i is not installed. It is required due to required UI tools.`);
+        return undefined;
+    };
 
+    if (line.length < 6) return undefined;
+    if (line[6] === `*`) return undefined;
+    line = line.padEnd(80);
 
-  if (line.length < 6) return undefined;
-  if (line[6] === `*`) return undefined;
-  line = line.padEnd(80);
+    const specDefinitions = languageId === 'rpg' ? opmSpecs : specs;
 
-  // Use OPM specs for .rpg files, ILE specs for .rpgle files
-  const specDefinitions = languageId === 'rpg' ? opmSpecs : specs;
+    const specLetter = line[5].toUpperCase();
+    const specKey = languageId !== 'rpg'
+        ? (specLetter === `O`
+            ? getOutputRulerKey(line)
+            : (specLetter === `I`
+                ? getInputRulerKey(line)
+                : (specLetter === `D`
+                    ? getDefinitionRulerKey(line)
+                    : (specLetter === `C` ? getCalculationRulerKey(line) : specLetter))))
+        : specLetter;
+    const effectiveSpecKey = specDefinitions[specKey] ? specKey : specLetter;
 
-  const specLetter = line[5].toUpperCase();
-  if (specDefinitions[specLetter]) {
-    const specification = specDefinitions[specLetter];
+    if (specDefinitions[effectiveSpecKey]) {
+        const specification = specDefinitions[effectiveSpecKey];
 
-    let parts: FieldBox[] = [];
+        const parts: FieldBox[] = [];
 
-    specification.forEach(box => {
-      parts.push({
-        id: box.id,
-        text: box.name,
-        content: line.substring(box.start, box.end+1).trimEnd(),
-        values: box.values,
-        maxLength: box.values ? undefined : (box.end+1)-box.start
-      });
-    });
+        specification.forEach(box => {
+            parts.push({
+                id: box.id,
+                text: box.name,
+                content: line.substring(box.start, box.end + 1).trimEnd(),
+                values: box.values,
+                maxLength: box.values ? undefined : (box.end + 1) - box.start
+            });
+        });
 
-    const ui = base.customUI();
+        const ui = base.customUI();
 
-    parts.forEach((box, index) => {
-      if (box.values) {
-        //Select box
-        ui.addSelect(box.id, box.text, box.values.map(item => ({
-          selected: item.value.toUpperCase() === box.content.toUpperCase(),
-          value: item.value,
-          description: item.value,
-          text: item.text
-        })))
+        parts.forEach((box, index) => {
+            if (box.values) {
+                ui.addSelect(box.id, box.text, box.values.map(item => ({
+                    selected: item.value.toUpperCase() === box.content.toUpperCase(),
+                    value: item.value,
+                    description: item.value,
+                    text: item.text
+                })));
+            } else {
+                ui.addInput(box.id, box.text);
+                ui.fields[index].default = box.content;
+                ui.fields[index].maxlength = box.maxLength;
+            }
+        });
 
-      } else {
-        //Input field
-        ui.addInput(box.id, box.text);
-        ui.fields[index].default = box.content;
-        ui.fields[index].maxlength = box.maxLength;
-      }
-    });
+        ui.addButtons(
+            { id: `apply`, label: `Apply changes` },
+            { id: `cancel`, label: `Cancel` }
+        );
 
-    ui.addButtons(
-      { id: `apply`, label: `Apply changes` },
-      { id: `cancel`, label: `Cancel` }
-    );
+        const result = await ui.loadPage<{ [key: string]: string }>(`Column Assistant`);
 
-    const result = await ui.loadPage<{[key: string]: string}>(`Column Assistant`);
+        if (result && result.data) {
+            result.panel.dispose();
+            const data = result.data;
 
-    if (result && result.data) {
-      result.panel.dispose();
-      const data = result.data;
+            if (data.buttons !== `cancel`) {
+                let spot: SpecFieldDef | undefined, length: number;
+                for (const key in data) {
+                    spot = specification.find(box => box.id === key);
+                    if (spot) {
+                        length = (spot.end + 1) - spot.start;
 
-      if (data.buttons !== `cancel`) {
-        let spot: SpecFieldDef|undefined, length: number;
-        for (const key in data) {
-          spot = specification.find(box => box.id === key);
-          if (spot) {
-            length = (spot.end+1)-spot.start;
+                        if (data[key].length > length) data[key] = data[key].substr(0, length);
 
-            if (data[key].length > length) data[key] = data[key].substr(0, length);
+                        line = line.substring(0, spot.start) + (spot.padStart ? data[key].padStart(length) : data[key].padEnd(length)) + line.substring(spot.end + 1);
+                    }
+                }
 
-            line = line.substring(0, spot.start) + (spot.padStart ? data[key].padStart(length) : data[key].padEnd(length)) + line.substring(spot.end+1);
-          }
+                return line.trimEnd();
+            }
         }
 
-        return line.trimEnd();
-      }
+        return undefined;
+    } else {
+        return undefined;
     }
-
-    return undefined;
-  } else {
-    return undefined;
-  }
 }
