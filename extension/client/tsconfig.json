@@ -3,10 +3,11 @@
 	"compilerOptions": {
 		"module": "commonjs",
 		"target": "es2020",
-		"forceConsistentCasingInFileNames": true,
 		"outDir": "out",
 		"rootDir": "../..",
-		"lib": [ "es2020" ],
+		"lib": [
+			"es2020"
+		],
 		"sourceMap": true,
 		"composite": true
 	},
@@ -15,6 +16,8 @@
 		"../../language/utils"
 	],
 	"exclude": [
-		"node_modules", ".vscode-test", "src/test"
+		"node_modules",
+		".vscode-test",
+		"src/test"
 	]
 }

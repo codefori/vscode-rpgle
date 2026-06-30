@@ -90,10 +90,10 @@ export default class Linter {
 
     const globalProcs = globalScope.procedures;
 
-    interface ReferenceInfo {name: string, skipRules?: boolean};
+    interface ReferenceInfo { name: string, skipRules?: boolean };
 
-    let inProcedure: ReferenceInfo|undefined;
-    let inSubroutine: ReferenceInfo|undefined;
+    let inProcedure: ReferenceInfo | undefined;
+    let inSubroutine: ReferenceInfo | undefined;
     let inStruct: string[] = [];
     let inPrototype = false;
     let inOnExit = false;
@@ -291,7 +291,7 @@ export default class Linter {
                         // /INCLUDE or /COPY is way to long.
                         errors.push({
                           type: `IncludeMustBeRelative`,
-                            offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
+                          offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
                         });
                       }
                     }
@@ -378,7 +378,7 @@ export default class Linter {
                       });
                     }
 
-                    inSubroutine = {name: statement[1].value || NO_NAME, skipRules: statement[1].type === `special`};
+                    inSubroutine = { name: statement[1].value || NO_NAME, skipRules: statement[1].type === `special` };
 
                     if (inProcedure) {
                       if (rules.NoLocalSubroutines) {
@@ -405,7 +405,7 @@ export default class Linter {
                     }
 
                     value = statement[1].value;
-                    inProcedure = {name: value || NO_NAME};
+                    inProcedure = { name: value || NO_NAME };
 
                     if (statement.length < 2) break;
                     if (rules.RequiresProcedureDescription) {
@@ -770,7 +770,7 @@ export default class Linter {
                   case `DOU`:
                     if (rules.ForceOptionalParens) {
                       const lastStatement = statement[statement.length - 1];
-                      if (lastStatement && statement[1] &&(statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`)) {
+                      if (lastStatement && statement[1] && (statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`)) {
                         errors.push({
                           type: `ForceOptionalParens`,
                           offset: { start: statement[1].range.start, end: statement[statement.length - 1].range.end }

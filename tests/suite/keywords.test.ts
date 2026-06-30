@@ -2,25 +2,10 @@
 import setupParser from "../parserSetup";
 import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
+import { assertCache, assertFound } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
-
-const assertCache = <T>(value: T | undefined): T => {
-  expect(value).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected parser cache to be defined`);
-  }
-  return value;
-};
-
-const assertFound = <T>(value: T | undefined, name: string): T => {
-  expect(value, `${name} should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} to exist`);
-  }
-  return value;
-};
 
 test("qualified1", async () => {
   const lines = [
@@ -33,8 +18,8 @@ test("qualified1", async () => {
     `Return`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
-  const { errors } = Linter.getErrors({uri, content: lines}, {
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
     QualifiedCheck: true,
   }, cache);
 
@@ -105,8 +90,8 @@ test("ctdata1", async () => {
     `order by RMLPID ,LTID ,EFFDATE`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
 
@@ -135,7 +120,7 @@ test("ctdata2", async () => {
     `Regina         12:33:00Vancouver      13:20:00`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(Object.keys(cache.keyword).length).toBe(2);
   expect(cache.keyword[`DEBUG`]).toBe(true);
@@ -166,7 +151,7 @@ test("ctdata3", async () => {
     `VVoluntary    Volntry`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.files.length).toBe(1);
   expect(cache.variables.length).toBe(3);
@@ -185,7 +170,7 @@ test("likeds1", async () => {
     `//Yes`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).toBe(2);
   expect(cache.structs.length).toBe(2);
@@ -216,7 +201,7 @@ test("likeds2", async () => {
     `End-Proc;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.variables.length).toBe(2);
   expect(cache.structs.length).toBe(1);
@@ -259,9 +244,9 @@ test("overload1", async () => {
     `End-PR;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
-  const { indentErrors } = Linter.getErrors({uri, content: lines}, {
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2,
     PrettyComments: true
   }, cache);
@@ -280,7 +265,7 @@ test(`extproc1`, async () => {
     `end-pr;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.procedures.length).toBe(1);
   expect(cache.procedures[0].name).toBe(`APIVAL01S_iws_validate`);

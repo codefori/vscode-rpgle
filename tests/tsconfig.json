@@ -1,15 +1,15 @@
- {
+{
+  "extends": "../extension/tsconfig.base.json",
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2020",
     "moduleResolution": "node",
-    "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
     "outDir": "out",
     "rootDir": "..",
-    "lib": ["es2020"],
-    "allowJs": true,
-    "strict": true,
+    "lib": [
+      "es2020"
+    ],
     "noImplicitAny": false,
     "noUnusedParameters": false,
     "composite": true

@@ -3,25 +3,10 @@ import setupParser from "../parserSetup";
 import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
 import Parser from "../../language/ile/parser";
+import { assertCache, assertFound } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
-
-const assertCache = <T>(value: T | undefined): T => {
-  expect(value).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected parser cache to be defined`);
-  }
-  return value;
-};
-
-const assertFound = <T>(value: T | undefined, name: string): T => {
-  expect(value, `${name} should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} to exist`);
-  }
-  return value;
-};
 
 test('skip1', async () => {
   const lines = [

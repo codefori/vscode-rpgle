@@ -2,25 +2,10 @@
 import * as path from "path";
 import setupParser from "../parserSetup";
 import { test, expect } from "vitest";
+import { assertCache, assertFound } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
-
-const assertCache = <T>(value: T | undefined): T => {
-  expect(value).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected parser cache to be defined`);
-  }
-  return value;
-};
-
-const assertFound = <T>(value: T | undefined, name: string): T => {
-  expect(value, `${name} should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} to exist`);
-  }
-  return value;
-};
 
 test('fixed1', async () => {
   const lines = [
@@ -1423,7 +1408,7 @@ test('incorrect range on prototypes and procedures (#412)', async () => {
     `      ******************************************`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache).toBeDefined();
 
@@ -1438,7 +1423,7 @@ test('incorrect range on prototypes and procedures (#412)', async () => {
   const prRange = procedures[0].range;
   const procRange = procedures[1].range;
 
-  expect(prRange.start).to.deep.equal(prRange.end-1);
+  expect(prRange.start).to.deep.equal(prRange.end - 1);
   expect(procRange.start).toBeGreaterThan(prRange.end);
   expect(procRange.end).toBeGreaterThan(procRange.start);
 });
@@ -1458,7 +1443,7 @@ test('missing subroutines #443', async () => {
     `     C                   ENDSR`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache).toBeDefined();
 

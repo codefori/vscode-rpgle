@@ -2,33 +2,10 @@
 import * as path from "path";
 import setupParser from "../parserSetup";
 import { test, expect } from "vitest";
+import { assertCache, assertFound, assertScope } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
-
-const assertCache = <T>(value: T | undefined): T => {
-  expect(value).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected parser cache to be defined`);
-  }
-  return value;
-};
-
-const assertFound = <T>(value: T | undefined, name: string): T => {
-  expect(value, `${name} should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} to exist`);
-  }
-  return value;
-};
-
-const assertScope = <T>(value: T | undefined, name: string): T => {
-  expect(value, `${name} scope should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} scope to exist`);
-  }
-  return value;
-};
 
 test("simple_file", async () => {
   const lines = [
@@ -41,7 +18,7 @@ test("simple_file", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
   expect(cache.structs.length).toBe(0);
@@ -74,7 +51,7 @@ test("many_formats", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
 
@@ -106,7 +83,7 @@ test("ds_extname", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(0);
   expect(cache.structs.length).toBe(1);
@@ -128,7 +105,7 @@ test("ds_extname", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(0);
   expect(cache.structs.length).toBe(1);
@@ -152,7 +129,7 @@ test("ds_extname_template", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.structs.length).toBe(2);
 
@@ -172,7 +149,7 @@ test("ds_extname_alias", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(0);
   expect(cache.structs.length).toBe(1);
@@ -195,7 +172,7 @@ test("file_prefix", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   const disp = assertFound(cache.find(`display`), `display`);
   expect(disp.subItems[0].subItems[0].name).toBe(`DE1_OPTION`);
@@ -217,7 +194,7 @@ test('file DS in a copy book', async () => {
   ].join(`\n`);
 
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   const globalStruct = assertFound(cache.find(`GlobalStruct`), `GlobalStruct`);
   expect(globalStruct.subItems.length).toBeGreaterThan(0);
@@ -230,7 +207,7 @@ test('file DS in a copy book', async () => {
   const someStruct = assertFound(mainProcScope.find(`SomeStruct`), `SomeStruct`);
   expect(someStruct.subItems.length).toBeGreaterThan(0);
 
-  expect(someStruct.subItems.map(s => ({name: s.name, keyword: s.keyword}))).toMatchObject(globalStruct.subItems.map(s => ({name: s.name, keyword: s.keyword})));
+  expect(someStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword }))).toMatchObject(globalStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword })));
 });
 
 test('test rename (#407)', async () => {
@@ -243,7 +220,7 @@ test('test rename (#407)', async () => {
 
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
 
@@ -270,7 +247,7 @@ test('test rename + prefix (#407)', async () => {
 
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
 

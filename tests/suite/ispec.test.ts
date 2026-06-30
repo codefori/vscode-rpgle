@@ -1,28 +1,13 @@
 import { expect, test } from "vitest";
 import setupParser from "../parserSetup";
 import { parseISpec } from "../../language/models/fixed";
+import { assertCache, assertFound } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
 
-const assertCache = <T>(value: T | undefined): T => {
-  expect(value).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected parser cache to be defined`);
-  }
-  return value;
-};
-
-const assertFound = <T>(value: T | undefined, name: string): T => {
-  expect(value, `${name} should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} to exist`);
-  }
-  return value;
-};
-
 test('ispec rename 1', async () => {
-  const lines =[
+  const lines = [
     `        dcl-f qrpglesrc prefix('RPG_');`,
     `        dcl-f qcbblesrc;`,
     ``,
@@ -42,7 +27,7 @@ test('ispec rename 1', async () => {
     `     I              SRCDAT                      ALL_SRCDAT`,
   ].join('\n');
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true }));
 
   const symbols = cache.symbols;
   expect(symbols.length).toBeGreaterThan(0);
@@ -174,7 +159,7 @@ test('ispec file fields definitions', async () => {
     `     C                   return`,
   ];
 
-  const cache = assertCache(await parser.getDocs(uri, lines.join('\n'), {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines.join('\n'), { ignoreCache: true, collectReferences: true }));
 
   const files = cache.files;
   expect(files.length).toBe(1);

@@ -2,34 +2,11 @@ import setupParser, { getFileContent } from "../parserSetup";
 import Cache from "../../language/models/cache";
 import { test, expect } from "vitest";
 import { readFile } from "fs/promises";
+import { assertCache, assertFound } from "../utils";
 
 
 const parser = setupParser();
 const uri = `source.rpgle`;
-
-const assertCache = <T>(value: T | undefined): T => {
-  expect(value).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected parser cache to be defined`);
-  }
-  return value;
-};
-
-const assertFound = <T>(value: T | undefined, name: string): T => {
-  expect(value, `${name} should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} to exist`);
-  }
-  return value;
-};
-
-const assertScope = (value: Cache | undefined, name: string): Cache => {
-  expect(value, `${name} scope should exist`).toBeDefined();
-  if (value === undefined) {
-    throw new Error(`Expected ${name} scope to exist`);
-  }
-  return value;
-};
 
 const bigLines = [
   `**free`,
@@ -81,7 +58,7 @@ const bigLines = [
 ].join(`\n`);
 
 test("references_1_const", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const falseConstIndex = bigLines.indexOf(`dcl-c FALSE`) + 7;
 
@@ -91,7 +68,7 @@ test("references_1_const", async () => {
 });
 
 test("references_2_const", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const trueConstIndex = bigLines.indexOf(`var1 = TRUE`) + 7;
 
@@ -101,7 +78,7 @@ test("references_2_const", async () => {
 });
 
 test("references_3_enum", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const colorsConstIndex = bigLines.indexOf(`var1 = COLORS`) + 7;
 
@@ -111,7 +88,7 @@ test("references_3_enum", async () => {
 });
 
 test("references_4_subfield_a", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const greenSubfieldIndex = bigLines.indexOf(`var1 = COLORS.GREEN`) + 17;
 
@@ -121,7 +98,7 @@ test("references_4_subfield_a", async () => {
 });
 
 test("references_4_subfield_b", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const greenSubfieldIndex = bigLines.indexOf(` GREEN 1`) + 3;
 
@@ -144,7 +121,7 @@ test("references_4_subfield_b", async () => {
 });
 
 test("references_5", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const var1Index = bigLines.indexOf(`var1 = TRUE`);
 
@@ -154,7 +131,7 @@ test("references_5", async () => {
 });
 
 test("references_6_subfield_dim", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const baseIndex = bigLines.indexOf(`var4 = varColors(1).red`);
   const varColorsIndex = baseIndex + 9;
@@ -171,7 +148,7 @@ test("references_6_subfield_dim", async () => {
 });
 
 test("references_7", async () => {
-  const cache = assertCache(await parser.getDocs(uri, bigLines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, bigLines, { ignoreCache: true, collectReferences: true }));
 
   const declareAbcIndex = bigLines.indexOf(`dcl-proc abc`) + 10;
 
@@ -192,7 +169,7 @@ test("reference from file (#406)", async () => {
     `dsply deptname;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true }));
 
   const deptname = assertFound(cache.find(`deptname`), `deptname`);
   expect(deptname.name).toEqual(`DEPTNAME`);
@@ -285,7 +262,7 @@ test("references_8", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
   const subfa = assertFound(cache.find(`subfa`), `subfa`);
   expect(subfa.references.length).toBe(2);
@@ -424,7 +401,7 @@ test("references_9", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
   const procedure = assertFound(cache.find(`InputIsValid`), `InputIsValid`);
 
@@ -453,9 +430,9 @@ test('references_10', async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
-  const rangeRefs = cache.referencesInRange(uri, {start: 220, end: 260});
+  const rangeRefs = cache.referencesInRange(uri, { start: 220, end: 260 });
   expect(rangeRefs.length).toBe(2);
   expect(rangeRefs[0].dec.name).toBe(`x`);
   expect(rangeRefs[1].dec.name).toBe(`y`);
@@ -505,7 +482,7 @@ test("references_11_issue_175", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {ignoreCache: true, withIncludes: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
 
   const procedure = assertFound(cache.find(`SubProc`), `SubProc`);
   expect(procedure).toBeDefined();
@@ -880,7 +857,7 @@ test('indicators1', async () => {
     `Return;`,
   ].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true}));
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
 
   const in10 = assertFound(cache.find(`IN10`), `IN10`);
   expect(in10.references.length).toBe(2);
@@ -1474,31 +1451,31 @@ test(`references_21_fixed_exec1`, async () => {
 test(`references_22_long_lines`, async () => {
   const lines = [
     `**free`,
-  `// --------------------------------------------------------------`,
-  `// Next departure from Mols Linien`,
-  `// --------------------------------------------------------------`,
-  `dcl-proc jsonRequest;`,
-  ``,
-  `   dcl-s  pReq   	  	pointer;`,
-  `   dcl-s  pResponse 	pointer;`,
-  `   dcl-s  url  	  	varchar(1024);`,
-  ``,
-  `   // parameters on URL`,
-  `   url = 'https://www.molslinjen.dk/umbraco/api/departure/getnextdepartures?departureRegionId=JYL';`,
-  ``,
-  `   // Note: No payload in the request. use *null - here we pass a null pointer  `,
-  `   // Note: No options in the request. use *null - here we pass the *null literal value`,
-  `   `,
-  `   // Do the http request to get next depature`,
-  `   // Use YUM to install curl, which is the tool used by httpRequest`,
-  `   pResponse = json_httpRequest (url: pReq:*null:'JSON');`,
-  ``,
-  `   json_WriteJsonStmf(pResponse:'/prj/noxdb/testout/httpdump.json':1208:*OFF);`,
-  ``,
-  `   json_delete(pReq);`,
-  `   json_delete(pResponse);`,
-  ``,
-  `end-proc;`,
+    `// --------------------------------------------------------------`,
+    `// Next departure from Mols Linien`,
+    `// --------------------------------------------------------------`,
+    `dcl-proc jsonRequest;`,
+    ``,
+    `   dcl-s  pReq   	  	pointer;`,
+    `   dcl-s  pResponse 	pointer;`,
+    `   dcl-s  url  	  	varchar(1024);`,
+    ``,
+    `   // parameters on URL`,
+    `   url = 'https://www.molslinjen.dk/umbraco/api/departure/getnextdepartures?departureRegionId=JYL';`,
+    ``,
+    `   // Note: No payload in the request. use *null - here we pass a null pointer  `,
+    `   // Note: No options in the request. use *null - here we pass the *null literal value`,
+    `   `,
+    `   // Do the http request to get next depature`,
+    `   // Use YUM to install curl, which is the tool used by httpRequest`,
+    `   pResponse = json_httpRequest (url: pReq:*null:'JSON');`,
+    ``,
+    `   json_WriteJsonStmf(pResponse:'/prj/noxdb/testout/httpdump.json':1208:*OFF);`,
+    ``,
+    `   json_delete(pReq);`,
+    `   json_delete(pResponse);`,
+    ``,
+    `end-proc;`,
   ].join(`\n`);
 
   const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
@@ -1859,7 +1836,7 @@ test('references_27_fixed_reference', async () => {
   ].join(`\n`);
 
   const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true, collectReferences: true }));
-  expect(cache.includes.length).toBe (5);
+  expect(cache.includes.length).toBe(5);
 
   const wCfgKey = assertFound(cache.find(`wCfgKey`), `wCfgKey`);
   const baseRefs = wCfgKey.references.filter(r => r.uri === uri);
@@ -1867,7 +1844,7 @@ test('references_27_fixed_reference', async () => {
   expect(baseRefs.length).toBe(21);
 
   const uniqueUris = wCfgKey.references.map(r => r.uri).filter((value, index, self) => self.indexOf(value) === index);
-  let cachedFiles: {[uri: string]: string} = {};
+  let cachedFiles: { [uri: string]: string } = {};
 
   for (const refUri of uniqueUris) {
     if (refUri === uri) {
@@ -2022,7 +1999,7 @@ test('references_prototype', async () => {
 
   const procTypeData = cache.resolveType(actualProcedure);
   expect(procTypeData).toBeDefined();
-  expect(procTypeData.type).toMatchObject({name: `int`, value: `10`});
+  expect(procTypeData.type).toMatchObject({ name: `int`, value: `10` });
   expect(procTypeData.reference).toBeUndefined();
 
   const prototype = procedures[0];
@@ -2035,7 +2012,7 @@ test('references_prototype', async () => {
 
   const protoTypeData = cache.resolveType(prototype);
   expect(protoTypeData).toBeDefined();
-  expect(protoTypeData.type).toMatchObject({name: `int`, value: `10`});
+  expect(protoTypeData.type).toMatchObject({ name: `int`, value: `10` });
   expect(protoTypeData.reference).toBeUndefined();
 });
 
