@@ -27,6 +27,34 @@ export interface BlockMatch {
   length: number;
 }
 
+/**
+ * Strip a trailing `//` line comment from a single source line.
+ * Returns everything before the `//`, or the whole line if there is no comment.
+ */
+export function stripLineComment(line: string): string {
+  const commentIndex = line.indexOf('//');
+  return commentIndex === -1 ? line : line.substring(0, commentIndex);
+}
+
+/**
+ * A `dcl-ds` that uses `likeds(...)` or `likerec(...)` is a single-line
+ * declaration: it declares a data structure shaped like an existing template
+ * or record and does NOT open a block, so it needs no matching `end-ds`.
+ *
+ * Comments are stripped first so a `likeds`/`likerec` appearing only in a
+ * trailing comment does not suppress a genuine block opener - for example
+ * `dcl-ds x; // likeds(fake)` is still a block. The regex tolerates optional
+ * whitespace before the paren and is case-insensitive.
+ *
+ * @param line The full source line containing the `dcl-ds` keyword.
+ * @returns true if the line is a single-line `dcl-ds` declaration (not a block opener).
+ */
+export function isSingleLineDclDs(line: string): boolean {
+  const code = stripLineComment(line).toLowerCase();
+  if (!/\bdcl-ds\b/.test(code)) return false;
+  return /likeds\s*\(/.test(code) || /likerec\s*\(/.test(code);
+}
+
 export function findAllBlockMatches(
   text: string,
   isInCommentOrString: (text: string, offset: number) => boolean,

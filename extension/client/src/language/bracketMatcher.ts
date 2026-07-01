@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
-import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch } from '../../../../language/utils/blockParser';
+import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch, stripLineComment, isSingleLineDclDs } from '../../../../language/utils/blockParser';
 import * as rpgle from '../rpgtools-comment-helpers';
 
 type BracketPair = BlockPair;
@@ -396,7 +396,7 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     if (prevLineEnd > 0) {
       const prevLineStart = text.lastIndexOf('\n', prevLineEnd - 1) + 1;
       const prevLineText = text.substring(prevLineStart, prevLineEnd).replace(/\r$/, '');
-      const prevLineWithoutComments = stripComments(prevLineText);
+      const prevLineWithoutComments = stripLineComment(prevLineText);
 
       if (/^\s*dcl-[a-z]+\s*$/i.test(prevLineWithoutComments)) {
         return true;
@@ -480,7 +480,7 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
   let depth = 0;
 
   for (let i = lines.length - 1; i >= 0; i--) {
-    const line = stripComments(lines[i]).trim().toLowerCase();
+    const line = stripLineComment(lines[i]).trim().toLowerCase();
     if (!line) {
       continue;
     }
@@ -492,7 +492,7 @@ function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
 
     if (/^dcl-ds\b/.test(line)) {
       // dcl-ds with likeds()/likerec() is a single-line declaration, not a block.
-      if (/likeds\s*\(|likerec\s*\(/.test(line)) {
+      if (isSingleLineDclDs(line)) {
         continue;
       }
 
@@ -576,27 +576,13 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   return matches;
 }
 
-// Helper function to strip comments from a line
-function stripComments(line: string): string {
-  // Remove // comments
-  const commentIndex = line.indexOf('//');
-  if (commentIndex !== -1) {
-    return line.substring(0, commentIndex);
-  }
-  return line;
-}
-
-// Helper function to check if dcl-ds line has likeds() or likerec()
+// Helper function to check if the dcl-ds at the given offset is a single-line
+// declaration (likeds()/likerec()) rather than a block opener needing end-ds.
 function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   const lineStart = text.lastIndexOf('\n', offset) + 1;
   const lineEnd = text.indexOf('\n', offset);
   const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
-
-  // Strip comments before checking
-  const lineWithoutComments = stripComments(lineContent).toLowerCase();
-
-  // Check if the line contains likeds() or likerec()
-  return /likeds\s*\(/.test(lineWithoutComments) || /likerec\s*\(/.test(lineWithoutComments);
+  return isSingleLineDclDs(lineContent);
 }
 
 // Helper function specifically for finding the opening block for an END keyword

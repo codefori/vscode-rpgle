@@ -34,7 +34,7 @@ dcl-proc proc1;
     end-ds;
     dcl-ds myds3 likeds(outputData_t);
     dcl-ds myds4;
-     field5 char(10);
+      field5 char(10);
     end-ds;
   end-ds;
 

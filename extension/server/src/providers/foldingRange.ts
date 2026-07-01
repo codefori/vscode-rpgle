@@ -1,7 +1,7 @@
 import { FoldingRange, FoldingRangeParams, FoldingRangeKind } from 'vscode-languageserver';
 import { documents } from '.';
 import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
-import { RPGLE_BLOCK_PAIRS, BlockPair } from '../../../../language/utils/blockParser';
+import { RPGLE_BLOCK_PAIRS, BlockPair, isSingleLineDclDs } from '../../../../language/utils/blockParser';
 import { ParserFactory } from '../../../../language/parserFactory';
 
 // Provides folding ranges for RPGLE code blocks
@@ -77,26 +77,13 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
     if (!pair) continue;
 
     if (pair.open.includes(current.word)) {
-      // Special handling for dcl-ds: skip if it uses likeds() or likerec()
-      // These create single-line declarations that don't require end-ds
+      // Special handling for dcl-ds: skip if it uses likeds() or likerec().
+      // These create single-line declarations that don't require end-ds.
       if (current.word === 'dcl-ds') {
         const lineStart = text.lastIndexOf('\n', current.offset) + 1;
         const lineEnd = text.indexOf('\n', current.offset);
-        let lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
-
-        // Strip comments before checking
-        const commentIndex = lineContent.indexOf('//');
-        if (commentIndex !== -1) {
-          lineContent = lineContent.substring(0, commentIndex);
-        }
-
-        lineContent = lineContent.toLowerCase();
-
-        // Skip if the line contains likeds() or likerec() - not a block opener
-        // Use regex to handle optional whitespace between keyword and opening paren
-        if (/likeds\s*\(/.test(lineContent) || /likerec\s*\(/.test(lineContent)) {
-          continue;
-        }
+        const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+        if (isSingleLineDclDs(lineContent)) continue;
       }
 
       // Opening keyword - push to stack
