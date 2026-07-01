@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { isInSqlBlock, isInCommentOrString } from '../../../../language/utils/sqlDetection';
-import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch, stripLineComment, isSingleLineDclDs } from '../../../../language/utils/blockParser';
+import { RPGLE_BLOCK_PAIRS, BlockPair, BlockMatch, stripLineComment, isSingleLineDclDs, isInsideOpenDclDsBlock } from '../../../../language/utils/blockParser';
 import * as rpgle from '../rpgtools-comment-helpers';
 
 type BracketPair = BlockPair;
@@ -469,39 +469,6 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
   // Check for other operator contexts
   if (beforeMatch) {
     return true;
-  }
-
-  return false;
-}
-
-function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
-  const priorText = text.substring(0, lineStart);
-  const lines = priorText.split(/\r?\n/);
-  let depth = 0;
-
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = stripLineComment(lines[i]).trim().toLowerCase();
-    if (!line) {
-      continue;
-    }
-
-    if (/^end-ds\b/.test(line)) {
-      depth++;
-      continue;
-    }
-
-    if (/^dcl-ds\b/.test(line)) {
-      // dcl-ds with likeds()/likerec() is a single-line declaration, not a block.
-      if (isSingleLineDclDs(line)) {
-        continue;
-      }
-
-      if (depth === 0) {
-        return true;
-      }
-
-      depth--;
-    }
   }
 
   return false;

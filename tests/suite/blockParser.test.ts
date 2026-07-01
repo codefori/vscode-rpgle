@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findAllBlockMatches, RPGLE_BLOCK_PAIRS, isSingleLineDclDs } from '../../language/utils/blockParser';
+import { findAllBlockMatches, RPGLE_BLOCK_PAIRS, isSingleLineDclDs, isInsideOpenDclDsBlock } from '../../language/utils/blockParser';
 import { isInCommentOrString, isInSqlBlock } from '../../language/utils/sqlDetection';
 
 describe('blockParser', () => {
@@ -287,6 +287,58 @@ end-ds;`;
 
         expect(blockOpeners.map(b => b.idx)).toEqual([1, 4, 9]);
       });
+    });
+  });
+
+  // `isInsideOpenDclDsBlock` scans backwards to decide whether a line sits
+  // inside an open data structure (so a leading `if`/`for`/etc. is a subfield
+  // name rather than a control-flow keyword). Getting this wrong drops the
+  // keyword from the block matcher and leaves its partner (e.g. `endif`)
+  // reported as unmatched.
+  describe('isInsideOpenDclDsBlock', () => {
+    // Offset of the first character of the given 0-based line.
+    const lineStartOffset = (text: string, line: number) =>
+      text.split('\n').slice(0, line).reduce((n, l) => n + l.length + 1, 0);
+
+    it('is true for a line inside a genuinely open dcl-ds block', () => {
+      const text = `dcl-ds myds qualified;
+  field1 char(10);
+  field2 char(10);
+end-ds;`;
+      // line 1 ("  field1 ...") is inside the open block
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 1))).toBe(true);
+    });
+
+    it('is false after a balanced multi-line dcl-ds block', () => {
+      const text = `dcl-ds myds qualified;
+  field1 char(10);
+end-ds;
+
+if not bar();
+endif;`;
+      // line 4 ("if not bar();") is after end-ds, not inside a DS
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 4))).toBe(false);
+    });
+
+    it('is false after a single-line likeds() dcl-ds', () => {
+      const text = `dcl-ds myds likeds(other_t);
+
+if not bar();
+endif;`;
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 2))).toBe(false);
+    });
+
+    it('is false after a self-closing "dcl-ds ... end-ds;" on one line', () => {
+      // Regression: an EXTNAME structure closed inline with end-ds is a
+      // single-line declaration and must NOT be seen as leaving a block open.
+      const text = `dcl-ds FAXATT_t extname('G#FAXATT':*all) qualified template inz end-ds;
+
+dcl-proc foo;
+  if not bar();
+  endif;
+end-proc;`;
+      // line 3 ("  if not bar();") is plain procedure code, not a DS subfield
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 3))).toBe(false);
     });
   });
 });

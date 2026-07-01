@@ -55,6 +55,54 @@ export function isSingleLineDclDs(line: string): boolean {
   return /likeds\s*\(/.test(code) || /likerec\s*\(/.test(code);
 }
 
+/**
+ * Given the source `text` and the offset of the start of a line, scan backwards
+ * to decide whether that line sits inside a still-open `dcl-ds` block (i.e. an
+ * unmatched `dcl-ds` opener appears above it before any balancing `end-ds`).
+ *
+ * Used to disambiguate keyword-looking tokens: a word like `if` at the start of
+ * a line inside an open data structure is a subfield name, not a control-flow
+ * keyword.
+ *
+ * @param text The full document text.
+ * @param lineStart Offset of the first character of the line being classified.
+ */
+export function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean {
+  const priorText = text.substring(0, lineStart);
+  const lines = priorText.split(/\r?\n/);
+  let depth = 0;
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = stripLineComment(lines[i]).trim().toLowerCase();
+    if (!line) {
+      continue;
+    }
+
+    if (/^end-ds\b/.test(line)) {
+      depth++;
+      continue;
+    }
+
+    if (/^dcl-ds\b/.test(line)) {
+      // A dcl-ds that is self-contained on this line does not leave a block
+      // open: either likeds()/likerec() (a single-line declaration) or an
+      // inline end-ds that closes the structure on the same line, e.g. an
+      // EXTNAME struct written `dcl-ds x extname(...) end-ds;`.
+      if (isSingleLineDclDs(line) || /\bend-ds\b/.test(line)) {
+        continue;
+      }
+
+      if (depth === 0) {
+        return true;
+      }
+
+      depth--;
+    }
+  }
+
+  return false;
+}
+
 export function findAllBlockMatches(
   text: string,
   isInCommentOrString: (text: string, offset: number) => boolean,
