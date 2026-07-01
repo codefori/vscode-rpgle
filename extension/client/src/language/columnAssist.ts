@@ -2,6 +2,7 @@ import { commands, DecorationOptions, ExtensionContext, Range, Selection, TextDo
 import * as Configuration from "../configuration";
 import { loadBase } from '../base';
 import { isIleFileByUri, isOpmFileByUri } from '../../../../language/utils/fileRouting';
+import { getCol } from '../rpgtools-comment-helpers';
 
 const currentArea = window.createTextEditorDecorationType({
     backgroundColor: `rgba(242, 242, 109, 0.3)`,
@@ -44,55 +45,62 @@ function documentType(document: TextDocument): 'opm' | 'ile' | undefined {
     return undefined;
 }
 
-function getOutputRulerKey(line: string): 'OX' | 'OC' | 'O' | 'OP' {
-    const src = line.padEnd(80, ` `);
 
-    const andOrKeyword = src.substring(15, 20).trim().toUpperCase();
+function getInputRulerKey(line: string): 'I' | 'IC' | 'IJ' | 'IX' | 'JX' {
+    const fileName = getCol(line, 7, 16).trim();
+    const shortFile = getCol(line, 7, 15).trim();
+    const andOr = getCol(line, 16, 18).toLowerCase().trim();
+    const fromPos = getCol(line, 37, 41).trim();
+    const toPos = getCol(line, 42, 46).trim();
+    const seqType = getCol(line, 17, 18).trim();
+    const indyVoidArea = getCol(line, 23, 46).trim();
+    const extField = getCol(line, 21, 30).trim();
+    const fieldName = getCol(line, 49, 63).trim();
+    const extVoidArea = getCol(line, 31, 48).trim();
+    const extVoidRec = getCol(line, 23, 80).trim();
+    if (!shortFile && (andOr === `and` || andOr === `or`)) {
+        return `IC`;
+    }
+
+    if (/^\d+$/.test(fromPos) || /^\d+$/.test(toPos)) {
+        return `IJ`;
+    }
+
+    if (!fileName && !extVoidArea && (!!extField || fieldName)) {
+        return `JX`;
+    }
+
+    if (fileName && indyVoidArea.length === 0) {
+        return `IX`;
+    }
+    if (seqType.length > 0 || indyVoidArea.length > 0) {
+        return `I`;
+    }
+
+    return `IX`;
+}
+
+
+function getOutputRulerKey(line: string): 'OX' | 'OC' | 'O' | 'OP' {
+    const andOrKeyword = getCol(line, 16, 20).trim().toUpperCase();
     if (andOrKeyword === `AND` || andOrKeyword === `OR`) {
         return `OC`;
     }
 
-    const filename = src.substring(6, 16).trim();
-    const type = src.substring(16, 17).trim();
-    const fieldName = src.substring(29, 43).trim();
-    const endPos = src.substring(46, 51).trim();
-    const constant = src.substring(52).trim();
+    const filename = getCol(line, 7, 16).trim();
+    const continueType = getCol(line, 16, 18).trim().toLowerCase();
+    const cyleTime = getCol(line, 17, 17).trim().toLowerCase();
+    const fieldName = getCol(line, 30, 43).trim();
+    const endPos = getCol(line, 47, 51).trim();
+    const constant = getCol(line, 53, 80).trim();
 
-    if (filename || type) return `O`;
+    if (continueType == 'and' || continueType == 'or') return `OC`;
+    if (filename || (!filename && cyleTime)) return `O`;
     if (endPos && (fieldName || constant)) return `OP`;
     if (!fieldName && constant) return `OP`;
     if (fieldName) return `OP`;
 
     return `OX`;
-}
-
-function getInputRulerKey(line: string): 'I' | 'IC' | 'IJ' | 'IX' | 'JX' {
-    const src = line.padEnd(80, ` `);
-
-    const andOr = src.substring(15, 18).toUpperCase().trim();
-    if (andOr === `AND` || andOr === `OR` || andOr === `AN`) {
-        return `IC`;
-    }
-
-    const fromPos = src.substring(36, 41).trim();
-    const toPos = src.substring(41, 46).trim();
-    if (/^\d+$/.test(fromPos) || /^\d+$/.test(toPos)) {
-        return `IJ`;
-    }
-
-    const seqType = src.substring(16, 18).trim();
-    const ricArea = src.substring(22, 46).trim();
-    if (seqType.length > 0 || ricArea.length > 0) {
-        return `I`;
-    }
-
-    const fileName = src.substring(6, 16).trim();
-    const extField = src.substring(20, 30).trim();
-    if (!fileName && !!extField) {
-        return `JX`;
-    }
-
-    return `IX`;
 }
 
 function getDefinitionRulerKey(line: string): 'D' | 'DX' {
@@ -369,7 +377,7 @@ function updateRuler(editor = window.activeTextEditor) {
                     editor.setDecorations(notCurrentArea, decorations);
 
                     const repaintNonce = ((lineNumber + positionIndex + overlayRevision) % 2) === 0 ? `\u200B` : `\u200C`;
-                    const fillText = `${`█`.repeat(240)}${repaintNonce}`;
+                    const fillText = `${`\u00A0`.repeat(240)}${repaintNonce}`;
                     const outlineText = `${positionsData.outline}${repaintNonce}`;
                     const rulerStart = sourceDatesVisible() ? 7 : 0;
 
@@ -380,7 +388,7 @@ function updateRuler(editor = window.activeTextEditor) {
                                 contentText: fillText,
                                 color: new ThemeColor(`editor.background`),
                                 backgroundColor: new ThemeColor(`editor.background`),
-                                textDecoration: `none; position: absolute; top: -1.4em; opacity: 1; white-space: pre; display: inline-block; line-height: 1.4em;`,
+                                textDecoration: `none; position: absolute; top: -1.4em; z-index: 0; opacity: 1; white-space: pre; display: inline-block; line-height: 1.4em; pointer-events: none;`,
                             }
                         }
                     }]);
@@ -388,10 +396,10 @@ function updateRuler(editor = window.activeTextEditor) {
                     editor.setDecorations(outlineBar, [{
                         range: new Range(lineNumber, rulerStart, lineNumber, rulerStart),
                         renderOptions: {
-                            before: {
+                            after: {
                                 contentText: outlineText,
-                                color: new ThemeColor(`editorLineNumber.foreground`),
-                                textDecoration: `none; position: absolute; top: -1.4em; opacity: 1; white-space: pre; display: inline-block; line-height: 1.4em;`,
+                                color: new ThemeColor(`editor.foreground`),
+                                textDecoration: `none; position: absolute; top: -1.4em; z-index: 1; opacity: 1; white-space: pre; display: inline-block; line-height: 1.4em; pointer-events: none;`,
                             }
                         }
                     }]);

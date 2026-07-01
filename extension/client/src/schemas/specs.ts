@@ -7,6 +7,7 @@ export const SpecRulers: { [spec: string]: string } = {
   D: `.....DName+++++++++++ETDsFrom+++To/L+++IDc.Keywords+++++++++++++++++++++++++++++`,
   DX: `.....DName++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++`,
   F: `.....FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords+++++++++++++++++++++++++++++`,
+  H: `.....HKeywords++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++`,
   I: `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
   IC: `.....I.........And..RiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
   IJ: `.....I.......................Dc.FrmPos1+Pos2+NCCField+++++++++L1M1FrPlMnZr......`,
@@ -217,6 +218,9 @@ export const specs: { [spec: string]: SpecFieldDef[] } = {
     { start: 34, end: 34, name: `File Organization`, id: `fileOrg` },
     { start: 35, end: 41, name: `Device`, id: `device` },
     { start: 43, end: 79, name: `Keywords`, id: `keywords` }
+  ],
+  H: [
+    { start: 6, end: 79, name: `Keywords`, id: `keywords` }
   ],
   // RPG IV Input spec variants (record/field and program/external forms)
   I: [
