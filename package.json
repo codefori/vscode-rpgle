@@ -65,24 +65,6 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Enable bracket/block highlighting and hover information in RPGLE editors."
-				},
-				"vscode-rpgle.bracketMismatchStyle": {
-					"type": "string",
-					"default": "box",
-					"enum": [
-						"box",
-						"underline"
-					],
-					"enumDescriptions": [
-						"Display unmatched keywords with red background box",
-						"Display unmatched keywords with red wavy underline only"
-					],
-					"description": "Visual style for highlighting unmatched bracket/block keywords."
-				},
-				"vscode-rpgle.bracketJumpEnabled": {
-					"type": "boolean",
-					"default": true,
-					"description": "Enable jumping between matching bracket/block keywords with Ctrl+Shift+\\ (or Cmd+Shift+\\ on macOS)."
 				}
 			}
 		},
@@ -154,11 +136,6 @@
 				"command": "vscode-rpgle.toggleComment",
 				"title": "Comment (toggle)",
 				"category": "RPGLE"
-			},
-			{
-				"command": "vscode-rpgle.jumpToMatchingBlock",
-				"title": "Jump to Matching Block",
-				"category": "RPGLE"
 			}
 		],
 		"keybindings": [
@@ -191,12 +168,6 @@
 				"key": "ctrl+/",
 				"mac": "cmd+/",
 				"when": "editorTextFocus && (editorLangId == 'rpg' || editorLangId == 'rpgle' || editorLangId == 'sqlrpgle' || editorLangId == 'rpginc' || editorLangId == 'rpgleinc')"
-			},
-			{
-				"command": "vscode-rpgle.jumpToMatchingBlock",
-				"key": "ctrl+shift+\\",
-				"mac": "cmd+shift+\\",
-				"when": "editorTextFocus && editorLangId == 'rpgle'"
 			}
 		],
 		"menus": {
