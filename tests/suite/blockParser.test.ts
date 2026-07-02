@@ -340,5 +340,30 @@ end-proc;`;
       // line 3 ("  if not bar();") is plain procedure code, not a DS subfield
       expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 3))).toBe(false);
     });
+
+    // Locks in the behaviour PR #547 introduced:
+    // keyword-like tokens at the start of a line inside an open data structure
+    // are subfield names, so the scan must report those lines as inside a DS.
+    it('is true for keyword-named subfields inside an open dcl-ds block', () => {
+      const text = `dcl-ds myds qualified;
+  end pointer;
+  endif pointer;
+  for int(10);
+end-ds;`;
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 1))).toBe(true); // end
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 2))).toBe(true); // endif
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 3))).toBe(true); // for
+    });
+
+    it('tracks nesting so subfields resolve to the correct enclosing DS', () => {
+      const text = `dcl-ds outer qualified;
+  dcl-ds inner;
+    end char(5);
+  end-ds;
+  endif char(5);
+end-ds;`;
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 2))).toBe(true); // inside inner
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 4))).toBe(true); // still inside outer
+    });
   });
 });
