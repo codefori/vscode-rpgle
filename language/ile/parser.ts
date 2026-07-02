@@ -291,15 +291,21 @@ export default class Parser {
       const cleanBase = baseFileUri.split(`?`)[0];
       const slashIndex = Math.max(cleanBase.lastIndexOf(`/`), cleanBase.lastIndexOf(`\\`));
       const baseDir = slashIndex >= 0 ? cleanBase.substring(0, slashIndex) : cleanBase;
-      return `${baseDir}::${includePath.toLowerCase()}`;
+      const includeLiteral = includePath.trim().replace(/^['"]|['"]$/g, ``);
+      return `${baseDir}::${includeLiteral}`;
     };
 
     const fetchIncludeOnce = async (baseFileUri: string, includePath: string): Promise<IncludeFetchResult> => {
+      const includeFetcher = this.includeFileFetch;
+      if (!includeFetcher) {
+        return {found: false};
+      }
+
       const key = getIncludeFetchKey(baseFileUri, includePath);
       let inFlight = includeFetchCache.get(key);
 
       if (!inFlight) {
-        inFlight = this.includeFileFetch(baseFileUri, includePath);
+        inFlight = includeFetcher(baseFileUri, includePath);
         includeFetchCache.set(key, inFlight);
       }
 
