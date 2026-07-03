@@ -81,26 +81,41 @@ function getInputRulerKey(line: string): 'I' | 'IC' | 'IJ' | 'IX' | 'JX' {
 }
 
 
-function getOutputRulerKey(line: string): 'OX' | 'OC' | 'O' | 'OP' {
+function getOutputRulerKey(line: string): 'O' | 'OA' | 'OC' | 'OD' | 'OX' {
     const andOrKeyword = getCol(line, 16, 20).trim().toUpperCase();
     if (andOrKeyword === `AND` || andOrKeyword === `OR`) {
         return `OC`;
     }
 
     const filename = getCol(line, 7, 16).trim();
+    const recordTag = getCol(line, 7, 7).trim().toUpperCase();
     const continueType = getCol(line, 16, 18).trim().toLowerCase();
-    const cyleTime = getCol(line, 17, 17).trim().toLowerCase();
+    const addKeyword = getCol(line, 18, 20).trim().toUpperCase();
+    const cycleTime = getCol(line, 17, 17).trim().toLowerCase();
     const fieldName = getCol(line, 30, 43).trim();
     const endPos = getCol(line, 47, 51).trim();
     const constant = getCol(line, 53, 80).trim();
 
     if (continueType == 'and' || continueType == 'or') return `OC`;
-    if (filename || (!filename && cyleTime)) return `O`;
-    if (endPos && (fieldName || constant)) return `OP`;
-    if (!fieldName && constant) return `OP`;
-    if (fieldName) return `OP`;
 
-    return `OX`;
+    // External format lines are keyed by an R marker in column 7.
+    if (recordTag === `R`) return `OX`;
+
+    if (filename) {
+        if (addKeyword === `ADD`) return `OA`;
+
+        // File-level header lines (for example OQPRINT ... E) should remain O,
+        // even if comment text appears later in the line.
+        return `O`;
+    }
+
+    if (endPos && (fieldName || constant)) return `OD`;
+    if (!fieldName && constant) return `OD`;
+    if (fieldName) return `OD`;
+
+    if (cycleTime) return `O`;
+
+    return `OD`;
 }
 
 function getDefinitionRulerKey(line: string): 'D' | 'DX' {

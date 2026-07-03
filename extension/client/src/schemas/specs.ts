@@ -13,10 +13,11 @@ export const SpecRulers: { [spec: string]: string } = {
   IJ: `.....I.......................Dc.FrmPos1+Pos2+NCCField+++++++++L1M1FrPlMnZr......`,
   IX: `.....IRcdname++++...Ri..........................................................`,
   JX: `.....I..............Ext-Field+..................Field+++++++++L1M1..PlMnZr......`,
-  OX: `.....ORcdname+++DAddN01N02N03Excnam++++.........................................`,
-  OC: `.....O.........And..N01N02N03Field+++++++++.B...................................`,
   O: `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.............................`,
-  OP: `.....O..............N01N02N03Field+++++++++YB.End++PConstant/editword/DTformat++`,
+  OA: `.....OFilename++DAddN01N02N03Excnam++++.........................................`,
+  OC: `.....O.........And..N01N02N03...................................................`,
+  OD: `.....O..............N01N02N03Field+++++++++YB.End++PConstant/editword/DTformat++`,
+  OX: `.....ORcdname+++DAddN01N02N03Excnam++++.........................................`,
   P: `.....PName+++++++++++..T...................Keywords+++++++++++++++++++++++++++++`
   // E, H specs are OPM-only - see opmSpecRulers below
 }
