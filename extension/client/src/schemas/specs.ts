@@ -497,5 +497,5 @@ export const opmSpecRulers: { [spec: string]: string } = {
   L: `.....LFilename066Fl060Ol..................................................`,
   I: `.....IFilenameSqNORiPos1NCCPos2NCCPos3NCC.PFromTo++DField+L1M1FrPlMnZr....`,
   C: `.....CL0N01N02N03Factor1+++OpcdeFactor2+++Result+++LenDXHiLoEq............`,
-  O: `.....OFilename+DTAAIndIndIndField++++EBPAAADCONSTANT/EDITWORD+++++++......`
+  O: `.....OName++++DFBASbSaN01N02N03Field+YBEnd+PConstant/editword+++++++++....`
 };
