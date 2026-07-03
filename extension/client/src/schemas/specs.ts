@@ -10,7 +10,7 @@ export const SpecRulers: { [spec: string]: string } = {
   H: `.....HKeywords++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++`,
   I: `.....IFilename++SqNORiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
   IC: `.....I.........And..RiPos1+NCCPos2+NCCPos3+NCCDcField+++++++++L1M1FrPlMnZr......`,
-  IJ: `.....I.......................Dc.FrmPos1+Pos2+NCCField+++++++++L1M1FrPlMnZr......`,
+  IJ: `.....I........................Fmt+SPFrom+To+++DcField+++++++++L1M1FrPlMnZr......`,
   IX: `.....IRcdname++++...Ri..........................................................`,
   JX: `.....I..............Ext-Field+..................Field+++++++++L1M1..PlMnZr......`,
   O: `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.............................`,
