@@ -34,7 +34,7 @@ dcl-proc proc1;
     end-ds;
     dcl-ds myds3 likeds(outputData_t);
     dcl-ds myds4;
-     field5 char(10);
+      field5 char(10);
     end-ds;
   end-ds;
 
@@ -136,5 +136,32 @@ dcl-proc proc9_comment_close;
   dcl-ds shouldBeBlock;  // end-ds in comment
     field1 int(10);
   end-ds;
+
+end-proc;
+
+dcl-proc proc10_self_closing;
+  dcl-pi *n;
+  end-pi;
+
+  // Self-closing dcl-ds on one line
+  dcl-ds QCUSTCDT_t extname('QIWS/QCUSTCDT':*all) qualified template inz end-ds;
+
+  dcl-ds data10 likeds(QCUSTCDT_t);
+
+  dcl-ds shouldBeBlock;
+    field1 int(10);
+  end-ds;
+
+  // Test that the block is closed properly
+  if field1 = 0;
+    field1 = 1;
+  endif;
+
+  // Test that the block is closed properly
+  if data10.CUSNUM = 938472;
+    field1 = 2;
+  else;
+    field1 = 3;
+  endif;
 
 end-proc;
