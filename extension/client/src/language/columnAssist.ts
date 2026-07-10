@@ -23,14 +23,6 @@ let overlayRevision = 0;
 
 import { SpecFieldDef, SpecFieldValue, SpecRulers, specs, opmSpecs, opmSpecRulers } from '../schemas/specs';
 
-function sourceDatesVisible(): boolean {
-    const codeForIbmiConfig = workspace.getConfiguration(`codeforibmi`);
-    const vscodeIbmiConfig = workspace.getConfiguration(`vscode-ibmi`);
-
-    return codeForIbmiConfig.get<boolean>(`enableSourceDates`) === true
-        || vscodeIbmiConfig.get<boolean>(`enableSourceDates`) === true;
-}
-
 function documentType(document: TextDocument): 'opm' | 'ile' | undefined {
     const uri = document.uri.toString();
 
@@ -81,39 +73,27 @@ function getInputRulerKey(line: string): 'I' | 'IC' | 'IJ' | 'IX' | 'JX' {
 }
 
 
-function getOutputRulerKey(line: string): 'O' | 'OA' | 'OC' | 'OD' | 'OX' {
-    const andOrKeyword = getCol(line, 16, 20).trim().toUpperCase();
-    if (andOrKeyword === `AND` || andOrKeyword === `OR`) {
-        return `OC`;
-    }
-
-    const filename = getCol(line, 7, 16).trim();
-    const recordTag = getCol(line, 7, 7).trim().toUpperCase();
-    const continueType = getCol(line, 16, 18).trim().toLowerCase();
-    const addKeyword = getCol(line, 18, 20).trim().toUpperCase();
-    const cycleTime = getCol(line, 17, 17).trim().toLowerCase();
+function getOutputRulerKey(line: string): 'O' | 'OC' | 'OD' | 'OP' {
+    const shortFilename = getCol(line, 7, 15).trim();
+    const andOrContinuation = getCol(line, 16, 18).trim().toLowerCase(); // 'and' or 'or'
+    const addKeyword = getCol(line, 18, 20).trim().toUpperCase();        // 'ADD' or 'DEL'
+    const cycleTime = getCol(line, 17, 17).trim();                       // D/H/T/E type indicator
     const fieldName = getCol(line, 30, 43).trim();
     const endPos = getCol(line, 47, 51).trim();
     const constant = getCol(line, 53, 80).trim();
 
-    if (continueType == 'and' || continueType == 'or') return `OC`;
+    if (andOrContinuation === 'and' || andOrContinuation === 'or') return `OC`;
 
-    // External format lines are keyed by an R marker in column 7.
-    if (recordTag === `R`) return `OX`;
-
-    if (filename) {
-        if (addKeyword === `ADD`) return `OA`;
-
-        // File-level header lines (for example OQPRINT ... E) should remain O,
-        // even if comment text appears later in the line.
-        return `O`;
+    if (!shortFilename) {
+        // Blank filename area — field output or plain continuation line.
+        // fieldName alone is sufficient for externally-described output (no explicit endPos needed).
+        if (fieldName || constant || endPos) return `OP`;
+    } else {
+        // Has filename/record-name in cols 7-15
+        if (cycleTime && (addKeyword === 'ADD' || addKeyword === 'DEL')) return `OD`;
+        if (cycleTime) return `O`;
+        if (endPos && (fieldName || constant)) return `OP`;
     }
-
-    if (endPos && (fieldName || constant)) return `OD`;
-    if (!fieldName && constant) return `OD`;
-    if (fieldName) return `OD`;
-
-    if (cycleTime) return `O`;
 
     return `OD`;
 }
@@ -211,13 +191,13 @@ const getAreasForLine = (line: string, index: number, languageId: string = 'rpgl
         return {
             specification,
             active,
-            outline: rulerDefinitions[rulerKey] || rulerDefinitions[specKey] || rulerDefinitions[specLetter],
+            outline: rulerDefinitions[rulerKey] || rulerDefinitions[specLetter],
         };
-    } else if (rulerDefinitions[rulerKey] || rulerDefinitions[specKey] || rulerDefinitions[specLetter]) {
+    } else if (rulerDefinitions[rulerKey] || rulerDefinitions[specLetter]) {
         return {
             specification: [] as SpecFieldDef[],
             active: -1,
-            outline: rulerDefinitions[rulerKey] || rulerDefinitions[specKey] || rulerDefinitions[specLetter],
+            outline: rulerDefinitions[rulerKey] || rulerDefinitions[specLetter],
         };
     }
 };
@@ -394,10 +374,9 @@ function updateRuler(editor = window.activeTextEditor) {
                     const repaintNonce = ((lineNumber + positionIndex + overlayRevision) % 2) === 0 ? `\u200B` : `\u200C`;
                     const fillText = `${`\u00A0`.repeat(240)}${repaintNonce}`;
                     const outlineText = `${positionsData.outline}${repaintNonce}`;
-                    const rulerStart = sourceDatesVisible() ? 7 : 0;
 
                     editor.setDecorations(outlineBarFill, [{
-                        range: new Range(lineNumber, rulerStart, lineNumber, rulerStart),
+                        range: new Range(lineNumber, 0, lineNumber, 0),
                         renderOptions: {
                             before: {
                                 contentText: fillText,
@@ -409,11 +388,11 @@ function updateRuler(editor = window.activeTextEditor) {
                     }]);
 
                     editor.setDecorations(outlineBar, [{
-                        range: new Range(lineNumber, rulerStart, lineNumber, rulerStart),
+                        range: new Range(lineNumber, 0, lineNumber, 0),
                         renderOptions: {
                             after: {
                                 contentText: outlineText,
-                                color: new ThemeColor(`editor.foreground`),
+                                color: new ThemeColor(`editorLineNumber.foreground`),
                                 textDecoration: `none; position: absolute; top: -1.4em; z-index: 1; opacity: 1; white-space: pre; display: inline-block; line-height: 1.4em; pointer-events: none;`,
                             }
                         }
