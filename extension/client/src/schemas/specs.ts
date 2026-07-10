@@ -13,7 +13,7 @@ export const SpecRulers: { [spec: string]: string } = {
   IJ: `.....I........................Fmt+SPFrom+To+++DcField+++++++++L1M1FrPlMnZr......`,
   IX: `.....IRcdname++++...Ri..........................................................`,
   JX: `.....I..............Ext-Field+..................Field+++++++++L1M1..PlMnZr......`,
-  O: `.....OFilename++DF..N01N02N03Excnam++++B++A++Sb+Sa+.............................`,
+  O: `.....OFilename++DF..N01N02N03Excnam++++SpBSpASkBSkA.............................`,
   OA: `.....OFilename++DAddN01N02N03Excnam++++.........................................`,
   OC: `.....O.........And..N01N02N03...................................................`,
   OD: `.....O..............N01N02N03Field+++++++++YB.End++PConstant/editword/DTformat++`,
