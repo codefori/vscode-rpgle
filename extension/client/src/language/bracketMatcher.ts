@@ -407,8 +407,8 @@ function isVariableContext(text: string, matchOffset: number, matchLength: numbe
     // is typically a subfield name (for example: "end pointer;", "endif pointer;").
     const afterTrimmed = afterKeyword.trimStart();
     if (afterTrimmed.length > 0 &&
-        afterTrimmed[0] !== ';' &&
-        isInsideOpenDclDsBlock(text, lineStart)) {
+      afterTrimmed[0] !== ';' &&
+      isInsideOpenDclDsBlock(text, lineStart)) {
       return true;
     }
   }
@@ -876,7 +876,7 @@ function findMatchingOpenForAnyClosing(
         // If not, it's a mismatch - pop anyway so subsequent closers can match correctly
         const topPair = stack[stack.length - 1].pair;
         const isMatch = (topPair === closerPair ||
-                        (topPair.close.includes(word) && closerPair.close.includes(word)));
+          (topPair.close.includes(word) && closerPair.close.includes(word)));
 
         stack.pop();
 
@@ -1144,6 +1144,84 @@ function findMatchingOpen(
   }
 
   return -1;
+}
+
+export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
+  const jumpCommand = vscode.commands.registerTextEditorCommand(
+    'vscode-rpgle.jumpToMatchingBlock',
+    (editor: vscode.TextEditor) => {
+      const document = editor.document;
+      if (document.languageId !== 'rpgle') return;
+
+      const position = editor.selection.active;
+      const text = document.getText();
+      const wordPattern = /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/;
+
+      const allMatches = findAllMatches(text, document);
+      if (allMatches.length === 0) return;
+
+      // Try cursor word first, then fall back to the first block keyword on the current line.
+      let matchIndex = -1;
+      let word = '';
+
+      const wordRange = document.getWordRangeAtPosition(position, wordPattern);
+      if (wordRange) {
+        const offset = document.offsetAt(wordRange.start);
+        const idx = allMatches.findIndex(match => match.offset === offset);
+        if (idx !== -1) {
+          matchIndex = idx;
+          word = allMatches[idx].word;
+        }
+      }
+
+      if (matchIndex === -1) {
+        const lineStart = document.offsetAt(new vscode.Position(position.line, 0));
+        const lineEnd = document.offsetAt(new vscode.Position(position.line + 1, 0));
+
+        for (let i = 0; i < allMatches.length; i++) {
+          if (allMatches[i].offset >= lineStart && allMatches[i].offset < lineEnd) {
+            matchIndex = i;
+            word = allMatches[i].word;
+            break;
+          }
+        }
+      }
+
+      if (matchIndex === -1) return;
+
+      let matchingPair: BracketPair | undefined;
+      const isClosingKeyword = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(word));
+
+      if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
+        const openIndex = findMatchingOpenForClosing(text, allMatches, matchIndex, word);
+        if (openIndex !== -1) {
+          const openWord = allMatches[openIndex].word;
+          matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
+        }
+      } else {
+        matchingPair = findMatchingPair(word);
+      }
+
+      if (!matchingPair) return;
+
+      const blockIndices = findBlockIndices(text, allMatches, matchIndex, matchingPair);
+      if (!blockIndices || blockIndices.length < 2) return;
+
+      // Jump opener -> closer (last index), closer/middle -> opener (first index).
+      const isOpen = matchIndex === blockIndices[0];
+      const targetIndex = isOpen ? blockIndices[blockIndices.length - 1] : blockIndices[0];
+      const targetMatch = allMatches[targetIndex];
+      if (!targetMatch) return;
+
+      const targetPos = document.positionAt(targetMatch.offset);
+      const targetRange = new vscode.Range(targetPos, document.positionAt(targetMatch.offset + targetMatch.length));
+
+      editor.selection = new vscode.Selection(targetPos, targetPos);
+      editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    }
+  );
+
+  context.subscriptions.push(jumpCommand);
 }
 
 export function deactivateBracketMatcher() {
