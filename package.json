@@ -136,6 +136,11 @@
 				"command": "vscode-rpgle.toggleComment",
 				"title": "Comment (toggle)",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.jumpToMatchingBlock",
+				"title": "Jump to Matching Block",
+				"category": "RPGLE"
 			}
 		],
 		"keybindings": [
@@ -168,6 +173,12 @@
 				"key": "ctrl+/",
 				"mac": "cmd+/",
 				"when": "editorTextFocus && (editorLangId == 'rpg' || editorLangId == 'rpgle' || editorLangId == 'sqlrpgle' || editorLangId == 'rpginc' || editorLangId == 'rpgleinc')"
+			},
+			{
+				"command": "vscode-rpgle.jumpToMatchingBlock",
+				"key": "ctrl+shift+\\",
+				"mac": "cmd+shift+\\",
+				"when": "editorTextFocus && editorLangId == 'rpgle'"
 			}
 		],
 		"menus": {

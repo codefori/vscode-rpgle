@@ -67,7 +67,7 @@ function createErrorDecorationType(): vscode.TextEditorDecorationType {
   }
 }
 
-let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
+let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; condition: string } | undefined;
 let currentErrorRanges: { range: vscode.Range; keyword: string }[] = [];
 
 // Store disposables for cleanup
@@ -476,11 +476,10 @@ function updateDecorationsImpl(editor: vscode.TextEditor) {
     editor.setDecorations(decorationType, validRanges);
 
     if (validRanges.length > 0) {
-      const blockType = getBlockTypeName(matchingPair);
       const startLine = relatedRanges[0].start.line;
       const endLine = relatedRanges[relatedRanges.length - 1].start.line;
       const condition = extractBlockCondition(document, startLine);
-      currentBlockInfo = { startLine, endLine, ranges: relatedRanges, blockType, condition };
+      currentBlockInfo = { startLine, endLine, ranges: relatedRanges, condition };
     } else {
       currentBlockInfo = undefined;
     }
@@ -517,11 +516,10 @@ function updateDecorationsImpl(editor: vscode.TextEditor) {
     editor.setDecorations(decorationType, validRanges.length > 0 ? validRanges : []);
 
     if (validRanges.length > 0) {
-      const blockType = getBlockTypeName(matchingPair);
       const startLine = relatedRanges[0].start.line;
       const endLine = relatedRanges[relatedRanges.length - 1].start.line;
       const condition = extractBlockCondition(document, startLine);
-      currentBlockInfo = { startLine, endLine, ranges: relatedRanges, blockType, condition };
+      currentBlockInfo = { startLine, endLine, ranges: relatedRanges, condition };
     } else {
       currentBlockInfo = undefined;
     }
@@ -532,29 +530,6 @@ function findMatchingPair(word: string): BracketPair | undefined {
   return RPGLE_BLOCK_PAIRS.find(pair =>
     pair.open.includes(word) || pair.close.includes(word) || (pair.middle && pair.middle.includes(word))
   );
-}
-
-// Get human-readable block type name
-function getBlockTypeName(pair: BracketPair): string {
-  // Determine block type based on opening keyword
-  const openWord = pair.open[0].toUpperCase();
-
-  const typeMap: { [key: string]: string } = {
-    'IF': 'IF',
-    'DOW': 'DOW',
-    'DOU': 'DOU',
-    'FOR': 'FOR',
-    'SELECT': 'SELECT',
-    'MONITOR': 'MONITOR',
-    'DCL-PROC': 'PROCEDURE',
-    'DCL-DS': 'DATA STRUCTURE',
-    'DCL-PR': 'PROTOTYPE',
-    'DCL-PI': 'PROCEDURE INTERFACE',
-    'DCL-ENUM': 'ENUMERATION',
-    'BEGSR': 'SUBROUTINE'
-  };
-
-  return typeMap[openWord] || openWord;
 }
 
 function extractBlockCondition(document: vscode.TextDocument, lineNumber: number): string {
@@ -800,42 +775,6 @@ function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   return isSingleLineDclDs(lineContent);
 }
 
-function hasPriorLikedsOrLikerecDclDs(
-  text: string,
-  matches: { offset: number; word: string; length: number }[],
-  closeIndex: number
-): boolean {
-  for (let i = closeIndex - 1; i >= 0; i--) {
-    const word = matches[i].word;
-
-    // Avoid crossing procedure boundaries when looking for a related declaration.
-    if (word === 'dcl-proc' || word === 'end-proc') {
-      break;
-    }
-
-    if (word === 'dcl-ds') {
-      if (hasInlineEndDsOnDclDsLine(text, matches[i].offset)) {
-        continue;
-      }
-
-      if (isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-// Helper function specifically for finding the opening block for an END keyword
-function findMatchingOpenForEnd(
-  text: string,
-  matches: { offset: number; word: string; length: number }[],
-  endIndex: number
-): number {
-  return findMatchingOpenForClosing(text, matches, endIndex, 'end');
-}
-
 // Helper function for finding the opening block for any closing keyword
 function findMatchingOpenForClosing(
   text: string,
@@ -968,63 +907,6 @@ function findAllMismatchedClosingKeywords(
   }
 
   return errorRanges;
-}
-
-// New function that validates block matching and returns separate lists for valid and error ranges
-function findAllRelatedKeywordsWithValidation(
-  document: vscode.TextDocument,
-  startRange: vscode.Range,
-  pair: BracketPair
-): { validRanges: vscode.Range[]; errorRanges: vscode.Range[] } {
-  const text = document.getText();
-  const startOffset = document.offsetAt(startRange.start);
-
-  // Use findAllMatches to get ALL keywords in the document
-  const allMatches = findAllMatches(text, document);
-
-  // Find index of current match
-  let currentIndex = -1;
-  for (let i = 0; i < allMatches.length; i++) {
-    if (allMatches[i].offset === startOffset) {
-      currentIndex = i;
-      break;
-    }
-  }
-
-  if (currentIndex === -1) return { validRanges: [], errorRanges: [] };
-
-  // Find block containing current keyword
-  const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
-  if (!blockIndices) return { validRanges: [startRange], errorRanges: [] };
-
-  // Validate all closing keywords in the block
-  const validRanges: vscode.Range[] = [];
-  const errorRanges: vscode.Range[] = [];
-
-  for (const idx of blockIndices) {
-    const m = allMatches[idx];
-    const start = document.positionAt(m.offset);
-    const end = document.positionAt(m.offset + m.length);
-    const range = new vscode.Range(start, end);
-
-    // Check if this is a closing keyword
-    const isClosing = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(m.word));
-
-    if (isClosing) {
-      // Validate that this closing keyword matches its opening keyword
-      const isValid = validateClosingKeyword(document.getText(), allMatches, idx);
-      if (isValid) {
-        validRanges.push(range);
-      } else {
-        errorRanges.push(range);
-      }
-    } else {
-      // Opening and middle keywords are always valid
-      validRanges.push(range);
-    }
-  }
-
-  return { validRanges, errorRanges };
 }
 
 // Validate that a closing keyword matches its corresponding opening keyword
