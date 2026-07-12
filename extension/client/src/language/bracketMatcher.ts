@@ -5,8 +5,23 @@ import * as rpgle from '../rpgtools-comment-helpers';
 
 type BracketPair = BlockPair;
 
-// Configuration key for bracket highlighting
+// Configuration keys for bracket matching features
 const CONFIG_KEY = 'bracketHighlightingEnabled';
+const MISMATCH_STYLE_KEY = 'bracketMismatchStyle';
+const JUMP_ENABLED_KEY = 'bracketJumpEnabled';
+
+// Cache infrastructure for document analysis
+interface CacheEntry {
+  version: number;
+  text: string;
+  matches: BlockMatch[];
+  errorRanges: { range: vscode.Range; keyword: string }[];
+  // O(1) lookup maps built at preload time so cursor moves never re-scan
+  matchIndexByOffset: Map<number, number>;     // offset → index in matches[]
+  blockIndicesByMatch: Map<number, number[]>;  // match index → block indices
+}
+
+const analysisCache = new Map<string, CacheEntry>();
 
 // Comprehensive list of SQL keywords that might conflict with RPG keywords
 // These keywords will be excluded from bracket matching when inside EXEC SQL blocks
@@ -26,31 +41,58 @@ const SQL_KEYWORDS = [
   'call', 'return', 'exit', 'continue'
 ];
 
-// Highlight style for matched brackets
 let decorationType: vscode.TextEditorDecorationType | undefined;
 
 // Highlight style for mismatched closing keywords (errors)
 let errorDecorationType: vscode.TextEditorDecorationType | undefined;
 
-let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; blockType: string; condition: string } | undefined;
+// Factory function to create error decoration type based on setting
+function createErrorDecorationType(): vscode.TextEditorDecorationType {
+  const config = vscode.workspace.getConfiguration('vscode-rpgle');
+  const style = config.get<string>(MISMATCH_STYLE_KEY, 'box');
+
+  if (style === 'underline') {
+    return vscode.window.createTextEditorDecorationType({
+      textDecoration: 'wavy underline red'
+    });
+  } else {
+    // Default 'box' style
+    return vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
+      border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
+      borderRadius: '3px',
+      fontWeight: 'bold',
+      textDecoration: 'wavy underline red'
+    });
+  }
+}
+
+let currentBlockInfo: { startLine: number; endLine: number; ranges: vscode.Range[]; condition: string } | undefined;
 let currentErrorRanges: { range: vscode.Range; keyword: string }[] = [];
 
 // Store disposables for cleanup
 let bracketMatcherDisposables: vscode.Disposable[] = [];
+let bracketMatcherActive = false;
 
 // Register bracket matching functionality
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
   // Listen for configuration changes (always register this listener)
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-    if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY)) {
+    if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY) ||
+      e.affectsConfiguration('vscode-rpgle.' + JUMP_ENABLED_KEY)) {
       const newConfig = vscode.workspace.getConfiguration('vscode-rpgle');
-      const newEnabled = newConfig.get<boolean>(CONFIG_KEY, true);
+      const highlightingEnabled = newConfig.get<boolean>(CONFIG_KEY, true);
+      const jumpEnabled = newConfig.get<boolean>(JUMP_ENABLED_KEY, true);
 
-      if (!newEnabled) {
-        // Feature disabled - dispose and clear decorations
+      if (!highlightingEnabled && !jumpEnabled) {
+        // Both disabled — dispose everything and clear cache
+        disposeBracketMatcher();
+        analysisCache.clear();
+      } else if (!highlightingEnabled) {
+        // Highlighting off, jump still on — dispose decorations but keep cache
         disposeBracketMatcher();
       } else {
-        // Feature enabled - activate if not already active
+        // Highlighting on — activate if not already active
         if (bracketMatcherDisposables.length === 0) {
           activateBracketMatcher();
         }
@@ -61,9 +103,11 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
 
   // Check if feature is enabled initially
   const config = vscode.workspace.getConfiguration('vscode-rpgle');
-  const isEnabled = config.get<boolean>(CONFIG_KEY, true);
+  const highlightingEnabled = config.get<boolean>(CONFIG_KEY, true);
+  const jumpEnabled = config.get<boolean>(JUMP_ENABLED_KEY, true);
 
-  if (isEnabled) {
+  // Activate decoration/listener infrastructure only when at least one feature needs it
+  if (highlightingEnabled || jumpEnabled) {
     activateBracketMatcher();
   }
 }
@@ -82,14 +126,33 @@ function activateBracketMatcher() {
   }
 
   if (!errorDecorationType) {
-    errorDecorationType = vscode.window.createTextEditorDecorationType({
-      backgroundColor: 'rgba(255, 0, 0, 0.3)', // Light red with transparency
-      border: '2px solid rgba(255, 0, 0, 0.8)', // Red border
-      borderRadius: '3px',
-      fontWeight: 'bold',
-      textDecoration: 'wavy underline red'
-    });
+    errorDecorationType = createErrorDecorationType();
   }
+
+  // Listen for mismatch style configuration changes
+  const styleChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+    if (e.affectsConfiguration('vscode-rpgle.' + MISMATCH_STYLE_KEY)) {
+      // Dispose old decoration type and create new one
+      if (errorDecorationType) {
+        errorDecorationType.dispose();
+        errorDecorationType = createErrorDecorationType();
+      }
+      // Update all visible editors
+      vscode.window.visibleTextEditors.forEach(editor => {
+        if (editor.document.languageId === 'rpgle') {
+          updateDecorations(editor);
+        }
+      });
+    }
+  });
+  bracketMatcherDisposables.push(styleChangeDisposable);
+
+  // Listen for document changes to invalidate cache
+  const docChangeDisposable = vscode.workspace.onDidChangeTextDocument(event => {
+    const docUri = event.document.uri.toString();
+    analysisCache.delete(docUri);
+  });
+  bracketMatcherDisposables.push(docChangeDisposable);
 
   let timeout: any = undefined;
 
@@ -101,10 +164,20 @@ function activateBracketMatcher() {
         if (errorInfo.range.contains(position)) {
           const keyword = errorInfo.keyword.toUpperCase();
           const markdown = new vscode.MarkdownString();
-          markdown.appendText(`⚠️ Unmatched ${keyword} statement\n\n`);
-          markdown.appendText('This ENDxx keyword has no matching opening block.\n\n');
-          markdown.appendText('If it is a DS subfield: use DCL-SUBF\n\n');
-          markdown.appendText('If it is a parameter: use DCL-PARM');
+
+          // Bold first line, while keeping keyword safely as plain text.
+          markdown.appendMarkdown('**Unmatched ');
+          markdown.appendText(keyword);
+          markdown.appendMarkdown(' statement**\n');
+          markdown.appendMarkdown(
+            [
+              'This ENDxx keyword has no matching opening block.',
+              '',
+              '- For DS subfields, use **DCL-SUBF**',
+              '- For parms, use **DCL-PARM**',
+              '- For DCL-DS with either **LIKEDS(...)** or **LIKEREC(...)** an END-DS is **not** allowed.'
+            ].join('\n')
+          );
           return new vscode.Hover(markdown);
         }
       }
@@ -133,22 +206,122 @@ function activateBracketMatcher() {
       if (timeout) {
         clearTimeout(timeout);
       }
-      timeout = setTimeout(() => updateDecorations(editor), 100);
+      timeout = setTimeout(() => { if (bracketMatcherActive) updateDecorations(editor); }, 100);
     }
   });
   bracketMatcherDisposables.push(selectionChangeDisposable);
 
   // Update decorations when active editor changes
   const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
-    if (editor && editor.document.languageId === 'rpgle') {
+    if (bracketMatcherActive && editor && editor.document.languageId === 'rpgle') {
       updateDecorations(editor);
     }
   });
   bracketMatcherDisposables.push(editorChangeDisposable);
 
-  // Initialize for current editor
-  if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
-    updateDecorations(vscode.window.activeTextEditor);
+  bracketMatcherActive = true;
+
+  // Initialize for current editor (defer off activation path)
+  setTimeout(() => {
+    if (!bracketMatcherActive) return;
+    try {
+      if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rpgle') {
+        updateDecorations(vscode.window.activeTextEditor);
+      }
+      // Preload bracket analysis for all currently visible RPGLE documents
+      vscode.window.visibleTextEditors.forEach(editor => {
+        if (bracketMatcherActive && editor.document.languageId === 'rpgle') {
+          preloadCache(editor.document);
+        }
+      });
+    } catch { /* swallow — extension host may be tearing down */ }
+  }, 0);
+
+  // Also preload when any new document is opened (deferred to avoid blocking)
+  const openDocDisposable = vscode.workspace.onDidOpenTextDocument(document => {
+    if (document.languageId === 'rpgle') {
+      setTimeout(() => { if (bracketMatcherActive) preloadCache(document); }, 0);
+    }
+  });
+  bracketMatcherDisposables.push(openDocDisposable);
+}
+
+function buildLookupMaps(
+  text: string,
+  matches: BlockMatch[]
+): { matchIndexByOffset: Map<number, number>; blockIndicesByMatch: Map<number, number[]> } {
+  const matchIndexByOffset = new Map<number, number>();
+  for (let i = 0; i < matches.length; i++) {
+    matchIndexByOffset.set(matches[i].offset, i);
+  }
+
+  const blockIndicesByMatch = new Map<number, number[]>();
+  for (let i = 0; i < matches.length; i++) {
+    if (blockIndicesByMatch.has(i)) continue; // already covered by an earlier block traversal
+
+    const matchWord = matches[i].word;
+    let pair: BracketPair | undefined;
+
+    const isClose = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(matchWord));
+    if (isClose && (matchWord === 'end' || matchWord === 'enddo')) {
+      const openIdx = findMatchingOpenForClosing(text, matches, i, matchWord);
+      if (openIdx !== -1) {
+        pair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(matches[openIdx].word));
+      }
+    } else {
+      pair = findMatchingPair(matchWord);
+    }
+
+    if (!pair) continue;
+
+    const indices = findBlockIndices(text, matches, i, pair);
+    if (!indices) continue;
+
+    // Store under every index in the block so opener, closer, and middles all resolve
+    for (const idx of indices) {
+      if (!blockIndicesByMatch.has(idx)) {
+        blockIndicesByMatch.set(idx, indices);
+      }
+    }
+  }
+
+  return { matchIndexByOffset, blockIndicesByMatch };
+}
+
+function preloadCache(document: vscode.TextDocument) {
+  const config = vscode.workspace.getConfiguration('vscode-rpgle');
+  const highlightingEnabled = config.get<boolean>(CONFIG_KEY, true);
+  const jumpEnabled = config.get<boolean>(JUMP_ENABLED_KEY, true);
+
+  // Matrix optimization: only build what the active settings actually need
+  // false/false → nothing needed, skip entirely
+  if (!highlightingEnabled && !jumpEnabled) return;
+
+  try {
+    const docUri = document.uri.toString();
+    if (analysisCache.has(docUri) && analysisCache.get(docUri)!.version === document.version) return;
+
+    const text = document.getText();
+    const matches = findAllMatches(text, document);
+
+    // true/true or true/false → full cache including errorRanges (O(n²) mismatch scan)
+    // false/true → partial cache: matches + maps only, skip errorRanges
+    const errorRanges = highlightingEnabled
+      ? findAllMismatchedClosingKeywords(document, matches)
+      : [];
+
+    const { matchIndexByOffset, blockIndicesByMatch } = buildLookupMaps(text, matches);
+
+    analysisCache.set(docUri, {
+      version: document.version,
+      text: text,
+      matches: matches,
+      errorRanges: errorRanges.map(e => ({ range: e.range, keyword: e.keyword })),
+      matchIndexByOffset,
+      blockIndicesByMatch
+    });
+  } catch {
+    // Silently ignore errors during background preload — cache miss on first use is acceptable
   }
 }
 
@@ -166,6 +339,8 @@ function disposeBracketMatcher() {
     }
   });
 
+  bracketMatcherActive = false;
+
   // Dispose all tracked disposables
   bracketMatcherDisposables.forEach(d => d.dispose());
   bracketMatcherDisposables = [];
@@ -175,6 +350,25 @@ function disposeBracketMatcher() {
 }
 
 function updateDecorations(editor: vscode.TextEditor) {
+  try {
+    updateDecorationsImpl(editor);
+  } catch (err) {
+    // Log to Debug Console so the root cause can be identified, then recover gracefully
+    console.error('[vscode-rpgle] bracketMatcher error in updateDecorations:', err);
+    try {
+      if (decorationType) editor.setDecorations(decorationType, []);
+      if (errorDecorationType) editor.setDecorations(errorDecorationType, []);
+    } catch { /* ignore */ }
+    currentBlockInfo = undefined;
+  }
+}
+
+function clearHighlight(editor: vscode.TextEditor) {
+  editor.setDecorations(decorationType!, []);
+  currentBlockInfo = undefined;
+}
+
+function updateDecorationsImpl(editor: vscode.TextEditor) {
   // Check if decorations are initialized (feature is enabled)
   if (!decorationType || !errorDecorationType) {
     return;
@@ -183,17 +377,35 @@ function updateDecorations(editor: vscode.TextEditor) {
   const document = editor.document;
   const position = editor.selection.active;
   const text = document.getText();
+  const docUri = document.uri.toString();
 
   // Never run selection-based block matching/decorations on comment lines.
   if (rpgle.isComment(document.lineAt(position.line).text, document)) {
-    editor.setDecorations(decorationType, []);
-    currentBlockInfo = undefined;
+    clearHighlight(editor);
     return;
   }
 
-  // First, find and highlight ALL mismatched closing keywords in the document
-  const allMatches = findAllMatches(text, document);
-  const allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
+  // Check cache for this document
+  let allMatches: BlockMatch[];
+  let allErrorRangesWithInfo: { range: vscode.Range; keyword: string }[];
+  let matchIndexByOffset: Map<number, number>;
+  let blockIndicesByMatch: Map<number, number[]>;
+
+  const cached = analysisCache.get(docUri);
+  if (cached && cached.version === document.version && cached.text === text) {
+    // Cache hit — pure O(1) lookups from here
+    allMatches = cached.matches;
+    allErrorRangesWithInfo = cached.errorRanges;
+    matchIndexByOffset = cached.matchIndexByOffset;
+    blockIndicesByMatch = cached.blockIndicesByMatch;
+  } else {
+    // Cache miss — compute matches, errors, and lookup maps for this render
+    allMatches = findAllMatches(text, document);
+    allErrorRangesWithInfo = findAllMismatchedClosingKeywords(document, allMatches);
+    ({ matchIndexByOffset, blockIndicesByMatch } = buildLookupMaps(text, allMatches));
+    if (bracketMatcherActive) setTimeout(() => preloadCache(document), 0);
+  }
+
   const allErrorRanges = allErrorRangesWithInfo.map(e => e.range);
 
   // Store error ranges for hover provider
@@ -211,8 +423,7 @@ function updateDecorations(editor: vscode.TextEditor) {
   // CCSID 297 (French): £, à, À
   const wordRange = document.getWordRangeAtPosition(position, /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/);
   if (!wordRange) {
-    editor.setDecorations(decorationType, []);
-    currentBlockInfo = undefined;
+    clearHighlight(editor);
     return;
   }
 
@@ -222,78 +433,51 @@ function updateDecorations(editor: vscode.TextEditor) {
   if (SQL_KEYWORDS.includes(word)) {
     const offset = document.offsetAt(position);
     if (isInSqlBlock(text, offset)) {
-      // Don't highlight SQL keywords inside SQL blocks
-      editor.setDecorations(decorationType, []);
-      currentBlockInfo = undefined;
+      clearHighlight(editor);
       return;
     }
   }
 
-  // Find matching bracket pair
-  // Special handling for closing keywords that can close multiple block types
-  let matchingPair: BracketPair | undefined;
+  // O(1) lookup: find the match index for the cursor offset
+  // Falls back to linear scan if maps aren't built yet (cache miss path)
+  const cursorOffset = document.offsetAt(wordRange.start);
 
-  // Check if this is a closing keyword
-  const isClosingKeyword = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(word));
-
-  if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
-    // For END and ENDDO, we need to find which block it actually closes
-    const currentOffset = document.offsetAt(wordRange.start);
-
-    // Find current match index
-    let currentIndex = -1;
-    for (let i = 0; i < allMatches.length; i++) {
-      if (allMatches[i].offset === currentOffset) {
-        currentIndex = i;
-        break;
-      }
-    }
-
-    if (currentIndex !== -1) {
-      // Use findMatchingOpenForClosing to determine which block this closes
-      const openIndex = findMatchingOpenForClosing(text, allMatches, currentIndex, word);
-      if (openIndex !== -1) {
-        const openWord = allMatches[openIndex].word;
-        matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
-      }
-    }
-  } else {
-    matchingPair = findMatchingPair(word);
-  }
-
-  if (!matchingPair) {
-    editor.setDecorations(decorationType, []);
-    currentBlockInfo = undefined;
+  // O(1) map lookups (maps always available — built from cache or computed inline above)
+  const matchIndex = matchIndexByOffset.get(cursorOffset);
+  if (matchIndex === undefined) {
+    clearHighlight(editor);
     return;
   }
 
-  // Find all related keywords in the block (only valid ones for yellow highlighting)
-  const relatedRanges = findAllRelatedKeywords(document, wordRange, matchingPair);
+  const blockIndices = blockIndicesByMatch.get(matchIndex);
+  if (!blockIndices) {
+    clearHighlight(editor);
+    return;
+  }
 
-  if (relatedRanges.length > 0) {
-    // Highlight valid keywords in yellow (excluding error ranges)
-    const validRanges = relatedRanges.filter(range =>
-      !allErrorRanges.some((errorRange: vscode.Range) => errorRange.isEqual(range))
-    );
-    editor.setDecorations(decorationType, validRanges);
+  const openerWord = allMatches[blockIndices[0]].word;
+  const matchingPair = findMatchingPair(openerWord);
+  if (!matchingPair) {
+    clearHighlight(editor);
+    return;
+  }
 
-    // Determine block type
-    const blockType = getBlockTypeName(matchingPair);
+  const relatedRanges = blockIndices.map(idx => {
+    const m = allMatches[idx];
+    return new vscode.Range(document.positionAt(m.offset), document.positionAt(m.offset + m.length));
+  });
 
-    // Extract condition from first line of block
+  const validRanges = relatedRanges.filter(range =>
+    !allErrorRanges.some((errorRange: vscode.Range) => errorRange.isEqual(range))
+  );
+  editor.setDecorations(decorationType, validRanges);
+
+  if (validRanges.length > 0) {
     const startLine = relatedRanges[0].start.line;
     const endLine = relatedRanges[relatedRanges.length - 1].start.line;
     const condition = extractBlockCondition(document, startLine);
-
-    currentBlockInfo = {
-      startLine,
-      endLine,
-      ranges: relatedRanges,
-      blockType,
-      condition
-    };
+    currentBlockInfo = { startLine, endLine, ranges: relatedRanges, condition };
   } else {
-    editor.setDecorations(decorationType, []);
     currentBlockInfo = undefined;
   }
 }
@@ -302,29 +486,6 @@ function findMatchingPair(word: string): BracketPair | undefined {
   return RPGLE_BLOCK_PAIRS.find(pair =>
     pair.open.includes(word) || pair.close.includes(word) || (pair.middle && pair.middle.includes(word))
   );
-}
-
-// Get human-readable block type name
-function getBlockTypeName(pair: BracketPair): string {
-  // Determine block type based on opening keyword
-  const openWord = pair.open[0].toUpperCase();
-
-  const typeMap: { [key: string]: string } = {
-    'IF': 'IF',
-    'DOW': 'DOW',
-    'DOU': 'DOU',
-    'FOR': 'FOR',
-    'SELECT': 'SELECT',
-    'MONITOR': 'MONITOR',
-    'DCL-PROC': 'PROCEDURE',
-    'DCL-DS': 'DATA STRUCTURE',
-    'DCL-PR': 'PROTOTYPE',
-    'DCL-PI': 'PROCEDURE INTERFACE',
-    'DCL-ENUM': 'ENUMERATION',
-    'BEGSR': 'SUBROUTINE'
-  };
-
-  return typeMap[openWord] || openWord;
 }
 
 function extractBlockCondition(document: vscode.TextDocument, lineNumber: number): string {
@@ -543,6 +704,24 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
   return matches;
 }
 
+// Helper function to check whether END-DS is coded inline on the same DCL-DS statement.
+function hasInlineEndDsOnDclDsLine(text: string, offset: number): boolean {
+  const lineStart = text.lastIndexOf('\n', offset) + 1;
+  const lineEnd = text.indexOf('\n', offset);
+  const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+  const lineWithoutComments = stripLineComment(lineContent).toLowerCase();
+
+  if (!/\bdcl-ds\b/.test(lineWithoutComments)) {
+    return false;
+  }
+
+  return /\bend-ds\b/.test(lineWithoutComments);
+}
+
+function isInlineEndDsForLikedsOrLikerec(text: string, offset: number): boolean {
+  return hasInlineEndDsOnDclDsLine(text, offset) && isDclDsWithLikedsOrLikerec(text, offset);
+}
+
 // Helper function to check if the dcl-ds at the given offset is a single-line
 // declaration (likeds()/likerec()) rather than a block opener needing end-ds.
 function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
@@ -550,15 +729,6 @@ function isDclDsWithLikedsOrLikerec(text: string, offset: number): boolean {
   const lineEnd = text.indexOf('\n', offset);
   const lineContent = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
   return isSingleLineDclDs(lineContent);
-}
-
-// Helper function specifically for finding the opening block for an END keyword
-function findMatchingOpenForEnd(
-  text: string,
-  matches: { offset: number; word: string; length: number }[],
-  endIndex: number
-): number {
-  return findMatchingOpenForClosing(text, matches, endIndex, 'end');
 }
 
 // Helper function for finding the opening block for any closing keyword
@@ -629,13 +799,14 @@ function findMatchingOpenForClosing(
 function findAllRelatedKeywords(
   document: vscode.TextDocument,
   startRange: vscode.Range,
-  pair: BracketPair
+  pair: BracketPair,
+  precomputedMatches?: BlockMatch[]
 ): vscode.Range[] {
   const text = document.getText();
   const startOffset = document.offsetAt(startRange.start);
 
-  // Use findAllMatches to get ALL keywords in the document
-  const allMatches = findAllMatches(text, document);
+  // Use pre-computed matches from cache if provided, otherwise compute
+  const allMatches = precomputedMatches ?? findAllMatches(text, document);
 
   // Find index of current match
   let currentIndex = -1;
@@ -692,63 +863,6 @@ function findAllMismatchedClosingKeywords(
   }
 
   return errorRanges;
-}
-
-// New function that validates block matching and returns separate lists for valid and error ranges
-function findAllRelatedKeywordsWithValidation(
-  document: vscode.TextDocument,
-  startRange: vscode.Range,
-  pair: BracketPair
-): { validRanges: vscode.Range[]; errorRanges: vscode.Range[] } {
-  const text = document.getText();
-  const startOffset = document.offsetAt(startRange.start);
-
-  // Use findAllMatches to get ALL keywords in the document
-  const allMatches = findAllMatches(text, document);
-
-  // Find index of current match
-  let currentIndex = -1;
-  for (let i = 0; i < allMatches.length; i++) {
-    if (allMatches[i].offset === startOffset) {
-      currentIndex = i;
-      break;
-    }
-  }
-
-  if (currentIndex === -1) return { validRanges: [], errorRanges: [] };
-
-  // Find block containing current keyword
-  const blockIndices = findBlockIndices(text, allMatches, currentIndex, pair);
-  if (!blockIndices) return { validRanges: [startRange], errorRanges: [] };
-
-  // Validate all closing keywords in the block
-  const validRanges: vscode.Range[] = [];
-  const errorRanges: vscode.Range[] = [];
-
-  for (const idx of blockIndices) {
-    const m = allMatches[idx];
-    const start = document.positionAt(m.offset);
-    const end = document.positionAt(m.offset + m.length);
-    const range = new vscode.Range(start, end);
-
-    // Check if this is a closing keyword
-    const isClosing = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(m.word));
-
-    if (isClosing) {
-      // Validate that this closing keyword matches its opening keyword
-      const isValid = validateClosingKeyword(document.getText(), allMatches, idx);
-      if (isValid) {
-        validRanges.push(range);
-      } else {
-        errorRanges.push(range);
-      }
-    } else {
-      // Opening and middle keywords are always valid
-      validRanges.push(range);
-    }
-  }
-
-  return { validRanges, errorRanges };
 }
 
 // Validate that a closing keyword matches its corresponding opening keyword
@@ -827,6 +941,11 @@ function findMatchingOpenForAnyClosing(
   for (let i = 0; i < closeIndex; i++) {
     const word = matches[i].word;
 
+    // Ignore inline END-DS written on LIKEDS/LIKEREC one-line declarations.
+    if (word === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[i].offset)) {
+      continue;
+    }
+
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
@@ -871,17 +990,16 @@ function findMatchingOpenForAnyClosing(
       });
 
       if (closerPair && stack.length > 0) {
-        // For specific closers, ONLY close the top of the stack
-        // Check if it matches - if so, this is a valid closure
-        // If not, it's a mismatch - pop anyway so subsequent closers can match correctly
+        // For specific closers, only close the top of the stack when it matches.
+        // If it does not match, treat it as a local mismatch and do not consume
+        // outer block state (prevents mismatch cascade to later ENDxx tokens).
         const topPair = stack[stack.length - 1].pair;
         const isMatch = (topPair === closerPair ||
           (topPair.close.includes(word) && closerPair.close.includes(word)));
 
-        stack.pop();
-
-        // IMPORTANT: Mismatch doesn't get to search deeper in the stack
-        // It consumes the top block (for error recovery) but that's it
+        if (isMatch) {
+          stack.pop();
+        }
       }
     }
   }
@@ -999,6 +1117,11 @@ function findMatchingClose(
   for (let i = openIndex + 1; i < matches.length; i++) {
     const word = matches[i].word;
 
+    // Ignore inline END-DS written on LIKEDS/LIKEREC one-line declarations.
+    if (word === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[i].offset)) {
+      continue;
+    }
+
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
     if (openingPair) {
@@ -1033,9 +1156,8 @@ function findMatchingClose(
       if (closingPair) {
         // Specific closing keyword (endif, endfor, end-proc, etc.)
         // ONLY close the top of the stack, maintaining proper LIFO discipline
-        // For error recovery: pop the top even if it doesn't match (the mismatch
-        // will be caught by validateClosingKeyword), allowing subsequent closers
-        // to find their correct matches
+        // If it does not match, keep stack state intact so the mismatch remains
+        // local and does not invalidate downstream valid closers.
         if (stack.length > 0) {
           const topPair = stack[stack.length - 1];
 
@@ -1047,16 +1169,6 @@ function findMatchingClose(
             }
             // Pop this matched block
             stack.pop();
-          } else {
-            // Mismatch: pop the top anyway for error recovery
-            // The mismatch will be highlighted by validateClosingKeyword
-            stack.pop();
-
-            // If stack is now empty, our target block was closed (incorrectly)
-            // Stop searching to avoid matching with unrelated blocks
-            if (stack.length === 0) {
-              return -1;
-            }
           }
         }
       }
@@ -1082,6 +1194,11 @@ function findMatchingOpen(
 
   for (let i = 0; i < startIndex; i++) {
     const word = matches[i].word;
+
+    // Ignore inline END-DS written on LIKEDS/LIKEREC one-line declarations.
+    if (word === 'end-ds' && isInlineEndDsForLikedsOrLikerec(text, matches[i].offset)) {
+      continue;
+    }
 
     // Check if this word opens any block
     const openingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(word));
@@ -1110,9 +1227,12 @@ function findMatchingOpen(
 
       if (closingPair && stack.length > 0) {
         // Specific closing keyword (endif, endfor, end-proc, etc.)
-        // ONLY close the top of the stack, maintaining proper LIFO discipline
-        // For error recovery: pop the top even if it doesn't match
-        stack.pop();
+        // ONLY close the top of the stack when it matches. If it does not match,
+        // keep stack state intact to avoid propagating mismatch to later closers.
+        const topPair = stack[stack.length - 1].pair;
+        if (topPair.close.includes(word)) {
+          stack.pop();
+        }
       }
       // else: word is neither opener nor closer (might be middle keyword) - ignore it
     }
@@ -1155,56 +1275,61 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
 
       const position = editor.selection.active;
       const text = document.getText();
+      const docUri = document.uri.toString();
+
+      // Use cached matches and lookup maps if available, else compute
+      let allMatches: BlockMatch[];
+      let matchIndexByOffset: Map<number, number>;
+      let blockIndicesByMatch: Map<number, number[]>;
+      const cached = analysisCache.get(docUri);
+      if (cached && cached.version === document.version && cached.text === text) {
+        allMatches = cached.matches;
+        matchIndexByOffset = cached.matchIndexByOffset;
+        blockIndicesByMatch = cached.blockIndicesByMatch;
+      } else {
+        allMatches = findAllMatches(text, document);
+        const maps = buildLookupMaps(text, allMatches);
+        matchIndexByOffset = maps.matchIndexByOffset;
+        blockIndicesByMatch = maps.blockIndicesByMatch;
+      }
+
+      // First try the word directly under the cursor, then fall back to scanning
+      // the entire current line — so the jump works even when the cursor is
+      // anywhere on the same line as the keyword (not just on top of it).
       const wordPattern = /[a-zA-Z_#@$§£ÆæØøàÀ][\w#@$§£ÆæØøàÀ-]*/;
-
-      const allMatches = findAllMatches(text, document);
-      if (allMatches.length === 0) return;
-
-      // Try cursor word first, then fall back to the first block keyword on the current line.
       let matchIndex = -1;
       let word = '';
 
-      const wordRange = document.getWordRangeAtPosition(position, wordPattern);
-      if (wordRange) {
-        const offset = document.offsetAt(wordRange.start);
-        const idx = allMatches.findIndex(match => match.offset === offset);
-        if (idx !== -1) {
+      const wordRangeAtCursor = document.getWordRangeAtPosition(position, wordPattern);
+      if (wordRangeAtCursor) {
+        const candidateOffset = document.offsetAt(wordRangeAtCursor.start);
+        // O(1) lookup instead of findIndex scan
+        const idx = matchIndexByOffset.get(candidateOffset);
+        if (idx !== undefined && blockIndicesByMatch.has(idx)) {
           matchIndex = idx;
           word = allMatches[idx].word;
         }
       }
 
+      // Fall back: first block keyword with precomputed block indices on the current line
       if (matchIndex === -1) {
         const lineStart = document.offsetAt(new vscode.Position(position.line, 0));
         const lineEnd = document.offsetAt(new vscode.Position(position.line + 1, 0));
-
         for (let i = 0; i < allMatches.length; i++) {
           if (allMatches[i].offset >= lineStart && allMatches[i].offset < lineEnd) {
-            matchIndex = i;
-            word = allMatches[i].word;
-            break;
+            if (blockIndicesByMatch.has(i)) {
+              matchIndex = i;
+              word = allMatches[i].word;
+              break;
+            }
           }
         }
       }
 
       if (matchIndex === -1) return;
 
-      let matchingPair: BracketPair | undefined;
-      const isClosingKeyword = RPGLE_BLOCK_PAIRS.some(p => p.close.includes(word));
-
-      if (isClosingKeyword && (word === 'end' || word === 'enddo')) {
-        const openIndex = findMatchingOpenForClosing(text, allMatches, matchIndex, word);
-        if (openIndex !== -1) {
-          const openWord = allMatches[openIndex].word;
-          matchingPair = RPGLE_BLOCK_PAIRS.find(p => p.open.includes(openWord));
-        }
-      } else {
-        matchingPair = findMatchingPair(word);
-      }
-
-      if (!matchingPair) return;
-
-      const blockIndices = findBlockIndices(text, allMatches, matchIndex, matchingPair);
+      // O(1) lookup for block indices — no findBlockIndices call needed
+      const blockIndices = blockIndicesByMatch.get(matchIndex);
       if (!blockIndices || blockIndices.length < 2) return;
 
       // Jump opener -> closer (last index), closer/middle -> opener (first index).
@@ -1220,7 +1345,6 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
       editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
     }
   );
-
   context.subscriptions.push(jumpCommand);
 }
 
