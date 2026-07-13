@@ -63,9 +63,6 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 			{ pattern: /\b(for|for-each)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(select)\b/gi, kind: SymbolKind.Null },
 			{ pattern: /\b(monitor)\b/gi, kind: SymbolKind.Null },
-			{ pattern: /\b(dcl-ds)\s+(\w+)/gi, kind: SymbolKind.Struct },
-			{ pattern: /\b(dcl-pi)\s+(\w+)/gi, kind: SymbolKind.Interface },
-			{ pattern: /\b(dcl-enum)\s+(\w+)/gi, kind: SymbolKind.Enum },
 			{ pattern: /\b(casxx|caseq|casne|casgt|caslt|casge|casle)\s+(.+?)(?:;|$)/gi, kind: SymbolKind.Null },
 		];
 
