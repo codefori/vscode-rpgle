@@ -167,7 +167,10 @@ function getCalculationRulerKey(line: string): 'C' | 'CX' {
 
 const getAreasForLine = (line: string, index: number, languageId: string = 'rpgle') => {
     if (line.length < 6) return undefined;
-    if (line[6] === `*` || line[6] === `/`) return undefined;
+    // Skip comments (*), compiler directives (/), and legacy embedded SQL
+    // continuation lines (+). A `+` in column 7 marks a C-spec SQL continuation
+    // line (e.g. `.....C+ FROM qiws.qcustcdt;`) and must never trigger the ruler.
+    if (line[6] === `*` || line[6] === `/` || line[6] === `+`) return undefined;
 
     const specDefinitions = languageId === 'rpg' ? opmSpecs : specs;
     const rulerDefinitions = languageId === 'rpg' ? opmSpecRulers : SpecRulers;
