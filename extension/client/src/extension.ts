@@ -8,6 +8,8 @@ import { workspace, ExtensionContext } from 'vscode';
 
 import * as Linter from "./linter";
 import * as columnAssist from "./language/columnAssist";
+import { registerBracketMatcher, registerJumpToMatchingBlock } from "./language/bracketMatcher";
+import { registerCommentStatementCommand, registerUncommentStatementCommand, registerToggleCommentCommand } from './commentStmt';
 
 
 import {
@@ -98,9 +100,14 @@ export function activate(context: ExtensionContext) {
 
 	Linter.initialise(context);
 	columnAssist.registerColumnAssist(context);
-	
+	registerBracketMatcher(context);
+	registerJumpToMatchingBlock(context);
+	registerCommentStatementCommand(context);
+	registerUncommentStatementCommand(context);
+	registerToggleCommentCommand(context);
+
 	registerCommands(context, client);
-	
+
 	context.subscriptions.push(getServerSymbolProvider());
 	context.subscriptions.push(getServerImplementationProvider());
 	context.subscriptions.push(setLanguageSettings());

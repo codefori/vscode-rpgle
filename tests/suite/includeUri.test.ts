@@ -1,7 +1,7 @@
 import path from "path";
 import { test, expect } from "vitest";
 import { readFile } from "fs/promises";
-import Parser from "../../language/parser";
+import Parser from "../../language/ile/parser";
 import { URI } from "vscode-uri";
 import { resolveWorkspaceIncludePath } from "../../extension/server/src/includeResolver";
 

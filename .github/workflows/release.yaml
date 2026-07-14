@@ -1,0 +1,8 @@
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-and-publish-release:
+    uses: codefori/.github/.github/workflows/release.yaml@main
+    secrets: inherit

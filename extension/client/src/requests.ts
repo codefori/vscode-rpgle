@@ -133,7 +133,7 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 				const dateStr = Date.now().toString().substr(-6);
 				const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
-				const fullPath = `${config.tempLibrary}/${randomFile}`;
+				const fullPath = `QTEMP/${randomFile}`;
 
 				console.log(`Temp OUTFILE: ${fullPath}`);
 
@@ -154,20 +154,20 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 				const outfileRes: any = await connection.runCommand({
 					environment: `ile`,
-					command: `DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
+					command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
 				});
 
 				console.log(outfileRes);
 				const resultCode = outfileRes.code || 0;
 
 				if (resultCode === 0) {
-					const data: any[] = await content.getTable(config.tempLibrary, randomFile, randomFile, true);
+					const data: any[] = await content.getTable('QTEMP', randomFile, randomFile, true);
 
 					console.log(`Temp OUTFILE read. ${data.length} rows.`);
 
 					connection.runCommand({
 						environment: `ile`,
-						command: `DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
+						command: `QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
 					});
 
 					return data;

@@ -1,8 +1,8 @@
 import path = require('path');
 import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from 'vscode';
-import {getInstance} from './base';
+import { getInstance } from './base';
 
-import {DEFAULT_SCHEMA} from "./schemas/linter"
+import { DEFAULT_SCHEMA } from "./schemas/linter";
 
 export function initialise(context: ExtensionContext) {
 	context.subscriptions.push(
@@ -47,7 +47,7 @@ export function initialise(context: ExtensionContext) {
 
 			} else if (instance && instance.getConnection()) {
 				const connection = instance.getConnection();
-				const content = instance.getContent();
+				const content = connection.getContent();
 
 				/** @type {"member"|"streamfile"} */
 				let type = `member`;
@@ -65,7 +65,7 @@ export function initialise(context: ExtensionContext) {
 					configPath = `${library}/VSCODE/RPGLINT.JSON`;
 
 					exists = (await connection.runCommand({
-						command: `CHKOBJ OBJ(${library}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
+						command: `QSYS/CHKOBJ OBJ(${library}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
 						noLibList: true
 					})).code === 0;
 
@@ -92,7 +92,7 @@ export function initialise(context: ExtensionContext) {
 							configPath = memberUri.path;
 
 							exists = (await connection.runCommand({
-								command: `CHKOBJ OBJ(${memberPath.library!.toLocaleUpperCase()}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
+								command: `QSYS/CHKOBJ OBJ(${memberPath.library!.toLocaleUpperCase()}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
 								noLibList: true
 							})).code === 0;
 							break;
@@ -128,21 +128,21 @@ export function initialise(context: ExtensionContext) {
 												// Will not crash, even if it fails
 												await connection.runCommand(
 													{
-														'command': `CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
+														'command': `QSYS/CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
 													}
 												);
 
 												// Will not crash, even if it fails
 												await connection.runCommand(
 													{
-														command: `ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
+														command: `QSYS/ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
 													}
 												);
 
 												try {
 													console.log(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);
 
-													await content.uploadMemberContent(undefined, memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
+													await content.uploadMemberContent(memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
 													await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
 												} catch (e) {
 													console.log(e);
@@ -155,7 +155,7 @@ export function initialise(context: ExtensionContext) {
 											console.log(`IFS path: ${configPath}`);
 
 											try {
-												await content.writeStreamfile(configPath, jsonString);
+												await content.writeStreamfileRaw(configPath, jsonString, "utf-8");
 												await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
 											} catch (e) {
 												console.log(e);

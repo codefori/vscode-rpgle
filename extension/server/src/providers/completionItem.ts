@@ -10,6 +10,7 @@ import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/ile/parser';
 import { Token } from '../../../../language/types';
 import { getBuiltIn, getBuiltIns, getBuiltInsForType } from './apis/bif';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -37,6 +38,9 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 	const trigger = handler.context?.triggerCharacter;
 	const currentPath = handler.textDocument.uri;
+	
+	if (ParserFactory.isOpmFile(currentPath)) return items;
+
 	const document = documents.get(currentPath);
 
 	if (document) {

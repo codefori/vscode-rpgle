@@ -357,7 +357,7 @@ export function parseSpecification(line: string, startIndex: number = 0): Specif
               rawLine,
               described,
               subtype,
-              name: toToken(6, 12),
+              name: toToken(6, 12, { default: `*N` }),
               externalDescription: toToken(15, 17),
               option: toToken(17, 18),
               externalFileName: toToken(20, 30),

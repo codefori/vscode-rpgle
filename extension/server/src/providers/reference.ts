@@ -2,6 +2,7 @@ import { Location, Range, ReferenceParams } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser } from '.';
 import Linter from '../../../../language/ile/linter';
 import { calculateOffset } from './linter';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 import * as Project from "./project";
 import { findAllProjectReferences as getAllProcedureReferences } from './project/references';
@@ -9,6 +10,9 @@ import Cache from '../../../../language/models/cache';
 
 export async function referenceProvider(params: ReferenceParams): Promise<Location[]|undefined> {
 	const uri = params.textDocument.uri;
+
+	if (ParserFactory.isOpmFile(uri)) return;
+
 	const position = params.position;
 	const document = documents.get(uri);
 

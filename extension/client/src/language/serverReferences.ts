@@ -1,7 +1,7 @@
+import { ConnectionConfig, IBMiMember } from "@halcyontech/vscode-ibmi-types";
+import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
 import { commands, Definition, DocumentSymbol, languages, Location, ProgressLocation, Range, SymbolInformation, SymbolKind, TextDocument, Uri, window, workspace } from "vscode";
 import { getInstance } from "../base";
-import IBMi from "@halcyontech/vscode-ibmi-types/api/IBMi";
-import { ConnectionConfig, IBMiMember } from "@halcyontech/vscode-ibmi-types";
 
 export function getServerSymbolProvider() {
   let latestFetch: ExportInfo[]|undefined;
@@ -18,7 +18,7 @@ export function getServerSymbolProvider() {
 
       if (instance && instance.getConnection()) {
         const connection = instance.getConnection();
-        const config = connection.config! //TODO in vscode-ibmi 3.0.0 - change to getConfig()
+        const config = connection.getConfig();
 
         let member: IBMiMember|undefined;
 
@@ -71,7 +71,7 @@ export function getServerImplementationProvider() {
 
       if (connection) {
         const word = document.getText(document.getWordRangeAtPosition(position));
-        const config = connection.getConfig() //TODO in vscode-ibmi 3.0.0 - change to getConfig()
+        const config = connection.getConfig();
 
         const uriPath = document.uri.path;
         const member = connection.parserMemberPath(uriPath);

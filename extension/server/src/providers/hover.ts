@@ -1,12 +1,16 @@
 import { Hover, HoverParams, MarkupKind, Range } from 'vscode-languageserver';
-import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywords } from '.';
+import { documents, parser, getReturnValue, getWordRangeAtPosition, prettyKeywords } from '.';
 import Parser from '../../../../language/ile/parser';
 import { URI } from 'vscode-uri';
 import { Keywords } from '../../../../language/ile/parserTypes';
 import Declaration from '../../../../language/models/declaration';
+import { ParserFactory } from '../../../../language/parserFactory';
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover | undefined> {
 	const currentPath = params.textDocument.uri;
+
+	if (ParserFactory.isOpmFile(currentPath)) return;
+
 	const currentLine = params.position.line;
 	const document = documents.get(currentPath);
 
