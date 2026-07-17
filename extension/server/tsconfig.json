@@ -4,18 +4,21 @@
 		"target": "es2020",
 		"module": "commonjs",
 		"moduleResolution": "node",
+		"ignoreDeprecations": "6.0",
 		"sourceMap": true,
 		"outDir": "out",
 		"rootDir": "./../..",
-		"lib": [ "es2020" ],
-		"allowJs": true,
+		"lib": [
+			"es2020"
+		],
 		"composite": true
 	},
 	"include": [
 		"src",
-  	"../../language"
+		"../../language"
 	],
 	"exclude": [
-		"node_modules", ".vscode-test",
+		"node_modules",
+		".vscode-test",
 	]
 }

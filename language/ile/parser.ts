@@ -21,7 +21,7 @@ export interface ParseOptions {withIncludes?: boolean, ignoreCache?: boolean, co
 const PROGRAMPARMS_NAME = `PROGRAMPARMS`;
 
 export default class Parser {
-  parsedCache: {[thePath: string]: Cache} = {};
+  parsedCache: {[thePath: string]: Cache | undefined} = {};
   tables: TableDetail = {};
   tableFetch: tablePromise|undefined;
   includeFileFetch: includeFilePromise|undefined;
@@ -91,14 +91,14 @@ export default class Parser {
   /**
    * @param {string} path
    */
-  clearParsedCache(path) {
+  clearParsedCache(path: string) {
     this.parsedCache[path] = undefined;
   }
 
   /**
    * @param {string} path
    */
-  getParsedCache(path) {
+  getParsedCache(path: string): Cache | undefined {
     return this.parsedCache[path];
   }
 
@@ -178,14 +178,14 @@ export default class Parser {
     return { preToken, block: tokensWithBlocks };
   }
 
-  static getReference(tokens: Token[], cursorIndex: number): number|-1 {
+  static getReference(tokens: Token[], cursorIndex: number): number | undefined {
     let checkNextToken = tokens.findIndex(token => cursorIndex > token.range.start && cursorIndex <= token.range.end);
 
-    let lastToken: number;
+    let lastToken = -1;
     while (
       tokens[checkNextToken] &&
       [`block`, `word`, `dot`, `builtin`].includes(tokens[checkNextToken].type) &&
-      tokens[lastToken]?.type !== tokens[checkNextToken].type &&
+      (lastToken === -1 || tokens[lastToken]?.type !== tokens[checkNextToken].type) &&
       checkNextToken >= 0
 
     ) {
@@ -210,7 +210,7 @@ export default class Parser {
       return existingCache;
     }
 
-    if (baseContent === undefined) return null;
+    if (baseContent === undefined) return undefined;
 
     let scopes: Cache[] = [];
 
@@ -286,7 +286,7 @@ export default class Parser {
      * Parse the tokens and add references to the definitions
      * The statement is modified in place and sets tokens undefined when are references
      */
-    const collectReferences = (currentUri: string, statement: Token[], currentProcedure?: Declaration, currentDef?: Declaration, isExec = false) => {
+    const collectReferences = (currentUri: string, statement: (Token | undefined)[], currentProcedure?: Declaration, currentDef?: Declaration, isExec = false) => {
       if (statement[0]?.value?.toUpperCase() === `EXEC`) {
         isExec = true;
       }
@@ -307,17 +307,19 @@ export default class Parser {
       for (let i = 0; i < statement.length; i++) {
         const part = statement[i];
         if (part === undefined) continue;
+        const prevPart = statement[i - 1];
 
         if (![`special`, `word`].includes(part.type)) continue;
-        if (statement[i - 1] && statement[i - 1].type === `dot`) continue;
+        if (prevPart && prevPart.type === `dot`) continue;
 
-        if (isExec && statement[i-1]) {
-          if (statement[i-1].type !== `seperator`) {
+        if (isExec && prevPart) {
+          if (prevPart.type !== `seperator`) {
             continue;
           }
         }
 
         const isSpecial = part.type === `special`;
+        if (!part.value) continue;
         const lookupName = (isSpecial ? part.value.substring(1) : part.value).toUpperCase();
 
         let defRef: Declaration|undefined;
@@ -359,22 +361,27 @@ export default class Parser {
 
           if (defRef.keyword[`QUALIFIED`]) {
             let nextPartIndex = i + 1;
+            let nextPart = statement[nextPartIndex];
 
-            if (statement[nextPartIndex]) {
+            if (nextPart) {
               // First, check if there is an array call here and skip over it
-              if (statement[nextPartIndex].type === `openbracket`) {
-                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value.type === `closebracket`);
+              if (nextPart.type === `openbracket`) {
+                nextPartIndex = statement.findIndex((value, index) => index > nextPartIndex && value?.type === `closebracket`);
 
                 if (nextPartIndex >= 0) nextPartIndex++;
               }
 
+              nextPart = statement[nextPartIndex];
+
               // Check if the next part is a dot
-              if (statement[nextPartIndex] && statement[nextPartIndex].type === `dot`) {
+              if (nextPart && nextPart.type === `dot`) {
                 nextPartIndex++;
+                nextPart = statement[nextPartIndex];
 
                 // Check if the next part is a word
-                if (statement[nextPartIndex] && statement[nextPartIndex].type === `word` && statement[nextPartIndex].value) {
-                  const subItemPart = statement[nextPartIndex];
+                if (nextPart && nextPart.type === `word` && nextPart.value) {
+                  const subItemPart = nextPart;
+                  if (!subItemPart || !subItemPart.value) continue;
                   const subItemName = subItemPart.value.toUpperCase();
 
                   // Find the subitem
@@ -395,9 +402,9 @@ export default class Parser {
       const EOL = allContent.includes(`\r\n`) ? `\r\n` : `\n`;
       let lines = allContent.split(EOL);
 
-      let postProcessingStatements: {[procedure: string]: Token[][]} = {'GLOBAL': []};
+      let postProcessingStatements: {[procedure: string]: (Token | undefined)[][]} = {'GLOBAL': []};
 
-      const addPostProcessingStatements = (procedure = `GLOBAL`, statement: Token[]) => {
+      const addPostProcessingStatements = (procedure = `GLOBAL`, statement: (Token | undefined)[]) => {
         if (!options.collectReferences) return;
 
         if (!postProcessingStatements[procedure]) {
@@ -571,7 +578,7 @@ export default class Parser {
           if (keywords[tag] && typeof keywords[tag] === `string`) {
             let keywordValue = keywords[tag];
             if (keywordValue.includes(`:`)) {
-              const parms = keywordValue.split(`:`).filter(part => part.trim().startsWith(`*`) === false);
+              const parms = keywordValue.split(`:`).filter((part: string) => part.trim().startsWith(`*`) === false);
 
               if (parms.length > 0) {
                 keywordValue = parms[0];
@@ -680,7 +687,7 @@ export default class Parser {
             // Directives can be parsed by the free format parser
             baseLine = ``.padEnd(6) + baseLine.substring(6);
             lineIsFree = true;
-          } else if (comment === `+` && fixedExec && currentStmtStart.content) {
+          } else if (comment === `+` && fixedExec && currentStmtStart && currentStmtStart.content) {
             // Fixed format EXEC SQL
             baseLine = ``.padEnd(7) + baseLine.substring(7);
             currentStmtStart.content += baseLine + EOL;
@@ -727,7 +734,9 @@ export default class Parser {
 
           const lineIsComment = line.trim().startsWith(`//`);
           tokens = Parser.lineTokens(getValidStatement(line), lineNumber, lineIndex);
-          partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
+          partsLower = tokens
+            .map(piece => piece.value)
+            .filter((piece): piece is string => typeof piece === `string`);
           parts = partsLower.map(piece => piece.toUpperCase());
 
           line = line.trim();
@@ -784,7 +793,7 @@ export default class Parser {
                     // 2. Member/streamfile resolution caches are scoped per requesting file
                     // 3. Workspace context resolution uses the actual requesting file
                     const include = await this.includeFileFetch(fileUri, includePath);
-                    if (include.found && include.uri) {
+                    if (include.found && include.uri && include.content !== undefined) {
                       if (!scopes[0].includes.some(inc => inc.toPath === include.uri)) {
                         scopes[0].includes.push({
                           fromPath: fileUri,
@@ -878,7 +887,9 @@ export default class Parser {
                 dotsConcat = false;
 
                 tokens = Parser.lineTokens(line, currentStmtStart.line, currentStmtStart.index);
-                partsLower = tokens.filter(piece => piece.value).map(piece => piece.value);
+                partsLower = tokens
+                  .map(piece => piece.value)
+                  .filter((piece): piece is string => typeof piece === `string`);
                 parts = partsLower.map(piece => piece.toUpperCase());
 
                 currentStmtStart.content = undefined;
@@ -1074,10 +1085,16 @@ export default class Parser {
             }
 
             if (dsScopes.length === 1) {
-              scope.addSymbol(dsScopes.pop());
+              const ds = dsScopes.pop();
+              if (ds) {
+                scope.addSymbol(ds);
+              }
             } else
               if (dsScopes.length > 1) {
-                dsScopes[dsScopes.length - 2].subItems.push(dsScopes.pop());
+                const ds = dsScopes.pop();
+                if (ds) {
+                  dsScopes[dsScopes.length - 1].subItems.push(ds);
+                }
               }
             break;
 
@@ -1171,7 +1188,7 @@ export default class Parser {
               }
 
               if (currentItem) {
-                const endInline = tokens.findIndex(part => part.value.toUpperCase() === `END-PI`);
+                const endInline = tokens.findIndex(part => part.value?.toUpperCase() === `END-PI`);
 
                 // Indicates that the PI starts and ends on the same line
                 if (endInline >= 0) {
@@ -1221,7 +1238,7 @@ export default class Parser {
             //Procedures can only exist in the global scope.
             if (scopes.length > 1) {
               // currentItem = scopes[0].symbols.find(proc => !proc.prototype && proc.name === currentProcName);
-              currentItem = scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope);
+              currentItem = currentProcName ? scopes[0].findAll(currentProcName).find(proc => !proc.prototype && proc.scope) : undefined;
 
               if (currentItem && currentItem.type === `procedure`) {
                 scopes.pop();
@@ -1262,11 +1279,11 @@ export default class Parser {
             break;
 
           case `EXEC`:
-            const pIncludes = (value) => {
+            const pIncludes = (value: string) => {
               return parts.some(p => p === value);
             }
 
-            const pIs = (part, value) => {
+            const pIs = (part: string | undefined, value: string) => {
               return part && part === value;
             }
 
@@ -1279,9 +1296,14 @@ export default class Parser {
               const preFileWords = [`INTO`, `FROM`, `UPDATE`, `CALL`, `JOIN`];
               const ignoredWords = [`FINAL`, `SET`];
 
-              const cleanupObjectRef = (index) => {
+              const cleanupObjectRef = (index: number) => {
                 let nameIndex = index;
-                const result = {
+                const result: {
+                  schema: string | undefined,
+                  name: string,
+                  length: number,
+                  nameToken: Token | undefined,
+                } = {
                   schema: undefined,
                   name: partsLower[index],
                   length: 1,
@@ -1344,7 +1366,7 @@ export default class Parser {
 
                       currentSqlItem.position = {
                         path: fileUri,
-                        range: qualifiedObjectPath.nameToken.range
+                        range: qualifiedObjectPath.nameToken?.range || tokens[index]?.range || tokens[0].range
                       };
 
                       scope.sqlReferences.push(currentSqlItem);
@@ -1638,7 +1660,7 @@ export default class Parser {
             tokens = [cSpec.clIndicator, cSpec.indicator, cSpec.ind1, cSpec.ind2, cSpec.ind3];
 
             const fromToken = (token?: Token) => {
-              return token ? Parser.lineTokens(token.value, lineNumber, token.range.start) : [];
+              return token?.value !== undefined ? Parser.lineTokens(token.value, lineNumber, token.range.start) : [];
             };
 
             if (cSpec.opcode && ALLOWS_EXTENDED.includes(cSpec.opcode.value) && !cSpec.factor1 && cSpec.extended) {
@@ -1770,7 +1792,7 @@ export default class Parser {
                   currentItem = new Declaration(`procedure`);
 
                   currentProcName = currentNameToken.value;
-                  currentItem.name = currentProcName;
+                  currentItem.name = currentProcName || NO_NAME;
                   currentItem.keyword = pSpec.keywords;
 
                   currentItem.position = {
@@ -1793,7 +1815,7 @@ export default class Parser {
               } else {
                 if (scopes.length > 1) {
                   //Procedures can only exist in the global scope.
-                  currentItem = scopes[0].find(currentProcName);
+                  currentItem = currentProcName ? scopes[0].find(currentProcName) : undefined;
 
                   if (currentItem && currentItem.type === `procedure`) {
                     scopes.pop();
@@ -1835,7 +1857,7 @@ export default class Parser {
                 };
 
                 currentItem.range = {
-                  start: currentNameToken.range.line,
+                  start: currentNameToken?.range.line || lineNumber,
                   end: currentItem.position.range.line
                 };
 
@@ -1851,7 +1873,7 @@ export default class Parser {
                 }
 
                 currentItem = new Declaration(`variable`);
-                currentItem.name = currentNameToken.value;
+                currentItem.name = currentNameToken.value || NO_NAME;
                 currentItem.keyword = {
                   ...dSpec.keywords,
                   ...prettyTypeFromDSpecTokens(dSpec),
@@ -1887,7 +1909,9 @@ export default class Parser {
                   end: currentItem.position.range.line
                 };
 
-                expandDs(fileUri, currentNameToken, currentItem);
+                if (currentNameToken) {
+                  await expandDs(fileUri, currentNameToken, currentItem);
+                }
 
                 currentGroup = `structs`;
                 scope.addSymbol(currentItem);
@@ -1904,7 +1928,7 @@ export default class Parser {
 
                 currentItem.position = {
                   path: fileUri,
-                  range: getPotentialNameToken().range
+                  range: getPotentialNameToken()?.range || dSpec.field.range
                 };
 
                 currentItem.range = {
@@ -1950,7 +1974,9 @@ export default class Parser {
                       if (validScope[currentGroup].length > 0) break;
                     }
 
-                    currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
+                    if (validScope && validScope[currentGroup].length > 0) {
+                      currentItem = validScope[currentGroup][validScope[currentGroup].length - 1];
+                    }
                     break;
 
                   case `parameters`:
@@ -1984,7 +2010,7 @@ export default class Parser {
 
                     currentSub.position = {
                       path: fileUri,
-                      range: currentNameToken?.range
+                      range: currentNameToken?.range || dSpec.field.range
                     };
 
                     currentSub.range = {
@@ -1993,7 +2019,9 @@ export default class Parser {
                     }
 
                     // If the parameter has likeds, add the subitems to make it a struct.
-                    await expandDs(fileUri, currentNameToken, currentSub);
+                    if (currentNameToken) {
+                      await expandDs(fileUri, currentNameToken, currentSub);
+                    }
 
                     if (isProgramParameter) {
                       scope.addSymbol(currentSub);
@@ -2070,11 +2098,13 @@ export default class Parser {
   }
 
   static getTokens(content: string|string[]|Token[], lineNumber?: number, baseIndex?: number): Token[] {
+    const resolvedLineNumber = lineNumber ?? 0;
+    const resolvedBaseIndex = baseIndex ?? 0;
     if (Array.isArray(content) && typeof content[0] === `string`) {
-      return Parser.lineTokens(content.join(` `), lineNumber, baseIndex);
+      return Parser.lineTokens(content.join(` `), resolvedLineNumber, resolvedBaseIndex);
     } else
       if (typeof content === `string`) {
-        return Parser.lineTokens(content, lineNumber, baseIndex);
+        return Parser.lineTokens(content, resolvedLineNumber, resolvedBaseIndex);
       } else {
         return content as Token[];
       }
@@ -2087,9 +2117,14 @@ export default class Parser {
       const keywordParts = createBlocks(tokens.slice(0));
 
       for (let i = 0; i < keywordParts.length; i++) {
-        if (keywordParts[i].value) {
-          if (keywordParts[i+1] && keywordParts[i+1].type === `block`) {
-            keyvalues[keywordParts[i].value.toUpperCase()] = keywordParts[i+1].block.map(part => part.value).join(``);
+        const currentKeyword = keywordParts[i];
+        if (currentKeyword?.value) {
+          const nextKeyword = keywordParts[i + 1];
+          if (nextKeyword?.type === `block` && nextKeyword.block) {
+            keyvalues[currentKeyword.value.toUpperCase()] = nextKeyword.block
+              .map(part => part.value)
+              .filter((part): part is string => typeof part === `string`)
+              .join(``);
             i++; // Skip one for the block.
           } else {
             if (isConst) {
@@ -2097,9 +2132,9 @@ export default class Parser {
                 keyvalues[`CONST`] = ``;
               }
 
-              keyvalues[`CONST`] += keywordParts[i].value;
+              keyvalues[`CONST`] += currentKeyword.value;
             } else {
-              keyvalues[keywordParts[i].value.toUpperCase()] = true;
+              keyvalues[currentKeyword.value.toUpperCase()] = true;
             }
           }
         }

@@ -1,8 +1,9 @@
-import path from "path";
+import * as path from "path";
 import setupParser from "../parserSetup";
 import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
 import Parser from "../../language/ile/parser";
+import { assertCache, assertFound } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -19,7 +20,7 @@ test('skip1', async () => {
     `return`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -41,7 +42,7 @@ test('skip2', async () => {
     `return`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -63,7 +64,7 @@ test('skip2_issue91_1', async () => {
     `return`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -85,7 +86,7 @@ test('skip2_issue91_2', async () => {
     `return`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2
   }, cache);
@@ -113,13 +114,13 @@ test('skip2_issue91', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
   expect(cache.procedures.length).toBe(1);
-  const theProcedure2 = cache.find(`theProcedure2`);
+  const theProcedure2 = assertFound(cache.find(`theProcedure2`), `theProcedure2`);
   expect(theProcedure2.name).toBe(`theProcedure2`);
 
   expect(errors.length).toBe(0);
@@ -139,7 +140,7 @@ test('skip3', async () => {
     `return`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -165,9 +166,9 @@ test('eof1', async () => {
     `                      *OFF= Do not convert any characters other than A-Z.`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const uppercase = cache.find(`UPPERCASE`);
+  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
   expect(uppercase.name).toBe(`UPPERCASE`);
   expect(uppercase.position.range.line).toBe(0);
   expect(uppercase.subItems.length).toBe(2);
@@ -185,11 +186,11 @@ test('eof2', async () => {
     `     D   Escaped                       n   Const Options(*NoPass)`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.procedures.length).toBe(1);
 
-  const uppercase = cache.find(`UPPERCASE`);
+  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
   expect(uppercase.name).toBe(`UPPERCASE`);
   expect(uppercase.position.range.line).toBe(0);
   expect(uppercase.subItems.length).toBe(2);
@@ -221,7 +222,7 @@ test('eof3', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     NoGlobalsInProcedures: true
   }, cache);
@@ -245,7 +246,7 @@ test('eof4', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.includes.length).toBe(1);
   expect(cache.includes[0].line).toBe(4);
@@ -255,7 +256,7 @@ test('eof4', async () => {
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
 
-  const uppercase = cache.find(`UPPERCASE`);
+  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
 
   expect(uppercase.subItems.length).toBe(2);
 
@@ -286,13 +287,13 @@ test('eof5_issue181', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
 
   expect(cache.procedures.length).toBe(1);
-  const theProcedure2 = cache.find(`theProcedure2`);
+  const theProcedure2 = assertFound(cache.find(`theProcedure2`), `theProcedure2`);
   expect(theProcedure2.name).toBe(`theProcedure2`);
 
   expect(errors.length).toBe(1);
@@ -307,7 +308,7 @@ test('incorrectEnd1', async () => {
     `End-Proc;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true
@@ -329,7 +330,7 @@ test('incorrectEnd2', async () => {
     `endsr;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true
@@ -351,7 +352,7 @@ test('incorrectEnd3', async () => {
     `end-proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true
@@ -380,7 +381,7 @@ test('incorrectEnd4', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     PrettyComments: true
@@ -418,11 +419,11 @@ test('if1', async () => {
     `End-Ds;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.structs.length).toBe(2);
 
-  const Prp00a = cache.find(`Prp00a`);
+  const Prp00a = assertFound(cache.find(`Prp00a`), `Prp00a`);
   expect(Prp00a.subItems.length).toBe(7);
   expect(Prp00a.keyword[`QUALIFIED`]).toBe(true);
   expect(Prp00a.keyword[`TEMPLATE`]).toBeUndefined();
@@ -457,11 +458,11 @@ test('if2', async () => {
     `     d  ff                         1024a`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.structs.length).toBe(1);
 
-  const someDs = cache.find(`someDs`);
+  const someDs = assertFound(cache.find(`someDs`), `someDs`);
   expect(someDs.keyword[`BASED`]).toBeUndefined();
 })
 
@@ -479,7 +480,7 @@ test('variable_case1', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -519,7 +520,7 @@ test('variable_case1 commented out', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     IncorrectVariableCase: true
   }, cache);
@@ -540,7 +541,7 @@ test('uppercase1', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     DirectiveCase: `upper`
   }, cache);
@@ -573,7 +574,7 @@ test('lowercase1', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   const { errors } = Linter.getErrors({ uri, content: lines }, {
     DirectiveCase: `lower`
   }, cache);
@@ -604,7 +605,7 @@ test('macro defined test 1', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.includes.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
@@ -622,7 +623,7 @@ test('macro defined test 2', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.includes.length).toBe(1);
   expect(cache.procedures.length).toBe(0);
@@ -640,10 +641,10 @@ test('depth test', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.includes.length).toBe(2);
-  
+
   expect(cache.includes[0].fromPath).toBe(uri);
   expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `depth1.rpgleinc`))).toBeTruthy();
   expect(cache.includes[0].line).toBe(2); // zero indexed
@@ -662,7 +663,7 @@ test('fixed copy with comment and using double quotes', async () => {
     `      /copy "./rpgle/db00040s_h.rpgleinc" `,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.includes.length).toBe(2);
 });
@@ -687,7 +688,7 @@ test('/IF DEFINED - uppercase', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   expect(cache.variables.length).toBe(1);
   expect(cache.variables[0].name).toBe('Var2');
 });
@@ -704,7 +705,7 @@ test('/IF DEFINED - lowercase', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   expect(cache.variables.length).toBe(1);
   expect(cache.variables[0].name).toBe('Var2');
 });
@@ -721,7 +722,7 @@ test('/IF DEFINED with Not - mixed case', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
   expect(cache.variables.length).toBe(1);
   expect(cache.variables[0].name).toBe('Var2');
 });
@@ -739,7 +740,7 @@ test('rapid re-parse produces consistent offsets', async () => {
   ];
 
   for (const content of versions) {
-    const cache = await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: true });
+    const cache = assertCache(await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: true }));
     const myVarDefs = cache.variables.filter(v => v.name.toUpperCase() === 'MYVAR');
     expect(myVarDefs.length).toBe(1);
     expect(myVarDefs[0].position.range.line).toBe(1);
@@ -757,7 +758,7 @@ test('re-parse with includes does not duplicate definitions', async () => {
 
   // Parse the same content twice with ignoreCache
   await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
-  const cache = await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   // Should have exactly 2 includes (depth1 -> copy3), not duplicates
   expect(cache.includes.length).toBe(2);
@@ -776,7 +777,7 @@ test('editing around include directives maintains offsets', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache1 = await parser.getDocs(uri, lines1, { withIncludes: true, ignoreCache: true });
+  const cache1 = assertCache(await parser.getDocs(uri, lines1, { withIncludes: true, ignoreCache: true }));
   const localVarLine1 = cache1.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
 
   // Add a new include line before LocalVar
@@ -788,7 +789,7 @@ test('editing around include directives maintains offsets', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache2 = await parser.getDocs(uri, lines2, { withIncludes: true, ignoreCache: true });
+  const cache2 = assertCache(await parser.getDocs(uri, lines2, { withIncludes: true, ignoreCache: true }));
   const localVarLine2 = cache2.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
 
   // LocalVar should shift down by 1 line

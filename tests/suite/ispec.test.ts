@@ -1,12 +1,13 @@
 import { expect, test } from "vitest";
 import setupParser from "../parserSetup";
 import { parseISpec } from "../../language/models/fixed";
+import { assertCache, assertFound } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
 
 test('ispec rename 1', async () => {
-  const lines =[
+  const lines = [
     `        dcl-f qrpglesrc prefix('RPG_');`,
     `        dcl-f qcbblesrc;`,
     ``,
@@ -26,7 +27,7 @@ test('ispec rename 1', async () => {
     `     I              SRCDAT                      ALL_SRCDAT`,
   ].join('\n');
 
-  const cache = await parser.getDocs(uri, lines, {ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true }));
 
   const symbols = cache.symbols;
   expect(symbols.length).toBeGreaterThan(0);
@@ -34,14 +35,12 @@ test('ispec rename 1', async () => {
   const files = cache.files;
   expect(files.length).toBe(2);
 
-  const rpgSrc = files.find(f => f.name === `qrpglesrc`);
-  expect(rpgSrc).toBeDefined();
+  const rpgSrc = assertFound(files.find(f => f.name === `qrpglesrc`), `qrpglesrc`);
 
   const rpgExpectedColumns = [`ALL_SRCDAT`, `RPG_SRCSEQ`, `RPG_SRCDTA`];
   expect(rpgSrc.subItems[0].subItems.map(s => s.name)).toEqual(rpgExpectedColumns);
 
-  const cblSrc = files.find(f => f.name === `qcbblesrc`);
-  expect(cblSrc).toBeDefined();
+  const cblSrc = assertFound(files.find(f => f.name === `qcbblesrc`), `qcbblesrc`);
   expect(cblSrc.subItems[0].subItems.length).toBe(3);
 
   const cblExpectedColumns = [`ALL_SRCDAT`, `CBL_SRCSEQ`, `CBL_SRCDTA`];
@@ -53,22 +52,20 @@ test('ispec rename 1', async () => {
 
   expect(inputs.length).toBe(2);
 
-  const qarpg = inputs.find(s => s.name === `qarpglesrc`);
-  expect(qarpg).toBeDefined();
+  const qarpg = assertFound(inputs.find(s => s.name === `qarpglesrc`), `qarpglesrc`);
   expect(qarpg.subItems.length).toBe(3);
   const qaRpgNames = [`RPG_SRCSEQ`, `RPG_SRCDTA`, `ALL_SRCDAT`];
   expect(qarpg.subItems.map(s => s.name)).toEqual(qaRpgNames);
 
-  const qacbl = inputs.find(s => s.name === `qacbllesrc`);
-  expect(qacbl).toBeDefined();
+  const qacbl = assertFound(inputs.find(s => s.name === `qacbllesrc`), `qacbllesrc`);
   expect(qacbl.subItems.length).toBe(3);
   const qaCblNames = [`CBL_SRCSEQ`, `CBL_SRCDTA`, `ALL_SRCDAT`];
   expect(qacbl.subItems.map(s => s.name)).toEqual(qaCblNames);
 
-  const allSrcDat = cache.find(`ALL_SRCDAT`);
+  const allSrcDat = assertFound(cache.find(`ALL_SRCDAT`), `ALL_SRCDAT`);
   expect(allSrcDat).toBeDefined();
 
-  const cblSrcSeq = cache.find(`CBL_SRCSEQ`);
+  const cblSrcSeq = assertFound(cache.find(`CBL_SRCSEQ`), `CBL_SRCSEQ`);
   expect(cblSrcSeq).toBeDefined();
 });
 
@@ -162,7 +159,7 @@ test('ispec file fields definitions', async () => {
     `     C                   return`,
   ];
 
-  const cache = await parser.getDocs(uri, lines.join('\n'), {ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines.join('\n'), { ignoreCache: true, collectReferences: true }));
 
   const files = cache.files;
   expect(files.length).toBe(1);
@@ -191,7 +188,7 @@ test('ispec file fields definitions', async () => {
   const multipleDefinitionVar = cache.findAll(`D_P_DTYP_S5_0`);
   expect(multipleDefinitionVar.length).toBe(1);
 
-  const someVar = cache.find(`C_P_CTYP_P4_0`);
+  const someVar = assertFound(cache.find(`C_P_CTYP_P4_0`), `C_P_CTYP_P4_0`);
   expect(someVar).toBeDefined();
   expect(someVar.references.length).toBe(2);
 });
