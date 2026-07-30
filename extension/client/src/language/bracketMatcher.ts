@@ -1060,9 +1060,20 @@ function findBlockIndices(
   let closeIndex = -1;
 
   if (isOpen) {
-    // If opening, find matching close
-    openIndex = currentIndex;
-    closeIndex = findMatchingClose(text, matches, currentIndex, pair);
+    if (pair.nonNestable) {
+      // Non-nestable compound block: scan backward to find the first opener in the run
+      openIndex = currentIndex;
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (pair.open.includes(matches[i].word)) {
+          openIndex = i;
+        } else {
+          break;
+        }
+      }
+    } else {
+      openIndex = currentIndex;
+    }
+    closeIndex = findMatchingClose(text, matches, openIndex, pair);
   } else if (isClose) {
     // If closing, find matching open
     closeIndex = currentIndex;
@@ -1079,6 +1090,15 @@ function findBlockIndices(
 
   // Collect all block indices (open, close, and same-level middle keywords)
   const blockIndices: number[] = [openIndex, closeIndex];
+
+  // Non-nestable pairs: all same-pair openers between open and close belong to the block
+  if (pair.nonNestable) {
+    for (let i = openIndex + 1; i < closeIndex; i++) {
+      if (pair.open.includes(matches[i].word)) {
+        blockIndices.push(i);
+      }
+    }
+  }
 
   // Add middle keywords at the same nesting level
   if (pair.middle) {
@@ -1128,6 +1148,11 @@ function findMatchingClose(
       // Special handling for dcl-ds: skip if it uses likeds() or likerec()
       if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
         continue; // Skip this dcl-ds, it's not a block opener
+      }
+
+      // Non-nestable pairs (CAS blocks): consecutive same-pair openers share one closer.
+      if (openingPair.nonNestable && stack.length > 0 && stack[stack.length - 1] === openingPair) {
+        continue;
       }
 
       stack.push(openingPair);
@@ -1206,6 +1231,11 @@ function findMatchingOpen(
       // Special handling for dcl-ds: skip if it uses likeds() or likerec()
       if (word === 'dcl-ds' && isDclDsWithLikedsOrLikerec(text, matches[i].offset)) {
         continue; // Skip this dcl-ds, it's not a block opener
+      }
+
+      // Non-nestable pairs (CAS blocks): keep only the first opener on the stack.
+      if (openingPair.nonNestable && stack.length > 0 && stack[stack.length - 1].pair === openingPair) {
+        continue;
       }
 
       stack.push({ index: i, pair: openingPair });
