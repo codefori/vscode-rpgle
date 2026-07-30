@@ -195,6 +195,35 @@ if x > 0;`;
       const offset = code.indexOf('unclosed');
       expect(isInCommentOrString(code, offset)).to.be.true;
     });
+
+    it('should detect keyword on continuation line inside string literal', () => {
+      // The string opens on the first line (ends with + inside the string).
+      // 'if' on the second line is still inside the string.
+      const code = `msg = 'Let me +\n                  know if you are ready to proceed.';`;
+      const offset = code.indexOf('know if') + 'know '.length;
+      expect(isInCommentOrString(code, offset)).to.be.true;
+    });
+
+    it('should detect keyword on third continuation line', () => {
+      const code = `msg = 'part1 +\n       part2 +\n       endif rest';`;
+      const offset = code.lastIndexOf('endif');
+      expect(isInCommentOrString(code, offset)).to.be.true;
+    });
+
+    it('should not misidentify keyword after separate string on continuation line', () => {
+      // The first line closes its string before the +, so the second line starts fresh.
+      // 'if' on the second line is inside its own new string literal.
+      const code = `msg = 'Let me ' +\n                  'know if you are ready to proceed.';`;
+      const offset = code.indexOf('know if') + 'know '.length;
+      expect(isInCommentOrString(code, offset)).to.be.true;
+    });
+
+    it('should not flag code after a string containing //', () => {
+      // // inside a completed string should not be treated as a line comment
+      const code = `msg = 'http://example.com'; if (x > 0);`;
+      const offset = code.indexOf(' if ') + 1;
+      expect(isInCommentOrString(code, offset)).to.be.false;
+    });
   });
 
   describe('integration tests', () => {

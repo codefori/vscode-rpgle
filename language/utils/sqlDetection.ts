@@ -136,38 +136,102 @@ function scanForSqlTerminator(
 }
 
 /**
- * Check if a position is inside a comment or string
+ * Scan a single source line tracking string/comment state, stopping before any
+ * content that follows a `//` comment opener (when not inside a string).
+ * Returns the string state at the end of the scan.
+ * Handles RPG `''` escaped quotes (two consecutive single quotes inside a string).
+ */
+function scanLineStringState(line: string, initialInString: boolean): boolean {
+  let inString = initialInString;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (!inString) {
+      if (ch === '/' && i + 1 < line.length && line[i + 1] === '/') {
+        break; // rest of line is a comment — stop
+      }
+      if (ch === "'") {
+        inString = true;
+      }
+    } else {
+      if (ch === "'") {
+        // '' is an escaped quote inside the string — skip both characters
+        if (i + 1 < line.length && line[i + 1] === "'") {
+          i++;
+        } else {
+          inString = false;
+        }
+      }
+    }
+  }
+  return inString;
+}
+
+/**
+ * Return the string state that is carried into `lineStart` from prior
+ * continuation lines.  A string can only carry over when the preceding
+ * physical line ends with `+` (RPG free-form string continuation).
+ */
+function getPriorLineStringState(text: string, lineStart: number): boolean {
+  if (lineStart <= 0) return false;
+
+  // Find the previous physical line (skip the newline character before lineStart)
+  let prevEnd = lineStart - 1;
+  if (prevEnd > 0 && text[prevEnd - 1] === '\r') prevEnd--; // handle \r\n
+  let prevStart = prevEnd;
+  while (prevStart > 0 && text[prevStart - 1] !== '\n') {
+    prevStart--;
+  }
+
+  const prevLine = text.substring(prevStart, prevEnd);
+  // Continuation requires the last non-whitespace character to be '+'
+  if (!prevLine.trimEnd().endsWith('+')) return false;
+
+  // Recursively get the state carried into the previous line, then scan it
+  const stateBeforePrev = getPriorLineStringState(text, prevStart);
+  return scanLineStringState(prevLine, stateBeforePrev);
+}
+
+/**
+ * Check if a position is inside a comment or string.
+ * Handles RPG free-form line continuation: a string that opens on a line ending
+ * with `+` carries over into the next physical line, so keywords on continuation
+ * lines are correctly detected as being inside the string.
+ * Also correctly handles `//` that appears inside a string (e.g. 'http://...').
  * @param text The full text content
  * @param offset The position to check
  * @returns true if the position is inside a comment or string
  */
 export function isInCommentOrString(text: string, offset: number): boolean {
-  // Find the start of the line
+  // Find the start of the current physical line
   let lineStart = offset;
   while (lineStart > 0 && text[lineStart - 1] !== '\n' && text[lineStart - 1] !== '\r') {
     lineStart--;
   }
 
-  // Extract line content before the offset
+  // Carry over string state from prior continuation lines
+  let inString = getPriorLineStringState(text, lineStart);
+
+  // Scan from line start to the target offset
   const lineBeforeOffset = text.substring(lineStart, offset);
-
-  // Check if there's a comment marker before this position
-  const commentIndex = lineBeforeOffset.indexOf('//');
-  if (commentIndex !== -1) {
-    return true;
-  }
-
-  // Check if the offset is inside a string delimited by single quotes
-  let inString = false;
   for (let i = 0; i < lineBeforeOffset.length; i++) {
-    if (lineBeforeOffset[i] === "'") {
-      inString = !inString;
+    const ch = lineBeforeOffset[i];
+    if (!inString) {
+      if (ch === '/' && i + 1 < lineBeforeOffset.length && lineBeforeOffset[i + 1] === '/') {
+        return true; // position is after a line comment opener
+      }
+      if (ch === "'") {
+        inString = true;
+      }
+    } else {
+      if (ch === "'") {
+        if (i + 1 < lineBeforeOffset.length && lineBeforeOffset[i + 1] === "'") {
+          i++; // skip escaped quote pair
+        } else {
+          inString = false;
+        }
+      }
     }
   }
 
-  if (inString) {
-    return true;
-  }
-
-  return false;
+  return inString;
 }
