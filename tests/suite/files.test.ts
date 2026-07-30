@@ -1,11 +1,12 @@
 
-import path from "path";
+import * as path from "path";
 import setupParser from "../parserSetup";
 import { test, expect } from "vitest";
+import { assertCache, assertFound, assertScope } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
-  
+
 test("simple_file", async () => {
   const lines = [
     `**free`,
@@ -17,12 +18,12 @@ test("simple_file", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
   expect(cache.structs.length).toBe(0);
 
-  const fileDef = cache.find(`employee`);
+  const fileDef = assertFound(cache.find(`employee`), `employee`);
   expect(fileDef.name).toBe(`employee`);
   expect(fileDef.keyword[`DISK`]).toBe(true);
   expect(fileDef.keyword[`USAGE`]).toBe(`*input`);
@@ -34,7 +35,7 @@ test("simple_file", async () => {
 
   expect(empRdcFmt.name).toBe(`EMPLOYEE`);
 
-  expect(empRdcFmt.subItems[1].keyword[`VARCHAR`]).toBe(`12`);																	   
+  expect(empRdcFmt.subItems[1].keyword[`VARCHAR`]).toBe(`12`);
   // 14 fields inside of this record format
   expect(empRdcFmt.subItems.length).toBe(14);
 });
@@ -50,11 +51,11 @@ test("many_formats", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
 
-  const fileDef = cache.find(`emps`);
+  const fileDef = assertFound(cache.find(`emps`), `emps`);
   expect(fileDef.name).toBe(`emps`);
   expect(fileDef.keyword[`WORKSTN`]).toBe(true);
 
@@ -82,12 +83,12 @@ test("ds_extname", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(0);
   expect(cache.structs.length).toBe(1);
 
-  const structDef = cache.find(`employee`);
+  const structDef = assertFound(cache.find(`employee`), `employee`);
   expect(structDef.name).toBe(`Employee`);
   expect(structDef.subItems.length).toBe(14);
 });
@@ -104,12 +105,12 @@ test("ds_extname", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(0);
   expect(cache.structs.length).toBe(1);
 
-  const structDef = cache.find(`employee`);
+  const structDef = assertFound(cache.find(`employee`), `employee`);
   expect(structDef.name).toBe(`Employee`);
   expect(structDef.subItems.length).toBe(14);
 });
@@ -128,11 +129,11 @@ test("ds_extname_template", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.structs.length).toBe(2);
 
-  const dept = cache.find(`dsExample`);
+  const dept = assertFound(cache.find(`dsExample`), `dsExample`);
   expect(dept.subItems.length).toBe(2);
 });
 
@@ -148,12 +149,12 @@ test("ds_extname_alias", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(0);
   expect(cache.structs.length).toBe(1);
 
-  const dept = cache.find(`dept`);
+  const dept = assertFound(cache.find(`dept`), `dept`);
   expect(dept.subItems.length).toBe(5);
 
   expect(dept.subItems[0].name).toBe(`DEPTNO`);
@@ -171,9 +172,9 @@ test("file_prefix", async () => {
     `return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const disp = cache.find(`display`);
+  const disp = assertFound(cache.find(`display`), `display`);
   expect(disp.subItems[0].subItems[0].name).toBe(`DE1_OPTION`);
 });
 
@@ -193,20 +194,20 @@ test('file DS in a copy book', async () => {
   ].join(`\n`);
 
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const globalStruct = cache.find(`GlobalStruct`);
+  const globalStruct = assertFound(cache.find(`GlobalStruct`), `GlobalStruct`);
   expect(globalStruct.subItems.length).toBeGreaterThan(0);
 
-  const mainProc = cache.find(`Main`);
+  const mainProc = assertFound(cache.find(`Main`), `Main`);
 
   expect(mainProc).toBeDefined();
 
-  const someStruct = mainProc.scope.find(`SomeStruct`);
-  expect(someStruct).toBeDefined();
+  const mainProcScope = assertScope(mainProc.scope, `Main`);
+  const someStruct = assertFound(mainProcScope.find(`SomeStruct`), `SomeStruct`);
   expect(someStruct.subItems.length).toBeGreaterThan(0);
 
-  expect(someStruct.subItems.map(s => ({name: s.name, keyword: s.keyword}))).toMatchObject(globalStruct.subItems.map(s => ({name: s.name, keyword: s.keyword})));
+  expect(someStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword }))).toMatchObject(globalStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword })));
 });
 
 test('test rename (#407)', async () => {
@@ -219,11 +220,11 @@ test('test rename (#407)', async () => {
 
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
 
-  const dept = cache.find(`DEPARTMENT`);
+  const dept = assertFound(cache.find(`DEPARTMENT`), `DEPARTMENT`);
   expect(dept.name).toBe(`DEPARTMENT`);
   expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
 
@@ -246,11 +247,11 @@ test('test rename + prefix (#407)', async () => {
 
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
   expect(cache.files.length).toBe(1);
 
-  const dept = cache.find(`DEPARTMENT`);
+  const dept = assertFound(cache.find(`DEPARTMENT`), `DEPARTMENT`);
   expect(dept.name).toBe(`DEPARTMENT`);
   expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
 

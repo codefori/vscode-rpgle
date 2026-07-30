@@ -22,7 +22,7 @@ import {
 import { projectFilesGlob } from './configuration';
 import { clearTableCache, buildRequestHandlers } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
-import { checkAndWait, loadBase, onCodeForIBMiConfigurationChange } from './base';
+import { checkAndWait, loadBase } from './base';
 import { registerCommands } from './commands';
 import { setLanguageSettings } from './language/config';
 
@@ -78,9 +78,10 @@ export function activate(context: ExtensionContext) {
 		buildRequestHandlers(client);
 
 		const instance = await checkAndWait();
+		const base = loadBase();
 
 		// We need to clear table caches when the connection changes
-		if (instance) {
+		if (instance && base) {
 			// When the connection is established
 			instance.subscribe(context, "connected", "vscode-rpgle", () => {
 				clearTableCache(client);
@@ -88,7 +89,7 @@ export function activate(context: ExtensionContext) {
 
 			// When the library list changes
 			context.subscriptions.push(
-				onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+				base.onCodeForIBMiConfigurationChange("connectionSettings", async () => {
 					clearTableCache(client);
 				}),
 			);

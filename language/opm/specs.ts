@@ -203,6 +203,13 @@ export function parseSpecification(line: string, startIndex: number = 0): Specif
     };
   };
 
+  const toRequiredToken = (start: number, end: number, opts: { default?: TokenValue, isNumber?: boolean } = {}): Token => {
+    return toToken(start, end, opts) || {
+      range: [startIndex + start, startIndex + start],
+      value: opts.default !== undefined ? opts.default : ``,
+    };
+  };
+
   if (isContinuation) {
     return {
       type: `sql`,
@@ -218,7 +225,7 @@ export function parseSpecification(line: string, startIndex: number = 0): Specif
       return {
         type: "sql",
         rawLine,
-        end: sqlCharacters.value === END_SQL,
+        end: sqlCharacters?.value === END_SQL,
         contents: line.substring(15).trim()
       } satisfies EmbeddedSqlSpecification;
     }
@@ -226,7 +233,7 @@ export function parseSpecification(line: string, startIndex: number = 0): Specif
     return {
       type: "directive",
       rawLine,
-      directiveName: toToken(7, nextSpace),
+      directiveName: toRequiredToken(7, nextSpace),
       value: toToken(nextSpace + 1, LINE_LENGTH)
     };
   }
@@ -243,9 +250,9 @@ export function parseSpecification(line: string, startIndex: number = 0): Specif
       return {
         type: "file",
         rawLine,
-        fileName: toToken(6, 14),
-        fileType: toToken(14, 15),
-        usage: toToken(15, 16),
+        fileName: toRequiredToken(6, 14),
+        fileType: toRequiredToken(14, 15),
+        usage: toRequiredToken(15, 16),
         // Additional fields can be added here if needed
       };
 
@@ -262,8 +269,8 @@ export function parseSpecification(line: string, startIndex: number = 0): Specif
       return {
         type: "lineCounter",
         rawLine,
-        lineCountID: toToken(6, 14),
-        associatedField: toToken(14, 17),
+        lineCountID: toRequiredToken(6, 14),
+        associatedField: toRequiredToken(14, 17),
         // Form length, overflow line, etc., are next
       };
 
