@@ -8,7 +8,8 @@ import {
 } from './utils/fileRouting';
 
 export type tablePromise = (name: string, aliases?: boolean) => Promise<Declaration[]>;
-export type includeFilePromise = (baseFile: string, includeString: string) => Promise<{found: boolean, uri?: string, content?: string}>;
+export type IncludeFetchResult = { found: boolean, uri?: string, content?: string };
+export type includeFilePromise = (baseFile: string, includeString: string) => Promise<IncludeFetchResult>;
 
 /**
  * Common interface for both parsers
