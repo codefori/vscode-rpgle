@@ -2,7 +2,7 @@
 import * as path from "path";
 import setupParser from "../parserSetup";
 import { test, expect } from "vitest";
-import { assertCache, assertFound } from "../utils";
+import { assertCache, assertFound, assertScope } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -67,7 +67,7 @@ test('fixed2', async () => {
   const CHARFields = cache.variables.filter(v => v.keyword[`CHAR`] !== undefined);
   expect(CHARFields.length).to.equal(12);
 
-  const countVar = cache.variables.find(v => v.name === `Count`);
+  const countVar = assertFound(cache.variables.find(v => v.name === `Count`), `Count`);
   expect(countVar.keyword[`PACKED`]).to.equal(`4:0`);
 });
 
@@ -537,7 +537,7 @@ test('fixedfree1', async () => {
   expect(Obj_List.subItems.find(i => !i.keyword[`CHAR`])).to.be.undefined;
   expect(Obj_List.subItems.find(i => !i.keyword[`CONST`])).to.be.undefined;
 
-  const scope = Obj_List.scope;
+  const scope = assertScope(Obj_List.scope, `Obj_List`);
   expect(scope.subroutines.length).to.equal(1);
   expect(scope.variables.length).to.equal(1);
 });
@@ -985,13 +985,13 @@ test('def_ranges', async () => {
     end: 41
   });
 
-  const $ErrorDS_TYPEMST = cache.find(`$ErrorDS_TYPEMST`);
+  const $ErrorDS_TYPEMST = assertFound(cache.find(`$ErrorDS_TYPEMST`), `$ErrorDS_TYPEMST`);
   expect($ErrorDS_TYPEMST.range).to.deep.equal({
     start: 164,
     end: 167
   });
 
-  const $Validate_TYPEMST = cache.find(`$Validate_TYPEMST`);
+  const $Validate_TYPEMST = assertFound(cache.find(`$Validate_TYPEMST`), `$Validate_TYPEMST`);
   expect($Validate_TYPEMST.range).to.deep.equal({
     start: 45,
     end: 48
@@ -1063,7 +1063,7 @@ test('call_opcode', async () => {
   expect(cache.subroutines.length).to.equal(1);
   expect(cache.procedures.length).to.equal(1);
 
-  const fixedCall = cache.find(`BBSWINASKR`)
+  const fixedCall = assertFound(cache.find(`BBSWINASKR`), `BBSWINASKR`);
   expect(fixedCall.name).to.equal(`BBSWINASKR`);
   expect(fixedCall.keyword[`CALL`]).to.equal(true);
 });
@@ -1367,12 +1367,11 @@ test('multiline procedure names', async () => {
   expect(cache.procedures[3].name).to.equal(`TestA`);
 
   const abcxyzTest = assertFound(cache.find(`abcxyzTest`), `abcxyzTest`);
-  expect(abcxyzTest).toBeDefined();
   expect(abcxyzTest.name).to.equal(`abcxyzTest`);
 
   const procRange = abcxyzTest.range;
-  expect(lines[procRange.start]).to.equal(`     Pabc...`);
-  expect(lines[procRange.end]).to.equal(`     P                 E`);
+  expect(lines[procRange.start!]).to.equal(`     Pabc...`);
+  expect(lines[procRange.end!]).to.equal(`     P                 E`);
 });
 
 test('incorrect range on prototypes and procedures (#412)', async () => {
@@ -1410,8 +1409,6 @@ test('incorrect range on prototypes and procedures (#412)', async () => {
 
   const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache).toBeDefined();
-
   const procedures = cache.procedures;
   expect(procedures.length).toBe(2);
   expect(procedures[0].name).toBe('SCO000');
@@ -1423,9 +1420,9 @@ test('incorrect range on prototypes and procedures (#412)', async () => {
   const prRange = procedures[0].range;
   const procRange = procedures[1].range;
 
-  expect(prRange.start).to.deep.equal(prRange.end - 1);
-  expect(procRange.start).toBeGreaterThan(prRange.end);
-  expect(procRange.end).toBeGreaterThan(procRange.start);
+  expect(prRange.start).to.deep.equal(prRange.end! - 1);
+  expect(procRange.start).toBeGreaterThan(prRange.end!);
+  expect(procRange.end).toBeGreaterThan(procRange.start!);
 });
 
 test('missing subroutines #443', async () => {

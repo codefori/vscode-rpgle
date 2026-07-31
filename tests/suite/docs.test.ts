@@ -2,6 +2,7 @@
 import setupParser from "../parserSetup";
 import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
+import { assertCache, assertFound } from "../utils";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
@@ -25,14 +26,14 @@ test("issue_202", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
-  const toLower = cache.find(`ToLower`);
+  const toLower = assertFound(cache.find(`ToLower`), `ToLower`);
 
-  const titleTag = toLower.tags.find(tag => tag.tag === `title`);
+  const titleTag = assertFound(toLower.tags.find(tag => tag.tag === `title`), `title tag`);
   expect(titleTag.content).toBe(`Transform to lowercase`);
 
-  const descTag = toLower.tags.find(tag => tag.tag === `description`);
+  const descTag = assertFound(toLower.tags.find(tag => tag.tag === `description`), `description tag`);
   expect(descTag.content).toBe(`This procedure will take a string and transform it to lowercase`);
 
   const tags = toLower.tags;
@@ -47,7 +48,7 @@ test("issue_202", async () => {
   });
 
   const stringInParam = toLower.subItems[0];
-  const parmTag = stringInParam.tags.find(tag => tag.tag === `description`);
+  const parmTag = assertFound(stringInParam.tags.find(tag => tag.tag === `description`), `parm description tag`);
   expect(parmTag.content).toBe(`The string`);
 });
 
@@ -83,7 +84,7 @@ test("issue_231", async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   const { indentErrors, errors } = Linter.getErrors({ uri, content: lines }, {
     indent: 2,
@@ -96,7 +97,7 @@ test("issue_231", async () => {
 
 test("Cache for empty files", async () => {
   const emptyLines = ``;
-  const cache = await parser.getDocs(uri, emptyLines, { ignoreCache: true });
+  const cache = assertCache(await parser.getDocs(uri, emptyLines, { ignoreCache: true }));
   expect(cache.procedures.length).toBe(0);
 });
 
@@ -114,7 +115,7 @@ test("Clear cache on change to empty file", async () => {
   ].join(`\n`);
 
   // First parse should add the proc to the cache
-  const cache1 = await parser.getDocs(uri, lines, { ignoreCache: true });
+  const cache1 = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true }));
   expect(cache1.procedures.length).toBe(1);
 
   // Second parse with empty content should clear the cache
@@ -122,6 +123,6 @@ test("Clear cache on change to empty file", async () => {
   await parser.getDocs(uri, emptyLines, { ignoreCache: true });
 
   // Verify that the cache is cleared
-  const cache2 = parser.getParsedCache(uri);
+  const cache2 = assertCache(parser.getParsedCache(uri));
   expect(cache2.procedures.length).toBe(0);
 });

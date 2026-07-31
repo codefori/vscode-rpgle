@@ -29,17 +29,17 @@ describe("Specs Parser", () => {
     expect(iSpec).toBeDefined();
     expect(iSpec.type).toBe("input");
     expect(iSpec.subtype).toBe("field");
-    expect(iSpec.name.value).toBe("$ERSIZ");
-    expect(iSpec.internalDataFormat.value).toBe("B");
-    expect(iSpec.from.value).toBe(1);
-    expect(iSpec.to.value).toBe(4);
-    expect(iSpec.decimalPositions.value).toBe(0);
+    expect(iSpec.name?.value).toBe("$ERSIZ");
+    expect(iSpec.internalDataFormat?.value).toBe("B");
+    expect(iSpec.from?.value).toBe(1);
+    expect(iSpec.to?.value).toBe(4);
+    expect(iSpec.decimalPositions?.value).toBe(0);
     expect(iSpec.externalField).toBeFalsy();
-    expect(iSpec.initialValue.value).toBe("80")
+    expect(iSpec.initialValue?.value).toBe("80")
 
     expect(line.substring(
-      iSpec.name.range[0],
-      iSpec.name.range[1]
+      iSpec.name!.range[0],
+      iSpec.name!.range[1]
     )).toBe("$ERSIZ");
   });
 
@@ -50,10 +50,10 @@ describe("Specs Parser", () => {
     expect(iSpec).toBeDefined();
     expect(iSpec.type).toBe("input");
     expect(iSpec.subtype).toBe("field");
-    expect(iSpec.name.value).toBe("$ERMIC");
+    expect(iSpec.name?.value).toBe("$ERMIC");
     expect(iSpec.internalDataFormat).toBeFalsy();
-    expect(iSpec.from.value).toBe(9);
-    expect(iSpec.to.value).toBe(15);
+    expect(iSpec.from?.value).toBe(9);
+    expect(iSpec.to?.value).toBe(15);
     expect(iSpec.decimalPositions).toBeFalsy();
   });
 
