@@ -2,9 +2,7 @@ import Cache from '../models/cache';
 import Declaration, { DeclarationType } from '../models/declaration';
 import { Keywords } from '../ile/parserTypes';
 import { EmbeddedSqlSpecification, InputConstantEntry, parseSpecification } from './specs';
-
-export type tablePromise = (name: string, aliases?: boolean) => Promise<Declaration[]>;
-export type includeFilePromise = (baseFile: string, includeString: string) => Promise<{found: boolean, uri?: string, content?: string}>;
+import type { tablePromise, includeFilePromise } from '../parserFactory';
 
 export interface ParseOptions {
   withIncludes?: boolean;
