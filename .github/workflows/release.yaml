@@ -9,10 +9,11 @@ jobs:
 
   cli-release:
     name: Release rpglint CLI
+    needs: extension-release
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for OIDC
-      contents: read
+      contents: write
     steps:
       - name: Use Node.js 24
         uses: actions/setup-node@v6
@@ -41,3 +42,28 @@ jobs:
       - name: Publish to npm
         working-directory: cli/rpglint
         run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit changes and move release tag
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git commit --allow-empty -a -m "Release ${{ github.ref_name }}"
+          git tag -f ${{ github.ref_name }}
+          git push --tags --force
+
+      - name: Bump version number for next cycle
+        working-directory: cli/rpglint
+        run: npm version --no-git-tag-version prerelease --preid dev
+
+      - name: Read new version
+        id: new-version
+        uses: beaconbrigade/package-json-version@v0.3
+        with:
+          path: cli/rpglint
+
+      - name: Commit version number change
+        run: |
+          git commit -a -m "Starting ${{ steps.new-version.outputs.version }} development"
+          git push
