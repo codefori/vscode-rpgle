@@ -5,9 +5,9 @@
 import glob from "glob";
 import { readFileSync } from 'fs';
 
-import Parser from '../../language/parser';
-import Linter from '../../language/linter';
-import { Rules } from '../../language/parserTypes';
+import Parser from '../../language/ile/parser';
+import Linter from '../../language/ile/linter';
+import { Rules } from '../../language/ile/parserTypes';
 import path from 'path';
 
 type FormatTypes = "standard" | "flc";
@@ -20,7 +20,7 @@ async function main() {
 	let cwd = process.cwd();
 	let scanGlob = `**/*.{SQLRPGLE,sqlrpgle,RPGLE,rpgle}`;
 	let maxErrors: number|undefined;
-	let outputType: FormatTypes;
+	let outputType: FormatTypes|undefined;
 
 	for (let i = 0; i < parms.length; i++) {
 		switch (parms[0]) {
@@ -84,7 +84,7 @@ async function main() {
 		rules = getLintConfig(cwd);
 		parser = setupParser(cwd, scanGlob);
 		files = getFiles(cwd, scanGlob);
-	} catch (e) {
+	} catch (e: any) {
 		error(e.message || e);
 		process.exit(1);
 	}
@@ -153,9 +153,11 @@ async function main() {
 		
 							if (lintResult.errors.length) {
 								lintResult.errors.forEach(error => {
-									const line = eolIndexes.findIndex(index => index > error.offset.position);
-									const offset = error.offset.position - (eolIndexes[line-1] || 0);
-									console.log(`${filePath}:${line+1}:${offset}:${Linter.getErrorText(error.type)}`);
+									const line = eolIndexes.findIndex(index => index > error.offset.start);
+									const offset = error.offset.start - (eolIndexes[line-1] || 0);
+									if(error.type) {
+										console.log(`${filePath}:${line+1}:${offset}:${Linter.getErrorText(error.type)}`);
+									}
 								});
 							}
 							break;
@@ -172,9 +174,11 @@ async function main() {
 		
 							if (lintResult.errors.length) {
 								lintResult.errors.forEach(error => {
-									const line = eolIndexes.findIndex(index => index > error.offset.position);
-									const offset = error.offset.position - (eolIndexes[line-1] || 0);
-									console.log(`\tLine ${line+1}, column ${offset}: ${Linter.getErrorText(error.type)}`);
+									const line = eolIndexes.findIndex(index => index > error.offset.start);
+									const offset = error.offset.start - (eolIndexes[line-1] || 0);
+									if(error.type) {
+										console.log(`\tLine ${line+1}, column ${offset}: ${Linter.getErrorText(error.type)}`);
+									}
 								});
 							}
 							break;
@@ -182,7 +186,7 @@ async function main() {
 				}
 			}
 
-		} catch (e) {
+		} catch (e: any) {
 			error(`Failed to lint ${filePath}: ${e.message || e}`);
 			error(`Report this issue to us with an example: github.com/halcyon-tech/vscode-rpgle/issues`);
 		}

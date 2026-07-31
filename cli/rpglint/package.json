@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/halcyon-tech/vscode-rpgle/issues"
   },
-  "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme"
+  "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme",
+  "devDependencies": {
+    "@types/node": "^20.19.41"
+  }
 }
