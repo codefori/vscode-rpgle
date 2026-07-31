@@ -4,6 +4,7 @@ import { OpmParser } from "../../../language/opm/parser";
 import path from "path";
 import { readFile } from "fs/promises";
 import { setupParser } from "./setupParser";
+import { assertCache, assertFound } from "../../utils";
 
 async function readFixture(fixturePath: string): Promise<string> {
   const fullPath = path.join(__dirname, '../../fixtures/opm', fixturePath);
@@ -20,13 +21,13 @@ describe("Parser tests", () => {
     const parser = new OpmParser();
     const fileUri = "file:///test.rpg";
 
-    const scope = await parser.getDocs(fileUri, lines, {keepTree: true});
+    const cache = assertCache(await parser.getDocs(fileUri, lines, {keepTree: true}));
 
-    expect(scope).toBeDefined();
-    expect(scope.parseTree[fileUri]).toBeDefined();
-    expect(scope.parseTree[fileUri].length).toBe(2);
+    expect(cache.parseTree).toBeDefined();
+    expect(cache.parseTree![fileUri]).toBeDefined();
+    expect(cache.parseTree![fileUri].length).toBe(2);
 
-    const iSpec1 = scope.parseTree[fileUri][0] as InputDataStructureEntry;
+    const iSpec1 = cache.parseTree![fileUri][0] as InputDataStructureEntry;
 
     expect(iSpec1).toBeDefined();
     expect(iSpec1.type).toBe("input");
@@ -39,16 +40,16 @@ describe("Parser tests", () => {
       iSpec1.name.range[1]
     )).toBe("$APIER");
 
-    const iSpec2 = scope.parseTree[fileUri][1] as InputField;
+    const iSpec2 = cache.parseTree![fileUri][1] as InputField;
     expect(iSpec2).toBeDefined();
     expect(iSpec2.type).toBe("input");
     expect(iSpec2.subtype).toBe("field");
     expect(iSpec2.described).toBeFalsy();
 
-    expect(iSpec2.name.value).toBe("$ERSIZ");
+    expect(iSpec2.name!.value).toBe("$ERSIZ");
     expect(lines.substring(
-      iSpec2.name.range[0],
-      iSpec2.name.range[1]
+      iSpec2.name!.range[0],
+      iSpec2.name!.range[1]
     )).toBe("$ERSIZ");
   });
 
@@ -58,15 +59,13 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines);
+    const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    expect(scope).toBeDefined();
+    expect(cache.symbols.length).toBe(1);
+    expect(cache.symbols[0].name).toBe("$SYSER");
+    expect(cache.symbols[0].subItems.length).toBe(5);
 
-    expect(scope.symbols.length).toBe(1);
-    expect(scope.symbols[0].name).toBe("$SYSER");
-    expect(scope.symbols[0].subItems.length).toBe(5);
-
-    const subfieldNames = scope.symbols[0].subItems.map((s) => s.name);
+    const subfieldNames = cache.symbols[0].subItems.map((s) => s.name);
     expect(subfieldNames).toMatchObject([
       `$ESIZ`,
       `$ELEN`,
@@ -75,7 +74,7 @@ describe("Parser tests", () => {
       `$EMSG`
     ]);
 
-    const subfieldKeywords = scope.symbols[0].subItems.map((s) => s.keyword);
+    const subfieldKeywords = cache.symbols[0].subItems.map((s) => s.keyword);
     expect(subfieldKeywords).toMatchObject([
       { packed: "4", decimals: "0" },
       { packed: "4", decimals: "0" },
@@ -91,15 +90,13 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines);
+    const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    expect(scope).toBeDefined();
-
-    const qprint = scope.symbols[0];
+    const qprint = cache.symbols[0];
     expect(qprint.name).toBe("OUTFILE");
     expect(qprint.type).toBe("file");
 
-    const genhdr = scope.symbols[1];
+    const genhdr = cache.symbols[1];
     expect(genhdr.name).toBe("CTLHDR");
     expect(genhdr.type).toBe("struct");
     expect(genhdr.subItems.length).toBe(16);
@@ -115,13 +112,13 @@ describe("Parser tests", () => {
     expect(lastSubfield.keyword).toMatchObject({ packed: "4", decimals: "0" });
 
     // Note: The *N (unnamed struct) test is skipped as Cache class may handle unnamed structs differently
-    // const noName = scope.symbols.find(s => s.name === "*N");
+    // const noName = cache.symbols.find(s => s.name === "*N");
     // expect(noName).toBeDefined();
     // expect(noName!.name).toBe("*N");
     // expect(noName!.type).toBe("struct");
     // expect(noName!.subItems.length).toBe(3);
 
-    const calls = scope.symbols.filter(s => s.type === "call");
+    const calls = cache.symbols.filter(s => s.type === "call");
     const firstCall = calls[0];
     expect(firstCall.name).toBe("QUSCRTUS");
     expect(firstCall.type).toBe("call");
@@ -131,19 +128,17 @@ describe("Parser tests", () => {
 
     const definedInCall = firstCall.subItems[1];
     expect(definedInCall.name).toBe("BUFATR");
-    const symbolLookup = scope.find("BUFATR");
+    const symbolLookup = cache.find("BUFATR");
     expect(symbolLookup).toMatchObject(definedInCall);
 
-    const initSubroutine = scope.find(`*INZSR`);
-    expect(initSubroutine).toBeDefined();
+    const initSubroutine = assertFound(cache.find(`*INZSR`), `*INZSR`);
     expect(initSubroutine.name).toBe("*INZSR");
     expect(initSubroutine.type).toBe("subroutine");
     // Note: Position structure differs between Scope and Cache
     // expect(initSubroutine.position.range[0]).toBe(200);
     // expect(initSubroutine.position.range[1]).toBe(214);
 
-    const entryPlist = scope.find("*ENTRY");
-    expect(entryPlist).toBeDefined();
+    const entryPlist = assertFound(cache.find("*ENTRY"), `*ENTRY`);
     expect(entryPlist.name).toBe("*ENTRY");
     expect(entryPlist.type).toBe("plist");
     // expect(entryPlist.position.range[0]).toBe(203);
@@ -167,15 +162,13 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines);
+    const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    expect(scope).toBeDefined();
-
-    const files = scope.symbols.filter((s) => s.type === "file").map((s) => s.name);
+    const files = cache.symbols.filter((s) => s.type === "file").map((s) => s.name);
     expect(files.length).toBe(3);
     expect(files).toMatchObject([`CURROBJS`, `PREVOBJS`, `PRTFILE`]);
 
-    const constants = scope.symbols.filter((s) => s.type === `constant`);
+    const constants = cache.symbols.filter((s) => s.type === `constant`);
     expect(constants.length).toBe(17);
 
     const optionIndex = constants.findIndex((c) => c.name === `OPTS`);
@@ -183,7 +176,7 @@ describe("Parser tests", () => {
 
     expect(optionIndex).toBe(toLibIndex-1);
 
-    const subroutines = scope.symbols.filter((s) => s.type === "subroutine");
+    const subroutines = cache.symbols.filter((s) => s.type === "subroutine");
     expect(subroutines.length).toBe(3);
   });
 
@@ -193,11 +186,9 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines);
+    const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    expect(scope).toBeDefined();
-
-    const klists = scope.symbols.filter((s) => s.type === "klist");
+    const klists = cache.symbols.filter((s) => s.type === "klist");
     expect(klists.length).toBe(1);
     expect(klists[0].name).toBe("DATAKEY");
     expect(klists[0].subItems.length).toBe(2);
@@ -219,11 +210,9 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines);
+    const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    expect(scope).toBeDefined();
-
-    const klists = scope.symbols.filter((s) => s.type === "klist");
+    const klists = cache.symbols.filter((s) => s.type === "klist");
     expect(klists.length).toBe(1);
     expect(klists[0].name).toBe("DATAKEY");
     expect(klists[0].subItems.length).toBe(2);
@@ -238,11 +227,8 @@ describe("Parser tests", () => {
     expect(lastKlistField.type).toBe("variable");
     expect(lastKlistField.keyword).toMatchObject({ char: "10" });
 
-    const file = scope.find(`DATAFILE`);
-    expect(file).toBeDefined();
-
-    const idnum = scope.find(`IDNUM`);
-    expect(idnum).toBeDefined();
+    assertFound(cache.find(`DATAFILE`), `DATAFILE`);
+    assertFound(cache.find(`IDNUM`), `IDNUM`);
 
     // Note: Position matching depends on external file resolution
     // expect(file.position).toMatchObject(idnum.position);
@@ -254,11 +240,9 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines, {keepSqlInTree: true});
+    const cache = assertCache(await parser.getDocs(fileUri, lines, {keepSqlInTree: true}));
 
-    expect(scope).toBeDefined();
-
-    const sqlStatements = scope.parseTree[fileUri]
+    const sqlStatements = assertFound(cache.parseTree, `parseTree`)[fileUri]
     expect(sqlStatements.length).toBe(4);
     expect(sqlStatements[0].rawLine).toBe("declare objcur cursor for select odlbnm, odobnm, odobtp, odobow from QADSPOBJ where odobow <> 'SYSOWNER '");
     expect(sqlStatements[1].rawLine).toBe("open objcur");
@@ -272,11 +256,10 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines);
+    const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    expect(scope).toBeDefined();
-    expect(scope.symbols.length).toBe(1);
-    expect(scope.symbols[0].name).toBe("FIELD1");
+    expect(cache.symbols.length).toBe(1);
+    expect(cache.symbols[0].name).toBe("FIELD1");
   });
 
     it('No search for symbols if we find Local Data Area', async () => {
@@ -285,10 +268,9 @@ describe("Parser tests", () => {
 
     const lines = await readFixture(fileUri)
 
-    const scope = await parser.getDocs(fileUri, lines);
+    const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    expect(scope).toBeDefined();
-    expect(scope.symbols.length).toBe(1);
-    expect(scope.symbols[0].name).toBe("DATA");
+    expect(cache.symbols.length).toBe(1);
+    expect(cache.symbols[0].name).toBe("DATA");
   });
 });

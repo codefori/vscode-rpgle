@@ -31,7 +31,7 @@ test("Parser partial tests", { timeout }, async () => {
 
       let content = ``;
 
-      let baseContentSplitUpIntoPieces = [];
+      let baseContentSplitUpIntoPieces: string[] = [];
 
       const pieceSize = Math.ceil(baseContent.length / SPLIT_SIZE);
       for (let i = 0; i < baseContent.length; i += pieceSize) {
