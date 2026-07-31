@@ -124,12 +124,16 @@ async function main() {
 				}
 			}
 
+			const collectReferences = Boolean(rules.NoUnreferenced || rules.IncorrectVariableCase);
+
+
 			if (content.length > 6 && content.substring(0, 6).toLowerCase() === `**free`) {
 				const docs = await parser.getDocs(
 					filePath,
 					content,
 					{
-						withIncludes: true
+						withIncludes: true,
+						collectReferences
 					}
 				);
 
