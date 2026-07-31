@@ -62,6 +62,8 @@ export interface Rules {
   CollectReferences?: boolean;
 }
 
+export type ErrorType = Exclude<keyof Rules, 'indent' | 'literalMinimum' | 'CollectReferences'>;
+
 export  interface DefinitionPosition {
   path: string;
   line: number;
@@ -74,7 +76,7 @@ export interface Reference {
 
 export interface IssueRange {
   offset: IRange;
-  type?: keyof Rules;
+  type?: ErrorType;
   newValue?: string;
 }
 

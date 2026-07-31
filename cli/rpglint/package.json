@@ -1,6 +1,6 @@
 {
   "name": "@halcyontech/rpglint",
-  "version": "0.27.0",
+  "version": "0.28.0",
   "description": "rpglint CLI tool",
   "bin": {
     "rpglint": "./dist/index.js"
@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/halcyon-tech/vscode-rpgle/issues"
   },
-  "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme"
+  "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme",
+  "devDependencies": {
+    "@types/node": "^20.19.41"
+  }
 }

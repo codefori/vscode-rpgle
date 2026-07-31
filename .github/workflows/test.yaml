@@ -9,10 +9,22 @@ jobs:
     name: Test runner
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
           submodules: true
-      - run: npm install
-      - run: node ./node_modules/eslint/bin/eslint src/** --no-error-on-unmatched-pattern
-      - run: npm run test
+
+      - name: Install dependencies
+        run: npm install
+          
+      - name: Run ESLint
+        run: node ./node_modules/eslint/bin/eslint src/** --no-error-on-unmatched-pattern
+
+      - name: Run tests
+        run: npm run test
