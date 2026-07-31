@@ -3,6 +3,38 @@ on:
     types: [created]
 
 jobs:
-  build-and-publish-release:
+  extension-release:
     uses: codefori/.github/.github/workflows/release.yaml@main
     secrets: inherit
+
+  cli-release:
+    name: Release rpglint CLI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read
+    steps:
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Update version number
+        working-directory: cli/rpglint
+        run: npm version --allow-same-version --no-git-tag-version ${{ github.ref_name }}
+
+      - name: Install dependencies
+        working-directory: cli/rpglint
+        run: npm ci
+
+      - name: Create build
+        working-directory: cli/rpglint
+        run: npm run webpack
+
+      - name: Publish to npm
+        working-directory: cli/rpglint
+        run: npm publish --access public

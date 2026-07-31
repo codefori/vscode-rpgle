@@ -1,5 +1,37 @@
 on: pull_request
 
 jobs:
-  build-pull-request:
+  pr-build-extension:
     uses: codefori/.github/.github/workflows/pr_build.yaml@main
+
+  pr-build-cli:
+    name: Build rpglint CLI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Get package info
+        id: package-info
+        uses: luizfelipelaviola/get-package-info@v2
+        with:
+          path: cli/rpglint
+
+      - name: Install dependencies
+        working-directory: cli/rpglint
+        run: npm ci
+
+      - name: Create build
+        working-directory: cli/rpglint
+        run: npm run webpack
+
+      - name: Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.package-info.outputs.name }}-pr-build
+          path: cli/rpglint/dist/
