@@ -22,7 +22,10 @@ jobs:
         with:
           path: cli/rpglint
 
-      - name: Install dependencies
+      - name: Install extension dependencies
+        run: npm ci
+
+      - name: Install CLI dependencies
         working-directory: cli/rpglint
         run: npm ci
 

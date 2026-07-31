@@ -27,7 +27,10 @@ jobs:
         working-directory: cli/rpglint
         run: npm version --allow-same-version --no-git-tag-version ${{ github.ref_name }}
 
-      - name: Install dependencies
+      - name: Install extension dependencies
+        run: npm ci
+
+      - name: Install CLI dependencies
         working-directory: cli/rpglint
         run: npm ci
 
