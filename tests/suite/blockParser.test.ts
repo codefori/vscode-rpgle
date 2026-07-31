@@ -129,6 +129,46 @@ endfor;`;
       expect(matches[1].word).toBe('endfor');
     });
 
+    it('should find all CASxx opcodes and ENDCS in a compound CAS block', () => {
+      // Fixed-format CAS block: multiple CASxx / CAS openers share one ENDCS.
+      // All openers and the closer must appear in the matches list.
+      const code = [
+        ` c     check1        CASEQ     '1'           VALUE1`,
+        ` c     check1        CASEQ     '2'           VALUE2`,
+        ` c     check1        CASNE     '3'           VALUE3`,
+        ` c                   CAS                     VALUEEND`,
+        ` c                   ENDCS`,
+      ].join('\n');
+      const matches = findAllBlockMatches(code, isInCommentOrString, isInSqlBlock);
+      const words = matches.map(m => m.word);
+      expect(words).toContain('caseq');
+      expect(words).toContain('casne');
+      expect(words).toContain('cas');
+      expect(words).toContain('endcs');
+      // No stray block keywords should appear
+      expect(words.filter(w => !['caseq', 'casne', 'cas', 'endcs'].includes(w))).toHaveLength(0);
+    });
+
+    it('should not count IF inside a string literal spanning continuation lines', () => {
+      // 'if' appears on the continuation line of a string — must not be a block match.
+      // blockParser returns 'end' (not 'end-proc') because its regex is not longest-first.
+      const code = [
+        `dcl-proc set_msg;`,
+        `  dcl-s msg varchar(100);`,
+        `  msg = 'Let me know if you are ready to proceed.';`,
+        `  msg = 'Let me +`,
+        `           know if you are ready to proceed.';`,
+        `  msg = 'Let me ' +`,
+        `           'know if you are ready to proceed.';`,
+        `end-proc;`,
+      ].join('\n');
+      const matches = findAllBlockMatches(code, isInCommentOrString, isInSqlBlock);
+      const words = matches.map(m => m.word);
+      // No 'if' should appear — all three occurrences are inside string literals
+      expect(words).not.toContain('if');
+      expect(words).toContain('dcl-proc');
+    });
+
     it('should find DCL-PROC blocks', () => {
       const code = `dcl-proc myProc;
   dcl-pi *n;
