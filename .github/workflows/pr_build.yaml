@@ -38,3 +38,10 @@ jobs:
         with:
           name: rpglint-pr-build
           path: cli/rpglint/dist/
+
+      - name: Copy license
+        run: cp LICENSE cli/rpglint/LICENSE
+
+      - name: Dry run NPM publish
+        working-directory: cli/rpglint
+        run: npm publish --dry-run
