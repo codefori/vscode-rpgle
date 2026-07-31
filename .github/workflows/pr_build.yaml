@@ -36,5 +36,5 @@ jobs:
       - name: Upload build
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.package-info.outputs.name }}-pr-build
+          name: rpglint-pr-build
           path: cli/rpglint/dist/
