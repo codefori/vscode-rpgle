@@ -5,6 +5,7 @@ import { fail } from "assert";
 import Declaration from "../../language/models/declaration";
 import Cache from "../../language/models/cache";
 import { Reference } from "../../language/ile/parserTypes";
+import { assertCache } from "../utils";
 
 const timeout = 1000 * 60 * 10; // 10 minutes
 
@@ -28,7 +29,7 @@ test("Generic reference tests", { timeout }, async () => {
       const baseContent = await getFileContent(relativePath);
 
       const ps = performance.now();
-      const doc = await parser.getDocs(basename, baseContent, { collectReferences: true, ignoreCache: true, withIncludes: true });
+      const doc = assertCache(await parser.getDocs(basename, baseContent, { collectReferences: true, ignoreCache: true, withIncludes: true }));
       const pe = performance.now();
 
       let cachedFiles: {[uri: string]: string} = {};

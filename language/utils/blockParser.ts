@@ -2,15 +2,17 @@ export interface BlockPair {
   open: string[];
   close: string[];
   middle?: string[];
+  /** When true, consecutive openers of this pair share one closer (non-nestable). */
+  nonNestable?: boolean;
 }
 
 export const RPGLE_BLOCK_PAIRS: BlockPair[] = [
-  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif','end'], middle: ['else', 'elseif'] },
-  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo','end'] },
-  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo','end'] },
-  { open: ['do'], close: ['enddo','end'] },
-  { open: ['for', 'for-each'], close: ['endfor','end'] },
-  { open: ['select'], close: ['endsl','end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
+  { open: ['if', 'ifeq', 'ifne', 'ifgt', 'iflt', 'ifge', 'ifle'], close: ['endif', 'end'], middle: ['else', 'elseif'] },
+  { open: ['dow', 'doweq', 'downe', 'dowgt', 'dowlt', 'dowge', 'dowle'], close: ['enddo', 'end'] },
+  { open: ['dou', 'doueq', 'doune', 'dougt', 'doult', 'douge', 'doule'], close: ['enddo', 'end'] },
+  { open: ['do'], close: ['enddo', 'end'] },
+  { open: ['for', 'for-each'], close: ['endfor', 'end'] },
+  { open: ['select'], close: ['endsl', 'end'], middle: ['when', 'wheneq', 'whenne', 'whengt', 'whenlt', 'whenge', 'whenle', 'when-is', 'when-in', 'other'] },
   { open: ['monitor'], close: ['endmon'], middle: ['on-error', 'on-excp'] },
   { open: ['dcl-proc'], close: ['end-proc'] },
   { open: ['dcl-ds'], close: ['end-ds'] },
@@ -18,7 +20,7 @@ export const RPGLE_BLOCK_PAIRS: BlockPair[] = [
   { open: ['dcl-pi'], close: ['end-pi'] },
   { open: ['dcl-enum'], close: ['end-enum'] },
   { open: ['begsr'], close: ['endsr'] },
-  { open: ['casxx', 'caseq', 'casne', 'casgt', 'caslt', 'casge', 'casle'], close: ['endcs'] },
+  { open: ['cas', 'casxx', 'caseq', 'casne', 'casgt', 'caslt', 'casge', 'casle'], close: ['endcs'], nonNestable: true },
 ];
 
 export interface BlockMatch {

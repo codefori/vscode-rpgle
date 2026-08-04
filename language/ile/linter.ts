@@ -1,12 +1,10 @@
 /* eslint-disable no-case-declarations */
 
 import Cache from "../models/cache";
-import { tokenise } from "./tokens";
 import oneLineTriggers from "../models/oneLineTriggers";
-import { Range, Position } from "../models/DataPoints";
 import opcodes from "../models/opcodes";
 import Document from "./document";
-import { IssueRange, Rules, SelectBlock } from "./parserTypes";
+import { ErrorType, IssueRange, Rules, SelectBlock } from "./parserTypes";
 import Declaration from "../models/declaration";
 import { IRange, Token } from "./types";
 import { NO_NAME } from "./statement";
@@ -63,7 +61,7 @@ type IndentError = {
 };
 
 export default class Linter {
-  static getErrorText(error: keyof typeof errorText): string {
+  static getErrorText(error: ErrorType): string {
     return errorText[error];
   }
 

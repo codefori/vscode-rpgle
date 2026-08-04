@@ -3,6 +3,7 @@ import path from "path";
 import setupParser, { getFileContent } from "../parserSetup";
 import Linter from "../../language/ile/linter";
 import { test, expect } from "vitest";
+import { assertCache, assertFound, assertScope } from "../utils";
 import { readFile } from "fs/promises";
 import Statement from "../../language/ile/statement";
 import { Token } from "../../language/ile/types";
@@ -16,7 +17,7 @@ test('vitestTest1', async () => {
     `Dcl-s MyVariable CHAR(20);`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(1);
   expect(cache.variables[0].position.range.line).toBe(1);
@@ -33,7 +34,7 @@ test('vitestTest2', async () => {
     `Dcl-s MyVariable2 CHAR(20);`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(2);
   expect(cache.variables[0].position.range.line).toBe(1);
@@ -52,7 +53,7 @@ test('vitestTest3', async () => {
     `//Yes`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(2);
   expect(cache.structs.length).toBe(1);
@@ -80,7 +81,7 @@ test('vitestTest4', async () => {
     `Endsr;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(1);
   expect(cache.subroutines.length).toBe(1);
@@ -90,9 +91,9 @@ test('vitestTest4', async () => {
   expect(cache.subroutines[0].range.end).toBe(6);
 
   const typeData = cache.resolveType(cache.variables[0]);
-  expect(typeData.type).toBeDefined();
-  expect(typeData.type.name).toBe(`char`);
-  expect(typeData.type.value).toBe(`20`);
+  const resolvedType = assertFound(typeData.type, `typeData.type`);
+  expect(resolvedType.name).toBe(`char`);
+  expect(resolvedType.value).toBe(`20`);
 });
 
 /**
@@ -116,7 +117,7 @@ test('vitestTest5', async () => {
    `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(2);
@@ -155,13 +156,12 @@ test('vitestTest6', async () => {
    `MyVariable2 = 'Hello world';`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
 
-  const resolved = cache.find(`TheProcedure`);
-  expect(resolved).toBeDefined();
+  const resolved = assertFound(cache.find(`TheProcedure`), `TheProcedure`);
   expect(resolved.name).toBe(`TheProcedure`);
   expect(resolved.prototype).toBeTruthy();
 });
@@ -188,7 +188,7 @@ test('vitestTest7', async () => {
    `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(1);
   expect(cache.procedures.length).toBe(2);
@@ -201,8 +201,7 @@ test('vitestTest7', async () => {
   expect(cache.procedures[1].prototype).toBeFalsy();
   expect(cache.procedures[1].subItems.length).toBe(1);
 
-  const resolved = cache.find(`TheProcedure`);
-  expect(resolved).toBeDefined();
+  const resolved = assertFound(cache.find(`TheProcedure`), `TheProcedure`);
   expect(resolved.name).toBe(`theProcedure`);
   expect(resolved.prototype).toBeFalsy();
 });
@@ -227,7 +226,7 @@ test('vitestTest7_fixed', async () => {
    `     pGetArtDesc       e`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.procedures.length).toBe(2);
 
@@ -239,8 +238,7 @@ test('vitestTest7_fixed', async () => {
   expect(cache.procedures[1].subItems.length).toBe(1);
   expect(cache.procedures[1].prototype).toBeFalsy();
 
-  const resolved = cache.find(`GetArtDesc`);
-  expect(resolved).toBeDefined();
+  const resolved = assertFound(cache.find(`GetArtDesc`), `GetArtDesc`);
   expect(resolved.name).toBe(`GetArtDesc`);
   expect(resolved.prototype).toBeFalsy();
 });
@@ -256,15 +254,15 @@ test('vitestTest8', async () => {
    `Dcl-C theConstant 'Hello world';`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(1);
   expect(cache.constants.length).toBe(1);
 
   const typeData = cache.resolveType(cache.variables[0]);
-  expect(typeData.type).toBeDefined();
-  expect(typeData.type.name).toBe(`char`);
-  expect(typeData.type.value).toBe(`20`);
+  const resolvedType = assertFound(typeData.type, `typeData.type`);
+  expect(resolvedType.name).toBe(`char`);
+  expect(resolvedType.value).toBe(`20`);
 });
 
 /**
@@ -287,7 +285,7 @@ test('vitestTest9', async () => {
    `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(1);
   expect(cache.constants.length).toBe(1);
@@ -315,7 +313,7 @@ test('vitestTest10', async () => {
    `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(Object.keys(cache.keyword).length).toBe(1);
   expect(cache.keyword[`DFTACTGRP`]).toBe(`*NO`);
@@ -347,14 +345,14 @@ test('test10_local_fixedcopy', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.includes.length).toBe(1);
   expect(cache.variables.length).toBe(1);
   expect(cache.constants.length).toBe(1);
   expect(cache.procedures.length).toBe(1);
 
-  const uppercase = cache.find(`UPPERCASE`);
+  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
 
   const baseNameInclude = path.basename(uppercase.position.path);
   expect(baseNameInclude).toBe(`eof4.rpgle`);
@@ -383,7 +381,7 @@ test('test11', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.includes.length).toBe(2);
   expect(cache.variables.length).toBe(1);
@@ -423,7 +421,7 @@ test('test12', async () => {
     ``
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.includes.length).toBe(1);
 
@@ -437,7 +435,7 @@ test('test12', async () => {
   expect(cache.procedures[0].name).toBe(`theExtProcedure`);
   expect(cache.procedures[1].name).toBe(`theLocalProc`);
 
-  const theLocalProc = cache.find(`theLocalProc`);
+  const theLocalProc = assertFound(cache.find(`theLocalProc`), `theLocalProc`);
 
   expect(theLocalProc.range).toEqual({
     start: 16,
@@ -448,10 +446,10 @@ test('test12', async () => {
   expect(theLocalProc.subItems.length).toBe(1);
 
   // Has a local scope
-  expect(theLocalProc.scope !== undefined).toBe(true);
+  const theLocalProcScope = assertScope(theLocalProc.scope, `theLocalProc`);
 
   // Should have a local variable
-  expect(theLocalProc.scope.variables.length).toBe(1);
+  expect(theLocalProcScope.variables.length).toBe(1);
 
   const typeData = cache.resolveType(theLocalProc);
   expect(typeData).toBeDefined();
@@ -488,7 +486,7 @@ test('test13', async () => {
     ``
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.includes.length).toBe(1);
 
@@ -502,7 +500,7 @@ test('test13', async () => {
   expect(cache.procedures[0].name).toBe(`theExtProcedure`);
   expect(cache.procedures[1].name).toBe(`theLocalProc`);
 
-  const theLocalProc = cache.find(`theLocalProc`);
+  const theLocalProc = assertFound(cache.find(`theLocalProc`), `theLocalProc`);
 
   expect(theLocalProc.range).toEqual({
     start: 16,
@@ -513,10 +511,10 @@ test('test13', async () => {
   expect(theLocalProc.subItems.length).toBe(1);
 
   // Has a local scope
-  expect(theLocalProc.scope !== undefined).toBe(true);
+  const theLocalProcScope = assertScope(theLocalProc.scope, `theLocalProc`);
 
   // Should have a local variable
-  expect(theLocalProc.scope.variables.length).toBe(1);
+  expect(theLocalProcScope.variables.length).toBe(1);
 });
 
 test('subds1', async () => {
@@ -546,11 +544,11 @@ test('subds1', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.structs.length).toBe(1);
 
-  const DsChangingNodeRole = cache.find(`DsChangingNodeRole`);
+  const DsChangingNodeRole = assertFound(cache.find(`DsChangingNodeRole`), `DsChangingNodeRole`);
   expect(DsChangingNodeRole.name).toBe(`DsChangingNodeRole`);
   expect(DsChangingNodeRole.position.range.line).toBe(2);
 
@@ -583,19 +581,18 @@ test('subds2 likeds', async () => {
     `end-ds;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
   expect(cache.structs.length).toBe(2);
 
-  const t_fileinfo = cache.find(`t_fileinfo`);
+  const t_fileinfo = assertFound(cache.find(`t_fileinfo`), `t_fileinfo`);
   expect(t_fileinfo.name).toBe(`t_fileinfo`);
   expect(t_fileinfo.subItems.length).toBe(3);
 
-  const t_mysimpleDs = cache.find(`t_mysimpleDs`);
+  const t_mysimpleDs = assertFound(cache.find(`t_mysimpleDs`), `t_mysimpleDs`);
   expect(t_mysimpleDs.name).toBe(`t_mysimpleDs`);
   expect(t_mysimpleDs.subItems.length).toBe(5);
 
-  const fieldDs = t_mysimpleDs.subItems.find(item => item.name === `fieldDs`);
-  expect(fieldDs).toBeDefined();
+  const fieldDs = assertFound(t_mysimpleDs.subItems.find(item => item.name === `fieldDs`), `fieldDs`);
   expect(fieldDs.keyword[`LIKEDS`]).toBe(`t_fileinfo`);
   expect(fieldDs.subItems.length).toBe(3);
 })
@@ -629,17 +626,17 @@ test('range1', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.procedures.length).toBe(2);
 
-  const json_getDelims = cache.find(`json_getDelims`);
+  const json_getDelims = assertFound(cache.find(`json_getDelims`), `json_getDelims`);
   expect(json_getDelims.range).toEqual({
     start: 11,
     end: 11
   });
 
-  const json_getDelimiters = cache.find(`json_setDelimiters`);
+  const json_getDelimiters = assertFound(cache.find(`json_setDelimiters`), `json_setDelimiters`);
   expect(json_getDelimiters.subItems.length).toBe(1);
   expect(json_getDelimiters.range).toEqual({
     start: 21,
@@ -667,12 +664,12 @@ test('range2', async () => {
     `Dcl-S Eod          Ind;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(2);
   expect(cache.structs.length).toBe(1);
 
-  const ABCD = cache.find(`ABCD`);
+  const ABCD = assertFound(cache.find(`ABCD`), `ABCD`);
   expect(ABCD.keyword[`LIKEDS`]).toBe(`BBOOP`);
   expect(ABCD.range).toEqual({
     start: 2,
@@ -703,9 +700,9 @@ test('inline_end_pi', async () => {
     `       end-proc getHandle;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
-  const getHandle = cache.find(`getHandle`);
+  const getHandle = assertFound(cache.find(`getHandle`), `getHandle`);
 
   expect(getHandle.keyword[`LIKE`]).toBe(`handle_t`);
   expect(getHandle.keyword[`END-PI`]).toBeUndefined();
@@ -743,7 +740,7 @@ test('issue_168', async () => {
     `Return; `,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 });
 
 test('issues_168a', async () => {
@@ -790,9 +787,9 @@ test('issues_168a', async () => {
     `End-Proc aaa;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
-  const testFile = cache.find(`TESTFILE3`);
+  const testFile = assertFound(cache.find(`TESTFILE3`), `TESTFILE3`);
 
   expect(testFile.range.start).toBe(3);
   expect(testFile.range.end).toBe(3);
@@ -820,16 +817,16 @@ test('issues_170b', async () => {
     `End-DS;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
-  const WkStnInd = cache.find(`WkStnInd`);
+  const WkStnInd = assertFound(cache.find(`WkStnInd`), `WkStnInd`);
   expect(WkStnInd.name).toBe(`WkStnInd`);
   expect(WkStnInd.subItems.length).toBe(11);
 
   expect(WkStnInd.range.start).toBe(2);
   expect(WkStnInd.range.end).toBe(17);
 
-  const error = cache.find(`Error`);
+  const error = assertFound(cache.find(`Error`), `Error`);
   expect(error.name).toBe(`Error`);
   expect(error.keyword[`IND`]).toBe(true);
   expect(error.keyword[`POS`]).toBe(`25`);
@@ -850,9 +847,9 @@ test('issues_dcl_subf', async () => {
     `end-ds;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
-  const inputsYo = cache.find(`inputsYo`);
+  const inputsYo = assertFound(cache.find(`inputsYo`), `inputsYo`);
   expect(inputsYo.subItems.length).toBe(7);
 
   const boop_Addr1 = inputsYo.subItems[0];
@@ -886,9 +883,9 @@ test('issue_195a', async () => {
     `End-Proc ScomponiStringa;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true, collectReferences: true}));
 
-  const typeDataB = cache.resolveType(cache.find(`ScomponiStringa`));
+  const typeDataB = cache.resolveType(assertFound(cache.find(`ScomponiStringa`), `ScomponiStringa`));
   expect(typeDataB).toBeDefined();
   expect(typeDataB.type).toMatchObject({name: `varchar`, value: `2000`});
   expect(typeDataB.reference).toBeUndefined();
@@ -946,12 +943,13 @@ test('issue_195b', async () => {
     `End-Proc;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.procedures.length).toBe(1);
 
-  const DoProfileStuff = cache.find(`DoProfileStuff`);
-  expect(DoProfileStuff.scope.procedures.length).toBe(2);
+  const DoProfileStuff = assertFound(cache.find(`DoProfileStuff`), `DoProfileStuff`);
+  const DoProfileStuffScope = assertScope(DoProfileStuff.scope, `DoProfileStuff`);
+  expect(DoProfileStuffScope.procedures.length).toBe(2);
 });
 
 test('exec_1', async () => {
@@ -969,7 +967,7 @@ test('exec_1', async () => {
     `Return;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`sysdummy1`);
@@ -1000,7 +998,7 @@ test('exec_2', async () => {
     `    WHERE WORKDEPT = :deptNum;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
   expect(cache.sqlReferences[0].name).toBe(`Employee`);
@@ -1028,7 +1026,7 @@ test('exec_3', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(0);
 });
@@ -1060,7 +1058,7 @@ test('exec_4', async () => {
     `            sample.employee;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`employee`);
@@ -1085,7 +1083,7 @@ test('exec_5', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
 
@@ -1116,7 +1114,7 @@ test('exec_6', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
 
@@ -1147,7 +1145,7 @@ test('exec_7', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
 
@@ -1178,7 +1176,7 @@ test('exec_8', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
 
@@ -1207,7 +1205,7 @@ test('exec_9', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
 
@@ -1233,7 +1231,7 @@ test('exec_10', async () => {
     `            ORDER BY MSGDAT DESC, MSGTIM DESC;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
 
@@ -1260,7 +1258,7 @@ test('exec_11', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(2);
   expect(cache.sqlReferences[0].name).toBe(`PrdBlock`);
@@ -1280,7 +1278,7 @@ test('exec_12_a', async () => {
     `order by arid ;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences[0].name).toBe(`article`);
   expect(cache.sqlReferences[1].name).toBe(`artiprov`);
@@ -1300,7 +1298,7 @@ test('exec_12_b', async () => {
     `order by arid ;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences[0].name).toBe(`article`);
   expect(cache.sqlReferences[1].name).toBe(`artiprov`);
@@ -1323,7 +1321,7 @@ test('exec_13', async () => {
     ` );`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`TRANSACTION`);
@@ -1343,7 +1341,7 @@ test(`exec_14`, async () => {
     `Select * from temp;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.sqlReferences.length).toBe(1);
   expect(cache.sqlReferences[0].name).toBe(`table1`);
@@ -1373,15 +1371,15 @@ test('enum_1', async () => {
     `END-DS;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.constants.length).toBe(2);
 
-  const sizes = cache.find(`sizes`);
+  const sizes = assertFound(cache.find(`sizes`), `sizes`);
   expect(sizes.name).toBe(`sizes`);
   expect(sizes.subItems.length).toBe(4);
 
-  const jobMsgQ = cache.find(`jobMsgQ`);
+  const jobMsgQ = assertFound(cache.find(`jobMsgQ`), `jobMsgQ`);
   expect(jobMsgQ.name).toBe(`jobMsgQ`);
   expect(jobMsgQ.subItems.length).toBe(3);
 });
@@ -1398,10 +1396,10 @@ test('keywords over multiple lines', async () => {
     `       End-Pr;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.procedures.length).toBe(1);
-  const invoice_get_invoice = cache.find(`invoice_get_invoice`);
+  const invoice_get_invoice = assertFound(cache.find(`invoice_get_invoice`), `invoice_get_invoice`);
   expect(invoice_get_invoice.subItems.length).toBe(5);
 
   const storeParm = invoice_get_invoice.subItems[0];
@@ -1439,10 +1437,10 @@ test('BINDEC with decimal positions', async () => {
     `       Dcl-S standalone_bindec Bindec(7:2);`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.structs.length).toBe(1);
-  const testDS = cache.find(`testDS`);
+  const testDS = assertFound(cache.find(`testDS`), `testDS`);
   expect(testDS.subItems.length).toBe(3);
 
   const field1 = testDS.subItems[0];
@@ -1457,7 +1455,7 @@ test('BINDEC with decimal positions', async () => {
   expect(field3.name).toBe(`field3`);
   expect(field3.keyword[`BINDEC`]).toBe(`4`);
 
-  const standalone = cache.find(`standalone_bindec`);
+  const standalone = assertFound(cache.find(`standalone_bindec`), `standalone_bindec`);
   expect(standalone.name).toBe(`standalone_bindec`);
   expect(standalone.keyword[`BINDEC`]).toBe(`7:2`);
 });
@@ -1470,23 +1468,23 @@ test('BINDEC with decimal positions - fixed format', async () => {
     `     D BIN92           S              9B 2`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.variables.length).toBe(4);
 
-  const bin40 = cache.find(`BIN40`);
+  const bin40 = assertFound(cache.find(`BIN40`), `BIN40`);
   expect(bin40.name).toBe(`BIN40`);
   expect(bin40.keyword[`BINDEC`]).toBe(`4:0`);
 
-  const bin90 = cache.find(`BIN90`);
+  const bin90 = assertFound(cache.find(`BIN90`), `BIN90`);
   expect(bin90.name).toBe(`BIN90`);
   expect(bin90.keyword[`BINDEC`]).toBe(`9:0`);
 
-  const bin43 = cache.find(`BIN43`);
+  const bin43 = assertFound(cache.find(`BIN43`), `BIN43`);
   expect(bin43.name).toBe(`BIN43`);
   expect(bin43.keyword[`BINDEC`]).toBe(`4:3`);
 
-  const bin92 = cache.find(`BIN92`);
+  const bin92 = assertFound(cache.find(`BIN92`), `BIN92`);
   expect(bin92.name).toBe(`BIN92`);
   expect(bin92.keyword[`BINDEC`]).toBe(`9:2`);
 });
@@ -1499,15 +1497,15 @@ test(`const keyword check`, async () => {
     ``,
   ].join(`\r\n`);
 
-  const cache = await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true});
+  const cache = assertCache(await parser.getDocs(uri, lines, {withIncludes: true, ignoreCache: true}));
 
   expect(cache.constants.length).toBe(2);
 
-  const act = cache.find(`act`);
+  const act = assertFound(cache.find(`act`), `act`);
   expect(act.name).toBe(`act`);
   expect(act.keyword[`CONST`]).toBe(`'act'`);
 
-  const hello = cache.find(`hello`);
+  const hello = assertFound(cache.find(`hello`), `hello`);
   expect(hello.name).toBe(`hello`);
   expect(hello.keyword[`CONST`]).toBe(`556`);
 });
@@ -1525,13 +1523,11 @@ test('issue_353_comments', async () => {
     `dcl-s p2@          Pointer;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false }));
 
-  const hedinf = cache.find(`HEDINF`);
-  expect(hedinf).toBeDefined();
+  const hedinf = assertFound(cache.find(`HEDINF`), `HEDINF`);
   expect(hedinf.subItems.length).toBe(5);
-  const p2at = cache.find(`p2@`);
-  expect(p2at).toBeDefined();
+  assertFound(cache.find(`p2@`), `p2@`);
 });
 
 test('header file parse', async () => {
@@ -1561,7 +1557,7 @@ test('header file parse', async () => {
     `return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
 
   expect(cache.includes.length).toBe(1);
   expect(cache.constants.length).toBe(8);
@@ -1584,7 +1580,7 @@ test('can define on the first line', async () => {
     `        endsr;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false }));
   expect(cache.subroutines.length).toBe(3);
 });
 
@@ -1694,7 +1690,7 @@ test('fixed-format c spec', async () => {
     `     P UpdArt          e`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false }));
   expect(cache.constants.length).toBe(0);
   expect(cache.procedures.length).toBe(2);
 
@@ -1706,8 +1702,7 @@ test('fixed-format c spec', async () => {
   expect(cache.procedures[1].prototype).toBeFalsy();
   expect(cache.procedures[1].subItems.length).toBe(2);
 
-  const resolved = cache.find(`UpdArt`);
-  expect(resolved).toBeDefined();
+  const resolved = assertFound(cache.find(`UpdArt`), `UpdArt`);
   expect(resolved.name).toBe(`UpdArt`);
   expect(resolved.prototype).toBeFalsy();
 
@@ -1762,22 +1757,22 @@ test('can resolve return structure correctly', async () => {
     ``,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false }));
 
   expect(cache.procedures.length).toBe(3);
 
-  const someProc = cache.find(`someProc`);
+  const someProc = assertFound(cache.find(`someProc`), `someProc`);
   expect(someProc.name).toBe(`someProc`);
 
   const typeDataA = cache.resolveType(someProc);
   expect(typeDataA).toBeDefined();
   expect(typeDataA.type).toBeUndefined();
-  expect(typeDataA.reference).toBeDefined();
-  expect(typeDataA.reference.name).toBe(`return_t`);
-  expect(typeDataA.reference.type).toBe(`struct`);
-  expect(typeDataA.reference.subItems.length).toBe(2);
+  const typeDataARef = assertFound(typeDataA.reference, `typeDataA.reference`);
+  expect(typeDataARef.name).toBe(`return_t`);
+  expect(typeDataARef.type).toBe(`struct`);
+  expect(typeDataARef.subItems.length).toBe(2);
 
-  const simpleProc = cache.find(`simpleProc`);
+  const simpleProc = assertFound(cache.find(`simpleProc`), `simpleProc`);
   expect(simpleProc.name).toBe(`simpleProc`);
 
   const typeDataB = cache.resolveType(simpleProc);
@@ -1785,7 +1780,7 @@ test('can resolve return structure correctly', async () => {
   expect(typeDataB.type).toMatchObject({name: `char`, value: `10`});
   expect(typeDataB.reference).toBeUndefined();
 
-  const simpleReturn = cache.find(`simpleReturn`);
+  const simpleReturn = assertFound(cache.find(`simpleReturn`), `simpleReturn`);
   expect(simpleReturn.name).toBe(`simpleReturn`);
 
   const typeDataC = cache.resolveType(simpleReturn);
@@ -1794,16 +1789,16 @@ test('can resolve return structure correctly', async () => {
   expect(typeDataC.type).toMatchObject({name: `char`, value: `10`});
   expect(typeDataC.reference).toBeUndefined();
 
-  const dumbLikeReturn = cache.find(`dumbLikeReturn`);
+  const dumbLikeReturn = assertFound(cache.find(`dumbLikeReturn`), `dumbLikeReturn`);
   expect(dumbLikeReturn.name).toBe(`dumbLikeReturn`);
 
   const typeDataD = cache.resolveType(dumbLikeReturn);
   expect(typeDataD).toBeDefined();
   expect(typeDataD.type).toBeUndefined();
-  expect(typeDataD.reference).toBeDefined();
-  expect(typeDataD.reference.name).toBe(`return_t`);
-  expect(typeDataD.reference.type).toBe(`struct`);
-  expect(typeDataD.reference.subItems.length).toBe(2);
+  const typeDataDRef = assertFound(typeDataD.reference, `typeDataD.reference`);
+  expect(typeDataDRef.name).toBe(`return_t`);
+  expect(typeDataDRef.type).toBe(`struct`);
+  expect(typeDataDRef.subItems.length).toBe(2);
 });
 
 test('const value #400', async () => {
@@ -1812,10 +1807,10 @@ test('const value #400', async () => {
     `Dcl-C PI         3.14159;`
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false }));
 
   expect(cache.constants.length).toBe(1);
-  const pi = cache.find(`PI`);
+  const pi = assertFound(cache.find(`PI`), `PI`);
   expect(pi.name).toBe(`PI`);
   expect(pi.keyword[`CONST`]).toBe(`3.14159`);
   expect(pi.range).toMatchObject({ start: 1, end: 1 });
@@ -1836,15 +1831,15 @@ test('dcl-enum range (#425)', async () => {
     `dsply myprogramText;`,
   ];
 
-  const cache = await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: false }));
 
   const constants = cache.constants;
   expect(constants.length).toBe(1);
   expect(constants[0].name).toBe(`myenum`);
   expect(constants[0].subItems.length).toBe(2);
   expect(constants[0].range).toMatchObject({ start: 5, end: 8 });
-  expect(lines[constants[0].range.start]).toBe(`dcl-enum myenum qualified;`);
-  expect(lines[constants[0].range.end]).toBe(`end-enum;`);
+  expect(lines[constants[0].range.start!]).toBe(`dcl-enum myenum qualified;`);
+  expect(lines[constants[0].range.end!]).toBe(`end-enum;`);
 });
 
 test('correct ranges (#427)', async () => {
@@ -1903,9 +1898,9 @@ test('correct ranges (#427)', async () => {
     `     p                 e`,
   ];
 
-  const cache = await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: false });
+  const cache = assertCache(await parser.getDocs(uri, lines.join(`\n`), { ignoreCache: true, withIncludes: false }));
 
-  const testingPr = cache.find(`testing`);
+  const testingPr = assertFound(cache.find(`testing`), `testing`);
   expect(testingPr.range.start).toBe(2);
   expect(testingPr.range.end).toBe(5);
 
@@ -1915,9 +1910,9 @@ test('correct ranges (#427)', async () => {
   expect(cache.parameters[7].name).toBe(`ai_fmtType`);
   expect(cache.parameters[7].range.start).toBe(33)
 
-  const mainProcedure = cache.find(`main`);
-  const procStart = mainProcedure.range.start;
-  const procEnd = mainProcedure.range.end;
+  const mainProcedure = assertFound(cache.find(`main`), `main`);
+  const procStart = mainProcedure.range.start!;
+  const procEnd = mainProcedure.range.end!;
   expect(procEnd-procStart).toBe(4);
 
   const constants = cache.constants;
@@ -1962,7 +1957,7 @@ test('that symbols can be defined correctly', async () => {
     `     `,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true }));
 
   expect(cache.structs.length).toBe(1);
   expect(cache.constants.length).toBe(1);
@@ -1991,7 +1986,7 @@ test('that mixed symbols can be defined correctly', async () => {
     `     `,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true }));
 
   expect(cache.structs.length).toBe(1);
   expect(cache.files.length).toBe(1);
@@ -2008,18 +2003,14 @@ test('range issue #453 (snippet)', async () => {
     `          dcl-ds custInfo EXTNAME('CUSTMAST') INZ;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
-
-  expect(cache).toBeDefined();
+  assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true }));
 });
 
 test('range issue #453 (full source)', async () => {
   const testSource = path.join(__dirname, `..`, `rpgle`, `issue453.rpgle`);
   const contents = await readFile(testSource, 'utf-8');
 
-  const cache = await parser.getDocs(testSource, contents, { ignoreCache: true, withIncludes: false, collectReferences: true });
-
-  expect(cache).toBeDefined();
+  assertCache(await parser.getDocs(testSource, contents, { ignoreCache: true, withIncludes: false, collectReferences: true }));
 });
 
 test('**free after first line (#451)', async () => {
@@ -2040,11 +2031,9 @@ test('**free after first line (#451)', async () => {
     `       return;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true }));
 
-  expect(cache).toBeDefined();
-
-  expect(cache.find(`txtMsg`)).toBeDefined();
+  assertFound(cache.find(`txtMsg`), `txtMsg`);
 });
 
 test('multi-line definition (#442)', async () => {
@@ -2060,16 +2049,12 @@ test('multi-line definition (#442)', async () => {
     `end-ds;`,
   ].join(`\n`);
 
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true });
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: false, collectReferences: true }));
 
-  expect(cache).toBeDefined();
-
-  const name = cache.find(`name`);
-  expect(name).toBeDefined();
+  const name = assertFound(cache.find(`name`), `name`);
   expect(name.range).toMatchObject({ start: 4, end: 5 });
 
-  const person = cache.find(`person`);
-  expect(person).toBeDefined();
+  const person = assertFound(cache.find(`person`), `person`);
   console.log(person);
   expect(person.range).toMatchObject({ start: 7, end: 8 });
 });
@@ -2087,10 +2072,7 @@ test('signatureHelpWithColonParameter', async () => {
 
   // This test ensures the parser doesn't crash when processing
   // BIF calls with colon-prefixed parameters
-  const cache = await parser.getDocs(uri, lines, { ignoreCache: true });
-
-  // The main goal is to ensure parsing doesn't throw an error
-  expect(cache).toBeDefined();
+  assertCache(await parser.getDocs(uri, lines, { ignoreCache: true }));
 });
 
 /**
@@ -2104,8 +2086,7 @@ test('bifParameterEdgeCases', async () => {
     `result = %scan(:searchString :sourceString);`
   ].join(`\n`);
 
-  const cache1 = await parser.getDocs(uri, lines1, { ignoreCache: true });
-  expect(cache1).toBeDefined();
+  assertCache(await parser.getDocs(uri, lines1, { ignoreCache: true }));
 
   // Test with trailing colon
   const lines2 = [
@@ -2113,8 +2094,7 @@ test('bifParameterEdgeCases', async () => {
     `result = %subst(:str :pos);`
   ].join(`\n`);
 
-  const cache2 = await parser.getDocs(uri, lines2, { ignoreCache: true });
-  expect(cache2).toBeDefined();
+  assertCache(await parser.getDocs(uri, lines2, { ignoreCache: true }));
 
   // Test with multiple separators
   const lines3 = [
@@ -2122,8 +2102,7 @@ test('bifParameterEdgeCases', async () => {
     `result = %xlate(:from :to :string);`
   ].join(`\n`);
 
-  const cache3 = await parser.getDocs(uri, lines3, { ignoreCache: true });
-  expect(cache3).toBeDefined();
+  assertCache(await parser.getDocs(uri, lines3, { ignoreCache: true }));
 });
 
 /**
