@@ -2111,3 +2111,39 @@ test('sql prepare reference', async () => {
   const getGenerationTime = assertFound(cache.find(`getGenerationTime`), `getGenerationTime`);
   assertScope(getGenerationTime.scope, `getGenerationTime`);
 })
+
+test("references_qualified_ds_subfield_hover", async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds dirty qualified;`,
+    `  dcl-subf fruit   varchar(16);`,
+    `  dcl-subf tree    varchar(32);`,
+    `  dcl-subf spec    varchar(128);`,
+    `end-ds dirty;`,
+    ``,
+    `dirty.fruit = 'Pickles';`,
+    `dirty.tree  = 'Oak';`,
+    `dirty.spec  = 'Code';`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true }));
+
+  // Verify the parent DS is found at the top level
+  const dirtyDs = assertFound(cache.find(`dirty`), `dirty`);
+  expect(dirtyDs.name.toUpperCase()).toBe(`DIRTY`);
+  expect(dirtyDs.subItems.length).toBe(3);
+
+  // Offset of `fruit` inside `dirty.fruit = 'Pickles'`
+  const fruitRefIndex = lines.indexOf(`dirty.fruit = `) + 6;
+  const fruitSubfield = assertFound(Cache.referenceByOffset(uri, cache, fruitRefIndex), ``);
+  expect(fruitSubfield.name.toUpperCase()).toBe(`FRUIT`);
+  expect(fruitSubfield.type).toBe(`subitem`);
+  expect(fruitSubfield.references.length).toBeGreaterThan(0);
+
+  // Offset of `tree` inside `dirty.tree  = 'Oak'`
+  const treeRefIndex = lines.indexOf(`dirty.tree`) + 6;
+  const treeSubfield = assertFound(Cache.referenceByOffset(uri, cache, treeRefIndex), ``);
+  expect(treeSubfield.name.toUpperCase()).toBe(`TREE`);
+  expect(treeSubfield.type).toBe(`subitem`);
+});
