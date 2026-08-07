@@ -3,7 +3,7 @@ import setupParser from "../parserSetup";
 
 const parser = setupParser();
 const uri = `source.rpgle`;
-
+//TODO: test cases need to be improved , mainly assertions
 test('ospec1 - basic output specification', async () => {
   const lines = [
     `     FQPRINT    O    F  132        PRINTER OFLIND(*INOF)`,
@@ -453,5 +453,3 @@ test('ospec25 - output with maximum complexity', async () => {
   expect(cache.variables.length).toBeGreaterThan(0);
   expect(cache.outputs.length).toBeGreaterThan(0);
 });
-
-// Made with Bob

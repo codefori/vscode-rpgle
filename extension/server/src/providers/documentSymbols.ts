@@ -268,10 +268,23 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 					const outputDef = DocumentSymbol.create(
 						output.name,
 						prettyKeywords(output.keyword),
-						SymbolKind.String,  // or SymbolKind.Field
+						output.subItems.length > 0 ? SymbolKind.Object : SymbolKind.String,
 						Range.create(output.range.start!, 0, output.range.end!, 0),
-						Range.create(output.range.start!, 0, output.range.end!, 0)
+						Range.create(output.range.start!, 0, output.range.start!, 0)
 					);
+
+					if (output.subItems.length > 0) {
+						outputDef.children = output.subItems
+							.filter(subitem => subitem.position && subitem.position.path === currentPath)
+							.map(subitem => DocumentSymbol.create(
+								subitem.name,
+								prettyKeywords(subitem.keyword),
+								SymbolKind.Field,
+								Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
+								Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
+							));
+					}
+
 					currentScopeDefs.push(outputDef);
 				});
 

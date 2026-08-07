@@ -134,206 +134,66 @@ export function parsePLine(content: string, lineNumber: number, lineIndex: numbe
 
 /**
  * Detect O-Spec line type
- * Note: Comment lines (* in column 7) are filtered out before reaching this function
  */
-function detectOSpecType(content: string): 'O' | 'OAnd' | 'OF' | 'OFC' | 'OXF' {
-  // Check for comment line (though this should already be filtered by parser)
-  const commentChar = content.substr(6, 1);
-  if (commentChar === '*' || commentChar === '/') {
-    return 'OF'; // Return default to avoid processing
-  }
-  
-  const filename = content.substr(6, 10).trim();
-  const type = content.substr(16, 1).trim();
-  const andOrKeyword = content.substr(15, 5).trim().toUpperCase();
-  const fieldName = content.substr(29, 14).trim();
-  const endPos = content.substr(46, 5).trim();
-  const constant = content.substr(52).trim();
-  
-  if (andOrKeyword === 'AND' || andOrKeyword === 'OR') {
+function detectOSpecType(filename: string, type: string, andOrKeyword:string, fieldName: string, endPos: string, constant: string): 'O' | 'OAnd' | 'OF' | 'OFC' | 'OXF' {
+  const conditioalOperators = ['AND', 'OR'];
+  if (filename || type) 
+    return 'O'; 
+  else if (conditioalOperators.includes(andOrKeyword)) 
     return 'OAnd';
-  }
-  
-  // Check if this line has field/constant data (endPos + fieldName/constant)
-  // If so, it's a field line (OF), even if it also has type/filename
-  if (endPos && (fieldName || constant)) {
-    if (!endPos) {
-      return 'OXF';
-    }
+  else if (!fieldName && constant)//if no field name and constant literal is present its OFC or Output constant
+    return 'OFC';                 //This is need not be part of outline
+  else if (fieldName && endPos)
     return 'OF';
-  }
-  
-  if (filename || type) {
-    return 'O';
-  }
-  
-  if (!fieldName && constant) {
-    return 'OFC';
-  }
-  
-  if (fieldName) {
-    const endPosCheck = content.substr(46, 5).trim();
-    if (!endPosCheck) {
-      return 'OXF';
-    }
-    return 'OF';
-  }
-  
-  return 'OF';
+  else
+    return 'OXF';
 }
 
+//TODO: return type annotations are required to be 
+//updated once feedback wrt fields required in outline is received
 /**
  * Parse O-Spec (Output Specification) line
  * @param {number} lineNumber
  * @param {number} lineIndex
  * @param {string} content
  */
-export function parseOLine(lineNumber, lineIndex, content) {
+export function parseOLine(lineNumber: number, lineIndex: number, content: string): any {
   content = content.padEnd(80);
+
+  const fileName = content.substring(6, 16).trim();//col[7,..,16] which o/p file or record this spec belongs to
+  const type = content.substring(16, 17).trim();//col[17]D:Detailed o/p, T:Total o/p, H:Heading, E:Exception o/p
+  const andOrKeyword = content.substring(18, 20).trim().toUpperCase();//col[16,..,20]conditioal operators
+  const fieldName = content.substring(29, 43).trim();//col[30,43] var name (14 chars; col 44 is edit code)
+  const endPos = content.substring(46, 52).trim();//col[47,52]
+  const constant = content.substring(52).trim();//col[53,..] constant name
+
+  const lineType = detectOSpecType(fileName, type, andOrKeyword, fieldName, endPos, constant);
   
-  const lineType = detectOSpecType(content);
-  
-  const filename = content.substr(6, 10);
-  const type = content.substr(16, 1);
-  
-  if (lineType === 'O') {
-    const fetchOverflow = content.substr(17, 3);
-    const addDeleteIndicator = content.substr(20, 3);
-    const outputIndicator1 = content.substr(23, 3);
-    const outputIndicator2 = content.substr(26, 3);
-    const exceptName = content.substr(29, 10);
-    const spaceBefore = content.substr(39, 3);
-    const spaceAfter = content.substr(42, 3);
-    const skipBefore = content.substr(45, 3);
-    const skipAfter = content.substr(48, 3);
-    
-    return {
-      lineType: 'O',
-      filename: calculateToken(lineNumber, lineIndex+6, filename),
-      type: calculateToken(lineNumber, lineIndex+16, type),
-      fetchOverflow: calculateToken(lineNumber, lineIndex+17, fetchOverflow),
-      addDeleteIndicator: calculateToken(lineNumber, lineIndex+20, addDeleteIndicator),
-      outputIndicator1: calculateToken(lineNumber, lineIndex+23, outputIndicator1),
-      outputIndicator2: calculateToken(lineNumber, lineIndex+26, outputIndicator2),
-      exceptName: calculateToken(lineNumber, lineIndex+29, exceptName),
-      spaceBefore: calculateToken(lineNumber, lineIndex+39, spaceBefore),
-      spaceAfter: calculateToken(lineNumber, lineIndex+42, spaceAfter),
-      skipBefore: calculateToken(lineNumber, lineIndex+45, skipBefore),
-      skipAfter: calculateToken(lineNumber, lineIndex+48, skipAfter),
-      andOr: undefined,
-      fieldName: undefined,
-      blankAfter: undefined,
-      editCodes: undefined,
-      endPosition: undefined,
-      dataFormat: undefined,
-      constantOrEdit: undefined
-    };
-  } else if (lineType === 'OAnd') {
-    const andOrKeyword = content.substr(15, 5);
-    const outputIndicator1 = content.substr(20, 3);
-    const outputIndicator2 = content.substr(23, 3);
-    const outputIndicator3 = content.substr(26, 3);
-    const exceptName = content.substr(29, 10);
-    
-    return {
-      lineType: 'OAnd',
-      andOrKeyword: calculateToken(lineNumber, lineIndex+15, andOrKeyword),
-      outputIndicator1: calculateToken(lineNumber, lineIndex+20, outputIndicator1),
-      outputIndicator2: calculateToken(lineNumber, lineIndex+23, outputIndicator2),
-      outputIndicator3: calculateToken(lineNumber, lineIndex+26, outputIndicator3),
-      exceptName: calculateToken(lineNumber, lineIndex+29, exceptName),
-      filename: undefined,
-      type: undefined,
-      fetchOverflow: undefined,
-      andOr: calculateToken(lineNumber, lineIndex+15, andOrKeyword),
-      fieldName: undefined,
-      blankAfter: undefined,
-      editCodes: undefined,
-      endPosition: undefined,
-      dataFormat: undefined,
-      constantOrEdit: undefined
-    };
-  } else if (lineType === 'OF') {
-    const outputIndicator1 = content.substr(20, 3);
-    const outputIndicator2 = content.substr(23, 3);
-    const outputIndicator3 = content.substr(26, 3);
-    const fieldName = content.substr(29, 14);
-    const blankAfter = content.substr(43, 1);
-    const editCodes = content.substr(44, 2);
-    const endPosition = content.substr(46, 5);
-    const dataFormat = content.substr(51, 1);
-    const constantOrEdit = content.substr(52, 28);
-    
-    return {
-      lineType: 'OF',
-      outputIndicator1: calculateToken(lineNumber, lineIndex+20, outputIndicator1),
-      outputIndicator2: calculateToken(lineNumber, lineIndex+23, outputIndicator2),
-      outputIndicator3: calculateToken(lineNumber, lineIndex+26, outputIndicator3),
-      fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
-      blankAfter: calculateToken(lineNumber, lineIndex+43, blankAfter),
-      editCodes: calculateToken(lineNumber, lineIndex+44, editCodes),
-      endPosition: calculateToken(lineNumber, lineIndex+46, endPosition),
-      dataFormat: calculateToken(lineNumber, lineIndex+51, dataFormat),
-      constantOrEdit: calculateToken(lineNumber, lineIndex+52, constantOrEdit),
-      filename: undefined,
-      type: undefined,
-      fetchOverflow: undefined,
-      andOr: undefined
-    };
-  } else if (lineType === 'OFC') {
-    const constantOrEdit = content.substr(52, 28);
-    
-    return {
-      lineType: 'OFC',
-      constantOrEdit: calculateToken(lineNumber, lineIndex+52, constantOrEdit),
-      filename: undefined,
-      type: undefined,
-      fetchOverflow: undefined,
-      andOr: undefined,
-      fieldName: undefined,
-      blankAfter: undefined,
-      editCodes: undefined,
-      endPosition: undefined,
-      dataFormat: undefined
-    };
-  } else if (lineType === 'OXF') {
-    const outputIndicator1 = content.substr(20, 3);
-    const outputIndicator2 = content.substr(23, 3);
-    const outputIndicator3 = content.substr(26, 3);
-    const fieldName = content.substr(29, 14);
-    const blankAfter = content.substr(44, 1);
-    
-    return {
-      lineType: 'OXF',
-      outputIndicator1: calculateToken(lineNumber, lineIndex+20, outputIndicator1),
-      outputIndicator2: calculateToken(lineNumber, lineIndex+23, outputIndicator2),
-      outputIndicator3: calculateToken(lineNumber, lineIndex+26, outputIndicator3),
-      fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
-      blankAfter: calculateToken(lineNumber, lineIndex+44, blankAfter),
-      filename: undefined,
-      type: undefined,
-      fetchOverflow: undefined,
-      andOr: undefined,
-      editCodes: undefined,
-      endPosition: undefined,
-      dataFormat: undefined,
-      constantOrEdit: undefined
-    };
+  //OFC is not handled as its not supposed to be part of outline
+  //currently 3 diff cases are maintained , once feedback for desc is received
+  //OF and OXF case should look diff , if no changes then they can be combined
+  //as 1 case as it is repetitative
+  switch(lineType) {
+    case 'O': {
+       return {
+        fileName: calculateToken(lineNumber, lineIndex+6, fileName),
+        fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
+        type,
+        endPos,
+       };
+    }
+    case 'OF': {
+      return {
+        fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
+      };
+    }
+    case 'OXF': {
+      return {
+        fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
+      };
+    }
+    default: return null;
   }
-  
-  return {
-    lineType: 'OF',
-    filename: undefined,
-    type: undefined,
-    fetchOverflow: undefined,
-    andOr: undefined,
-    fieldName: undefined,
-    blankAfter: undefined,
-    editCodes: undefined,
-    endPosition: undefined,
-    dataFormat: undefined,
-    constantOrEdit: undefined
-  };
 }
 
 export function prettyTypeFromDSpecTokens(dSpec) {
