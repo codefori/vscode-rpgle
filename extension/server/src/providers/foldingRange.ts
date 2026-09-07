@@ -65,6 +65,21 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
 
   const stack: OpenBlock[] = [];
 
+  const pushVisibleEndRange = (startLine: number, closeLine: number) => {
+    const endLine = closeLine - 1;
+
+    // Keep the closing keyword (end-*) visible by ending the fold one line above it.
+    if (endLine > startLine) {
+      foldingRanges.push(FoldingRange.create(
+        startLine,
+        endLine,
+        undefined,
+        undefined,
+        FoldingRangeKind.Region
+      ));
+    }
+  };
+
   // Process matches to find matching pairs
   for (let i = 0; i < matches.length; i++) {
     const current = matches[i];
@@ -102,16 +117,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
           if (stack[j].pair.close.includes('end')) {
             const openBlock = stack[j];
 
-            // Create folding range only if block spans multiple lines
-            if (current.line > openBlock.startLine) {
-              foldingRanges.push(FoldingRange.create(
-                openBlock.startLine,
-                current.line,
-                undefined,
-                undefined,
-                FoldingRangeKind.Region
-              ));
-            }
+            pushVisibleEndRange(openBlock.startLine, current.line);
 
             // Remove matched block from stack
             stack.splice(j, 1);
@@ -124,16 +130,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
           if (stack[j].pair.close.includes('enddo')) {
             const openBlock = stack[j];
 
-            // Create folding range only if block spans multiple lines
-            if (current.line > openBlock.startLine) {
-              foldingRanges.push(FoldingRange.create(
-                openBlock.startLine,
-                current.line,
-                undefined,
-                undefined,
-                FoldingRangeKind.Region
-              ));
-            }
+            pushVisibleEndRange(openBlock.startLine, current.line);
 
             // Remove matched block from stack
             stack.splice(j, 1);
@@ -158,16 +155,7 @@ export default function foldingRangeProvider(params: FoldingRangeParams): Foldin
           // A specific closer can ONLY close the last block if it's of the correct type
           const lastBlock = stack[stack.length - 1];
           if (lastBlock.pair === closerPair) {
-            // Create folding range only if block spans multiple lines
-            if (current.line > lastBlock.startLine) {
-              foldingRanges.push(FoldingRange.create(
-                lastBlock.startLine,
-                current.line,
-                undefined,
-                undefined,
-                FoldingRangeKind.Region
-              ));
-            }
+            pushVisibleEndRange(lastBlock.startLine, current.line);
 
             // Remove matched block from stack
             stack.pop();
