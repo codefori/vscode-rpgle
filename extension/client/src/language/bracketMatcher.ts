@@ -26,6 +26,21 @@ function exceedsBracketLineLimit(document: vscode.TextDocument): boolean {
   return limit > 0 && document.lineCount > limit;
 }
 
+// Documents already warned about crossing the line limit, so the popup shows once per file.
+const lineLimitNotified = new Set<string>();
+
+// Warn (once) that bracket matching is off for a document because of its size.
+function warnBracketLineLimitExceeded(document: vscode.TextDocument) {
+  const docUri = document.uri.toString();
+  if (lineLimitNotified.has(docUri)) return;
+  lineLimitNotified.add(docUri);
+
+  vscode.window.showWarningMessage(
+    `RPGLE bracket matching is disabled for this file: ${document.lineCount} lines exceed the configured limit of ${getBracketMaxLines()} ` +
+    `(vscode-rpgle.${MAX_LINES_KEY}).`
+  );
+}
+
 // Cache infrastructure for document analysis
 interface CacheEntry {
   version: number;
@@ -97,6 +112,7 @@ export function registerBracketMatcher(context: vscode.ExtensionContext) {
     // Line-limit change: re-evaluate visible editors against the new threshold.
     if (e.affectsConfiguration('vscode-rpgle.' + MAX_LINES_KEY)) {
       analysisCache.clear();
+      lineLimitNotified.clear();
       if (bracketMatcherActive) {
         vscode.window.visibleTextEditors.forEach(editor => {
           if (editor.document.languageId === 'rpgle') {
@@ -381,6 +397,7 @@ function disposeBracketMatcher() {
 
   // Clear current block info
   currentBlockInfo = undefined;
+  lineLimitNotified.clear();
 }
 
 function updateDecorations(editor: vscode.TextEditor) {
@@ -413,15 +430,18 @@ function updateDecorationsImpl(editor: vscode.TextEditor) {
   const text = document.getText();
   const docUri = document.uri.toString();
 
-  // Over the line limit: clear decorations and skip analysis.
+  // Over the line limit: clear decorations, warn once, and skip analysis.
   if (exceedsBracketLineLimit(document)) {
     editor.setDecorations(decorationType, []);
     editor.setDecorations(errorDecorationType, []);
     currentBlockInfo = undefined;
     currentErrorRanges = [];
     analysisCache.delete(docUri);
+    warnBracketLineLimitExceeded(document);
     return;
   }
+  // Back under the limit (edits, or a raised setting) — allow the warning again later.
+  lineLimitNotified.delete(docUri);
 
   // Never run selection-based block matching/decorations on comment lines.
   if (rpgle.isComment(document.lineAt(position.line).text, document)) {

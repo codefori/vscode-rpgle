@@ -725,7 +725,7 @@ export default class Linter {
                     if (rules.SQLRunner) {
                       // For running SQL statements
                       const sqlStatementType = statement.find((t, i) => i >= 2 && t.type !== `newline`)?.value?.toLowerCase();
-                      const validStatements = sqlStatementType ? [`declare`, `with`, `select`, `values`, `merge`, `insert`, `update`, `delete`, `call`].includes(sqlStatementType) : false;
+                      const validStatements = sqlStatementType ? [`declare`, `with`, `select`, `values`, `merge`, `insert`, `update`, `delete`, `call`, `create`, `drop`].includes(sqlStatementType) : false;
                       if (validStatements) {
                         errors.push({
                           type: `SQLRunner`,

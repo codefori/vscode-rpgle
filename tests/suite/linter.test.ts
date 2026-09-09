@@ -3021,6 +3021,12 @@ test('sqlRunner_dml', async () => {
     `  CALL MYPROC(:cust.CUSNO);`,
     ``,
     `EXEC SQL`,
+    `  CREATE TABLE QTEMP.WRK AS (SELECT * FROM CUSTOMER) WITH DATA;`,
+    ``,
+    `EXEC SQL`,
+    `  DROP TABLE QTEMP.WRK;`,
+    ``,
+    `EXEC SQL`,
     `  OPEN CUSCUR;`,
     ``,
   ].join(`\n`);
@@ -3030,7 +3036,7 @@ test('sqlRunner_dml', async () => {
     SQLRunner: true
   }, cache);
 
-  expect(errors.length).toBe(3);
+  expect(errors.length).toBe(5);
   expect(errors.every(e => e.type === 'SQLRunner')).toBe(true);
 });
 
