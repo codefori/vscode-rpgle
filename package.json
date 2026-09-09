@@ -65,6 +65,12 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Enable bracket/block highlighting and hover information in RPGLE editors."
+				},
+				"vscode-rpgle.bracketHighlightingMaxLines": {
+					"type": "number",
+					"default": 6000,
+					"minimum": 0,
+					"description": "Maximum document size, in lines, for which bracket/block highlighting, mismatch detection and jump-to-matching-block run. Larger members are skipped to keep the editor responsive. Set to 0 to disable the limit."
 				}
 			}
 		},
