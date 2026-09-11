@@ -44,6 +44,7 @@ const errorText = {
   'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
   'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
   'RequireOtherBlock': `OTHER block missing from SELECT block.`,
+  'MissingSemicolon': `Missing semicolon at the end of this statement.`,
   'SQLRunner': `Execute this statement through Db2 for i`
 };
 
@@ -59,6 +60,86 @@ type IndentError = {
   expectedIndent: number,
   currentIndent: number,
 };
+
+function getMissingSemicolonErrors(content: string): IssueRange[] {
+  type SourceLine = { code: string, endOffset: number };
+  const errors: IssueRange[] = [];
+  const rpgStatementStart = /^(?:begsr|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
+  const conditionContinuation = /^(?:and|or)\b/i;
+  const trailingConditionContinuation = /\b(?:and|or)$/i;
+  const expressionContinuation = /\+$/;
+  let offset = 0;
+  let previousLine: SourceLine | undefined;
+  let lastSqlLine: SourceLine | undefined;
+  let inEmbeddedSql = false;
+
+  for (const sourceLineWithEnding of content.split(`\n`)) {
+    const sourceLine = sourceLineWithEnding.endsWith(`\r`)
+      ? sourceLineWithEnding.slice(0, -1)
+      : sourceLineWithEnding;
+    const codeBeforeComment = sourceLine.replace(/\/\/.*$/, ``).trimEnd();
+    const code = codeBeforeComment.trim();
+    const currentLine: SourceLine = {
+      code,
+      endOffset: offset + codeBeforeComment.length,
+    };
+
+    if (!code) {
+      offset += sourceLineWithEnding.length + 1;
+      continue;
+    }
+
+    if (code.toUpperCase() === `**FREE`) {
+      offset += sourceLineWithEnding.length + 1;
+      continue;
+    }
+
+    if (inEmbeddedSql) {
+      if (rpgStatementStart.test(code)) {
+        const errorLine = lastSqlLine!;
+        errors.push({
+          offset: { start: errorLine.endOffset - 1, end: errorLine.endOffset },
+          type: `MissingSemicolon`,
+        });
+        inEmbeddedSql = false;
+        previousLine = undefined;
+        lastSqlLine = undefined;
+      } else {
+        lastSqlLine = currentLine;
+        if (code.endsWith(`;`)) {
+          inEmbeddedSql = false;
+          previousLine = undefined;
+          lastSqlLine = undefined;
+        }
+        offset += sourceLineWithEnding.length + 1;
+        continue;
+      }
+    }
+
+    const previousContinues = previousLine
+      && (!previousLine.code.endsWith(`;`))
+      && (!previousLine.code.endsWith(`...`))
+      && !expressionContinuation.test(previousLine.code)
+      && !trailingConditionContinuation.test(previousLine.code)
+      && !conditionContinuation.test(code);
+
+    if (previousContinues && previousLine) {
+      errors.push({
+        offset: { start: previousLine.endOffset - 1, end: previousLine.endOffset },
+        type: `MissingSemicolon`,
+      });
+    }
+
+    previousLine = currentLine;
+    if (/^exec\s+sql\b/i.test(code) && !code.endsWith(`;`)) {
+      inEmbeddedSql = true;
+      lastSqlLine = currentLine;
+    }
+    offset += sourceLineWithEnding.length + 1;
+  }
+
+  return errors;
+}
 
 export default class Linter {
   static getErrorText(error: ErrorType): string {
@@ -124,6 +205,10 @@ export default class Linter {
     let currentRule = skipRules.none;
 
     const doc = new Document(data.content);
+
+    if (rules.MissingSemicolon) {
+      errors.push(...getMissingSemicolonErrors(data.content));
+    }
 
     for (let si = 0; si < doc.statements.length; si++) {
       const docStatement = doc.statements[si];
