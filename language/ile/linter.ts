@@ -4,6 +4,7 @@ import Cache from "../models/cache";
 import oneLineTriggers from "../models/oneLineTriggers";
 import opcodes from "../models/opcodes";
 import Document from "./document";
+import { tokenise } from "./tokens";
 import { ErrorType, IssueRange, Rules, SelectBlock } from "./parserTypes";
 import Declaration from "../models/declaration";
 import { IRange, Token } from "./types";
@@ -61,13 +62,18 @@ type IndentError = {
   currentIndent: number,
 };
 
+function getCodeBeforeComment(sourceLine: string) {
+  const comment = tokenise(sourceLine).find(token => token.type === `comment`);
+  return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
+}
+
 function getMissingSemicolonErrors(content: string): IssueRange[] {
   type SourceLine = { code: string, endOffset: number };
   const errors: IssueRange[] = [];
   const rpgStatementStart = /^(?:begsr|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
   const conditionContinuation = /^(?:and|or)\b/i;
   const trailingConditionContinuation = /\b(?:and|or)$/i;
-  const expressionContinuation = /\+$/;
+  const expressionContinuation = /[+=]$/;
   let offset = 0;
   let previousLine: SourceLine | undefined;
   let lastSqlLine: SourceLine | undefined;
@@ -77,7 +83,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
     const sourceLine = sourceLineWithEnding.endsWith(`\r`)
       ? sourceLineWithEnding.slice(0, -1)
       : sourceLineWithEnding;
-    const codeBeforeComment = sourceLine.replace(/\/\/.*$/, ``).trimEnd();
+    const codeBeforeComment = getCodeBeforeComment(sourceLine);
     const code = codeBeforeComment.trim();
     const currentLine: SourceLine = {
       code,
@@ -136,6 +142,18 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       lastSqlLine = currentLine;
     }
     offset += sourceLineWithEnding.length + 1;
+  }
+
+  const finalIncompleteLine = inEmbeddedSql ? lastSqlLine : previousLine;
+  if (finalIncompleteLine
+    && !finalIncompleteLine.code.endsWith(`;`)
+    && !finalIncompleteLine.code.endsWith(`...`)
+    && !expressionContinuation.test(finalIncompleteLine.code)
+    && !trailingConditionContinuation.test(finalIncompleteLine.code)) {
+    errors.push({
+      offset: { start: finalIncompleteLine.endOffset - 1, end: finalIncompleteLine.endOffset },
+      type: `MissingSemicolon`,
+    });
   }
 
   return errors;

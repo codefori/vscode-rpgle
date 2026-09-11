@@ -190,7 +190,7 @@
 		"MissingSemicolon": {
 			"$id": "#/properties/MissingSemicolon",
 			"type": "boolean",
-			"description": "Detect declarations that begin before the previous statement is terminated."
+			"description": "Detect free-format RPG statements that are missing a terminating semicolon."
 		}
 	},
 	"additionalProperties": true

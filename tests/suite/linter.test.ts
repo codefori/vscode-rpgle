@@ -226,6 +226,38 @@ test("linter_missing_semicolon_ignores_concatenation_continuation", () => {
   expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
 });
 
+test("linter_missing_semicolon_ignores_assignment_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `currentTs =`,
+    `  GetServerTimestamp();`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_comment_markers_in_strings", () => {
+  const lines = [
+    `**FREE`,
+    `url = 'https://example.com';`,
+    `Dsply url;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_reports_unterminated_final_statement", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-s value Char(10)`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `Dcl-s value Char(10)`));
+});
+
 test("linter_missing_semicolon_ignores_multiline_conditions", () => {
   const lines = [
     `**FREE`,
