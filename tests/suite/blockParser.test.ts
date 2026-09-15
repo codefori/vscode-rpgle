@@ -381,6 +381,17 @@ end-proc;`;
       expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 3))).toBe(false);
     });
 
+    it('is false after a continued dcl-ds statement closed by end-ds on the next line', () => {
+      // Regression: `end-ds` can close the declaration statement from a
+      // continuation line and should not leave a DS block open for later code.
+      const text = `dcl-ds foo extname('SOMEFILE')
+  prefix(b4) end-ds;
+
+if (a = b);
+endif;`;
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 3))).toBe(false);
+    });
+
     // Locks in the behaviour PR #547 introduced:
     // keyword-like tokens at the start of a line inside an open data structure
     // are subfield names, so the scan must report those lines as inside a DS.
@@ -404,6 +415,25 @@ end-ds;`;
 end-ds;`;
       expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 2))).toBe(true); // inside inner
       expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 4))).toBe(true); // still inside outer
+    });
+  });
+
+  describe('continued dcl-ds statement with inline end-ds', () => {
+    it('keeps IF/ENDIF as block keywords after the declaration', () => {
+      const code = `**free
+
+dcl-ds foo extname('SOMEFILE')
+  prefix(b4) end-ds;
+
+if (a = b);
+  a += 1;
+endif;`;
+
+      const matches = findAllBlockMatches(code, isInCommentOrString, isInSqlBlock);
+      const words = matches.map(m => m.word);
+
+      expect(words).toContain('if');
+      expect(words).toContain('endif');
     });
   });
 });

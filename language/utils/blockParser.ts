@@ -80,7 +80,10 @@ export function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean
       continue;
     }
 
-    if (/^end-ds\b/.test(line)) {
+    // `end-ds` can appear on a continuation line in the same statement as a
+    // preceding `dcl-ds` declaration (for example after `prefix(...)`). Treat
+    // any `end-ds` token in prior lines as a balancing closer while scanning.
+    if (/\bend-ds\b/.test(line)) {
       depth++;
       continue;
     }
