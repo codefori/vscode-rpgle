@@ -392,6 +392,19 @@ endif;`;
       expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 3))).toBe(false);
     });
 
+    it('is true when an earlier dcl-ds misses semicolon and is not actually closed', () => {
+      // Regression: a later self-contained `dcl-ds ... end-ds;` line must not
+      // be treated as closing a previous malformed declaration statement.
+      const text = `dcl-ds foo extname('SOMEFILE')
+  prefix(b4)
+
+dcl-ds foo2 extname('SOMEFILE2') end-ds;
+
+if (a = b);
+endif;`;
+      expect(isInsideOpenDclDsBlock(text, lineStartOffset(text, 5))).toBe(true);
+    });
+
     // Locks in the behaviour PR #547 introduced:
     // keyword-like tokens at the start of a line inside an open data structure
     // are subfield names, so the scan must report those lines as inside a DS.
