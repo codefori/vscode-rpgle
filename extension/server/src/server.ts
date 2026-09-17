@@ -80,7 +80,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
 		result.capabilities.implementationProvider = true;
-		result.capabilities.renameProvider = {prepareProvider: true};
+		result.capabilities.renameProvider = { prepareProvider: true };
 		result.capabilities.signatureHelpProvider = {
 			triggerCharacters: [`(`, `:`]
 		};
@@ -144,184 +144,223 @@ parser.setTableFetch(tableFetch);
 opmParser.setTableFetch(tableFetch);
 
 let fetchingInProgress: { [fetchKey: string]: boolean } = {};
+const includeUriCache = new Map<string, string>();
+const includeContentCache = new Map<string, string>();
+
+const normalizeUriForCache = (uri: string): string => uri.split(`?`)[0];
+
+const getIncludeCacheKey = (baseUri: string, includeLiteral: string): string => {
+	const cleanBase = normalizeUriForCache(baseUri);
+	const slashIndex = Math.max(cleanBase.lastIndexOf(`/`), cleanBase.lastIndexOf(`\\`));
+	const baseDir = slashIndex >= 0 ? cleanBase.substring(0, slashIndex) : cleanBase;
+	const includePath = includeLiteral.trim().replace(/^['"]|['"]$/g, ``);
+	return `${baseDir}::${includePath}`;
+};
+
+const invalidateIncludeCacheForUri = (uri: string) => {
+	const cacheUri = normalizeUriForCache(uri);
+	includeContentCache.delete(cacheUri);
+
+	for (const [cacheKey, resolvedUri] of includeUriCache.entries()) {
+		if (resolvedUri === cacheUri) {
+			includeUriCache.delete(cacheKey);
+		}
+	}
+};
 
 const includeFileFetch = async (stringUri: string, includeString: string) => {
 	const currentUri = URI.parse(stringUri);
 	const uriPath = currentUri.fsPath;
-	// Extract clean filename without query parameters
 	const parentFileName = getDisplayName(stringUri);
 	const fetchStartTime = Date.now();
+	const includeCacheKey = getIncludeCacheKey(stringUri, includeString);
 
 	let cleanString: string | undefined;
 	let validUri: string | undefined;
 
-	if (!fetchingInProgress[includeString]) {
-		fetchingInProgress[includeString] = true;
-		logWithTimestamp(`Include fetch started: ${includeString} (from ${parentFileName})`, LogLevel.DEBUG);
-
-		// Right now we are resolving based on the base file schema.
-		// This is likely bad since you can include across file systems.
-
-		const hasQuotes = (includeString.startsWith(`'`) && includeString.endsWith(`'`)) || (includeString.startsWith(`"`) && includeString.endsWith(`"`))
-		const isUnixPath = hasQuotes || (includeString.includes(`/`) && !includeString.includes(`,`));
-
-		cleanString = includeString;
-
-		if (hasQuotes) {
-			cleanString = cleanString.substring(1, cleanString.length - 1);
-		}
-
-		if (isUnixPath) {
-			if (![`streamfile`, `member`].includes(currentUri.scheme)) {
-				// Local file system search (scheme is usually file)
-				const workspaceFolders = await connection.workspace.getWorkspaceFolders();
-				let workspaceFolder: WorkspaceFolder | undefined;
-				if (workspaceFolders) {
-					workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).fsPath))
-				}
-
-				if (Project.isEnabled) {
-					// Project mode is enable. Let's do a search for the path.
-					validUri = await validateUri(cleanString, currentUri.scheme);
-
-				} else {
-					// Because project mode is disabled, likely due to the large workspace, we don't search
-					if (workspaceFolder) {
-						const resolved = resolveWorkspaceIncludePath(workspaceFolder.uri, cleanString);
-						cleanString = resolved.absolutePath;
-						validUri = existsSync(cleanString) ? resolved.fileUri : undefined;
-					} else {
-						validUri = existsSync(cleanString) ? URI.file(cleanString).toString() : undefined;
-					}
-				}
-
-				if (!validUri) {
-					// Ok, no local file was found. Let's see if we can do a server lookup?
-					const foundStreamfile = await streamfileResolve(stringUri, [cleanString]);
-
-					if (foundStreamfile) {
-						validUri = URI.from({
-							scheme: `streamfile`,
-							path: foundStreamfile
-						}).toString();
-					}
-				}
-
-			} else {
-				// Resolving IFS path from member or streamfile
-
-				// IFS fetch
-
-				if (cleanString.startsWith(`/`)) {
-					// Path from root
-					validUri = URI.from({
-						scheme: `streamfile`,
-						path: cleanString
-					}).toString();
-
-				} else {
-					// TODO: Instead of searching for `.*`, search for:
-					//   - `${cleanString}`
-					//   - `${cleanString}.rpgleinc`
-					//   - `${cleanString}.rpgle`
-					const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
-
-					// Path from home directory?
-					const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
-
-					if (foundStreamfile) {
-						validUri = URI.from({
-							scheme: `streamfile`,
-							path: foundStreamfile
-						}).toString();
-					}
-				}
-			}
-
-		} else {
-			// Member fetch
-			// Split by /,
-			const parts = parseMemberUri(includeString);
-
-			// If there is no file provided, assume QRPGLESRC
-			let baseFile = parts.file || `QRPGLESRC`;
-			let baseMember = parts.name;
-
-			if (parts.library && parts.library.startsWith(`*`)) {
-				parts.library = undefined;
-			}
-
-			if (parts.library) {
-				cleanString = [
-					``,
-					...(parts.asp ? [parts.asp] : []),
-					parts.library,
-					baseFile,
-					baseMember + `.rpgleinc`
-				].join(`/`);
-
-				cleanString = URI.from({
-					scheme: `member`,
-					path: cleanString
-				}).toString();
-
-				validUri = await validateUri(cleanString, currentUri.scheme);
-
-			} else {
-				// No base library provided, let's do a resolve
-
-				const foundMember = await memberResolve(stringUri, baseMember, baseFile);
-
-				if (foundMember) {
-					cleanString = [
-						``,
-						...(parts.asp ? [parts.asp] : []),
-						foundMember.library,
-						foundMember.file,
-						foundMember.name + `.rpgleinc`
-					].join(`/`);
-
-					validUri = URI.from({
-						scheme: `member`,
-						path: cleanString
-					}).toString();
-				}
-			}
-		}
-
-		if (validUri) {
-			const validSource = await getFileRequest(validUri, true); // true = skip debounce for include files
-			if (validSource) {
-				const duration = Date.now() - fetchStartTime;
-				const fileName = getDisplayName(validUri);
-				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`, LogLevel.INFO);
-				fetchingInProgress[includeString] = false;
-				return {
-					found: true,
-					uri: validUri,
-					content: validSource
-				};
-			}
-		}
-
-		const duration = Date.now() - fetchStartTime;
-		logWithTimestamp(`Include fetch completed: ${includeString} (${duration}ms, NOT FOUND)`, LogLevel.WARN);
-		fetchingInProgress[includeString] = false;
-		return {
-			found: false,
-			uri: validUri
-		};
-	} else {
+	if (fetchingInProgress[includeCacheKey]) {
 		logWithTimestamp(`Include fetch skipped: ${includeString} (already fetching)`, LogLevel.DEBUG);
 		return {
 			found: false,
 			uri: validUri
 		};
 	}
+
+	fetchingInProgress[includeCacheKey] = true;
+	try {
+		logWithTimestamp(`Include fetch started: ${includeString} (from ${parentFileName})`, LogLevel.DEBUG);
+
+		const cachedUri = includeUriCache.get(includeCacheKey);
+		if (cachedUri) {
+			const cachedContent = includeContentCache.get(cachedUri);
+			if (cachedContent) {
+				const duration = Date.now() - fetchStartTime;
+				const fileName = getDisplayName(cachedUri);
+				logWithTimestamp(`Include fetch cache hit: ${includeString} -> ${fileName} (${duration}ms, memory cache)`, LogLevel.DEBUG);
+				return {
+					found: true,
+					uri: cachedUri,
+					content: cachedContent
+				};
+			}
+
+			validUri = cachedUri;
+		}
+
+		if (!validUri) {
+			const hasQuotes = (includeString.startsWith(`'`) && includeString.endsWith(`'`)) || (includeString.startsWith(`"`) && includeString.endsWith(`"`));
+			const isUnixPath = hasQuotes || (includeString.includes(`/`) && !includeString.includes(`,`));
+
+			cleanString = includeString;
+
+			if (hasQuotes) {
+				cleanString = cleanString.substring(1, cleanString.length - 1);
+			}
+
+			if (isUnixPath) {
+				if (![`streamfile`, `member`].includes(currentUri.scheme)) {
+					const workspaceFolders = await connection.workspace.getWorkspaceFolders();
+					let workspaceFolder: WorkspaceFolder | undefined;
+					if (workspaceFolders) {
+						workspaceFolder = workspaceFolders.find(folderUri => uriPath.startsWith(URI.parse(folderUri.uri).fsPath));
+					}
+
+					if (Project.isEnabled) {
+						validUri = await validateUri(cleanString, currentUri.scheme);
+					} else {
+						if (workspaceFolder) {
+							const resolved = resolveWorkspaceIncludePath(workspaceFolder.uri, cleanString);
+							cleanString = resolved.absolutePath;
+							validUri = existsSync(cleanString) ? resolved.fileUri : undefined;
+						} else {
+							validUri = existsSync(cleanString) ? URI.file(cleanString).toString() : undefined;
+						}
+					}
+
+					if (!validUri) {
+						const foundStreamfile = await streamfileResolve(stringUri, [cleanString]);
+
+						if (foundStreamfile) {
+							validUri = URI.from({
+								scheme: `streamfile`,
+								path: foundStreamfile
+							}).toString();
+						}
+					}
+				} else {
+					if (cleanString.startsWith(`/`)) {
+						validUri = URI.from({
+							scheme: `streamfile`,
+							path: cleanString
+						}).toString();
+					} else {
+						const possibleFiles = [cleanString, `${cleanString}.rpgleinc`, `${cleanString}.rpgle`];
+						const foundStreamfile = await streamfileResolve(stringUri, possibleFiles);
+
+						if (foundStreamfile) {
+							validUri = URI.from({
+								scheme: `streamfile`,
+								path: foundStreamfile
+							}).toString();
+						}
+					}
+				}
+			} else {
+				const parts = parseMemberUri(includeString);
+				let baseFile = parts.file || `QRPGLESRC`;
+				let baseMember = parts.name;
+
+				if (parts.library && parts.library.startsWith(`*`)) {
+					parts.library = undefined;
+				}
+
+				if (parts.library) {
+					cleanString = [
+						``,
+						...(parts.asp ? [parts.asp] : []),
+						parts.library,
+						baseFile,
+						baseMember + `.rpgleinc`
+					].join(`/`);
+
+					cleanString = URI.from({
+						scheme: `member`,
+						path: cleanString
+					}).toString();
+
+					validUri = await validateUri(cleanString, currentUri.scheme);
+				} else {
+					const foundMember = await memberResolve(stringUri, baseMember, baseFile);
+
+					if (foundMember) {
+						cleanString = [
+							``,
+							...(parts.asp ? [parts.asp] : []),
+							foundMember.library,
+							foundMember.file,
+							foundMember.name + `.rpgleinc`
+						].join(`/`);
+
+						validUri = URI.from({
+							scheme: `member`,
+							path: cleanString
+						}).toString();
+					}
+				}
+			}
+		}
+
+		if (validUri) {
+			const normalizedUri = normalizeUriForCache(validUri);
+			includeUriCache.set(includeCacheKey, normalizedUri);
+
+			const cachedContent = includeContentCache.get(normalizedUri);
+			if (cachedContent) {
+				const duration = Date.now() - fetchStartTime;
+				const fileName = getDisplayName(normalizedUri);
+				logWithTimestamp(`Include fetch cache hit: ${includeString} -> ${fileName} (${duration}ms, memory cache)`, LogLevel.DEBUG);
+				return {
+					found: true,
+					uri: normalizedUri,
+					content: cachedContent
+				};
+			}
+
+			const validSource = await getFileRequest(normalizedUri, true);
+			if (validSource) {
+				includeContentCache.set(normalizedUri, validSource);
+				const duration = Date.now() - fetchStartTime;
+				const fileName = getDisplayName(normalizedUri);
+				logWithTimestamp(`Include fetch completed: ${includeString} -> ${fileName} (${duration}ms, found)`, LogLevel.INFO);
+				return {
+					found: true,
+					uri: normalizedUri,
+					content: validSource
+				};
+			}
+
+			includeUriCache.delete(includeCacheKey);
+		}
+
+		const duration = Date.now() - fetchStartTime;
+		logWithTimestamp(`Include fetch completed: ${includeString} (${duration}ms, NOT FOUND)`, LogLevel.WARN);
+		return {
+			found: false,
+			uri: validUri
+		};
+	} finally {
+		fetchingInProgress[includeCacheKey] = false;
+	}
 };
 
 parser.setIncludeFileFetch(includeFileFetch);
 opmParser.setIncludeFileFetch(includeFileFetch);
+
+watchedFilesChangeEvent.push((params) => {
+	for (const fileEvent of params.changes) {
+		invalidateIncludeCacheForUri(fileEvent.uri);
+	}
+});
 
 if (languageToolsEnabled) {
 	// regular language stuff
@@ -434,6 +473,7 @@ function executeParse(uri: string, parseId: number, document: any) {
 // Always get latest stuff
 documents.onDidChangeContent(handler => {
 	const uri = handler.document.uri;
+	invalidateIncludeCacheForUri(uri);
 	// Extract clean filename without query parameters
 	const fileName = getDisplayName(uri);
 
