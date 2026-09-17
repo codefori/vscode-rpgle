@@ -3724,6 +3724,23 @@ test('allow special global subroutines', async () => {
   expect(errors.length).toBe(2);
 });
 
+test('inline end-ds closes dcl-ds in the same statement', async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds foo extname('SOMEFILE')`,
+    `  prefix(b4) end-ds;`,
+    ``,
+    `return;`
+  ].join(`\n`);
+
+  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+    indent: 2,
+  });
+
+  expect(indentErrors).toHaveLength(0);
+});
+
 test("DS template references", async () => {
   const lines = [
     `**free`,

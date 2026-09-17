@@ -507,8 +507,14 @@ export default class Linter {
                       }
                     }
 
-                    // If no one line ender is used, push current ds to scope
-                    if (!oneLineTriggers["DCL-DS"].some(trigger => statement.map(t => (t.value || ``).toUpperCase()).includes(trigger))) {
+                    // RPG allows a single-statement declaration to close itself with END-DS,
+                    // even when the declaration spans multiple physical lines before the ;.
+                    // Evaluate the full statement, not just the current line.
+                    const hasInlineDclDsCloser = oneLineTriggers["DCL-DS"].some(trigger =>
+                      statement.some(part => part.value && part.value.toUpperCase() === trigger)
+                    );
+
+                    if (!hasInlineDclDsCloser) {
                       if (value) {
                         inStruct.push(value);
                       }
@@ -951,8 +957,21 @@ export default class Linter {
             ].includes(opcode)) {
               const oneLineTriggerOps = [`DCL-DS`, `DCL-PI`, `DCL-PR`] as const;
               const isOneLineTriggerOp = (oneLineTriggerOps as readonly string[]).includes(opcode);
-              if (isOneLineTriggerOp && oneLineTriggers[opcode as keyof typeof oneLineTriggers].some((trigger: string) => statement.map(t => (t.value || ``).toUpperCase()).includes(trigger))) {
-                //No change
+              if (isOneLineTriggerOp) {
+                const hasInlineTerminal = oneLineTriggers[opcode as keyof typeof oneLineTriggers].some((trigger: string) =>
+                  statement.some(part => part.value && part.value.toUpperCase() === trigger)
+                );
+                if (!hasInlineTerminal) {
+                  if (opcode === `SELECT`) {
+                    if (skipIndentCheck === false) expectedIndent += (indent * 2);
+                  }
+                  else if (opcode === `ON-EXIT`) {
+                    expectedIndent += indent;
+                    inOnExit = true;
+                  }
+                  else
+                    expectedIndent += indent;
+                }
               }
               else if (opcode === `SELECT`) {
                 if (skipIndentCheck === false) expectedIndent += (indent * 2);
