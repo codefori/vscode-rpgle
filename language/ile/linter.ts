@@ -36,6 +36,10 @@ const errorText = {
 	'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
 	'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
 	'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\`/\`BEG..\``,
+	'MissingEndDS': `Missing \`END-DS\` for \`DCL-DS\` block.`,
+	'MissingEndPR': `Missing \`END-PR\` for \`DCL-PR\` block.`,
+	'MissingEndPI': `Missing \`END-PI\` for \`DCL-PI\` block.`,
+	'MissingEndENUM': `Missing \`END-ENUM\` for \`DCL-ENUM\` block.`,
 	'NoUnreferenced': `No reference to definition.`,
 	'NoExternalTo': `Cannot declare prototype to this external API.`,
 	'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`,
@@ -59,6 +63,58 @@ type IndentError = {
   expectedIndent: number,
   currentIndent: number,
 };
+
+type DeclarationBlockType = `DCL-DS` | `DCL-PR` | `DCL-PI` | `DCL-ENUM`;
+
+const declarationClosers: Record<DeclarationBlockType, string> = {
+	"DCL-DS": `END-DS`,
+	"DCL-PR": `END-PR`,
+	"DCL-PI": `END-PI`,
+	"DCL-ENUM": `END-ENUM`,
+};
+
+const missingDeclarationErrors: Record<DeclarationBlockType, ErrorType> = {
+	"DCL-DS": `MissingEndDS`,
+	"DCL-PR": `MissingEndPR`,
+	"DCL-PI": `MissingEndPI`,
+	"DCL-ENUM": `MissingEndENUM`,
+};
+
+const declarationOpeners = new Set<DeclarationBlockType>([
+	`DCL-DS`,
+	`DCL-PR`,
+	`DCL-PI`,
+	`DCL-ENUM`,
+]);
+
+function hasUnclosedDeclarationBeforeBoundary(statement: Token[], opener: DeclarationBlockType): boolean {
+	const closer = declarationClosers[opener];
+	const openerIndex = statement.findIndex(part =>
+		part.type === `declare` &&
+		part.value &&
+		part.value.toUpperCase() === opener
+	);
+
+	if (openerIndex < 0) {
+		return false;
+	}
+
+	for (let i = openerIndex + 1; i < statement.length; i++) {
+		const part = statement[i];
+		const upper = (part.value || ``).toUpperCase();
+
+		if (upper === closer) {
+			return false;
+		}
+
+		if (part.type === `declare` && declarationOpeners.has(upper as DeclarationBlockType)) {
+			return true;
+		}
+
+	}
+
+	return false;
+}
 
 function getCodeBeforeComment(sourceLine: string) {
 	const comment = tokenise(sourceLine).find(token => token.type === `comment`);
@@ -284,6 +340,15 @@ export default class Linter {
 
     const selectBlocks: SelectBlock[] = [];
 
+    const reportMissingDeclarationEndInStatement = (statement: Token[], type: DeclarationBlockType, offset: IRange) => {
+    	if (hasUnclosedDeclarationBeforeBoundary(statement, type)) {
+    		errors.push({
+    			type: missingDeclarationErrors[type],
+    			offset,
+    		});
+    	}
+    };
+
     const stringLiterals: { value: string, list: { line: number, offset: IRange }[] }[] = [];
 
     let directiveScope = 0;
@@ -306,6 +371,18 @@ export default class Linter {
     	const firstValue = firstToken.value || ``;
     	lineNumber = docStatement.range.line;
     	currentIndent = docStatement.indent;
+
+    	// Some malformed multi-line statements can produce negative indent values,
+    	// which currently bypass normal lint-rule processing. Keep MissingEndDS
+    	// detection active so broken merged DCL-DS statements still report.
+    	if (currentIndent < 0 && firstToken.type === `declare` && firstValue.toUpperCase() === `DCL-DS`) {
+    		if (hasUnclosedDeclarationBeforeBoundary(statement, `DCL-DS`)) {
+    			errors.push({
+    				type: `MissingEndDS`,
+    				offset: firstToken.range,
+    			});
+    		}
+    	}
 
     	if (currentIndent >= 0) {
     		skipIndentCheck = false;
@@ -506,6 +583,8 @@ export default class Linter {
     					case `declare`:
     						if (statement.length < 2) break;
 
+    						const declarationOperation = firstValue.toUpperCase();
+
     						if (rules.SpecificCasing) {
     							const caseRule = rules.SpecificCasing.find(rule => [firstValue.toUpperCase(), `*DECLARE`].includes(rule.operation.toUpperCase()));
     							if (caseRule) {
@@ -537,7 +616,7 @@ export default class Linter {
     							});
     						}
 
-    						switch (firstValue.toUpperCase()) {
+    						switch (declarationOperation) {
     							case `BEGSR`:
     								if (inSubroutine) {
     									errors.push({
@@ -602,7 +681,8 @@ export default class Linter {
     								break;
 
     							case `DCL-PI`:
-    								if (!statement.some(s => s.type === `end`)) {
+    								const hasInlineEndPI = statement.some(part => part.value && part.value.toUpperCase() === `END-PI`);
+    								if (!hasInlineEndPI) {
     									inPrototype = true;
     								}
     								break;
@@ -651,7 +731,8 @@ export default class Linter {
     								break;
 
     							case `DCL-ENUM`:
-    								if (value) {
+    								const hasInlineEndEnum = statement.some(part => part.value && part.value.toUpperCase() === `END-ENUM`);
+    								if (value && !hasInlineEndEnum) {
     									inStruct.push(value);
     								}
     								break;
@@ -699,6 +780,8 @@ export default class Linter {
     								const hasInlineDclDsCloser = oneLineTriggers["DCL-DS"].some(trigger =>
     									statement.some(part => part.value && part.value.toUpperCase() === trigger)
     								);
+
+    								reportMissingDeclarationEndInStatement(statement, `DCL-DS`, statement[0].range);
 
     								if (!hasInlineDclDsCloser) {
     									if (value) {
