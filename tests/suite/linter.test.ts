@@ -3741,6 +3741,41 @@ test('inline end-ds closes dcl-ds in the same statement', async () => {
   expect(indentErrors).toHaveLength(0);
 });
 
+test('reports missing end-ds when a new declaration starts first', () => {
+  const lines = [
+    `**free`,
+    `dcl-ds foo extname('SOMEFILE')`,
+    `  prefix(b4)`,
+    `dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+    `return;`
+  ].join(`\n`);
+
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    SQLRunner: true,
+  });
+
+  expect(errors.some(error => error.type === `MissingEndDS`)).toBe(true);
+});
+
+test('reports missing end-ds for malformed continued declaration with blank line', () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds foo extname('SOMEFILE')`,
+    `   prefix(b4) `,
+    ``,
+    `dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+    ``,
+    `return;`
+  ].join(`\n`);
+
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    SQLRunner: true,
+  });
+
+  expect(errors.some(error => error.type === `MissingEndDS`)).toBe(true);
+});
+
 test("DS template references", async () => {
   const lines = [
     `**free`,

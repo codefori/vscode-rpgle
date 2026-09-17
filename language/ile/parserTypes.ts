@@ -3,7 +3,7 @@ import { IRange, IRangeWithLine } from './types';
 import { SymbolRegister } from '../models/cache';
 
 export interface Keywords {
-  [keyword: string]: string|true;
+  [keyword: string]: string | true;
 }
 
 export interface IncludeStatement {
@@ -36,11 +36,11 @@ export interface Rules {
   StringLiteralDupe?: boolean;
   literalMinimum?: number;
   RequireBlankSpecial?: boolean;
-  CopybookDirective?: "copy"|"include";
-  DirectiveCase?: "lower"|"upper";
+  CopybookDirective?: "copy" | "include";
+  DirectiveCase?: "lower" | "upper";
   NoSQLJoins?: boolean;
   NoGlobalsInProcedures?: boolean;
-  SpecificCasing?: {operation: string, expected: string}[];
+  SpecificCasing?: { operation: string, expected: string }[];
   NoCTDATA?: boolean;
   PrettyComments?: boolean;
   NoGlobalSubroutines?: boolean;
@@ -56,6 +56,10 @@ export interface Rules {
   /** Not for user definition */
   InvalidDeclareNumber?: void;
   UnexpectedEnd?: void;
+  MissingEndDS?: void;
+  MissingEndPR?: void;
+  MissingEndPI?: void;
+  MissingEndENUM?: void;
   SQLRunner?: boolean;
 
   /** When true, will update Cache will references found in linter */
@@ -64,14 +68,14 @@ export interface Rules {
 
 export type ErrorType = Exclude<keyof Rules, 'indent' | 'literalMinimum' | 'CollectReferences'>;
 
-export  interface DefinitionPosition {
+export interface DefinitionPosition {
   path: string;
   line: number;
 }
 
 export interface Reference {
   uri: string;
-  offset: IRange|IRangeWithLine;
+  offset: IRange | IRangeWithLine;
 }
 
 export interface IssueRange {
