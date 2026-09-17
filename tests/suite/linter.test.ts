@@ -1591,6 +1591,30 @@ test('linter22_b', async () => {
   expect(errors.length).to.equal(0);
 });
 
+test('linter22_c', async () => {
+  const lines = [
+    `**FREE`,
+    `dcl-pr firstProc extproc;`,
+    `end-pr;`,
+    `dcl-pr secondProc extproc;`,
+    `end-pr;`,
+    `dcl-pr overloadProc overload(firstProc: secondProc);`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, {
+    ignoreCache: true,
+    withIncludes: true
+  }));
+
+  const { errors } = Linter.getErrors(
+    { uri, content: lines },
+    { PrototypeCheck: true },
+    cache
+  );
+
+  expect(errors).toHaveLength(0);
+});
+
 test("linter23", async () => {
   const lines = [
     `**free`,
