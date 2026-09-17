@@ -9,6 +9,37 @@ type BracketPair = BlockPair;
 const CONFIG_KEY = 'bracketHighlightingEnabled';
 const MISMATCH_STYLE_KEY = 'bracketMismatchStyle';
 const JUMP_ENABLED_KEY = 'bracketJumpEnabled';
+const MAX_LINES_KEY = 'bracketHighlightingMaxLines';
+
+// Above this many lines bracket analysis is skipped for responsiveness.
+const DEFAULT_MAX_LINES = 6000;
+
+// Configured line limit, normalized so that <= 0 means "no limit".
+function getBracketMaxLines(): number {
+  const config = vscode.workspace.getConfiguration('vscode-rpgle');
+  const value = config.get<number>(MAX_LINES_KEY, DEFAULT_MAX_LINES);
+  return typeof value === 'number' && value > 0 ? value : 0;
+}
+
+function exceedsBracketLineLimit(document: vscode.TextDocument): boolean {
+  const limit = getBracketMaxLines();
+  return limit > 0 && document.lineCount > limit;
+}
+
+// Documents already warned about crossing the line limit, so the popup shows once per file.
+const lineLimitNotified = new Set<string>();
+
+// Warn (once) that bracket matching is off for a document because of its size.
+function warnBracketLineLimitExceeded(document: vscode.TextDocument) {
+  const docUri = document.uri.toString();
+  if (lineLimitNotified.has(docUri)) return;
+  lineLimitNotified.add(docUri);
+
+  vscode.window.showWarningMessage(
+    `RPGLE bracket matching is disabled for this file: ${document.lineCount} lines exceed the configured limit of ${getBracketMaxLines()} ` +
+    `(vscode-rpgle.${MAX_LINES_KEY}).`
+  );
+}
 
 // Cache infrastructure for document analysis
 interface CacheEntry {
@@ -78,6 +109,20 @@ let bracketMatcherActive = false;
 export function registerBracketMatcher(context: vscode.ExtensionContext) {
   // Listen for configuration changes (always register this listener)
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+    // Line-limit change: re-evaluate visible editors against the new threshold.
+    if (e.affectsConfiguration('vscode-rpgle.' + MAX_LINES_KEY)) {
+      analysisCache.clear();
+      lineLimitNotified.clear();
+      if (bracketMatcherActive) {
+        vscode.window.visibleTextEditors.forEach(editor => {
+          if (editor.document.languageId === 'rpgle') {
+            updateDecorations(editor);
+            setTimeout(() => { if (bracketMatcherActive) preloadCache(editor.document); }, 0);
+          }
+        });
+      }
+    }
+
     if (e.affectsConfiguration('vscode-rpgle.' + CONFIG_KEY) ||
       e.affectsConfiguration('vscode-rpgle.' + JUMP_ENABLED_KEY)) {
       const newConfig = vscode.workspace.getConfiguration('vscode-rpgle');
@@ -297,6 +342,11 @@ function preloadCache(document: vscode.TextDocument) {
   // false/false → nothing needed, skip entirely
   if (!highlightingEnabled && !jumpEnabled) return;
 
+  if (exceedsBracketLineLimit(document)) {
+    analysisCache.delete(document.uri.toString());
+    return;
+  }
+
   try {
     const docUri = document.uri.toString();
     if (analysisCache.has(docUri) && analysisCache.get(docUri)!.version === document.version) return;
@@ -347,6 +397,7 @@ function disposeBracketMatcher() {
 
   // Clear current block info
   currentBlockInfo = undefined;
+  lineLimitNotified.clear();
 }
 
 function updateDecorations(editor: vscode.TextEditor) {
@@ -378,6 +429,19 @@ function updateDecorationsImpl(editor: vscode.TextEditor) {
   const position = editor.selection.active;
   const text = document.getText();
   const docUri = document.uri.toString();
+
+  // Over the line limit: clear decorations, warn once, and skip analysis.
+  if (exceedsBracketLineLimit(document)) {
+    editor.setDecorations(decorationType, []);
+    editor.setDecorations(errorDecorationType, []);
+    currentBlockInfo = undefined;
+    currentErrorRanges = [];
+    analysisCache.delete(docUri);
+    warnBracketLineLimitExceeded(document);
+    return;
+  }
+  // Back under the limit (edits, or a raised setting) — allow the warning again later.
+  lineLimitNotified.delete(docUri);
 
   // Never run selection-based block matching/decorations on comment lines.
   if (rpgle.isComment(document.lineAt(position.line).text, document)) {
@@ -1302,6 +1366,8 @@ export function registerJumpToMatchingBlock(context: vscode.ExtensionContext) {
     (editor: vscode.TextEditor) => {
       const document = editor.document;
       if (document.languageId !== 'rpgle') return;
+
+      if (exceedsBracketLineLimit(document)) return;
 
       const position = editor.selection.active;
       const text = document.getText();

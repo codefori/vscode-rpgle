@@ -3008,6 +3008,38 @@ test('sqlRunner1_b', async () => {
   });
 });
 
+test('sqlRunner_dml', async () => {
+  const lines = [
+    `**free`,
+    `EXEC SQL`,
+    `  INSERT INTO CUSTOMER (CUSNO) VALUES (:cust.CUSNO);`,
+    ``,
+    `EXEC SQL`,
+    `  DELETE FROM CUSTOMER WHERE CUSNO = :cust.CUSNO;`,
+    ``,
+    `EXEC SQL`,
+    `  CALL MYPROC(:cust.CUSNO);`,
+    ``,
+    `EXEC SQL`,
+    `  CREATE TABLE QTEMP.WRK AS (SELECT * FROM CUSTOMER) WITH DATA;`,
+    ``,
+    `EXEC SQL`,
+    `  DROP TABLE QTEMP.WRK;`,
+    ``,
+    `EXEC SQL`,
+    `  OPEN CUSCUR;`,
+    ``,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    SQLRunner: true
+  }, cache);
+
+  expect(errors.length).toBe(5);
+  expect(errors.every(e => e.type === 'SQLRunner')).toBe(true);
+});
+
 test(`snd-msg casing #309`, async () => {
   const lines = [
     `**FREE`,
