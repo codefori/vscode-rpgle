@@ -11,7 +11,7 @@ import * as path from "path";
 import { TextDocument } from 'vscode-languageserver-textdocument';
 const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
 
-export let includePath: {[workspaceUri: string]: string[]} = {};
+export let includePath: { [workspaceUri: string]: string[] } = {};
 
 export let isEnabled = false;
 /**
@@ -53,7 +53,7 @@ export async function initialise() {
 	});
 }
 
-async function loadWorkspace() {
+export async function loadWorkspace() {
 	const workspaces = await connection.workspace.getWorkspaceFolders();
 
 	if (workspaces) {
@@ -93,13 +93,22 @@ async function loadWorkspace() {
 			}
 		}));
 
-		if (uris.length < 1000) {
-			for (const uri of uris) {
-				await loadLocalFile(uri);
+		const config = await connection.workspace.getConfiguration('vscode-rpgle');
+		const fileLimit: number = config?.localProjectFileLimit ?? 1000;
+
+		if (uris.length <= fileLimit) {
+			if (!isEnabled) {
+				isEnabled = true;
+				console.log(`Enabling project mode.`);
 			}
+
+			console.log(`Pre-parsing ${uris.length} files.`);
+			await Promise.all(uris.map(uri => loadLocalFile(uri)));
 		} else {
-			console.log(`Disabling project mode for large project.`);
-			isEnabled = false;
+			if (isEnabled) {
+				console.log(`Disabling project mode for large project (${uris.length} files exceeds limit of ${fileLimit}).`);
+				isEnabled = false;
+			}
 		}
 	}
 }
@@ -151,7 +160,7 @@ export async function getTextDoc(uri: string): Promise<TextDocument | undefined>
 	try {
 		const content = await fs.readFile(URI.parse(uri).fsPath, { encoding: `utf-8` });
 		return TextDocument.create(uri, `rpgle`, 1, content);
-	} catch (e) {}
+	} catch (e) { }
 
 	return;
 }

@@ -62,7 +62,8 @@ export function activate(context: ExtensionContext) {
 				workspace.createFileSystemWatcher('**/iproj.json'),
 				workspace.createFileSystemWatcher('**/rpglint.json'),
 				workspace.createFileSystemWatcher(projectFilesGlob),
-			]
+			],
+			configurationSection: 'vscode-rpgle'
 		}
 	};
 
