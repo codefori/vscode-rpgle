@@ -18,7 +18,7 @@ import completionItemProvider from './providers/completionItem';
 import hoverProvider from './providers/hover';
 import foldingRangeProvider from './providers/foldingRange';
 
-import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp } from "./connection";
+import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp, watchedFilesChangeEvent } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
