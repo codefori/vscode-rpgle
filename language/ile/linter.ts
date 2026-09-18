@@ -80,6 +80,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   const errors: IssueRange[] = [];
   const hasFreeDirective = content.split(/\r?\n/).some(line => /^\s*\*\*FREE\b/i.test(line));
   const rpgStatementStart = /^(?:begsr|callp|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
+  const rpgOpcodeStart = new RegExp(`^(?:${[...new Set(opcodes)].join(`|`)})\\b`, `i`);
   const assignmentStart = /^[%A-Z_#$@][\w.$#@]*\s*(?:[+\-*/]?=)/i;
   const conditionContinuation = /^(?:and|or)\b/i;
   const trailingConditionContinuation = /\b(?:and|or)$/i;
@@ -118,7 +119,9 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       continue;
     }
 
-    const startsNewRpgStatement = rpgStatementStart.test(code) || (!currentLine.isIndented && assignmentStart.test(code));
+    const startsNewRpgStatement = rpgStatementStart.test(code)
+      || rpgOpcodeStart.test(code)
+      || (!currentLine.isIndented && assignmentStart.test(code));
 
     if (inEmbeddedSql) {
       if (startsNewRpgStatement) {

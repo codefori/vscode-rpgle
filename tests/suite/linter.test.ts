@@ -411,6 +411,19 @@ test("linter_missing_semicolon_reports_incomplete_continuations_before_assignmen
   ]);
 });
 
+test("linter_missing_semicolon_reports_incomplete_continuations_before_opcodes", () => {
+  const lines = [
+    `**FREE`,
+    `result = a +`,
+    `Dsply result;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `result = a +`));
+});
+
 test("linter_missing_semicolon_reports_unterminated_calls_before_rpg_statements", () => {
   const lines = [
     `**FREE`,
