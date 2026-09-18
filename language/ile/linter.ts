@@ -67,17 +67,27 @@ function getCodeBeforeComment(sourceLine: string) {
   return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
 }
 
+function getParenthesisDelta(code: string) {
+  return tokenise(code).reduce((depth, token) => {
+    if (token.type === `openbracket`) return depth + 1;
+    if (token.type === `closebracket`) return depth - 1;
+    return depth;
+  }, 0);
+}
+
 function getMissingSemicolonErrors(content: string): IssueRange[] {
   type SourceLine = { code: string, endOffset: number };
   const errors: IssueRange[] = [];
   const rpgStatementStart = /^(?:begsr|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
   const conditionContinuation = /^(?:and|or)\b/i;
   const trailingConditionContinuation = /\b(?:and|or)$/i;
-  const expressionContinuation = /[+=]$/;
+  const expressionContinuation = /[+\-*/=]$/;
+  const leadingExpressionContinuation = /^(?:[+\-*/]|<=|>=|<>|=|<|>)/;
   let offset = 0;
   let previousLine: SourceLine | undefined;
   let lastSqlLine: SourceLine | undefined;
   let inEmbeddedSql = false;
+  let openParentheses = 0;
 
   for (const sourceLineWithEnding of content.split(`\n`)) {
     const sourceLine = sourceLineWithEnding.endsWith(`\r`)
@@ -127,6 +137,8 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       && (!previousLine.code.endsWith(`...`))
       && !expressionContinuation.test(previousLine.code)
       && !trailingConditionContinuation.test(previousLine.code)
+      && openParentheses === 0
+      && !leadingExpressionContinuation.test(code)
       && !conditionContinuation.test(code);
 
     if (previousContinues && previousLine) {
@@ -136,6 +148,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       });
     }
 
+    openParentheses = Math.max(0, openParentheses + getParenthesisDelta(code));
     previousLine = currentLine;
     if (/^exec\s+sql\b/i.test(code) && !code.endsWith(`;`)) {
       inEmbeddedSql = true;

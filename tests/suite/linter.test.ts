@@ -236,6 +236,109 @@ test("linter_missing_semicolon_ignores_assignment_continuation", () => {
   expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
 });
 
+test("linter_missing_semicolon_ignores_binary_and_call_continuations", () => {
+  const lines = [
+    `**FREE`,
+    `message = 'Hola ' + 'Mundo';`,
+    `result = a -`,
+    `  b;`,
+    `myProc(parm1 :`,
+    `  parm2);`,
+    `myProc(parm1`,
+    `  :parm2);`,
+    `message = 'Hola'`,
+    `  + ' Mundo';`,
+    `result = a`,
+    `  -`,
+    `  b;`,
+    `myProc(parm1`,
+    `  :parm2`,
+    `  :parm3);`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_leading_plus_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `message = 'Hola'`,
+    `  + ' Mundo';`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_leading_minus_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `result = a`,
+    `  -`,
+    `  b;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_three_parameter_call_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `myProc(parm1`,
+    `  :parm2`,
+    `  :parm3);`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_leading_arithmetic_and_comparison_operators", () => {
+  const lines = [
+    `**FREE`,
+    `result = a`,
+    `  * b`,
+    `  * c;`,
+    `result = a`,
+    `  / b`,
+    `  / c;`,
+    `If amount`,
+    `  >= minimum;`,
+    `Endif;`,
+    `If status`,
+    `  <> 'X';`,
+    `Endif;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_nested_call_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `myProc(`,
+    `  FormatMessage(`,
+    `    title`,
+    `    : value`,
+    `    : value2`,
+    `    : value3`,
+    `  )`,
+    `);`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_compound_assignment_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `count +=`,
+    `  1;`,
+    `count -=`,
+    `  1;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
 test("linter_missing_semicolon_ignores_comment_markers_in_strings", () => {
   const lines = [
     `**FREE`,
