@@ -76,13 +76,20 @@ function getParenthesisDelta(code: string) {
 }
 
 function getMissingSemicolonErrors(content: string): IssueRange[] {
-  type SourceLine = { code: string, endOffset: number };
+  type SourceLine = { code: string, endOffset: number, isIndented: boolean };
   const errors: IssueRange[] = [];
-  const rpgStatementStart = /^(?:begsr|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
+  const hasFreeDirective = content.split(/\r?\n/).some(line => /^\s*\*\*FREE\b/i.test(line));
+  const rpgStatementStart = /^(?:begsr|callp|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
+  const assignmentStart = /^[%A-Z_#$@][\w.$#@]*\s*(?:[+\-*/]?=)/i;
   const conditionContinuation = /^(?:and|or)\b/i;
   const trailingConditionContinuation = /\b(?:and|or)$/i;
   const expressionContinuation = /[+\-*/=]$/;
   const leadingExpressionContinuation = /^(?:[+\-*/]|<=|>=|<>|=|<|>)/;
+
+  if (!hasFreeDirective) {
+    return errors;
+  }
+
   let offset = 0;
   let previousLine: SourceLine | undefined;
   let lastSqlLine: SourceLine | undefined;
@@ -98,6 +105,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
     const currentLine: SourceLine = {
       code,
       endOffset: offset + codeBeforeComment.length,
+      isIndented: /^\s/.test(codeBeforeComment),
     };
 
     if (!code) {
@@ -110,8 +118,10 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       continue;
     }
 
+    const startsNewRpgStatement = rpgStatementStart.test(code) || (!currentLine.isIndented && assignmentStart.test(code));
+
     if (inEmbeddedSql) {
-      if (rpgStatementStart.test(code)) {
+      if (startsNewRpgStatement) {
         const errorLine = lastSqlLine!;
         errors.push({
           offset: { start: errorLine.endOffset - 1, end: errorLine.endOffset },
@@ -139,13 +149,17 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       && !trailingConditionContinuation.test(previousLine.code)
       && openParentheses === 0
       && !leadingExpressionContinuation.test(code)
-      && !conditionContinuation.test(code);
+      && !conditionContinuation.test(code)
+      || (previousLine
+        && !previousLine.code.endsWith(`;`)
+        && startsNewRpgStatement);
 
     if (previousContinues && previousLine) {
       errors.push({
         offset: { start: previousLine.endOffset - 1, end: previousLine.endOffset },
         type: `MissingSemicolon`,
       });
+      openParentheses = 0;
     }
 
     openParentheses = Math.max(0, openParentheses + getParenthesisDelta(code));
@@ -159,10 +173,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
 
   const finalIncompleteLine = inEmbeddedSql ? lastSqlLine : previousLine;
   if (finalIncompleteLine
-    && !finalIncompleteLine.code.endsWith(`;`)
-    && !finalIncompleteLine.code.endsWith(`...`)
-    && !expressionContinuation.test(finalIncompleteLine.code)
-    && !trailingConditionContinuation.test(finalIncompleteLine.code)) {
+    && !finalIncompleteLine.code.endsWith(`;`)) {
     errors.push({
       offset: { start: finalIncompleteLine.endOffset - 1, end: finalIncompleteLine.endOffset },
       type: `MissingSemicolon`,
