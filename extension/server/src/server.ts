@@ -144,10 +144,32 @@ parser.setTableFetch(tableFetch);
 opmParser.setTableFetch(tableFetch);
 
 let fetchingInProgress: { [fetchKey: string]: boolean } = {};
+const INCLUDE_CACHE_LIMIT = 200;
 const includeUriCache = new Map<string, string>();
 const includeContentCache = new Map<string, string>();
 
-const normalizeUriForCache = (uri: string): string => uri.split(`?`)[0];
+const normalizeUriForCache = (uri: string): string => {
+	if (!uri) return ``;
+	const trimmed = uri.trim();
+	return trimmed.split(`?`)[0].split(`#`)[0];
+};
+
+const pruneIncludeCache = () => {
+	while (includeUriCache.size > INCLUDE_CACHE_LIMIT) {
+		const oldestKey = includeUriCache.keys().next().value;
+		if (oldestKey === undefined) break;
+
+		const oldestUri = includeUriCache.get(oldestKey);
+		includeUriCache.delete(oldestKey);
+
+		if (oldestUri) {
+			const stillReferenced = Array.from(includeUriCache.values()).includes(oldestUri);
+			if (!stillReferenced) {
+				includeContentCache.delete(oldestUri);
+			}
+		}
+	}
+};
 
 const getIncludeCacheKey = (baseUri: string, includeLiteral: string): string => {
 	const cleanBase = normalizeUriForCache(baseUri);
@@ -313,6 +335,7 @@ const includeFileFetch = async (stringUri: string, includeString: string) => {
 		if (validUri) {
 			const normalizedUri = normalizeUriForCache(validUri);
 			includeUriCache.set(includeCacheKey, normalizedUri);
+			pruneIncludeCache();
 
 			const cachedContent = includeContentCache.get(normalizedUri);
 			if (cachedContent) {
