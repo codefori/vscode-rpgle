@@ -122,9 +122,11 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
     const startsNewRpgStatement = rpgStatementStart.test(code)
       || rpgOpcodeStart.test(code)
       || (!currentLine.isIndented && assignmentStart.test(code));
+    const startsNewRpgStatementAfterSql = rpgStatementStart.test(code)
+      || (!currentLine.isIndented && assignmentStart.test(code));
 
     if (inEmbeddedSql) {
-      if (startsNewRpgStatement) {
+      if (startsNewRpgStatementAfterSql) {
         const errorLine = lastSqlLine!;
         errors.push({
           offset: { start: errorLine.endOffset - 1, end: errorLine.endOffset },
