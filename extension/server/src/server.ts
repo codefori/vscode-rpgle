@@ -80,7 +80,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
 		result.capabilities.implementationProvider = true;
-		result.capabilities.renameProvider = {prepareProvider: true};
+		result.capabilities.renameProvider = { prepareProvider: true };
 		result.capabilities.signatureHelpProvider = {
 			triggerCharacters: [`(`, `:`]
 		};
@@ -122,6 +122,14 @@ connection.onInitialized(() => {
 	initializeLogLevel();
 
 	if (projectEnabled) {
+		connection.onDidChangeConfiguration(params => {
+			const limit = params.settings?.['vscode-rpgle']?.localProjectFileLimit;
+			if (limit !== undefined) {
+				console.log(`Reloading workspace as local project file limit changed to ${limit}`);
+				Project.loadWorkspace();
+			}
+		});
+
 		Project.initialise();
 	}
 

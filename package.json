@@ -71,6 +71,12 @@
 					"default": 6000,
 					"minimum": 0,
 					"description": "Maximum document size, in lines, for which bracket/block highlighting, mismatch detection and jump-to-matching-block run. Larger members are skipped to keep the editor responsive. Set to 0 to disable the limit."
+				},
+				"vscode-rpgle.localProjectFileLimit": {
+					"type": "number",
+					"default": 1000,
+					"minimum": 1,
+					"description": "Maximum number of local RPGLE files a workspace can contain for project mode to remain active. Project mode pre-parses all files in the workspace to enable cross-file features such as go-to-definition, hover information, and completions. If the file count exceeds this limit, project mode is automatically disabled to avoid performance issues."
 				}
 			}
 		},
