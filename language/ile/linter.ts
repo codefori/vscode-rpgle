@@ -16,7 +16,7 @@ const INCLUDE_EXTENSIONS = [`rpgleinc`, `rpgleh`];
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
   'QualifiedCheck': `Struct names must be qualified (\`QUALIFIED\`).`,
-  'PrototypeCheck': `Prototypes can only be defined with either \`EXTPGM\` or \`EXTPROC\``,
+  'PrototypeCheck': `Prototypes must specify \`EXTPGM\`, \`EXTPROC\`, or \`OVERLOAD\``,
   'ForceOptionalParens': `Expressions must be surrounded by brackets.`,
   'NoOCCURS': `\`OCCURS\` is not allowed.`,
   'NoSELECTAll': `\`SELECT *\` is not allowed in Embedded SQL.`,
@@ -625,17 +625,20 @@ export default class Linter {
                             });
                           }
                         }
-
                       } else if (rules.PrototypeCheck) {
-                        // Not EXTPROC / EXTPGM found. Likely don't need this PR if it's for local procedure.
-                        errors.push({
-                          type: `PrototypeCheck`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                        });
+                        const hasOverload = statement.slice(2).some(
+                          part => part.value?.toUpperCase() === `OVERLOAD`
+                        );
+                        if (!hasOverload) {
+                          // Local procedures do not need a PR, but overloaded prototypes do.
+                          errors.push({
+                            type: `PrototypeCheck`,
+                            offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                          });
+                        }
                       }
                     }
                     break;
-
                   case `DCL-ENUM`:
                     if (value) {
                       inStruct.push(value);
