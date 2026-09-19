@@ -4,6 +4,7 @@ import Cache from "../models/cache";
 import oneLineTriggers from "../models/oneLineTriggers";
 import opcodes from "../models/opcodes";
 import Document from "./document";
+import { tokenise } from "./tokens";
 import { ErrorType, IssueRange, Rules, SelectBlock } from "./parserTypes";
 import Declaration from "../models/declaration";
 import { IRange, Token } from "./types";
@@ -44,6 +45,7 @@ const errorText = {
   'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
   'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
   'RequireOtherBlock': `OTHER block missing from SELECT block.`,
+  'MissingSemicolon': `Missing semicolon at the end of this statement.`,
   'SQLRunner': `Execute this statement through Db2 for i`
 };
 
@@ -59,6 +61,172 @@ type IndentError = {
   expectedIndent: number,
   currentIndent: number,
 };
+
+function getCodeBeforeComment(sourceLine: string) {
+  const comment = tokenise(sourceLine).find(token => token.type === `comment`);
+  return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
+}
+
+function getSqlCodeBeforeComment(sourceLine: string) {
+  let inString = false;
+
+  for (let index = 0; index < sourceLine.length - 1; index++) {
+    if (sourceLine[index] === `'`) {
+      if (inString && sourceLine[index + 1] === `'`) {
+        index += 1;
+      } else {
+        inString = !inString;
+      }
+    } else if (!inString && sourceLine[index] === `-` && sourceLine[index + 1] === `-`) {
+      return sourceLine.substring(0, index).trimEnd();
+    }
+  }
+
+  return sourceLine;
+}
+
+function getParenthesisDelta(code: string) {
+  return tokenise(code).reduce((depth, token) => {
+    if (token.type === `openbracket`) return depth + 1;
+    if (token.type === `closebracket`) return depth - 1;
+    return depth;
+  }, 0);
+}
+
+function getMissingSemicolonErrors(content: string): IssueRange[] {
+  type SourceLine = { code: string, endOffset: number, indent: number };
+  const errors: IssueRange[] = [];
+  const hasFreeDirective = content.split(/\r?\n/).some(line => /^\s*\*\*FREE\b/i.test(line));
+  const rpgStatementStart = /^(?:begsr|callp|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
+  const rpgOpcodeStart = new RegExp(`^(?:${[...new Set(opcodes)].join(`|`)})\\b`, `i`);
+  const assignmentStart = /^[%A-Z_#$@][\w.$#@]*\s*(?:[+\-*/]?=)/i;
+  const sqlContinuationStart = /^(?:alter|call|case|close|commit|connect|create|cross|declare|delete|describe|distinct|drop|else|end|exec(?:ute)?|fetch|for|from|full|grant|group|having|inner|insert|into|join|left|limit|merge|offset|on|open|order|prepare|release|right|rollback|select|set|then|union|update|values|where|with|when)\b/i;
+  const conditionContinuation = /^(?:and|or)\b/i;
+  const trailingConditionContinuation = /\b(?:and|or)$/i;
+  const expressionContinuation = /[+\-*/=]$/;
+  const leadingExpressionContinuation = /^(?:[+\-*/]|<=|>=|<>|=|<|>)/;
+
+  if (!hasFreeDirective) {
+    return errors;
+  }
+
+  let offset = 0;
+  let previousLine: SourceLine | undefined;
+  let lastSqlLine: SourceLine | undefined;
+  let inEmbeddedSql = false;
+  let sqlIndent = 0;
+  let openParentheses = 0;
+
+  for (const sourceLineWithEnding of content.split(`\n`)) {
+    const sourceLine = sourceLineWithEnding.endsWith(`\r`)
+      ? sourceLineWithEnding.slice(0, -1)
+      : sourceLineWithEnding;
+    const codeBeforeComment = getCodeBeforeComment(sourceLine);
+    const code = codeBeforeComment.trim();
+    const currentLine: SourceLine = {
+      code,
+      endOffset: offset + codeBeforeComment.length,
+      indent: codeBeforeComment.length - codeBeforeComment.trimStart().length,
+    };
+
+    if (!code) {
+      offset += sourceLineWithEnding.length + 1;
+      continue;
+    }
+
+    if (code.toUpperCase() === `**FREE`) {
+      offset += sourceLineWithEnding.length + 1;
+      continue;
+    }
+
+    if (code.toUpperCase() === `**CTDATA` || /^\/EOF\b/i.test(code)) {
+      break;
+    }
+
+    if (tokenise(code).some(token => token.type === `directive`)) {
+      offset += sourceLineWithEnding.length + 1;
+      continue;
+    }
+
+    const startsNewRpgStatement = rpgStatementStart.test(code)
+      || rpgOpcodeStart.test(code)
+      || (currentLine.indent === 0 && assignmentStart.test(code));
+    const startsNewRpgStatementAfterSql = !sqlContinuationStart.test(code)
+      && (rpgStatementStart.test(code)
+        || rpgOpcodeStart.test(code)
+        || (currentLine.indent <= sqlIndent && assignmentStart.test(code)));
+
+    if (inEmbeddedSql) {
+      const sqlCode = getSqlCodeBeforeComment(code);
+
+      if (startsNewRpgStatementAfterSql) {
+        const errorLine = lastSqlLine!;
+        errors.push({
+          offset: { start: errorLine.endOffset - 1, end: errorLine.endOffset },
+          type: `MissingSemicolon`,
+        });
+        inEmbeddedSql = false;
+        previousLine = undefined;
+        lastSqlLine = undefined;
+        sqlIndent = 0;
+      } else {
+        lastSqlLine = {
+          ...currentLine,
+          code: sqlCode,
+          endOffset: offset + currentLine.indent + sqlCode.length,
+        };
+        if (sqlCode.endsWith(`;`)) {
+          inEmbeddedSql = false;
+          previousLine = undefined;
+          lastSqlLine = undefined;
+          sqlIndent = 0;
+        }
+        offset += sourceLineWithEnding.length + 1;
+        continue;
+      }
+    }
+
+    const previousContinues = previousLine
+      && (!previousLine.code.endsWith(`;`))
+      && (!previousLine.code.endsWith(`...`))
+      && !expressionContinuation.test(previousLine.code)
+      && !trailingConditionContinuation.test(previousLine.code)
+      && openParentheses === 0
+      && !leadingExpressionContinuation.test(code)
+      && !conditionContinuation.test(code)
+      || (previousLine
+        && !previousLine.code.endsWith(`;`)
+        && startsNewRpgStatement);
+
+    if (previousContinues && previousLine) {
+      errors.push({
+        offset: { start: previousLine.endOffset - 1, end: previousLine.endOffset },
+        type: `MissingSemicolon`,
+      });
+      openParentheses = 0;
+    }
+
+    openParentheses = Math.max(0, openParentheses + getParenthesisDelta(code));
+    previousLine = currentLine;
+    if (/^exec\s+sql\b/i.test(code) && !code.endsWith(`;`)) {
+      inEmbeddedSql = true;
+      lastSqlLine = currentLine;
+      sqlIndent = currentLine.indent;
+    }
+    offset += sourceLineWithEnding.length + 1;
+  }
+
+  const finalIncompleteLine = inEmbeddedSql ? lastSqlLine : previousLine;
+  if (finalIncompleteLine
+    && !finalIncompleteLine.code.endsWith(`;`)) {
+    errors.push({
+      offset: { start: finalIncompleteLine.endOffset - 1, end: finalIncompleteLine.endOffset },
+      type: `MissingSemicolon`,
+    });
+  }
+
+  return errors;
+}
 
 export default class Linter {
   static getErrorText(error: ErrorType): string {
@@ -124,6 +292,10 @@ export default class Linter {
     let currentRule = skipRules.none;
 
     const doc = new Document(data.content);
+
+    if (rules.MissingSemicolon) {
+      errors.push(...getMissingSemicolonErrors(data.content));
+    }
 
     for (let si = 0; si < doc.statements.length; si++) {
       const docStatement = doc.statements[si];

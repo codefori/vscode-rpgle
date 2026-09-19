@@ -186,6 +186,11 @@
 			"$id": "#/properties/RequireOtherBlock",
 			"type": "boolean",
 			"description": "Require SELECT blocks to have an OTHER block."
+		},
+		"MissingSemicolon": {
+			"$id": "#/properties/MissingSemicolon",
+			"type": "boolean",
+			"description": "Detect free-format RPG statements that are missing a terminating semicolon."
 		}
 	},
 	"additionalProperties": true
