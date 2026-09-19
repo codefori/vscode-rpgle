@@ -400,6 +400,10 @@ test("linter_missing_semicolon_ignores_compiler_directives_and_content_after_eof
     `/Copy definitions`,
     `/If Defined(TEST)`,
     `/Endif`,
+    `/Eject`,
+    `/Space 2`,
+    `/Restore`,
+    `/Overload`,
     `/EOF`,
     `result = incomplete`,
   ].join(`\n`);
@@ -490,6 +494,20 @@ test("linter_missing_semicolon_ignores_sql_for_read_only", () => {
     `  Select name`,
     `    From sample_table`,
     `    For Read Only;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_sql_case_clauses", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select Case`,
+    `    When status = 'A' Then 'Active'`,
+    `    Else 'Inactive'`,
+    `  End`,
+    `  From sample_table;`,
   ].join(`\n`);
 
   expect(getMissingSemicolonErrors(lines)).toHaveLength(0);

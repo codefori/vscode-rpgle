@@ -82,7 +82,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   const rpgStatementStart = /^(?:begsr|callp|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
   const rpgOpcodeStart = new RegExp(`^(?:${[...new Set(opcodes)].join(`|`)})\\b`, `i`);
   const assignmentStart = /^[%A-Z_#$@][\w.$#@]*\s*(?:[+\-*/]?=)/i;
-  const sqlContinuationStart = /^(?:alter|call|close|commit|connect|create|declare|delete|describe|drop|exec(?:ute)?|fetch|for|from|grant|group|having|insert|into|join|left|merge|open|order|prepare|release|rollback|select|set|union|update|values|where|with|when)\b/i;
+  const sqlContinuationStart = /^(?:alter|call|case|close|commit|connect|create|cross|declare|delete|describe|distinct|drop|else|end|exec(?:ute)?|fetch|for|from|full|grant|group|having|inner|insert|into|join|left|limit|merge|offset|on|open|order|prepare|release|right|rollback|select|set|then|union|update|values|where|with|when)\b/i;
   const conditionContinuation = /^(?:and|or)\b/i;
   const trailingConditionContinuation = /\b(?:and|or)$/i;
   const expressionContinuation = /[+\-*/=]$/;
@@ -125,7 +125,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       break;
     }
 
-    if (/^\/(?:COPY|DEFINE|EOF|FREE|IF|ELSEIF|ELSE|ENDIF|EOF|INCLUDE|SET|TITLE|UNDEFINE)\b/i.test(code)) {
+    if (tokenise(code).some(token => token.type === `directive`)) {
       offset += sourceLineWithEnding.length + 1;
       continue;
     }
