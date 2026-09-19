@@ -349,7 +349,7 @@ const includeFileFetch = async (stringUri: string, includeString: string) => {
 				};
 			}
 
-			const validSource = await getFileRequest(normalizedUri, true);
+			const validSource = await getFileRequest(validUri, true);
 			if (validSource) {
 				includeContentCache.set(normalizedUri, validSource);
 				const duration = Date.now() - fetchStartTime;
