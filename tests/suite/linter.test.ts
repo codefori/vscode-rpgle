@@ -394,6 +394,19 @@ test("linter_missing_semicolon_only_checks_free_format_sources", () => {
   expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
 });
 
+test("linter_missing_semicolon_ignores_compiler_directives_and_content_after_eof", () => {
+  const lines = [
+    `**FREE`,
+    `/Copy definitions`,
+    `/If Defined(TEST)`,
+    `/Endif`,
+    `/EOF`,
+    `result = incomplete`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
 test("linter_missing_semicolon_reports_incomplete_continuations_before_assignments", () => {
   const lines = [
     `**FREE`,
@@ -451,6 +464,50 @@ test("linter_missing_semicolon_reports_unterminated_sql_before_assignment", () =
 
   expect(errors).toHaveLength(1);
   expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `  From table`));
+});
+
+test("linter_missing_semicolon_reports_unterminated_indented_sql_before_rpg", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-Proc TestSql;`,
+    `  Exec SQL`,
+    `    Select name`,
+    `      From sample_table`,
+    `  value = GetValue();`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `      From sample_table`));
+});
+
+test("linter_missing_semicolon_ignores_sql_for_read_only", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select name`,
+    `    From sample_table`,
+    `    For Read Only;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_reports_unterminated_sql_before_opcode", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select name`,
+    `    From sample_table`,
+    `Dsply 'SQL completed';`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `    From sample_table`));
 });
 
 test("linter_missing_semicolon_reports_ellipsis_before_new_statement", () => {

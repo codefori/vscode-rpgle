@@ -76,12 +76,13 @@ function getParenthesisDelta(code: string) {
 }
 
 function getMissingSemicolonErrors(content: string): IssueRange[] {
-  type SourceLine = { code: string, endOffset: number, isIndented: boolean };
+  type SourceLine = { code: string, endOffset: number, indent: number };
   const errors: IssueRange[] = [];
   const hasFreeDirective = content.split(/\r?\n/).some(line => /^\s*\*\*FREE\b/i.test(line));
   const rpgStatementStart = /^(?:begsr|callp|ctl-opt|dcl-|end-|else|elseif|endif|enddo|endfor|endmon|endsl|endsr|exsr|exec\s+sql|for|if|monitor|other|return|when|dow|dou)\b/i;
   const rpgOpcodeStart = new RegExp(`^(?:${[...new Set(opcodes)].join(`|`)})\\b`, `i`);
   const assignmentStart = /^[%A-Z_#$@][\w.$#@]*\s*(?:[+\-*/]?=)/i;
+  const sqlContinuationStart = /^(?:alter|call|close|commit|connect|create|declare|delete|describe|drop|exec(?:ute)?|fetch|for|from|grant|group|having|insert|into|join|left|merge|open|order|prepare|release|rollback|select|set|union|update|values|where|with|when)\b/i;
   const conditionContinuation = /^(?:and|or)\b/i;
   const trailingConditionContinuation = /\b(?:and|or)$/i;
   const expressionContinuation = /[+\-*/=]$/;
@@ -95,6 +96,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   let previousLine: SourceLine | undefined;
   let lastSqlLine: SourceLine | undefined;
   let inEmbeddedSql = false;
+  let sqlIndent = 0;
   let openParentheses = 0;
 
   for (const sourceLineWithEnding of content.split(`\n`)) {
@@ -106,7 +108,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
     const currentLine: SourceLine = {
       code,
       endOffset: offset + codeBeforeComment.length,
-      isIndented: /^\s/.test(codeBeforeComment),
+      indent: codeBeforeComment.length - codeBeforeComment.trimStart().length,
     };
 
     if (!code) {
@@ -119,11 +121,22 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       continue;
     }
 
+    if (code.toUpperCase() === `**CTDATA` || /^\/EOF\b/i.test(code)) {
+      break;
+    }
+
+    if (/^\/(?:COPY|DEFINE|EOF|FREE|IF|ELSEIF|ELSE|ENDIF|EOF|INCLUDE|SET|TITLE|UNDEFINE)\b/i.test(code)) {
+      offset += sourceLineWithEnding.length + 1;
+      continue;
+    }
+
     const startsNewRpgStatement = rpgStatementStart.test(code)
       || rpgOpcodeStart.test(code)
-      || (!currentLine.isIndented && assignmentStart.test(code));
-    const startsNewRpgStatementAfterSql = rpgStatementStart.test(code)
-      || (!currentLine.isIndented && assignmentStart.test(code));
+      || (currentLine.indent === 0 && assignmentStart.test(code));
+    const startsNewRpgStatementAfterSql = !sqlContinuationStart.test(code)
+      && (rpgStatementStart.test(code)
+        || rpgOpcodeStart.test(code)
+        || (currentLine.indent <= sqlIndent && assignmentStart.test(code)));
 
     if (inEmbeddedSql) {
       if (startsNewRpgStatementAfterSql) {
@@ -135,12 +148,14 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
         inEmbeddedSql = false;
         previousLine = undefined;
         lastSqlLine = undefined;
+        sqlIndent = 0;
       } else {
         lastSqlLine = currentLine;
         if (code.endsWith(`;`)) {
           inEmbeddedSql = false;
           previousLine = undefined;
           lastSqlLine = undefined;
+          sqlIndent = 0;
         }
         offset += sourceLineWithEnding.length + 1;
         continue;
@@ -172,6 +187,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
     if (/^exec\s+sql\b/i.test(code) && !code.endsWith(`;`)) {
       inEmbeddedSql = true;
       lastSqlLine = currentLine;
+      sqlIndent = currentLine.indent;
     }
     offset += sourceLineWithEnding.length + 1;
   }
