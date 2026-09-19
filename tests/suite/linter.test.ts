@@ -513,6 +513,21 @@ test("linter_missing_semicolon_ignores_sql_case_clauses", () => {
   expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
 });
 
+test("linter_missing_semicolon_ignores_semicolons_in_sql_comments", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select name`,
+    `    From sample_table -- ;`,
+    `Dsply 'SQL completed';`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `    From sample_table`));
+});
+
 test("linter_missing_semicolon_reports_unterminated_sql_before_opcode", () => {
   const lines = [
     `**FREE`,

@@ -67,6 +67,24 @@ function getCodeBeforeComment(sourceLine: string) {
   return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
 }
 
+function getSqlCodeBeforeComment(sourceLine: string) {
+  let inString = false;
+
+  for (let index = 0; index < sourceLine.length - 1; index++) {
+    if (sourceLine[index] === `'`) {
+      if (inString && sourceLine[index + 1] === `'`) {
+        index += 1;
+      } else {
+        inString = !inString;
+      }
+    } else if (!inString && sourceLine[index] === `-` && sourceLine[index + 1] === `-`) {
+      return sourceLine.substring(0, index).trimEnd();
+    }
+  }
+
+  return sourceLine;
+}
+
 function getParenthesisDelta(code: string) {
   return tokenise(code).reduce((depth, token) => {
     if (token.type === `openbracket`) return depth + 1;
@@ -139,6 +157,8 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
         || (currentLine.indent <= sqlIndent && assignmentStart.test(code)));
 
     if (inEmbeddedSql) {
+      const sqlCode = getSqlCodeBeforeComment(code);
+
       if (startsNewRpgStatementAfterSql) {
         const errorLine = lastSqlLine!;
         errors.push({
@@ -150,8 +170,12 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
         lastSqlLine = undefined;
         sqlIndent = 0;
       } else {
-        lastSqlLine = currentLine;
-        if (code.endsWith(`;`)) {
+        lastSqlLine = {
+          ...currentLine,
+          code: sqlCode,
+          endOffset: offset + currentLine.indent + sqlCode.length,
+        };
+        if (sqlCode.endsWith(`;`)) {
           inEmbeddedSql = false;
           previousLine = undefined;
           lastSqlLine = undefined;
