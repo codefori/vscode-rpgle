@@ -11,6 +11,563 @@ const uri = `source.rpgle`;
 const includeUri = `source.rpgleinc`;
 const memberIncludeUri = `/LIB/SRC/MEMBER.RPGLEINC?readonly`;
 
+function getMissingSemicolonErrors(lines: string) {
+  return Linter.getErrors({ uri, content: lines }, {
+    MissingSemicolon: true,
+  }).errors.filter(error => error.type === `MissingSemicolon`);
+}
+
+function endOfLineOffset(lines: string, line: string) {
+  return lines.indexOf(line) + line.length - 1;
+}
+
+test("linter_missing_semicolon_before_declaration", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-ds ds1 Qualified Inz;`,
+    `  subfield1 Char(10);`,
+    `End-ds`,
+    `Dcl-ds ds2 Qualified Inz;`,
+    `  subfield1 Char(10);`,
+    `End-ds;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].type).toBe(`MissingSemicolon`);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `End-ds`));
+});
+
+test("linter_missing_semicolon_ignores_local_declarations", () => {
+  const lines = [
+    `**FREE`,
+    `Begsr DemoSubroutine;`,
+    `  Dcl-s mode Char(1);`,
+    `  Dcl-s subroutineMessage Varchar(50);`,
+    `Endsr;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_after_procedure_declaration", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-Proc CalculateDiscount`,
+    `  Dcl-Pi CalculateDiscount Packed(7:2);`,
+    `    cost Packed(7:2) Value;`,
+    `  End-Pi;`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  const missingSemicolonErrors = errors.filter(error => error.type === `MissingSemicolon`);
+  expect(missingSemicolonErrors).toHaveLength(1);
+  expect(missingSemicolonErrors[0].offset.start).toBe(endOfLineOffset(lines, `Dcl-Proc CalculateDiscount`));
+});
+
+test("linter_missing_semicolon_before_elseif", () => {
+  const lines = [
+    `**FREE`,
+    `If mode = 'A';`,
+    `  subroutineMessage = 'Mode A'`,
+    `Elseif mode = 'B';`,
+    `  subroutineMessage = 'Mode B';`,
+    `Endif;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].type).toBe(`MissingSemicolon`);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `  subroutineMessage = 'Mode A'`));
+});
+
+test("linter_missing_semicolon_reports_each_block_boundary", () => {
+  const lines = [
+    `**FREE`,
+    `Else;`,
+    `  subroutineMessage = 'Other mode'`,
+    `Endif`,
+    `Select;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(2);
+  expect(errors.map(error => error.offset.start)).toEqual([
+    endOfLineOffset(lines, `  subroutineMessage = 'Other mode'`),
+    endOfLineOffset(lines, `Endif`),
+  ]);
+});
+
+test("linter_missing_semicolon_after_endsl", () => {
+  const lines = [
+    `**FREE`,
+    `Endsl`,
+    `ShowMessage('Other case');`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `Endsl`));
+});
+
+test("linter_missing_semicolon_before_exec_sql", () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No)`,
+    `Exec SQL`,
+    `  Set Option Commit = *None`,
+    `Dcl-Pr GetCurrentUser Varchar(50);`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(2);
+  expect(errors.map(error => error.offset.start)).toEqual([
+    endOfLineOffset(lines, `Ctl-Opt DftActGrp(*No)`),
+    endOfLineOffset(lines, `  Set Option Commit = *None`),
+  ]);
+});
+
+test("linter_missing_semicolon_ignores_valid_multiline_sql", () => {
+  const lines = [
+    `**FREE`,
+    `Ctl-Opt DftActGrp(*No) ActGrp(*New) Option(*SrcStmt:*NoDebugIo);`,
+    ``,
+    `Exec SQL`,
+    `  Set Option Commit = *None,`,
+    `             Closqlcsr = *EndMod,`,
+    `             Datfmt = *Iso;`,
+    ``,
+    `Dcl-Pr GetCurrentUser Varchar(50);`,
+    `End-Pr;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_consecutive_sql_blocks", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Values Current Timestamp`,
+    `    Into :result;`,
+    ``,
+    `Exec SQL`,
+    `  Select * From table Into :dsprueba;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_between_prototypes", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-Pr GetServerTimestamp Timestamp`,
+    `End-Pr`,
+    `Dcl-Pr FormatMessage Varchar(200);`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(2);
+  expect(errors.map(error => error.offset.start)).toEqual([
+    endOfLineOffset(lines, `Dcl-Pr GetServerTimestamp Timestamp`),
+    endOfLineOffset(lines, `End-Pr`),
+  ]);
+});
+
+test("linter_missing_semicolon_in_prototype_parameters", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-Pr AddAmounts Packed(9:2)`,
+    `  leftValue Packed(9:2) Const`,
+    `  rightValue Packed(9:2) Const;`,
+    `End-Pr;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(2);
+  expect(errors.map(error => error.offset.start)).toEqual([
+    endOfLineOffset(lines, `Dcl-Pr AddAmounts Packed(9:2)`),
+    endOfLineOffset(lines, `  leftValue Packed(9:2) Const`),
+  ]);
+});
+
+test("linter_missing_semicolon_between_procedure_calls", () => {
+  const lines = [
+    `**FREE`,
+    `ShowMessage(FormatMessage('FOR' : %Char(SumRange(5))))`,
+    `ShowMessage(FormatMessage('MONITOR' : SafeDivide(10 : 0)));`,
+    `Exsr DemoSubroutine;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `ShowMessage(FormatMessage('FOR' : %Char(SumRange(5))))`));
+});
+
+test("linter_missing_semicolon_ignores_concatenation_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `message = 'Hola ' +`,
+    `  'Mundo';`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_assignment_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `currentTs =`,
+    `  GetServerTimestamp();`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_binary_and_call_continuations", () => {
+  const lines = [
+    `**FREE`,
+    `message = 'Hola ' + 'Mundo';`,
+    `result = a -`,
+    `  b;`,
+    `myProc(parm1 :`,
+    `  parm2);`,
+    `myProc(parm1`,
+    `  :parm2);`,
+    `message = 'Hola'`,
+    `  + ' Mundo';`,
+    `result = a`,
+    `  -`,
+    `  b;`,
+    `myProc(parm1`,
+    `  :parm2`,
+    `  :parm3);`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_leading_plus_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `message = 'Hola'`,
+    `  + ' Mundo';`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_leading_minus_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `result = a`,
+    `  -`,
+    `  b;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_three_parameter_call_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `myProc(parm1`,
+    `  :parm2`,
+    `  :parm3);`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_leading_arithmetic_and_comparison_operators", () => {
+  const lines = [
+    `**FREE`,
+    `result = a`,
+    `  * b`,
+    `  * c;`,
+    `result = a`,
+    `  / b`,
+    `  / c;`,
+    `If amount`,
+    `  >= minimum;`,
+    `Endif;`,
+    `If status`,
+    `  <> 'X';`,
+    `Endif;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_nested_call_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `myProc(`,
+    `  FormatMessage(`,
+    `    title`,
+    `    : value`,
+    `    : value2`,
+    `    : value3`,
+    `  )`,
+    `);`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_compound_assignment_continuation", () => {
+  const lines = [
+    `**FREE`,
+    `count +=`,
+    `  1;`,
+    `count -=`,
+    `  1;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_comment_markers_in_strings", () => {
+  const lines = [
+    `**FREE`,
+    `url = 'https://example.com';`,
+    `Dsply url;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_reports_unterminated_final_statement", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-s value Char(10)`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `Dcl-s value Char(10)`));
+});
+
+test("linter_missing_semicolon_reports_incomplete_final_expression", () => {
+  const lines = [
+    `**FREE`,
+    `result = a +`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `result = a +`));
+});
+
+test("linter_missing_semicolon_reports_incomplete_final_expression_with_comment", () => {
+  const lines = [
+    `**FREE`,
+    `result = a + // unfinished`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `result = a +`));
+});
+
+test("linter_missing_semicolon_only_checks_free_format_sources", () => {
+  const lines = [
+    `Dcl-s value Char(10)`,
+    `result = a +`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_compiler_directives_and_content_after_eof", () => {
+  const lines = [
+    `**FREE`,
+    `/Copy definitions`,
+    `/If Defined(TEST)`,
+    `/Endif`,
+    `/Eject`,
+    `/Space 2`,
+    `/Restore`,
+    `/Overload`,
+    `/EOF`,
+    `result = incomplete`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_reports_incomplete_continuations_before_assignments", () => {
+  const lines = [
+    `**FREE`,
+    `result = a +`,
+    `other = 1;`,
+    `If a = b And`,
+    `other = 1;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors.map(error => error.offset.start)).toEqual([
+    endOfLineOffset(lines, `result = a +`),
+    endOfLineOffset(lines, `If a = b And`),
+  ]);
+});
+
+test("linter_missing_semicolon_reports_incomplete_continuations_before_opcodes", () => {
+  const lines = [
+    `**FREE`,
+    `result = a +`,
+    `Dsply result;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `result = a +`));
+});
+
+test("linter_missing_semicolon_reports_unterminated_calls_before_rpg_statements", () => {
+  const lines = [
+    `**FREE`,
+    `Callp Process(a,`,
+    `  b`,
+    `If condition;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `  b`));
+});
+
+test("linter_missing_semicolon_reports_unterminated_sql_before_assignment", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select *`,
+    `  From table`,
+    `currentUser = GetCurrentUser();`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `  From table`));
+});
+
+test("linter_missing_semicolon_reports_unterminated_indented_sql_before_rpg", () => {
+  const lines = [
+    `**FREE`,
+    `Dcl-Proc TestSql;`,
+    `  Exec SQL`,
+    `    Select name`,
+    `      From sample_table`,
+    `  value = GetValue();`,
+    `End-Proc;`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `      From sample_table`));
+});
+
+test("linter_missing_semicolon_ignores_sql_for_read_only", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select name`,
+    `    From sample_table`,
+    `    For Read Only;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_sql_case_clauses", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select Case`,
+    `    When status = 'A' Then 'Active'`,
+    `    Else 'Inactive'`,
+    `  End`,
+    `  From sample_table;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_ignores_semicolons_in_sql_comments", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select name`,
+    `    From sample_table -- ;`,
+    `Dsply 'SQL completed';`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `    From sample_table`));
+});
+
+test("linter_missing_semicolon_reports_unterminated_sql_before_opcode", () => {
+  const lines = [
+    `**FREE`,
+    `Exec SQL`,
+    `  Select name`,
+    `    From sample_table`,
+    `Dsply 'SQL completed';`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `    From sample_table`));
+});
+
+test("linter_missing_semicolon_reports_ellipsis_before_new_statement", () => {
+  const lines = [
+    `**FREE`,
+    `result = a ...`,
+    `Callp Process();`,
+  ].join(`\n`);
+
+  const errors = getMissingSemicolonErrors(lines);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].offset.start).toBe(endOfLineOffset(lines, `result = a ...`));
+});
+
+test("linter_missing_semicolon_ignores_multiline_conditions", () => {
+  const lines = [
+    `**FREE`,
+    `If message And`,
+    `  message Or`,
+    `  message;`,
+    `Endif;`,
+  ].join(`\n`);
+
+  expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
 test("linter_indent_multi_1", async () => {
   const lines = [
     `**FREE`,

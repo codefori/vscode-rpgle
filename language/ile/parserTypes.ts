@@ -52,6 +52,7 @@ export interface Rules {
   IncludeMustBeRelative?: boolean;
   SQLHostVarCheck?: boolean;
   RequireOtherBlock?: boolean;
+  MissingSemicolon?: boolean;
 
   /** Not for user definition */
   InvalidDeclareNumber?: void;
