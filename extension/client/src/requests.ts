@@ -4,6 +4,42 @@ import { LanguageClient } from 'vscode-languageclient/node';
 import { getInstance } from './base';
 import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
 
+const TABLE_CACHE_TTL = 30 * 60 * 1000;
+const TABLE_CACHE_LIMIT = 250;
+
+type CachedTableEntry = {
+	fetchedAt: number,
+	data: any[]
+};
+
+const tableObjectCache = new Map<string, CachedTableEntry>();
+const tableObjectInFlight = new Map<string, Promise<any[]>>();
+
+function getTableCacheKey(table: string): string {
+	const upper = table.trim().toUpperCase();
+	if (upper.includes(`/`)) {
+		const splitName = upper.split(`/`).filter(part => part.length > 0);
+		const schema = splitName.length >= 2 ? splitName[splitName.length - 2] : `*LIBL`;
+		const file = splitName[splitName.length - 1] || ``;
+		return `${schema}/${file}`;
+	}
+
+	return `*LIBL/${upper}`;
+}
+
+function pruneTableCache() {
+	while (tableObjectCache.size > TABLE_CACHE_LIMIT) {
+		const oldestKey = tableObjectCache.keys().next().value;
+		if (oldestKey === undefined) break;
+		tableObjectCache.delete(oldestKey);
+	}
+}
+
+function clearLocalTableObjectCache() {
+	tableObjectCache.clear();
+	tableObjectInFlight.clear();
+}
+
 export function buildRequestHandlers(client: LanguageClient) {
 	/**
 	 * Validates a URI.
@@ -121,65 +157,99 @@ export function buildRequestHandlers(client: LanguageClient) {
 	 * Gets the column information for a provided file
 	 */
 	client.onRequest(`getObject`, async (table: string) => {
-		const instance = getInstance();
+		const cacheKey = getTableCacheKey(table);
+		const now = Date.now();
+		const cached = tableObjectCache.get(cacheKey);
 
-		if (instance) {
-			console.log(`Fetching table: ${table}`);
-
-			const connection = instance.getConnection();
-			if (connection) {
-				const content = connection.getContent();
-				const config = connection.getConfig();
-
-				const dateStr = Date.now().toString().substr(-6);
-				const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
-				const fullPath = `QTEMP/${randomFile}`;
-
-				console.log(`Temp OUTFILE: ${fullPath}`);
-
-				const parts = {
-					schema: `*LIBL`,
-					table: ``,
-				};
-
-				if (table.includes(`/`)) {
-					const splitName = table.split(`/`);
-					if (splitName.length >= 2) parts.schema = splitName[splitName.length - 2];
-					if (splitName.length >= 1) parts.table = splitName[splitName.length - 1];
-				} else {
-					parts.table = table;
-				}
-
-				// TODO: handle .env file here?
-
-				const outfileRes: any = await connection.runCommand({
-					environment: `ile`,
-					command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
-				});
-
-				console.log(outfileRes);
-				const resultCode = outfileRes.code || 0;
-
-				if (resultCode === 0) {
-					const data: any[] = await content.getTable('QTEMP', randomFile, randomFile, true);
-
-					console.log(`Temp OUTFILE read. ${data.length} rows.`);
-
-					connection.runCommand({
-						environment: `ile`,
-						command: `QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
-					});
-
-					return data;
-				}
-			}
+		if (cached && (now - cached.fetchedAt) <= TABLE_CACHE_TTL) {
+			// Refresh LRU order.
+			tableObjectCache.delete(cacheKey);
+			tableObjectCache.set(cacheKey, cached);
+			console.log(`Using cached table metadata for ${cacheKey}. ${cached.data.length} rows.`);
+			return cached.data;
 		}
 
-		return [];
+		const activeFetch = tableObjectInFlight.get(cacheKey);
+		if (activeFetch) {
+			console.log(`Joining in-flight table metadata fetch for ${cacheKey}.`);
+			return activeFetch;
+		}
+
+		const fetchPromise = (async () => {
+			const instance = getInstance();
+
+			if (instance) {
+				console.log(`Fetching table: ${table}`);
+
+				const connection = instance.getConnection();
+				if (connection) {
+					const content = connection.getContent();
+					const config = connection.getConfig();
+
+					const dateStr = Date.now().toString().substr(-6);
+					const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
+					const fullPath = `QTEMP/${randomFile}`;
+
+					console.log(`Temp OUTFILE: ${fullPath}`);
+
+					const parts = {
+						schema: `*LIBL`,
+						table: ``,
+					};
+
+					if (table.includes(`/`)) {
+						const splitName = table.split(`/`);
+						if (splitName.length >= 2) parts.schema = splitName[splitName.length - 2];
+						if (splitName.length >= 1) parts.table = splitName[splitName.length - 1];
+					} else {
+						parts.table = table;
+					}
+
+					// TODO: handle .env file here?
+
+					const outfileRes: any = await connection.runCommand({
+						environment: `ile`,
+						command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
+					});
+
+					console.log(outfileRes);
+					const resultCode = outfileRes.code || 0;
+
+					if (resultCode === 0) {
+						const data: any[] = await content.getTable('QTEMP', randomFile, randomFile, true);
+
+						tableObjectCache.set(cacheKey, {
+							fetchedAt: Date.now(),
+							data
+						});
+						pruneTableCache();
+
+						console.log(`Temp OUTFILE read. ${data.length} rows.`);
+
+						connection.runCommand({
+							environment: `ile`,
+							command: `QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
+						});
+
+						return data;
+					}
+				}
+			}
+
+			return [];
+		})();
+
+		tableObjectInFlight.set(cacheKey, fetchPromise);
+		try {
+			return await fetchPromise;
+		} finally {
+			tableObjectInFlight.delete(cacheKey);
+		}
 	});
 }
 
 export function clearTableCache(client: LanguageClient) {
+	clearLocalTableObjectCache();
 	client.sendRequest(`clearTableCache`);
 }
 
