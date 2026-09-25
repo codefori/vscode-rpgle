@@ -33,7 +33,7 @@ type ComponentIdentification = {
 function getUDTFLibrary(connection: any): string {
     const configured = vscode.workspace
         .getConfiguration('vscode-rpgle')
-        .get<string>('fieldListLibrary', '*TEMPLIB')
+        .get<string>('codeforiFunctionLibrary', '*TEMPLIB')
         ?.trim()
         .toUpperCase();
 

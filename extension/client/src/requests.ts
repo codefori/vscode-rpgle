@@ -18,7 +18,7 @@ let forceTableRefresh = false;
 
 function resolveFieldListLibrary(connection: any): string {
 	const configured = workspace.getConfiguration('vscode-rpgle')
-		.get<string>('fieldListLibrary', '*TEMPLIB')
+		.get<string>('codeforiFunctionLibrary', '*TEMPLIB')
 		?.trim()
 		.toUpperCase();
 

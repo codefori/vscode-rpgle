@@ -89,7 +89,7 @@
 					],
 					"description": "Choose the provider used to fetch file field definitions when building field reference metadata. UDTF is generally a more streamlined approach when available."
 				},
-				"vscode-rpgle.fieldListLibrary": {
+				"vscode-rpgle.codeforiFunctionLibrary": {
 					"type": "string",
 					"default": "*TEMPLIB",
 					"description": "Library containing the FIELD_LIST UDTF when fieldMetadataProvider is set to UDTF. Use *TEMPLIB to follow the IBM i temp library setting."
