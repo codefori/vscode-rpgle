@@ -30,6 +30,10 @@
 	"activationEvents": [
 		"onLanguage:rpgle",
 		"onLanguage:rpg",
+		"onLanguage:sqlrpgle",
+		"onLanguage:sqlrpg",
+		"onLanguage:rpgleinc",
+		"onLanguage:rpginc",
 		"onCommand:workbench.action.showAllSymbols"
 	],
 	"main": "./out/extension",
@@ -71,6 +75,24 @@
 					"default": 6000,
 					"minimum": 0,
 					"description": "Maximum document size, in lines, for which bracket/block highlighting, mismatch detection and jump-to-matching-block run. Larger members are skipped to keep the editor responsive. Set to 0 to disable the limit."
+				},
+				"vscode-rpgle.fieldMetadataProvider": {
+					"type": "string",
+					"default": "CL",
+					"enum": [
+						"CL",
+						"UDTF"
+					],
+					"enumDescriptions": [
+						"Use the DSPFFD CL command (default)",
+						"Use the FIELD_LIST UDTF (recommended)"
+					],
+					"description": "Choose the provider used to fetch file field definitions when building field reference metadata. UDTF is generally a more streamlined approach when available."
+				},
+				"vscode-rpgle.fieldListLibrary": {
+					"type": "string",
+					"default": "*TEMPLIB",
+					"description": "Library containing the FIELD_LIST UDTF when fieldMetadataProvider is set to UDTF. Use *TEMPLIB to follow the IBM i temp library setting."
 				}
 			}
 		},
@@ -106,6 +128,13 @@
 				"title": "Toggle Inline Editor Helper",
 				"category": "RPGLE",
 				"enablement": "editorLangId == rpgle || editorLangId == rpg"
+			},
+			{
+				"command": "vscode-rpgle.refreshFileFieldDefinitionsCache",
+				"title": "RPGLE: Refresh File Field Definitions Cache",
+				"category": "RPGLE",
+				"enablement": "code-for-ibmi:connected",
+				"icon": "$(refresh)"
 			},
 			{
 				"command": "vscode-rpgle.server.reloadCache",

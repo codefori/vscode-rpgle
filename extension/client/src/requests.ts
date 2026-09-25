@@ -3,17 +3,35 @@ import { Uri, workspace } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import { getInstance } from './base';
 import { IBMiMember } from '@halcyontech/vscode-ibmi-types';
+import { queryFieldList, convertFieldListToDspffdFormat, FieldListRow } from '../../../language/components/fieldListQuery';
+import { logError, logInfo, logWarn } from '../../../language/components/logger';
+import { shouldUseCachedTableMetadata, TableCacheEntry } from '../../../language/utils/tableCache';
 
 const TABLE_CACHE_TTL = 30 * 60 * 1000;
 const TABLE_CACHE_LIMIT = 250;
 
-type CachedTableEntry = {
-	fetchedAt: number,
-	data: any[]
-};
+type CachedTableEntry = TableCacheEntry;
 
 const tableObjectCache = new Map<string, CachedTableEntry>();
 const tableObjectInFlight = new Map<string, Promise<any[]>>();
+let forceTableRefresh = false;
+
+function resolveFieldListLibrary(connection: any): string {
+	const configured = workspace.getConfiguration('vscode-rpgle')
+		.get<string>('fieldListLibrary', '*TEMPLIB')
+		?.trim()
+		.toUpperCase();
+
+	const config = connection?.getConfig?.() ?? connection?.config;
+	const tempLib = (config?.tempLibrary as string | undefined)?.trim().toUpperCase();
+	const currentLib = (config?.currentLibrary as string | undefined)?.trim().toUpperCase();
+
+	if (!configured || configured === '*TEMPLIB') {
+		return tempLib || currentLib || 'ILEDITOR';
+	}
+
+	return configured;
+}
 
 function getTableCacheKey(table: string): string {
 	const upper = table.trim().toUpperCase();
@@ -38,6 +56,52 @@ function pruneTableCache() {
 function clearLocalTableObjectCache() {
 	tableObjectCache.clear();
 	tableObjectInFlight.clear();
+}
+
+function formatTimestamp(date = new Date()) {
+	return `${date.toTimeString().split(' ')[0]}.${date.getMilliseconds().toString().padStart(3, '0')}`;
+}
+
+function logTableMetadataLifecycle(
+	cacheKey: string,
+	phase: 'start' | 'complete' | 'join' | 'error',
+	options: {
+		table?: string,
+		provider?: string,
+		startedAt?: number,
+		completedAt?: number,
+		rows?: number,
+		source?: 'UDTF' | 'DSPFFD',
+		error?: unknown,
+	} = {}
+) {
+	const startedAt = options.startedAt ?? Date.now();
+	const completedAt = options.completedAt ?? startedAt;
+	const durationMs = Math.max(0, completedAt - startedAt);
+	const common = [
+		`cacheKey=${cacheKey}`,
+		options.table ? `table=${options.table}` : undefined,
+		options.provider ? `provider=${options.provider}` : undefined,
+		`startedAt=${formatTimestamp(new Date(startedAt))}`,
+	].filter(Boolean).join(' ');
+
+	if (phase === 'join') {
+		logInfo(`[vscode-rpgle] table metadata fetch queued: ${common}`);
+		return;
+	}
+
+	if (phase === 'start') {
+		logInfo(`[vscode-rpgle] table metadata fetch started: ${common}`);
+		return;
+	}
+
+	if (phase === 'error') {
+		const errorText = options.error === undefined ? '' : ` error=${String(options.error)}`;
+		logError(`[vscode-rpgle] table metadata fetch failed: ${common} completedAt=${formatTimestamp(new Date(completedAt))} durationMs=${durationMs}${errorText}`.trim(), options.error);
+		return;
+	}
+
+	logInfo(`[vscode-rpgle] table metadata fetch completed: ${common} completedAt=${formatTimestamp(new Date(completedAt))} durationMs=${durationMs} rows=${options.rows ?? 0} source=${options.source ?? 'UDTF'}`);
 }
 
 export function buildRequestHandlers(client: LanguageClient) {
@@ -156,41 +220,46 @@ export function buildRequestHandlers(client: LanguageClient) {
 	/**
 	 * Gets the column information for a provided file
 	 */
-	client.onRequest(`getObject`, async (table: string) => {
+	client.onRequest(`getObject`, async (table: string, forceRefresh = false) => {
 		const cacheKey = getTableCacheKey(table);
 		const now = Date.now();
 		const cached = tableObjectCache.get(cacheKey);
 
-		if (cached && (now - cached.fetchedAt) <= TABLE_CACHE_TTL) {
+		if (forceTableRefresh) {
+			logInfo(`[vscode-rpgle] Forced table metadata refresh: clearing cached ${cacheKey}.`);
+			clearLocalTableObjectCache();
+			forceTableRefresh = false;
+		}
+
+		if (cached && shouldUseCachedTableMetadata(cached, now, forceRefresh || forceTableRefresh)) {
 			// Refresh LRU order.
 			tableObjectCache.delete(cacheKey);
 			tableObjectCache.set(cacheKey, cached);
-			console.log(`Using cached table metadata for ${cacheKey}. ${cached.data.length} rows.`);
+			logInfo(`[vscode-rpgle] Using cached table metadata for ${cacheKey}. source=${cached.source} rows=${cached.data.length}.`);
 			return cached.data;
 		}
 
+		const shouldBypassInflightFetch = forceRefresh || forceTableRefresh;
 		const activeFetch = tableObjectInFlight.get(cacheKey);
-		if (activeFetch) {
-			console.log(`Joining in-flight table metadata fetch for ${cacheKey}.`);
+		if (activeFetch && !shouldBypassInflightFetch) {
+			logTableMetadataLifecycle(cacheKey, 'join', { table, provider: workspace.getConfiguration('vscode-rpgle').get<string>('fieldMetadataProvider', 'CL') });
 			return activeFetch;
 		}
 
+		if (activeFetch && shouldBypassInflightFetch) {
+			logInfo(`[vscode-rpgle] Forcing fresh fetch for ${cacheKey}; bypassing in-flight request.`);
+			tableObjectInFlight.delete(cacheKey);
+		}
+
 		const fetchPromise = (async () => {
+			const startedAt = Date.now();
 			const instance = getInstance();
 
 			if (instance) {
-				console.log(`Fetching table: ${table}`);
-
 				const connection = instance.getConnection();
 				if (connection) {
 					const content = connection.getContent();
 					const config = connection.getConfig();
-
-					const dateStr = Date.now().toString().substr(-6);
-					const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
-					const fullPath = `QTEMP/${randomFile}`;
-
-					console.log(`Temp OUTFILE: ${fullPath}`);
 
 					const parts = {
 						schema: `*LIBL`,
@@ -205,33 +274,72 @@ export function buildRequestHandlers(client: LanguageClient) {
 						parts.table = table;
 					}
 
-					// TODO: handle .env file here?
+					const rpgleConfig = workspace.getConfiguration('vscode-rpgle');
+					const fieldDefMethod = rpgleConfig.get<string>('fieldMetadataProvider', 'CL');
+					const fieldListLibrary = resolveFieldListLibrary(connection);
+					logTableMetadataLifecycle(cacheKey, 'start', { table, provider: fieldDefMethod, startedAt });
 
-					const outfileRes: any = await connection.runCommand({
-						environment: `ile`,
-						command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
-					});
+					const fetchViaDspffd = async (source: 'DSPFFD') => {
+						const dateStr = Date.now().toString().substr(-6);
+						const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
+						const fullPath = `QTEMP/${randomFile}`;
 
-					console.log(outfileRes);
-					const resultCode = outfileRes.code || 0;
+						const outfileRes: any = await connection.runCommand({
+							environment: `ile`,
+							command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
+						});
+						const resultCode = outfileRes.code || 0;
 
-					if (resultCode === 0) {
+						if (resultCode !== 0) {
+							return undefined;
+						}
+
 						const data: any[] = await content.getTable('QTEMP', randomFile, randomFile, true);
 
 						tableObjectCache.set(cacheKey, {
 							fetchedAt: Date.now(),
+							source,
 							data
 						});
 						pruneTableCache();
-
-						console.log(`Temp OUTFILE read. ${data.length} rows.`);
-
-						connection.runCommand({
-							environment: `ile`,
-							command: `QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
-						});
-
+						logTableMetadataLifecycle(cacheKey, 'complete', { table, provider: source, startedAt, completedAt: Date.now(), rows: data.length, source });
 						return data;
+					};
+
+					try {
+						if (fieldDefMethod === 'UDTF') {
+							const fieldListRows = await queryFieldList(
+								connection,
+								parts.schema,
+								parts.table,
+								'*ALL',
+								fieldListLibrary
+							);
+							const data = convertFieldListToDspffdFormat(fieldListRows);
+							if (data.length === 0) {
+								logInfo(`[vscode-rpgle] FIELD_LIST returned 0 rows for ${cacheKey};`);
+							}
+
+							tableObjectCache.set(cacheKey, {
+								fetchedAt: Date.now(),
+								source: 'UDTF',
+								data
+							});
+							pruneTableCache();
+
+							logTableMetadataLifecycle(cacheKey, 'complete', { table, provider: 'UDTF', startedAt, completedAt: Date.now(), rows: data.length, source: 'UDTF' });
+							return data;
+						} else {
+							const dspffdData = await fetchViaDspffd('DSPFFD');
+							if (dspffdData) {
+								return dspffdData;
+							}
+						}
+					} catch (error) {
+						logTableMetadataLifecycle(cacheKey, 'error', { table, provider: fieldDefMethod, startedAt, completedAt: Date.now(), error });
+						if (fieldDefMethod === 'UDTF') {
+							logWarn(`Failed to get field definitions using UDTF FIELD_LIST for ${cacheKey}.`);
+						}
 					}
 				}
 			}
@@ -248,9 +356,20 @@ export function buildRequestHandlers(client: LanguageClient) {
 	});
 }
 
-export function clearTableCache(client: LanguageClient) {
+export type TableCacheRefreshSource = 'startup' | 'manual';
+
+export async function clearTableCache(client: LanguageClient, source: TableCacheRefreshSource = 'manual', forceRemoteRefresh = false): Promise<void> {
+	// Parse/reparse cycles do not trigger this. File metadata refresh is intentionally
+	// on startup or explicit user action only, not on every document edit.
+	if (source !== 'startup' && source !== 'manual') {
+		return;
+	}
+
 	clearLocalTableObjectCache();
-	client.sendRequest(`clearTableCache`);
+	if (forceRemoteRefresh) {
+		forceTableRefresh = true;
+	}
+	await client.sendRequest(`clearTableCache`);
 }
 
 export function getCache(client: LanguageClient, uri: Uri): Promise<any> {
