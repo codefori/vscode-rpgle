@@ -13,13 +13,12 @@ const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
 
 export let includePath: { [workspaceUri: string]: string[] } = {};
 
-export let isEnabled = false;
+export let isEnabled = true;
+let isWorkspaceLoading = false;
 /**
  * Assumes client has workspace
  */
 export async function initialise() {
-	isEnabled = true;
-
 	loadWorkspace();
 
 	watchedFilesChangeEvent.push((params: DidChangeWatchedFilesParams) => {
@@ -54,62 +53,71 @@ export async function initialise() {
 }
 
 export async function loadWorkspace() {
-	const workspaces = await connection.workspace.getWorkspaceFolders();
+	if (isWorkspaceLoading) {
+		console.log(`Workspace loading already in progress.`);
+		return;
+	}
 
-	if (workspaces) {
-		let uris: string[] = [];
+	isWorkspaceLoading = true;
 
-		workspaces.forEach((workspaceUri => {
-			const folderPath = URI.parse(workspaceUri.uri).fsPath;
+	try {
+		const workspaces = await connection.workspace.getWorkspaceFolders();
 
-			console.log(`Starting search of: ${folderPath}`);
-			const files = glob.sync(projectFilesGlob, {
-				cwd: folderPath,
-				absolute: true,
-				nocase: true,
-			});
+		if (workspaces) {
+			let uris: string[] = [];
 
-			console.log(`Found RPGLE files: ${files.length}`);
+			workspaces.forEach((workspaceUri => {
+				const folderPath = URI.parse(workspaceUri.uri).fsPath;
 
-			uris.push(...files.map(file => URI.from({
-				scheme: `file`,
-				path: file
-			}).toString()));
+				console.log(`Starting search of: ${folderPath}`);
+				const files = glob.sync(projectFilesGlob, {
+					cwd: folderPath,
+					absolute: true,
+					nocase: true,
+				});
 
-			const iprojFiles = glob.sync(`**/iproj.json`, {
-				cwd: folderPath,
-				absolute: true,
-				nocase: true,
-			});
+				console.log(`Found RPGLE files: ${files.length}`);
 
-			if (iprojFiles.length > 0) {
-				const base = iprojFiles[0];
-				const iprojUri = URI.from({
+				uris.push(...files.map(file => URI.from({
 					scheme: `file`,
-					path: base
-				}).toString();
+					path: file
+				}).toString()));
 
-				updateIProj(iprojUri);
-			}
-		}));
+				const iprojFiles = glob.sync(`**/iproj.json`, {
+					cwd: folderPath,
+					absolute: true,
+					nocase: true,
+				});
 
-		const config = await connection.workspace.getConfiguration('vscode-rpgle');
-		const fileLimit: number = config?.localProjectFileLimit ?? 1000;
+				if (iprojFiles.length > 0) {
+					const base = iprojFiles[0];
+					const iprojUri = URI.from({
+						scheme: `file`,
+						path: base
+					}).toString();
 
-		if (uris.length <= fileLimit) {
-			if (!isEnabled) {
-				isEnabled = true;
-				console.log(`Enabling project mode.`);
-			}
+					updateIProj(iprojUri);
+				}
+			}));
 
-			console.log(`Pre-parsing ${uris.length} files.`);
-			await Promise.all(uris.map(uri => loadLocalFile(uri)));
-		} else {
-			if (isEnabled) {
-				console.log(`Disabling project mode for large project (${uris.length} files exceeds limit of ${fileLimit}).`);
-				isEnabled = false;
+			const config = await connection.workspace.getConfiguration('vscode-rpgle');
+			const preParseOnStartup: boolean = config?.enableLocalProjectPreparsing ?? true;
+			const fileLimit: number = config?.localProjectPreparsingFileLimit ?? 1000;
+
+			if (preParseOnStartup) {
+				if (uris.length <= fileLimit) {
+					console.log(`Pre-parsing ${uris.length} files.`);
+					await Promise.all(uris.map(uri => loadLocalFile(uri)));
+					console.log(`Finished pre-parsing ${uris.length} files.`);
+				} else {
+					console.log(`Skipping pre-parse: ${uris.length} files exceeds limit of ${fileLimit}.`);
+				}
+			} else {
+				console.log(`Pre-parsing disabled; files will be parsed on open.`);
 			}
 		}
+	} finally {
+		isWorkspaceLoading = false;
 	}
 }
 
