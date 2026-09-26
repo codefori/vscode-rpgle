@@ -30,10 +30,6 @@
 	"activationEvents": [
 		"onLanguage:rpgle",
 		"onLanguage:rpg",
-		"onLanguage:sqlrpgle",
-		"onLanguage:sqlrpg",
-		"onLanguage:rpgleinc",
-		"onLanguage:rpginc",
 		"onCommand:workbench.action.showAllSymbols"
 	],
 	"main": "./out/extension",

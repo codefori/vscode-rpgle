@@ -611,9 +611,6 @@ documents.onDidOpen(handler => {
 		handler.document.languageId === `rpgle`
 		|| handler.document.languageId === `rpg`
 		|| handler.document.languageId === `sqlrpgle`
-		|| handler.document.languageId === `sqlrpg`
-		|| handler.document.languageId === `rpgleinc`
-		|| handler.document.languageId === `rpginc`
 	) {
 		executeParse(uri, currentParseId, handler.document);
 	}

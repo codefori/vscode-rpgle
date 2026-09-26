@@ -58,10 +58,6 @@ export function activate(context: ExtensionContext) {
 		documentSelector: [
 			{ language: 'rpgle' },
 			{ language: 'rpg' },
-			{ language: 'sqlrpgle' },
-			{ language: 'sqlrpg' },
-			{ language: 'rpgleinc' },
-			{ language: 'rpginc' },
 		],
 		synchronize: {
 			fileEvents: [
