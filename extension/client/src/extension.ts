@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, ExtensionContext, window, ProgressLocation } from 'vscode';
 
 import * as Linter from "./linter";
 import * as columnAssist from "./language/columnAssist";
@@ -25,10 +25,14 @@ import { getServerImplementationProvider, getServerSymbolProvider } from './lang
 import { checkAndWait, loadBase } from './base';
 import { registerCommands } from './commands';
 import { setLanguageSettings } from './language/config';
+import { fieldListChecker } from '../../../language/components/field_list';
+import { initRpgleOutput, logError, logInfo } from '../../../language/components/logger';
 
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
+	initRpgleOutput(context);
+
 	// The server is implemented in node
 	const serverModule = context.asAbsolutePath(
 		path.join('out', 'server.js')
@@ -47,8 +51,6 @@ export function activate(context: ExtensionContext) {
 			options: debugOptions
 		}
 	};
-
-	loadBase();
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
@@ -77,20 +79,129 @@ export function activate(context: ExtensionContext) {
 	client.onReady().then(async () => {
 		buildRequestHandlers(client);
 
+		const formatSeconds = (durationMs: number) => `${(durationMs / 1000).toFixed(1)}s`;
+		const showCrossReferenceToast = async (message: string, durationMs = 5000) => {
+			await window.withProgress(
+				{ location: ProgressLocation.Notification, title: message, cancellable: false },
+				async () => {
+					await new Promise(resolve => setTimeout(resolve, durationMs));
+				}
+			);
+		};
+
+		client.onNotification(`vscode-rpgle/crossReferenceState`, (payload: {
+			phase?: string,
+			uri?: string,
+			fileName?: string,
+			lineCount?: number,
+			parseId?: number,
+			durationMs?: number,
+		}) => {
+			const fileName = payload.fileName || `document`;
+			const lineCount = payload.lineCount || 0;
+			const parseId = payload.parseId || 0;
+
+			if (payload.phase === `started`) {
+				logInfo(`[vscode-rpgle] Cross-reference build started: ${fileName} (${lineCount.toLocaleString()} lines, parseId=${parseId}).`);
+				return;
+			}
+
+			if (payload.phase === `completed`) {
+				const durationMs = payload.durationMs || 0;
+				logInfo(`[vscode-rpgle] Cross-reference build completed: ${fileName} (${lineCount.toLocaleString()} lines, parseId=${parseId}, duration=${durationMs}ms).`);
+			}
+		});
+
+		client.onNotification(`vscode-rpgle/crossReferenceReady`, (payload: {
+			uri?: string,
+			fileName?: string,
+			lineCount?: number,
+			durationMs?: number,
+		}) => {
+			const fileName = payload.fileName || `document`;
+			const lineCount = payload.lineCount || 0;
+			const durationMs = payload.durationMs || 0;
+			const message = `RPGLE: Cross references ready for ${fileName} (${lineCount.toLocaleString()} lines, ${formatSeconds(durationMs)}).`;
+			logInfo(`[vscode-rpgle] ${message}`);
+			void showCrossReferenceToast(message, 5000);
+		});
+
 		const instance = await checkAndWait();
 		const base = loadBase();
+		let startupRefreshStarted = false;
+		let startupRefreshCompleted = false;
+
+		const ensureFieldList = async () => {
+			try {
+				const connection = instance?.getConnection?.();
+				if (!connection) {
+					logInfo(`[vscode-rpgle] FIELD_LIST ensure skipped: no active connection`);
+					return;
+				}
+
+				logInfo(`[vscode-rpgle] FIELD_LIST ensure: checking remote state`);
+				const state = await fieldListChecker.getRemoteState(connection);
+				logInfo(`[vscode-rpgle] FIELD_LIST ensure: remote state=${state}`);
+
+				if (state === 'Installed') {
+					return;
+				}
+
+				logInfo(`[vscode-rpgle] FIELD_LIST ensure: running update`);
+				const updateState = await fieldListChecker.update(connection);
+				logInfo(`[vscode-rpgle] FIELD_LIST ensure: update result=${updateState}`);
+			} catch (e) {
+				logError(`[vscode-rpgle] FIELD_LIST ensure failed`, e);
+			}
+		};
+
+		const rebuildFieldMetadataCache = async (reason: string) => {
+			if (startupRefreshCompleted) {
+				logInfo(`[vscode-rpgle] Startup field metadata refresh skipped (${reason}): already completed.`);
+				return;
+			}
+
+			if (startupRefreshStarted) {
+				logInfo(`[vscode-rpgle] Startup field metadata refresh skipped (${reason}): refresh already in progress.`);
+				return;
+			}
+
+			startupRefreshStarted = true;
+			try {
+				logInfo(`[vscode-rpgle] Startup field metadata refresh started (${reason}).`);
+				await clearTableCache(client, 'startup', true);
+				await client.sendRequest(`refreshTableCache`, true);
+				startupRefreshCompleted = true;
+				logInfo(`[vscode-rpgle] Startup field metadata refresh completed (${reason}).`);
+			} catch (e) {
+				startupRefreshStarted = false;
+				logError(`[vscode-rpgle] Startup field metadata refresh failed (${reason}).`, e);
+			}
+		};
+
+		if (base?.componentRegistry) {
+			logInfo(`[vscode-rpgle] Registering FIELD_LIST component checker`);
+			base.componentRegistry.registerComponent(context, fieldListChecker as any);
+		} else {
+			logInfo(`[vscode-rpgle] FIELD_LIST componentRegistry unavailable`);
+		}
 
 		// We need to clear table caches when the connection changes
 		if (instance && base) {
 			// When the connection is established
-			instance.subscribe(context, "connected", "vscode-rpgle", () => {
-				clearTableCache(client);
+			instance.subscribe(context, "connected", "vscode-rpgle", async () => {
+				await ensureFieldList();
+				await rebuildFieldMetadataCache(`connection event`);
 			});
+
+			// If we're already connected by the time onReady runs, ensure immediately.
+			await ensureFieldList();
+			await rebuildFieldMetadataCache(`already connected on activation`);
 
 			// When the library list changes
 			context.subscriptions.push(
 				base.onCodeForIBMiConfigurationChange("connectionSettings", async () => {
-					clearTableCache(client);
+					await clearTableCache(client, 'manual');
 				}),
 			);
 		}
