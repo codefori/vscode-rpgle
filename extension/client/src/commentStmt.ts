@@ -40,7 +40,7 @@ export function registerCommentStatementCommand(context: vscode.ExtensionContext
 
           // If the file is **FREE, always use free format comments
           if (isCompletelyFreeFormat) {
-            commentedLine = commentFreeFormatLine(line);
+            commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
           } else {
             // For mixed format files, determine format by checking if the line has a valid spec type
             const specType = rpgle.getSpecType(line);
@@ -51,7 +51,7 @@ export function registerCommentStatementCommand(context: vscode.ExtensionContext
               commentedLine = commentFixedFormatLine(line);
             } else {
               // Free format: Add // to the beginning
-              commentedLine = commentFreeFormatLine(line);
+              commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
             }
           }
 
@@ -110,7 +110,7 @@ export function registerUncommentStatementCommand(context: vscode.ExtensionConte
 
           // If the file is **FREE, always use free format uncomment
           if (isCompletelyFreeFormat) {
-            uncommentedLine = uncommentFreeFormatLine(line);
+            uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
           } else {
             // For mixed format files, determine format by checking for asterisk in column 7
             if (line.length > 6 && line[6] === '*') {
@@ -118,7 +118,7 @@ export function registerUncommentStatementCommand(context: vscode.ExtensionConte
               uncommentedLine = uncommentFixedFormatLine(line);
             } else {
               // Free format: Remove // from the beginning
-              uncommentedLine = uncommentFreeFormatLine(line);
+              uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
             }
           }
 
@@ -215,13 +215,13 @@ export function registerToggleCommentCommand(context: vscode.ExtensionContext) {
             let commentedLine = '';
 
             if (isCompletelyFreeFormat) {
-              commentedLine = commentFreeFormatLine(line);
+              commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
             } else {
               const specType = rpgle.getSpecType(line);
               if (specType && specType.trim() !== '') {
                 commentedLine = commentFixedFormatLine(line);
               } else {
-                commentedLine = commentFreeFormatLine(line);
+                commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
               }
             }
 
@@ -248,12 +248,12 @@ export function registerToggleCommentCommand(context: vscode.ExtensionContext) {
             let uncommentedLine = '';
 
             if (isCompletelyFreeFormat) {
-              uncommentedLine = uncommentFreeFormatLine(line);
+              uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
             } else {
               if (line.length > 6 && line[6] === '*') {
                 uncommentedLine = uncommentFixedFormatLine(line);
               } else {
-                uncommentedLine = uncommentFreeFormatLine(line);
+                uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
               }
             }
 
@@ -331,18 +331,39 @@ function uncommentFixedFormatLine(line: string): string {
  * @param line The free format line to comment
  * @returns The commented line
  */
-function commentFreeFormatLine(line: string): string {
-  // Get the leading whitespace
-  const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
-  const trimmedLine = line.trim();
+function commentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean = false): string {
+  if (isCompletelyFreeFormat) {
+    // Get the leading whitespace
+    const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
+    const trimmedLine = line.trim();
 
-  // If the line is already a comment, skip it
-  if (trimmedLine.startsWith('//')) {
-    return '';
+    // If the line is already a comment, skip it
+    if (trimmedLine.startsWith('//')) {
+      return '';
+    }
+
+    // Add // comment marker, preserving indentation
+    return leadingWhitespace + '// ' + trimmedLine;
+  } else {
+    // Mixed format: preserve columns 1-7 (positions 0-6) which may contain sequence numbers or developer tags.
+    // Code starts at column 8 (position 7).
+    if (line.length < 7) {
+      return line.padEnd(7, ' ') + '//';
+    }
+    
+    const prefix = line.substring(0, 7);
+    const codePart = line.substring(7);
+    
+    const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
+    const trimmedCode = codePart.trim();
+    
+    // If already a comment, skip
+    if (trimmedCode.startsWith('//')) {
+      return '';
+    }
+    
+    return prefix + leadingWhitespace + '//' + trimmedCode;
   }
-
-  // Add // comment marker, preserving indentation
-  return leadingWhitespace + '// ' + trimmedLine;
 }
 
 /**
@@ -350,19 +371,37 @@ function commentFreeFormatLine(line: string): string {
  * @param line The commented free format line
  * @returns The uncommented line
  */
-function uncommentFreeFormatLine(line: string): string {
-  // Get the leading whitespace
-  const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
-  const trimmedLine = line.trim();
+function uncommentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean = false): string {
+  if (isCompletelyFreeFormat) {
+    // Get the leading whitespace
+    const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
+    const trimmedLine = line.trim();
 
-  // If the line doesn't start with //, skip it
-  if (!trimmedLine.startsWith('//')) {
-    return '';
+    // If the line doesn't start with //, skip it
+    if (!trimmedLine.startsWith('//')) {
+      return '';
+    }
+
+    // Remove the // comment marker and optional space after it
+    const uncommentedContent = trimmedLine.replace(/^\/\/\s?/, '');
+
+    // Restore the indentation
+    return leadingWhitespace + uncommentedContent;
+  } else {
+    if (line.length < 7) return '';
+    
+    const prefix = line.substring(0, 7);
+    const codePart = line.substring(7);
+    
+    const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
+    const trimmedCode = codePart.trim();
+    
+    if (!trimmedCode.startsWith('//')) {
+      return '';
+    }
+    
+    const uncommentedContent = trimmedCode.replace(/^\/\/\s?/, '');
+    
+    return prefix + leadingWhitespace + uncommentedContent;
   }
-
-  // Remove the // comment marker and optional space after it
-  const uncommentedContent = trimmedLine.replace(/^\/\/\s?/, '');
-
-  // Restore the indentation
-  return leadingWhitespace + uncommentedContent;
 }
