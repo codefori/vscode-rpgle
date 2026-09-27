@@ -10,7 +10,7 @@ import * as Linter from "./linter";
 import * as columnAssist from "./language/columnAssist";
 import { registerBracketMatcher, registerJumpToMatchingBlock } from "./language/bracketMatcher";
 import { registerCommentStatementCommand, registerUncommentStatementCommand, registerToggleCommentCommand } from './commentStmt';
-
+import { registerAddDeveloperTagCommand } from './developerTag';
 
 import {
 	LanguageClient,
@@ -107,6 +107,7 @@ export function activate(context: ExtensionContext) {
 	registerCommentStatementCommand(context);
 	registerUncommentStatementCommand(context);
 	registerToggleCommentCommand(context);
+	registerAddDeveloperTagCommand(context);
 
 	registerCommands(context, client);
 
