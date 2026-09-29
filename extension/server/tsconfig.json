@@ -3,13 +3,15 @@
 	"compilerOptions": {
 		"target": "es2020",
 		"module": "commonjs",
-		"moduleResolution": "node",
 		"ignoreDeprecations": "6.0",
 		"sourceMap": true,
 		"outDir": "out",
 		"rootDir": "./../..",
 		"lib": [
 			"es2020"
+		],
+		"types": [
+			"node"
 		],
 		"composite": true
 	},

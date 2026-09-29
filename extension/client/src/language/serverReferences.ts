@@ -4,7 +4,7 @@ import { commands, Definition, DocumentSymbol, languages, Location, ProgressLoca
 import { getInstance } from "../base";
 
 export function getServerSymbolProvider() {
-  let latestFetch: ExportInfo[]|undefined;
+  let latestFetch: ExportInfo[] | undefined;
 
   return languages.registerWorkspaceSymbolProvider({
     provideWorkspaceSymbols: async (query, token): Promise<SymbolInformation[]> => {
@@ -20,7 +20,7 @@ export function getServerSymbolProvider() {
         const connection = instance.getConnection();
         const config = connection.getConfig();
 
-        let member: IBMiMember|undefined;
+        let member: IBMiMember | undefined;
 
         if (editor && documentIsValid(editor.document)) {
           const uriPath = editor.document.uri.path;
@@ -30,7 +30,7 @@ export function getServerSymbolProvider() {
         const libraryList = getLibraryList(config, member);
 
         if (query.length === 0 || !latestFetch) {
-          latestFetch = await binderLookup(connection, libraryList, {generic: query});
+          latestFetch = await binderLookup(connection, libraryList, { generic: query });
         }
 
         return latestFetch.map(e => {
@@ -47,7 +47,7 @@ export function getServerSymbolProvider() {
     },
 
     resolveWorkspaceSymbol: async (symbol, token): Promise<SymbolInformation | undefined> => {
-      const matchingSymbol = await window.withProgress({location: ProgressLocation.Window, title: `Fetching symbol ${symbol.name}`}, () => getSymbolFromDocument(symbol.location.uri, symbol.name));
+      const matchingSymbol = await window.withProgress({ location: ProgressLocation.Window, title: `Fetching symbol ${symbol.name}` }, () => getSymbolFromDocument(symbol.location.uri, symbol.name));
 
       if (matchingSymbol) {
         return new SymbolInformation(
@@ -64,8 +64,8 @@ export function getServerSymbolProvider() {
 }
 
 export function getServerImplementationProvider() {
-  return languages.registerImplementationProvider({language: `rpgle`, scheme: `member`}, {
-    async provideImplementation(document, position, token): Promise<Definition|undefined> {
+  return languages.registerImplementationProvider({ language: `rpgle`, scheme: `member` }, {
+    async provideImplementation(document, position, token): Promise<Definition | undefined> {
       const instance = getInstance();
       const connection = instance?.getConnection();
 
@@ -78,20 +78,20 @@ export function getServerImplementationProvider() {
 
         const libraryList = getLibraryList(config, member);
 
-        const exports = await binderLookup(connection, libraryList, {specific: word});
+        const exports = await binderLookup(connection, libraryList, { specific: word });
 
         if (exports.length) {
           const exportsInLibraryListOrder = libraryList.map(lib => exports.find(e => e.sourceLibrary === lib)).filter(e => e) as ExportInfo[];
 
-          const resultingLocation = await window.withProgress({location: ProgressLocation.Window, title: `Resolving ${word}`}, async (progress) => {
+          const resultingLocation = await window.withProgress({ location: ProgressLocation.Window, title: `Resolving ${word}` }, async (progress) => {
             for (const exportInfo of exportsInLibraryListOrder) {
-              progress.report({message: `checking ${exportInfo.moduleLibrary}/${exportInfo.moduleName}`});
+              progress.report({ message: `checking ${exportInfo.moduleLibrary}/${exportInfo.moduleName}` });
               const uri = exportInfo.assumedUri;
 
               const possibleSymbol = await getSymbolFromDocument(uri, word);
               if (possibleSymbol) {
                 return new Location(uri, possibleSymbol.selectionRange);
-              } 
+              }
             }
           });
 
@@ -117,7 +117,9 @@ async function getSymbolFromDocument(docUri: Uri, name: string): Promise<Documen
 }
 
 function getLibraryList(config: ConnectionConfig, member?: IBMiMember): string[] {
-  let libraryList = [config.currentLibrary, ...config.libraryList];
+  let libraryList = config.currentLibrary ?
+    [config.currentLibrary, ...config.libraryList] :
+    config.libraryList;
 
   if (member) {
     const editorLibrary = member.library;
@@ -148,7 +150,7 @@ interface ExportInfo {
   assumedUri: Uri;
 }
 
-async function binderLookup(connection: IBMi, libraryList: string[], filter: {specific?: string, generic?: string} = {}) {
+async function binderLookup(connection: IBMi, libraryList: string[], filter: { specific?: string, generic?: string } = {}) {
   let symbolClause = ``;
 
   if (filter.generic) {

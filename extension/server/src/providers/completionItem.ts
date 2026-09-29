@@ -1,4 +1,4 @@
-import path = require('path');
+import * as path from "path";
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Cache, { RpgleType, RpgleVariableType } from '../../../../language/models/cache';
@@ -26,7 +26,7 @@ const builtInFunctionCompletionItems: CompletionItem[] = getBuiltIns().map(built
 	item.documentation = `Built-in function`;
 	item.insertText = builtIn.name + `(\${1})`;
 	item.insertTextFormat = InsertTextFormat.Snippet;
-	item.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
+	item.command = { command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints` };
 	item.sortText = item.filterText;
 	return item;
 });
@@ -37,7 +37,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 	const trigger = handler.context?.triggerCharacter;
 	const currentPath = handler.textDocument.uri;
-	
+
 	if (ParserFactory.isOpmFile(currentPath)) return items;
 
 	const document = documents.get(currentPath);
@@ -64,7 +64,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 				let tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? ``.padEnd(7) + currentLine.substring(7) : ``, 0, 0, true);
 
 				if (tokens.length > 0) {
-					
+
 					// We need to find the innermost block we are part of
 					tokens = Parser.fromBlocksGetTokens(tokens, cursorIndex).block;
 
@@ -80,7 +80,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					let tokenIndex = referenceStart;
 
-					let currentDef: Declaration|undefined;
+					let currentDef: Declaration | undefined;
 
 					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
 						if (tokens[tokenIndex] === undefined || [`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
@@ -111,7 +111,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 					}
 
-					let onType: RpgleType|undefined;
+					let onType: RpgleType | undefined;
 					let onArray = false;
 
 					if (currentDef) {
@@ -149,10 +149,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 								handler.position.line,
 								tokens[referenceStart].range.start,
 								handler.position.line,
-								tokens[tokens.length-1].range.end
+								tokens[tokens.length - 1].range.end
 							);
 
-							const refValue = currentLine.substring(tokens[referenceStart].range.start, tokens[tokens.length-1].range.start);
+							const refValue = currentLine.substring(tokens[referenceStart].range.start, tokens[tokens.length - 1].range.start);
 
 							for (let func of usableFunctions) {
 								let builtInFunction = CompletionItem.create(func.name.substring(1));
@@ -165,13 +165,13 @@ export default async function completionItemProvider(handler: CompletionParams):
 									if (p.base) {
 										return refValue
 									} else {
-										return `\${${i+1}:${p.name}}`
+										return `\${${i + 1}:${p.name}}`
 									}
 								}).join(`:`) + `)`;
 								builtInFunction.insertTextFormat = InsertTextFormat.Snippet;
 
 								// To trigger the signature information
-								builtInFunction.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
+								builtInFunction.command = { command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints` };
 
 								builtInFunction.detail = `Built-in function`;
 								items.push(builtInFunction);
