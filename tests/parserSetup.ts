@@ -1,6 +1,6 @@
 import Parser from '../language/ile/parser';
 
-import glob from "glob";
+import { glob } from "glob"
 import path from 'path';
 import fs from 'fs';
 
@@ -26,8 +26,6 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 		nocase: true,
 	}
 
-	const globCache = glob.sync(`**/*.*rpg*`, globSettings);
-
 	parser.setIncludeFileFetch(async (baseFile: string, includeFile: string) => {
 		if (includeFile.startsWith(`'`) && includeFile.endsWith(`'`)) {
 			includeFile = includeFile.substring(1, includeFile.length - 1);
@@ -41,13 +39,13 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 
 
 		const globPath = path.join(`**`, includeFile);
-		const files: string[] = glob.sync(globPath, {cache: globCache, ...globSettings});
+		const files: string[] = glob.sync(globPath, { ...globSettings });
 
 		if (files.length >= 1) {
 			const file = files.find(f => f.toLowerCase().endsWith(`rpgleinc`)) || files[0];
 
 			const content = await readFile(file, { encoding: `utf-8` });
-			
+
 			return {
 				found: true,
 				uri: file,
@@ -62,9 +60,9 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 
 	parser.setTableFetch(async (table: string, aliases = false) => {
 		const upperName = table.toUpperCase();
-		
+
 		const data = tables[upperName] ? tables[upperName] : [];
-		
+
 		return dspffdToRecordFormats(data, aliases);
 	});
 

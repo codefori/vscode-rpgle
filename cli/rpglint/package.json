@@ -26,6 +26,6 @@
   },
   "homepage": "https://github.com/halcyon-tech/vscode-rpgle#readme",
   "devDependencies": {
-    "@types/node": "^20.19.41"
+    "@types/node": "^22.x"
   }
 }
