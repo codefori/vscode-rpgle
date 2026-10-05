@@ -2,7 +2,7 @@
 // --files [glob]
 // --cwd "[path]"
 
-import glob from "glob";
+import { glob } from "glob"
 import { readFileSync } from 'fs';
 
 import Parser from '../../language/ile/parser';
