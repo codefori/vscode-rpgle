@@ -3,7 +3,6 @@
 	"compilerOptions": {
 		"target": "es2020",
 		"module": "commonjs",
-		"ignoreDeprecations": "6.0",
 		"sourceMap": true,
 		"outDir": "out",
 		"rootDir": "./../..",
