@@ -17,7 +17,7 @@ export function getInterfaces(): APIInterface[] {
 			const nameDetail = path.parse(basename);
 			let objectName = path.basename(nameDetail.name).toUpperCase();
 
-			if (objectName.endsWith(`.PGM`)) objectName = objectName.substring(0, objectName.length-4);
+			if (objectName.endsWith(`.PGM`)) objectName = objectName.substring(0, objectName.length - 4);
 
 			if (basename.toLowerCase().endsWith(`.rpgleinc`) === false) {
 				const cache = parser.getParsedCache(uri);
@@ -33,7 +33,7 @@ export function getInterfaces(): APIInterface[] {
 							if (entryFunction) {
 
 								// We assume the file name is the name of the object
-								const useKeywords = {...entryFunction.keyword};
+								const useKeywords = { ...entryFunction.keyword };
 								useKeywords[`EXTPGM`] = `'${objectName}'`;
 
 								const prototype = [
@@ -55,8 +55,7 @@ export function getInterfaces(): APIInterface[] {
 							}
 						}
 
-					} else
-					if (cache.keyword[`NOMAIN`]) {
+					} else if (cache.keyword[`NOMAIN`]) {
 						// This might mean it is a module. Look for EXPORTs
 						cache.procedures.forEach(proc => {
 							if (proc.keyword[`EXPORT`]) {
@@ -69,7 +68,7 @@ export function getInterfaces(): APIInterface[] {
 									return; // Skip user test functions
 								}
 
-								const useKeywords = {...proc.keyword};
+								const useKeywords = { ...proc.keyword };
 								useKeywords[`EXTPROC`] = `'${proc.name.toUpperCase()}'`;
 
 								const prototype = [

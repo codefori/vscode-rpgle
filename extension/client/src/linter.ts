@@ -115,56 +115,55 @@ export function initialise(context: ExtensionContext) {
 					if (exists) {
 						await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
 					} else {
-						window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${configPath}?`, `Yes`, `No`).then
-							(async (value) => {
-								if (value === `Yes`) {
-									const jsonString = JSON.stringify(DEFAULT_SCHEMA, null, 2);
+						window.showErrorMessage(`RPGLE linter config doesn't exist for this file. Would you like to create a default at ${configPath}?`, `Yes`, `No`).then(async (value) => {
+							if (value === `Yes`) {
+								const jsonString = JSON.stringify(DEFAULT_SCHEMA, null, 2);
 
-									switch (type) {
-										case `member`:
-											if (configPath) {
-												const memberPath = configPath.split(`/`);
+								switch (type) {
+									case `member`:
+										if (configPath) {
+											const memberPath = configPath.split(`/`);
 
-												// Will not crash, even if it fails
-												await connection.runCommand(
-													{
-														'command': `QSYS/CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
-													}
-												);
-
-												// Will not crash, even if it fails
-												await connection.runCommand(
-													{
-														command: `QSYS/ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
-													}
-												);
-
-												try {
-													console.log(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);
-
-													await content.uploadMemberContent(memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
-													await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
-												} catch (e) {
-													console.log(e);
-													window.showErrorMessage(`Failed to create and open new lint configuration file: ${configPath}`);
+											// Will not crash, even if it fails
+											await connection.runCommand(
+												{
+													'command': `QSYS/CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
 												}
-											}
-											break;
+											);
 
-										case `streamfile`:
-											console.log(`IFS path: ${configPath}`);
+											// Will not crash, even if it fails
+											await connection.runCommand(
+												{
+													command: `QSYS/ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
+												}
+											);
 
 											try {
-												await content.writeStreamfileRaw(configPath, jsonString, "utf-8");
+												console.log(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);
+
+												await content.uploadMemberContent(memberPath[0], `VSCODE`, `RPGLINT`, jsonString);
 												await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
 											} catch (e) {
 												console.log(e);
 												window.showErrorMessage(`Failed to create and open new lint configuration file: ${configPath}`);
 											}
-											break;
-									}
+										}
+										break;
+
+									case `streamfile`:
+										console.log(`IFS path: ${configPath}`);
+
+										try {
+											await content.writeStreamfileRaw(configPath, jsonString, "utf-8");
+											await commands.executeCommand(`code-for-ibmi.openEditable`, configPath);
+										} catch (e) {
+											console.log(e);
+											window.showErrorMessage(`Failed to create and open new lint configuration file: ${configPath}`);
+										}
+										break;
 								}
-							});
+							}
+						});
 					}
 				} else {
 					window.showErrorMessage(`No lint config path for this file. File must either be a member or a streamfile on the host IBM i.`);
@@ -176,7 +175,7 @@ export function initialise(context: ExtensionContext) {
 	)
 }
 
-function parseMemberUri(fullPath: string): {asp?: string, library?: string, file?: string, name: string} {
+function parseMemberUri(fullPath: string): { asp?: string, library?: string, file?: string, name: string } {
 	const parts = fullPath.split(`/`).map(s => s.split(`,`)).flat().filter(s => s.length >= 1);
 	return {
 		name: path.parse(parts[parts.length - 1]).name,

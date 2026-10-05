@@ -12,108 +12,108 @@ const timeout = 1000 * 60 * 10; // 10 minutes
 // The purpose of this file is to test the parser against all the sources in the sources directory to ensure it doesn't crash.
 
 test("Generic reference tests", { timeout }, async () => {
-  const projects = getTestProjectsDir();
+	const projects = getTestProjectsDir();
 
-  let totalFiles = 0;
+	let totalFiles = 0;
 
-  for (const projectPath of projects) {
-    const parser = setupParser(projectPath);
-    const list = await getSourcesList(projectPath);
+	for (const projectPath of projects) {
+		const parser = setupParser(projectPath);
+		const list = await getSourcesList(projectPath);
 
-    totalFiles += list.length;
+		totalFiles += list.length;
 
-    for (let i = 0; i < list.length; i++) {
-      const relativePath = list[i];
-      const basename = path.basename(relativePath);
+		for (let i = 0; i < list.length; i++) {
+			const relativePath = list[i];
+			const basename = path.basename(relativePath);
 
-      const baseContent = await getFileContent(relativePath);
+			const baseContent = await getFileContent(relativePath);
 
-      const ps = performance.now();
-      const doc = assertCache(await parser.getDocs(basename, baseContent, { collectReferences: true, ignoreCache: true, withIncludes: true }));
-      const pe = performance.now();
+			const ps = performance.now();
+			const doc = assertCache(await parser.getDocs(basename, baseContent, { collectReferences: true, ignoreCache: true, withIncludes: true }));
+			const pe = performance.now();
 
-      let cachedFiles: {[uri: string]: string} = {};
-      let referencesCollected = 0;
-      let errorCount = 0;
+			let cachedFiles: { [uri: string]: string } = {};
+			let referencesCollected = 0;
+			let errorCount = 0;
 
-      const printReference = (def: Declaration, content: string, ref: Reference) => {
-        console.log({
-          def: def.name,
-          uri: ref.uri,
-          offset: ref.offset,
-          content: content.substring(ref.offset.start, ref.offset.end),
-          about: content.substring(ref.offset.start - 10, ref.offset.end + 10)
-        })
-      }
+			const printReference = (def: Declaration, content: string, ref: Reference) => {
+				console.log({
+					def: def.name,
+					uri: ref.uri,
+					offset: ref.offset,
+					content: content.substring(ref.offset.start, ref.offset.end),
+					about: content.substring(ref.offset.start - 10, ref.offset.end + 10)
+				})
+			}
 
-      const checkReferences = async (def: Declaration) => {
-        const refs = def.references;
-        const uniqueUris = refs.map(r => r.uri).filter((value, index, self) => self.indexOf(value) === index);
+			const checkReferences = async (def: Declaration) => {
+				const refs = def.references;
+				const uniqueUris = refs.map(r => r.uri).filter((value, index, self) => self.indexOf(value) === index);
 
-        for (const refUri of uniqueUris) {
-          if (refUri === basename) {
-            cachedFiles[refUri] = baseContent;
-          }
-          
-          if (!cachedFiles[refUri]) {
-            cachedFiles[refUri] = await getFileContent(refUri);
-          }
-        }
+				for (const refUri of uniqueUris) {
+					if (refUri === basename) {
+						cachedFiles[refUri] = baseContent;
+					}
 
-        for (const ref of refs) {
-          const offsetContent = cachedFiles[ref.uri].substring(ref.offset.start, ref.offset.end);
+					if (!cachedFiles[refUri]) {
+						cachedFiles[refUri] = await getFileContent(refUri);
+					}
+				}
 
-          const isInd = def.type === `indicator`;
+				for (const ref of refs) {
+					const offsetContent = cachedFiles[ref.uri].substring(ref.offset.start, ref.offset.end);
 
-          if (isInd) continue;
+					const isInd = def.type === `indicator`;
 
-          if (isInd && offsetContent.endsWith(def.name)) {
-            referencesCollected++;
-          }
-          else if (offsetContent.toUpperCase() === def.name.toUpperCase()) {
-            referencesCollected++;
-          } else {
-            errorCount++;
-            printReference(def, cachedFiles[ref.uri], ref);
-          }
-        }
-      }
+					if (isInd) continue;
 
-      const checkScope = async (scope: Cache) => {
-        for (const def of [...scope.symbols, ...scope.sqlReferences]) {
-          await checkReferences(def);
+					if (isInd && offsetContent.endsWith(def.name)) {
+						referencesCollected++;
+					}
+					else if (offsetContent.toUpperCase() === def.name.toUpperCase()) {
+						referencesCollected++;
+					} else {
+						errorCount++;
+						printReference(def, cachedFiles[ref.uri], ref);
+					}
+				}
+			}
 
-          if (def.subItems && def.subItems.length > 0) {
-            for (const sub of def.subItems) {
-              await checkReferences(sub);
-            }
-          }
+			const checkScope = async (scope: Cache) => {
+				for (const def of [...scope.symbols, ...scope.sqlReferences]) {
+					await checkReferences(def);
 
-          if (def.scope) {
-            await checkScope(def.scope);
-          }
+					if (def.subItems && def.subItems.length > 0) {
+						for (const sub of def.subItems) {
+							await checkReferences(sub);
+						}
+					}
 
-          // Skip indicators and files/sql references for range checks
-          if ([`indicator`, `file`].includes(def.type) == false && def.range) {
-            if (def.range.start === null || def.range.end === null) {
-              errorCount++;
-              console.error(`Declaration ${def.name} (${def.type}) has invalid range in ${basename}`);
-            }
-          }
-        }
-      }
+					if (def.scope) {
+						await checkScope(def.scope);
+					}
 
-      const ss = performance.now();
-      await checkScope(doc);
-      const se = performance.now();
+					// Skip indicators and files/sql references for range checks
+					if ([`indicator`, `file`].includes(def.type) == false && def.range) {
+						if (def.range.start === null || def.range.end === null) {
+							errorCount++;
+							console.error(`Declaration ${def.name} (${def.type}) has invalid range in ${basename}`);
+						}
+					}
+				}
+			}
 
-      if (errorCount > 0) {
-        fail(`Found ${errorCount} errors in ${basename}`);
-      }
+			const ss = performance.now();
+			await checkScope(doc);
+			const se = performance.now();
 
-      // console.log(`Parsed ${basename} in ${pe - ps}ms. Validated in ${se-ss} (${i+1}/${list.length}). Found ${referencesCollected} references.`);
-    }
-  }
+			if (errorCount > 0) {
+				fail(`Found ${errorCount} errors in ${basename}`);
+			}
 
-  console.log(`Parsed ${totalFiles} files.`);
+			// console.log(`Parsed ${basename} in ${pe - ps}ms. Validated in ${se-ss} (${i+1}/${list.length}). Found ${referencesCollected} references.`);
+		}
+	}
+
+	console.log(`Parsed ${totalFiles} files.`);
 });
