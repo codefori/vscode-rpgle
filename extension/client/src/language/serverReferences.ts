@@ -119,7 +119,7 @@ async function getSymbolFromDocument(docUri: Uri, name: string): Promise<Documen
 function getLibraryList(config: ConnectionConfig, member?: IBMiMember): string[] {
 	let libraryList = config.currentLibrary ?
 		[config.currentLibrary, ...config.libraryList] :
-		config.libraryList;
+		[...config.libraryList];
 
 	if (member) {
 		const editorLibrary = member.library;
