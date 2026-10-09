@@ -329,79 +329,66 @@ function uncommentFixedFormatLine(line: string): string {
  * Comment a free format RPG line by adding // to the beginning
  * Respects the indentation of the original line
  * @param line The free format line to comment
+ * @param isCompletelyFreeFormat Whether the file is fully free format
  * @returns The commented line
  */
-function commentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean = false): string {
-  if (isCompletelyFreeFormat) {
-    // Get the leading whitespace
-    const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
-    const trimmedLine = line.trim();
+export function commentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean): string {
+  let prefix = '';
+  let codePart = line;
 
-    // If the line is already a comment, skip it
-    if (trimmedLine.startsWith('//')) {
-      return '';
+  if (!isCompletelyFreeFormat) {
+    // Preserve prefix only when columns 6-7 are blank and there is no tab in the first 7 characters
+    if (line.length >= 7 && !line.substring(0, 7).includes('\t') && line[5] === ' ' && line[6] === ' ') {
+      prefix = line.substring(0, 7);
+      codePart = line.substring(7);
     }
-
-    // Add // comment marker, preserving indentation
-    return leadingWhitespace + '// ' + trimmedLine;
-  } else {
-    // Mixed format: preserve columns 1-7 (positions 0-6) which may contain sequence numbers or developer tags.
-    // Code starts at column 8 (position 7).
-    if (line.length < 7) {
-      return line.padEnd(7, ' ') + '//';
-    }
-    
-    const prefix = line.substring(0, 7);
-    const codePart = line.substring(7);
-    
-    const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
-    const trimmedCode = codePart.trim();
-    
-    // If already a comment, skip
-    if (trimmedCode.startsWith('//')) {
-      return '';
-    }
-    
-    return prefix + leadingWhitespace + '//' + trimmedCode;
   }
+
+  const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
+  const trimmedCode = codePart.trim();
+
+  // If the line is already a comment, skip it
+  if (trimmedCode.startsWith('//')) {
+    return '';
+  }
+
+  // Add // comment marker, preserving indentation
+  return prefix + leadingWhitespace + '// ' + trimmedCode;
 }
 
 /**
  * Uncomment a free format RPG line by removing the // prefix
  * @param line The commented free format line
+ * @param isCompletelyFreeFormat Whether the file is fully free format
  * @returns The uncommented line
  */
-function uncommentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean = false): string {
-  if (isCompletelyFreeFormat) {
-    // Get the leading whitespace
-    const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
-    const trimmedLine = line.trim();
+export function uncommentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean): string {
+  let prefix = '';
+  let codePart = line;
 
-    // If the line doesn't start with //, skip it
-    if (!trimmedLine.startsWith('//')) {
-      return '';
+  if (!isCompletelyFreeFormat) {
+    const firstSlash = line.indexOf('//');
+    const hasCommentInPrefix = firstSlash !== -1 && firstSlash < 7;
+    
+    // Preserve prefix only when columns 6-7 are blank, there is no tab in the first 7 characters,
+    // and the comment isn't inside the prefix itself.
+    if (line.length >= 7 && !line.substring(0, 7).includes('\t') && line[5] === ' ' && line[6] === ' ' && !hasCommentInPrefix) {
+      prefix = line.substring(0, 7);
+      codePart = line.substring(7);
     }
-
-    // Remove the // comment marker and optional space after it
-    const uncommentedContent = trimmedLine.replace(/^\/\/\s?/, '');
-
-    // Restore the indentation
-    return leadingWhitespace + uncommentedContent;
-  } else {
-    if (line.length < 7) return '';
-    
-    const prefix = line.substring(0, 7);
-    const codePart = line.substring(7);
-    
-    const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
-    const trimmedCode = codePart.trim();
-    
-    if (!trimmedCode.startsWith('//')) {
-      return '';
-    }
-    
-    const uncommentedContent = trimmedCode.replace(/^\/\/\s?/, '');
-    
-    return prefix + leadingWhitespace + uncommentedContent;
   }
+
+  const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
+  const trimmedCode = codePart.trim();
+
+  // If the line doesn't start with //, skip it
+  if (!trimmedCode.startsWith('//')) {
+    return '';
+  }
+
+  // Remove the // comment marker and optional space after it
+  const uncommentedContent = trimmedCode.replace(/^\/\/\s?/, '');
+
+  // Restore the indentation
+  return prefix + leadingWhitespace + uncommentedContent;
 }
