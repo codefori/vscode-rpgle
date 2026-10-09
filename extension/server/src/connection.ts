@@ -285,6 +285,7 @@ export function handleClientRequests() {
 			indicators: doc.indicators,
 			tags: doc.tags,
 			includes: doc.includes,
+			outputs: doc.outputs
 		}
 	});
 }

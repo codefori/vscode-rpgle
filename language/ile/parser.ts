@@ -6,7 +6,7 @@ import Cache from "../models/cache";
 import Declaration from "../models/declaration";
 
 import oneLineTriggers from "../models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "../models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens, parseOLine } from "../models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -726,7 +726,7 @@ export default class Parser {
               baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
-            } else if (![`D`, `I`, `P`, `C`, `F`, `H`].includes(spec)) {
+            } else if (![`D`, `I`, `P`, `C`, `F`, `H`, `O`].includes(spec)) {
               continue;
             }
           }
@@ -2084,7 +2084,52 @@ export default class Parser {
                     break;
                 }
 
-                potentialName = undefined;
+              potentialName = undefined;
+            }
+            break;
+
+            case `O`:
+              const oSpec = parseOLine(lineNumber, lineIndex, line);
+
+              // Handle based on line type
+              if (oSpec?.type) {
+                // Flush the previous O-spec parent into scope before starting a new one
+                if (currentItem && currentItem.type === `output` && currentItem.readParms) {
+                  currentItem.readParms = false;
+                  scope.addSymbol(currentItem);
+                }
+
+                currentItem = new Declaration(`output`);
+                currentItem.name = oSpec.fileName?.value;
+                currentItem.keyword = {
+                  [oSpec.type]: oSpec.fieldName?.value || true  //TODO: update keywords based on feedback
+                };
+
+                currentItem.position = {
+                  path: fileUri,
+                  range: oSpec.fileName?.range || { line: lineNumber, start: 0, end: 0 }
+                };
+
+                currentItem.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+
+                currentItem.readParms = true;//true suggests its nested and has children
+              } 
+              else if (oSpec && currentItem?.readParms) {
+                const currentChild = new Declaration(`subitem`);
+                currentChild.name = oSpec.fieldName?.value || '';
+                currentChild.position = {
+                  path: fileUri,
+                  range: oSpec.fieldName?.range || { line: lineNumber, start: 0, end: 0 }
+                };
+                currentChild.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+                currentItem.range.end = lineNumber;
+                currentItem.subItems.push(currentChild);
               }
               break;
           }
@@ -2105,6 +2150,12 @@ export default class Parser {
           currentTags = [];
           resetDefinition = false;
         }
+      }
+
+      // Flush the last O-spec parent if the file ends while still collecting children
+      if (currentItem && currentItem.type === `output` && currentItem.readParms) {
+        currentItem.readParms = false;
+        scopes[scopes.length - 1].addSymbol(currentItem);
       }
 
       if (options.collectReferences) {
