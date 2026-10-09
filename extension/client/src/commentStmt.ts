@@ -40,7 +40,7 @@ export function registerCommentStatementCommand(context: vscode.ExtensionContext
 
           // If the file is **FREE, always use free format comments
           if (isCompletelyFreeFormat) {
-            commentedLine = commentFreeFormatLine(line);
+            commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
           } else {
             // For mixed format files, determine format by checking if the line has a valid spec type
             const specType = rpgle.getSpecType(line);
@@ -51,7 +51,7 @@ export function registerCommentStatementCommand(context: vscode.ExtensionContext
               commentedLine = commentFixedFormatLine(line);
             } else {
               // Free format: Add // to the beginning
-              commentedLine = commentFreeFormatLine(line);
+              commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
             }
           }
 
@@ -110,7 +110,7 @@ export function registerUncommentStatementCommand(context: vscode.ExtensionConte
 
           // If the file is **FREE, always use free format uncomment
           if (isCompletelyFreeFormat) {
-            uncommentedLine = uncommentFreeFormatLine(line);
+            uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
           } else {
             // For mixed format files, determine format by checking for asterisk in column 7
             if (line.length > 6 && line[6] === '*') {
@@ -118,7 +118,7 @@ export function registerUncommentStatementCommand(context: vscode.ExtensionConte
               uncommentedLine = uncommentFixedFormatLine(line);
             } else {
               // Free format: Remove // from the beginning
-              uncommentedLine = uncommentFreeFormatLine(line);
+              uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
             }
           }
 
@@ -215,13 +215,13 @@ export function registerToggleCommentCommand(context: vscode.ExtensionContext) {
             let commentedLine = '';
 
             if (isCompletelyFreeFormat) {
-              commentedLine = commentFreeFormatLine(line);
+              commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
             } else {
               const specType = rpgle.getSpecType(line);
               if (specType && specType.trim() !== '') {
                 commentedLine = commentFixedFormatLine(line);
               } else {
-                commentedLine = commentFreeFormatLine(line);
+                commentedLine = commentFreeFormatLine(line, isCompletelyFreeFormat);
               }
             }
 
@@ -248,12 +248,12 @@ export function registerToggleCommentCommand(context: vscode.ExtensionContext) {
             let uncommentedLine = '';
 
             if (isCompletelyFreeFormat) {
-              uncommentedLine = uncommentFreeFormatLine(line);
+              uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
             } else {
               if (line.length > 6 && line[6] === '*') {
                 uncommentedLine = uncommentFixedFormatLine(line);
               } else {
-                uncommentedLine = uncommentFreeFormatLine(line);
+                uncommentedLine = uncommentFreeFormatLine(line, isCompletelyFreeFormat);
               }
             }
 
@@ -329,40 +329,66 @@ function uncommentFixedFormatLine(line: string): string {
  * Comment a free format RPG line by adding // to the beginning
  * Respects the indentation of the original line
  * @param line The free format line to comment
+ * @param isCompletelyFreeFormat Whether the file is fully free format
  * @returns The commented line
  */
-function commentFreeFormatLine(line: string): string {
-  // Get the leading whitespace
-  const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
-  const trimmedLine = line.trim();
+export function commentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean): string {
+  let prefix = '';
+  let codePart = line;
+
+  if (!isCompletelyFreeFormat) {
+    // Preserve prefix only when columns 6-7 are blank and there is no tab in the first 7 characters
+    if (line.length >= 7 && !line.substring(0, 7).includes('\t') && line[5] === ' ' && line[6] === ' ') {
+      prefix = line.substring(0, 7);
+      codePart = line.substring(7);
+    }
+  }
+
+  const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
+  const trimmedCode = codePart.trim();
 
   // If the line is already a comment, skip it
-  if (trimmedLine.startsWith('//')) {
+  if (trimmedCode.startsWith('//')) {
     return '';
   }
 
   // Add // comment marker, preserving indentation
-  return leadingWhitespace + '// ' + trimmedLine;
+  return prefix + leadingWhitespace + '// ' + trimmedCode;
 }
 
 /**
  * Uncomment a free format RPG line by removing the // prefix
  * @param line The commented free format line
+ * @param isCompletelyFreeFormat Whether the file is fully free format
  * @returns The uncommented line
  */
-function uncommentFreeFormatLine(line: string): string {
-  // Get the leading whitespace
-  const leadingWhitespace = line.match(/^\s*/)?.[0] || '';
-  const trimmedLine = line.trim();
+export function uncommentFreeFormatLine(line: string, isCompletelyFreeFormat: boolean): string {
+  let prefix = '';
+  let codePart = line;
+
+  if (!isCompletelyFreeFormat) {
+    const firstSlash = line.indexOf('//');
+    const hasCommentInPrefix = firstSlash !== -1 && firstSlash < 7;
+    
+    // Preserve prefix only when columns 6-7 are blank, there is no tab in the first 7 characters,
+    // and the comment isn't inside the prefix itself.
+    if (line.length >= 7 && !line.substring(0, 7).includes('\t') && line[5] === ' ' && line[6] === ' ' && !hasCommentInPrefix) {
+      prefix = line.substring(0, 7);
+      codePart = line.substring(7);
+    }
+  }
+
+  const leadingWhitespace = codePart.match(/^\s*/)?.[0] || '';
+  const trimmedCode = codePart.trim();
 
   // If the line doesn't start with //, skip it
-  if (!trimmedLine.startsWith('//')) {
+  if (!trimmedCode.startsWith('//')) {
     return '';
   }
 
   // Remove the // comment marker and optional space after it
-  const uncommentedContent = trimmedLine.replace(/^\/\/\s?/, '');
+  const uncommentedContent = trimmedCode.replace(/^\/\/\s?/, '');
 
   // Restore the indentation
-  return leadingWhitespace + uncommentedContent;
+  return prefix + leadingWhitespace + uncommentedContent;
 }

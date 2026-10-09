@@ -158,6 +158,11 @@
 				"command": "vscode-rpgle.jumpToMatchingBlock",
 				"title": "Jump to Matching Block",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.addDeveloperTag",
+				"title": "Add Developer Tag (Block)",
+				"category": "RPGLE"
 			}
 		],
 		"keybindings": [
@@ -204,6 +209,11 @@
 					"command": "vscode-rpgle.toggleComment",
 					"when": "resourceExtname =~ /\\.rpg(le)?|\\.sqlrpgle|\\.rpgleinc/i",
 					"group": "9_cutcopypaste@100"
+				},
+				{
+					"command": "vscode-rpgle.addDeveloperTag",
+					"when": "resourceExtname =~ /\\.rpg(le)?|\\.sqlrpgle|\\.rpgleinc/i",
+					"group": "9_cutcopypaste@101"
 				}
 			],
 			"view/item/context": [
