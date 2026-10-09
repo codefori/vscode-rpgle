@@ -16,7 +16,7 @@ const INCLUDE_EXTENSIONS = [`rpgleinc`, `rpgleh`];
 const errorText = {
   'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
   'QualifiedCheck': `Struct names must be qualified (\`QUALIFIED\`).`,
-  'PrototypeCheck': `Prototypes can only be defined with either \`EXTPGM\` or \`EXTPROC\``,
+  'PrototypeCheck': `Prototypes must specify \`EXTPGM\`, \`EXTPROC\`, or \`OVERLOAD\``,
   'ForceOptionalParens': `Expressions must be surrounded by brackets.`,
   'NoOCCURS': `\`OCCURS\` is not allowed.`,
   'NoSELECTAll': `\`SELECT *\` is not allowed in Embedded SQL.`,
@@ -610,7 +610,21 @@ export default class Linter {
                     break;
 
                   case `DCL-PR`:
-                    inPrototype = true;
+                    // First, determine if we can locate "OVERLOAD" followed by an open parenthesis '('.
+                    const hasOverload = statement.some((part, index) =>
+                      index > 1 &&
+                      part.value?.toUpperCase() === `OVERLOAD` &&
+                      statement[index + 1]?.type === `openbracket`
+                    );
+
+                    // Next, determine if an "END-PR" is also within the prototype statement.
+                    const hasInlineEnd = statement.some(
+                      part => part.type === `end` &&
+                      part.value?.toUpperCase() === `END-PR`
+                    );
+
+                    // Condition inPrototype based on the results of our prior two checks.
+                    inPrototype = !(hasOverload || hasInlineEnd);
                     if (rules.PrototypeCheck || rules.NoExtProgramVariable) {
 
                       const extIndex = statement.findIndex(part => part.value && [`EXTPGM`, `EXTPROC`].includes(part.value.toUpperCase()));
@@ -627,11 +641,13 @@ export default class Linter {
                         }
 
                       } else if (rules.PrototypeCheck) {
-                        // Not EXTPROC / EXTPGM found. Likely don't need this PR if it's for local procedure.
-                        errors.push({
-                          type: `PrototypeCheck`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                        });
+                        if (!hasOverload) {
+                          // No EXTPROC / EXTPGM / OVERLOAD found. Likely don't need this PR if it's for a local procedure.
+                          errors.push({
+                            type: `PrototypeCheck`,
+                            offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+                          });
+                        }
                       }
                     }
                     break;

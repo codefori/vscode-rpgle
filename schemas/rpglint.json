@@ -23,7 +23,7 @@
 		"PrototypeCheck": {
 			"$id": "#/properties/PrototypeCheck",
 			"type": "boolean",
-			"description": "Prototypes can only be defined with either EXTPGM or EXTPROC."
+			"description": "Prototypes must specify EXTPGM, EXTPROC, or OVERLOAD."
 		},
 		"ForceOptionalParens": {
 			"$id": "#/properties/ForceOptionalParens",
