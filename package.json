@@ -71,6 +71,17 @@
 					"default": 6000,
 					"minimum": 0,
 					"description": "Maximum document size, in lines, for which bracket/block highlighting, mismatch detection and jump-to-matching-block run. Larger members are skipped to keep the editor responsive. Set to 0 to disable the limit."
+				},
+				"vscode-rpgle.enableLocalProjectPreparsing": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "When enabled, all RPGLE files in the workspace are pre-parsed at startup to support cross-file features such as go-to-definition, hover information, and completions. The maximum number of files parsed is controlled by `#vscode-rpgle.localProjectPreparsingFileLimit#`."
+				},
+				"vscode-rpgle.localProjectPreparsingFileLimit": {
+					"type": "number",
+					"default": 1000,
+					"minimum": 1,
+					"markdownDescription": "Maximum number of local RPGLE files that will be pre-parsed. Only applies when `#vscode-rpgle.enableLocalProjectPreparsing#` is enabled. If the workspace contains more files than this limit, pre-parsing is skipped to avoid performance issues."
 				}
 			}
 		},
