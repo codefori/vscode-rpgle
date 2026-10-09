@@ -438,7 +438,21 @@ export default class Linter {
                     break;
 
                   case `DCL-PR`:
-                    inPrototype = true;
+                    // First, determine if we can locate "OVERLOAD" followed by an open parenthesis '('.
+                    const hasOverload = statement.some((part, index) =>
+                      index > 1 &&
+                      part.value?.toUpperCase() === `OVERLOAD` &&
+                      statement[index + 1]?.type === `openbracket`
+                    );
+
+                    // Next, determine if an "END-PR" is also within the prototype statement.
+                    const hasInlineEnd = statement.some(
+                      part => part.type === `end` &&
+                      part.value?.toUpperCase() === `END-PR`
+                    );
+
+                    // Condition inPrototype based on the results of our prior two checks.
+                    inPrototype = !(hasOverload || hasInlineEnd);
                     if (rules.PrototypeCheck || rules.NoExtProgramVariable) {
 
                       const extIndex = statement.findIndex(part => part.value && [`EXTPGM`, `EXTPROC`].includes(part.value.toUpperCase()));
@@ -453,12 +467,10 @@ export default class Linter {
                             });
                           }
                         }
+
                       } else if (rules.PrototypeCheck) {
-                        const hasOverload = statement.slice(2).some(
-                          part => part.value?.toUpperCase() === `OVERLOAD`
-                        );
                         if (!hasOverload) {
-                          // Local procedures do not need a PR, but overloaded prototypes do.
+                          // No EXTPROC / EXTPGM / OVERLOAD found. Likely don't need this PR if it's for a local procedure.
                           errors.push({
                             type: `PrototypeCheck`,
                             offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
@@ -467,6 +479,7 @@ export default class Linter {
                       }
                     }
                     break;
+
                   case `DCL-ENUM`:
                     if (value) {
                       inStruct.push(value);

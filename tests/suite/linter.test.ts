@@ -1615,6 +1615,68 @@ test('linter22_c', async () => {
   expect(errors).toHaveLength(0);
 });
 
+// Tests a few variants of an overload prototype while also making sure we are not suppressing actual error messages.
+test.each([
+  `dcl-pr overloadProc overload(firstProc: secondProc);`,
+  `dcl-pr overloadProc Overload (firstProc: secondProc);`,
+  `dcl-pr overloadProc\n  overload\n  (firstProc: secondProc);`,
+  `dcl-pr externalProc extproc end-pr;`,
+])('linter22_d: %s', async (prototype) => {
+  const lines = [
+    `**FREE`,
+    `dcl-s globalValue int(10);`,
+    `dcl-pr firstProc extproc;`,
+    `end-pr;`,
+    `dcl-pr secondProc extproc;`,
+    `end-pr;`,
+    prototype,
+    `dcl-proc caller;`,
+    `  firstProc;`,
+    `  globalValue = 1;`,
+    `end-proc;`,
+    `end-pr;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, {
+    PrototypeCheck: true,
+    RequiresParameter: true,
+    NoGlobalsInProcedures: true
+  }, cache);
+
+  expect(errors.map(error => ({
+    type: error.type,
+    text: lines.substring(error.offset.start, error.offset.end)
+  }))).toEqual([
+    { type: `RequiresParameter`, text: `firstProc` },
+    { type: `NoGlobalsInProcedures`, text: `globalValue` },
+    { type: `UnexpectedEnd`, text: `end-pr` }
+  ]);
+});
+
+// Tests whether the check for "OVERLOAD" is too sensitive.
+test.each([
+  `dcl-pr localProc;\nend-pr;`,
+  `dcl-pr localProc end-pr;`,
+  `dcl-pr overload;\nend-pr;`,
+  `dcl-pr localProc likeds(overload);\nend-pr;`,
+])('linter22_e: %s', async (prototype) => {
+  const lines = [
+    `**FREE`,
+    `dcl-ds overload qualified;`,
+    `  value int(10);`,
+    `end-ds;`,
+    prototype,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { PrototypeCheck: true }, cache);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0].type).toBe(`PrototypeCheck`);
+  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(prototype.split(`;`)[0]);
+});
+
 test("linter23", async () => {
   const lines = [
     `**free`,
