@@ -416,9 +416,26 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					// `%` is not part of the word pattern, so when it has already been typed
 					// we need to replace it explicitly or it ends up doubled (`%%trim`).
-					const typedBuiltIn = currentLine.substring(0, handler.position.character).match(/%\w*$/);
+					const beforeCursor = currentLine.substring(0, handler.position.character);
+					const typedBuiltIn = beforeCursor.match(/%\w*$/);
 
+					// A `%` inside a string literal (e.g. `like 'A%te`) or after a `//` comment
+					// is not the start of a built-in function.
+					let inStringOrComment = false;
 					if (typedBuiltIn) {
+						for (let i = 0; i < typedBuiltIn.index!; i++) {
+							if (beforeCursor[i] === `'`) {
+								inStringOrComment = !inStringOrComment;
+							} else if (!inStringOrComment && beforeCursor.startsWith(`//`, i)) {
+								inStringOrComment = true;
+								break;
+							}
+						}
+					}
+
+					if (inStringOrComment) {
+						// Nothing to offer
+					} else if (typedBuiltIn) {
 						const replaceRange = Range.create(lineNumber, typedBuiltIn.index!, lineNumber, handler.position.character);
 						items.push(...builtInFunctionCompletionItems.map(item => ({
 							...item,
