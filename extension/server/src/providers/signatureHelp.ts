@@ -1,7 +1,7 @@
 import { Range, SignatureHelp, SignatureHelpParams, SignatureInformation } from "vscode-languageserver";
 import { documents, getReturnValue, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Parser from "../../../../language/ile/parser";
-import { IleFunction, IleFunctionParameter, getBuiltIn } from "./apis/bif";
+import { BifCacheEntry, IleFunction, IleFunctionParameter, bifMarkdown, bifTypeString, getBuiltIn, getSpecificBifDocs } from "./apis/bif";
 import Statement from "../../../../language/ile/statement";
 import Cache, { RpgleType } from "../../../../language/models/cache";
 import { ParserFactory } from '../../../../language/parserFactory';
@@ -41,10 +41,12 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
         // TODO: eventually support signatures from procedures
 
         let functionReference: IleFunction | undefined;
+        let bifDocs: BifCacheEntry | undefined;
         if (referenceToken && referenceToken.value) {
           switch (referenceToken.type) {
             case `builtin`:
               functionReference = getBuiltIn(referenceToken.value);
+              bifDocs = await getSpecificBifDocs(referenceToken.value) ?? undefined;
               break;
             case `word`:
               functionReference = getFunctionInfo(doc, referenceToken.value);
@@ -67,35 +69,13 @@ export async function signatureHelpProvider(handler: SignatureHelpParams): Promi
 
           let signatures: SignatureInformation[] = []
 
-          const createTypeString = (parm: IleFunctionParameter): string => {
-            let value = ``
-
-            if (parm.continuous) {
-              value += `...`
-            }
-
-            if (parm.isArray && parm.type.length > 1) {
-              value += `(`
-            }
-            value += parm.type.join(`|`)
-            if (parm.isArray && parm.type.length > 1) {
-              value += `)`
-            }
-
-            if (parm.isArray) {
-              value += `[]`
-            }
-
-            return value;
-          }
-
           const createSignature = (parms: IleFunctionParameter[]): SignatureInformation => {
             return {
-              label: `${functionReference.name}(${parms.map(p => p.name + `: ${createTypeString(p)}`).join(", ")}): ${functionReference.returnType}`,
+              label: `${functionReference.name}(${parms.map(p => `${p.name}: ${bifTypeString(p)}`).join(`, `)}): ${functionReference.returnType}`,
+              documentation: bifDocs ? { kind: `markdown`, value: bifMarkdown(functionReference, bifDocs) } : undefined,
               activeParameter: currentParameter,
               parameters: parms.map(p => ({
-                label: `${p.name}: ${createTypeString(p)}`,
-                documentation: createTypeString(p) + (p.detail ? ` - ` + p.detail : ``)
+                label: `${p.name}: ${bifTypeString(p)}`,
               }))
             };
           }

@@ -20,7 +20,7 @@ import {
 } from 'vscode-languageclient/node';
 
 import { projectFilesGlob } from './configuration';
-import { clearTableCache, buildRequestHandlers } from './requests';
+import { clearTableCache, buildRequestHandlers, updateSystemVersion, resetSystemVersion } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
 import { checkAndWait, loadBase } from './base';
 import { registerCommands } from './commands';
@@ -57,6 +57,9 @@ export function activate(context: ExtensionContext) {
 			{ language: 'rpgle' },
 			{ language: 'rpg' },
 		],
+		markdown: {
+			isTrusted: true
+		},
 		synchronize: {
 			fileEvents: [
 				workspace.createFileSystemWatcher('**/iproj.json'),
@@ -86,6 +89,12 @@ export function activate(context: ExtensionContext) {
 			// When the connection is established
 			instance.subscribe(context, "connected", "vscode-rpgle", () => {
 				clearTableCache(client);
+				updateSystemVersion(client);
+			});
+
+			// When the connection is dropped
+			instance.subscribe(context, "disconnected", "vscode-rpgle", () => {
+				resetSystemVersion(client);
 			});
 
 			// When the library list changes

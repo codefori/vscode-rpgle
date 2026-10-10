@@ -1,6 +1,8 @@
-import { RpglePrimitiveType, RpgleType, RpgleVariableType, typeToPrimitive } from "../../../../../language/models/cache";
+import { parse } from "node-html-parser";
+import { RpgleType, typeToPrimitive } from "../../../../../language/models/cache";
+import { getOsVersion } from "../../connection";
 
-const RpgleDateFormats = [`*YMD`,`*DMY`,`*JUL`,`*JOBRUN`,`*CYMD`,`*CDMY`,`*CMDY`,`*ISO`,`*USA`,`*EUR`,`*JIS`,`*LONGJUL`,`*LONGJOBRUN`];
+const RpgleDateFormats = [`*YMD`, `*DMY`, `*JUL`, `*JOBRUN`, `*CYMD`, `*CDMY`, `*CMDY`, `*ISO`, `*USA`, `*EUR`, `*JIS`, `*LONGJUL`, `*LONGJOBRUN`];
 const RpgleTimeUnits = [`*MSECONDS`, `*SECONDS`, `*MINUTES`, `*HOURS`, `*DAYS`, `*MONTHS`, `*YEARS`]; // TODO: add shorthard
 
 export interface IleFunctionParameter {
@@ -17,14 +19,16 @@ export interface IleFunctionParameter {
 
 export interface IleFunction {
   name: string;
-  parameters: IleFunctionParameter[]
+  parameters: IleFunctionParameter[];
   returnType?: RpgleType;
+  description?: string;
+  link?: string;
 }
 
 export function getBuiltInsForType(type: RpgleType, isArray: boolean): IleFunction[] {
   const primitiveType = typeToPrimitive(type);
-  return BuiltInFunctions.filter(func => func.parameters.some(param => 
-    param.base && 
+  return BuiltInFunctions.filter(func => func.parameters.some(param =>
+    param.base &&
     (param.type.includes(`any`) || param.type.includes(type) || (primitiveType && param.type.includes(primitiveType))) &&
     (isArray ? param.isArray === isArray : !param.isArray)
   ));
@@ -38,12 +42,132 @@ export function getBuiltIns() {
   return BuiltInFunctions;
 }
 
-const StringOptions: IleFunctionParameter = {name: `option`, type: [`special`], optional: true, detail: `*NATURAL, *STDCHARSIZE`};
+export interface BifCacheEntry {
+  link: string;
+  unabbreviated: string;
+  description?: string | null;
+}
+
+let bifDocsCache: Map<string, BifCacheEntry> | null | undefined;
+
+export async function getBifCache(): Promise<Map<string, BifCacheEntry>> {
+  if (bifDocsCache !== undefined) {
+    return bifDocsCache ?? new Map();
+  }
+
+  const os = getOsVersion();
+  const indexUrl = `https://www.ibm.com/docs/en/i/${os}.0?topic=functions-built-in`;
+  const baseUrl = `https://www.ibm.com/docs/en/ssw_ibm_i_${os.replace(`.`, ``)}/rzasd/`;
+
+  try {
+    const response = await fetch(indexUrl);
+    if (!response.ok) {
+      bifDocsCache = null;
+      return new Map();
+    }
+
+    bifDocsCache = new Map();
+    const headingPattern = /^(%\w+)\s+\(([^)]+)\)$/i; // <%BIF> (<UNABBREVIATED>)
+    const root = parse(await response.text());
+    for (const anchor of root.querySelectorAll("a[href]")) {
+      const match = headingPattern.exec(anchor.textContent.trim());
+      if (!match) {
+        continue;
+      }
+
+      const bifName = match[1].trim().toUpperCase();
+      const unabbreviated = match[2].trim();
+      const href = anchor.getAttribute("href");
+      if (href) {
+        bifDocsCache.set(bifName, { link: new URL(href, baseUrl).href, unabbreviated });
+      }
+    }
+  } catch {
+    bifDocsCache = null;
+    return new Map();
+  }
+
+  return bifDocsCache;
+}
+
+export async function getSpecificBifDocs(bif: string): Promise<BifCacheEntry | undefined> {
+  const docs = await getBifCache();
+  const entry = docs.get(bif.trim().replace(/\s*\(.*$/, "").toUpperCase());
+  if (!entry) {
+    return;
+  }
+
+  if (entry.description === undefined) {
+    try {
+      const response = await fetch(entry.link);
+      if (response.ok) {
+        const root = parse(await response.text());
+        const description = root.querySelector("p")?.textContent.trim();
+        entry.description = description ?? null;
+      } else {
+        entry.description = null;
+      }
+    } catch {
+      entry.description = null;
+    }
+  }
+
+  if (!entry.description) {
+    return;
+  }
+
+  return { unabbreviated: entry.unabbreviated, description: entry.description, link: entry.link };
+}
+
+export function clearBifDocsCache() {
+  bifDocsCache = undefined;
+}
+
+export function bifTypeString(parm: IleFunctionParameter): string {
+  let value = ``
+
+  if (parm.continuous) {
+    value += `...`
+  }
+
+  if (parm.isArray && parm.type.length > 1) {
+    value += `(`
+  }
+  value += parm.type.join(`|`)
+  if (parm.isArray && parm.type.length > 1) {
+    value += `)`
+  }
+
+  if (parm.isArray) {
+    value += `[]`
+  }
+
+  return value;
+}
+
+export function bifSignature(builtIn: IleFunction, includeBifPrefix = true): string {
+  const params = builtIn.parameters
+    .map(p => `${p.name}: ${bifTypeString(p)}${p.optional ? `?` : ``}`)
+    .join(`, `);
+  return `${includeBifPrefix ? `(bif) ` : ``}${builtIn.name}(${params}): ${builtIn.returnType || `void`}`;
+}
+
+export function bifMarkdown(builtIn: IleFunction, docs?: BifCacheEntry, includeSignature = false): string {
+  let md = includeSignature ? `\`\`\`\n${bifSignature(builtIn)}\n\`\`\`\n\n` : ``;
+  if (docs) {
+    md += `#### ${docs.unabbreviated}\n\n${docs.description}\n\n`;
+    md += `---\n\n[View Full Documentation](command:simpleBrowser.api.open?${encodeURIComponent(JSON.stringify([docs.link]))})`;
+  }
+  return md;
+}
+
+
+const StringOptions: IleFunctionParameter = { name: `option`, type: [`special`], optional: true, detail: `*NATURAL, *STDCHARSIZE` };
 const LookupParameters: IleFunctionParameter[] = [
-  {name: `argument`, type: [`any`]},
-  {name: `array`, type: [`any`], isArray: true, base: true},
-  {name: `startIndex`, type: [`number`], optional: true},
-  {name: `length`, type: [`number`], optional: true}
+  { name: `argument`, type: [`any`] },
+  { name: `array`, type: [`any`], isArray: true, base: true },
+  { name: `startIndex`, type: [`number`], optional: true },
+  { name: `length`, type: [`number`], optional: true }
 ]
 
 const BuiltInFunctions: IleFunction[] = [
@@ -51,23 +175,31 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%alloc`,
     returnType: `pointer`,
     parameters: [
-      {name: `bytes`, type: [`number`]}
+      { name: `bytes`, type: [`number`] }
     ]
   },
-  {name: `%subst`, returnType: `char`, parameters: [
-    { name: `value`, type: [`string`], base: true },
-    { name: `start`, type: [`number`] },
-    { name: `length`, type: [`number`], optional: true }
-  ]},
-  {name: `%trim`, returnType: `char`, parameters: [
-    { name: `value`, type: [`string`], base: true },
-  ]},
-  {name: `%trimr`, returnType: `char`, parameters: [
-    { name: `value`, type: [`string`], base: true },
-  ]},
-  {name: `%triml`, returnType: `char`, parameters: [
-    { name: `value`, type: [`string`], base: true },
-  ]},
+  {
+    name: `%subst`, returnType: `char`, parameters: [
+      { name: `value`, type: [`string`], base: true },
+      { name: `start`, type: [`number`] },
+      { name: `length`, type: [`number`], optional: true }
+    ]
+  },
+  {
+    name: `%trim`, returnType: `char`, parameters: [
+      { name: `value`, type: [`string`], base: true },
+    ]
+  },
+  {
+    name: `%trimr`, returnType: `char`, parameters: [
+      { name: `value`, type: [`string`], base: true },
+    ]
+  },
+  {
+    name: `%triml`, returnType: `char`, parameters: [
+      { name: `value`, type: [`string`], base: true },
+    ]
+  },
   {
     name: `%len`,
     returnType: `int`,
@@ -138,60 +270,60 @@ const BuiltInFunctions: IleFunction[] = [
     returnType: `pointer`,
     parameters: [
       { name: `value`, type: [`any`], base: true },
-      { name: `option`, type: [`special`], detail: `*DATA`, optional: true}
+      { name: `option`, type: [`special`], detail: `*DATA`, optional: true }
     ]
   },
   {
-    name: `%bitadd`,
+    name: `%bitand`,
     returnType: `ind`,
     parameters: [
-      {name: `expr`, type: [`any`], continuous: true}
+      { name: `expr`, type: [`any`], continuous: true }
     ]
   },
   {
     name: `%bitnot`,
     returnType: `ind`,
     parameters: [
-      {name: `expr`, type: [`any`]}
+      { name: `expr`, type: [`any`] }
     ]
   },
   {
     name: `%bitor`,
     returnType: `ind`,
     parameters: [
-      {name: `expr`, type: [`any`], continuous: true}
+      { name: `expr`, type: [`any`], continuous: true }
     ]
   },
   {
     name: `%bitxor`,
     returnType: `ind`,
     parameters: [
-      {name: `expr`, type: [`any`]},
-      {name: `expr`, type: [`any`]}
+      { name: `expr`, type: [`any`] },
+      { name: `expr`, type: [`any`] }
     ]
   },
   {
     name: `%char`,
     returnType: `string`,
     parameters: [
-      {name: `expr`, type: [`any`], base: true},
-      {name: `formatOrCcsid`, type: [`number`, `special`], optional: true, detail: `If number, treated as CCSID. Use format when converting datetime types.`}
+      { name: `expr`, type: [`any`], base: true },
+      { name: `formatOrCcsid`, type: [`number`, `special`], optional: true, detail: `If number, treated as CCSID. Use format when converting datetime types.` }
     ]
   },
   {
     name: `%charcount`,
     returnType: `number`,
     parameters: [
-      {name: `value`, type: [`string`], base: true}
+      { name: `value`, type: [`string`], base: true }
     ]
   },
   {
     name: `%check`,
     returnType: `number`,
     parameters: [
-      {name: `comparator`, type: [`string`]},
-      {name: `base`, type: [`string`]},
-      {name: `start`, type: [`number`], optional: true},
+      { name: `comparator`, type: [`string`] },
+      { name: `base`, type: [`string`] },
+      { name: `start`, type: [`number`], optional: true },
       StringOptions,
     ]
   },
@@ -199,9 +331,9 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%checkr`,
     returnType: `number`,
     parameters: [
-      {name: `comparator`, type: [`string`]},
-      {name: `base`, type: [`string`]},
-      {name: `start`, type: [`number`], optional: true},
+      { name: `comparator`, type: [`string`] },
+      { name: `base`, type: [`string`] },
+      { name: `start`, type: [`number`], optional: true },
       StringOptions,
     ]
   },
@@ -209,16 +341,16 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%concat`,
     returnType: `string`,
     parameters: [
-      {name: `separator`, type: [`string`]},
-      {name: `value`, type: [`any`], continuous: true}
+      { name: `separator`, type: [`string`] },
+      { name: `value`, type: [`any`], continuous: true }
     ]
   },
   {
     name: `%concatarr`,
     returnType: `string`,
     parameters: [
-      {name: `comparator`, type: [`string`]},
-      {name: `array`, type: [`any`], isArray: true},
+      { name: `comparator`, type: [`string`] },
+      { name: `array`, type: [`any`], isArray: true },
       StringOptions,
     ]
   },
@@ -234,7 +366,7 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%days`,
     returnType: `datetime`,
     parameters: [
-      {name: `duration`, type: [`number`], base: true}
+      { name: `duration`, type: [`number`], base: true }
     ]
   },
   {
@@ -291,14 +423,14 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%eof`,
     returnType: `ind`,
     parameters: [
-      {name: `fileName`, type: [`file`], base: true, optional: true}
+      { name: `fileName`, type: [`file`], base: true, optional: true }
     ]
   },
   {
     name: `%equal`,
     returnType: `ind`,
     parameters: [
-      {name: `fileName`, type: [`file`], base: true, optional: true}
+      { name: `fileName`, type: [`file`], base: true, optional: true }
     ]
   },
   {
@@ -316,35 +448,35 @@ const BuiltInFunctions: IleFunction[] = [
   {
     name: `%fields`,
     parameters: [
-      {name: `name`, type: [`any`], continuous: true}
+      { name: `name`, type: [`any`], continuous: true }
     ]
   },
   {
     name: `%found`,
     returnType: `ind`,
     parameters: [
-      {name: `fileName`, type: [`file`], base: true, optional: true}
+      { name: `fileName`, type: [`file`], base: true, optional: true }
     ]
   },
   {
     name: `%graph`,
     returnType: `graph`,
     parameters: [
-      {name: `expression`, type: [`string`]}
+      { name: `expression`, type: [`string`] }
     ]
   },
   {
     name: `%hival`,
     returnType: `any`,
     parameters: [
-      {name: `variable`, type: [`any`], base: true}
+      { name: `variable`, type: [`any`], base: true }
     ]
   },
   {
     name: `%hours`,
     returnType: `datetime`,
     parameters: [
-      {name: `duration`, type: [`number`], base: true}
+      { name: `duration`, type: [`number`], base: true }
     ]
   },
   {
@@ -381,7 +513,7 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%loval`,
     returnType: `any`,
     parameters: [
-      {name: `variable`, type: [`any`], base: true}
+      { name: `variable`, type: [`any`], base: true }
     ]
   },
   {
@@ -420,108 +552,108 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%max`,
     returnType: `any`,
     parameters: [
-      {name: `variable`, type: [`any`], continuous: true}
+      { name: `variable`, type: [`any`], continuous: true }
     ]
   },
   {
     name: `%maxarr`,
     returnType: `any`,
     parameters: [
-      {name: `array`, type: [`any`], isArray: true, base: true},
-      {name: `startIndex`, type: [`number`], optional: true},
-      {name: `length`, type: [`number`], optional: true}
+      { name: `array`, type: [`any`], isArray: true, base: true },
+      { name: `startIndex`, type: [`number`], optional: true },
+      { name: `length`, type: [`number`], optional: true }
     ]
   },
   {
     name: `%min`,
     returnType: `any`,
     parameters: [
-      {name: `variable`, type: [`any`], continuous: true}
+      { name: `variable`, type: [`any`], continuous: true }
     ]
   },
   {
     name: `%minarr`,
     returnType: `any`,
     parameters: [
-      {name: `array`, type: [`any`], isArray: true, base: true},
-      {name: `startIndex`, type: [`number`], optional: true},
-      {name: `length`, type: [`number`], optional: true}
+      { name: `array`, type: [`any`], isArray: true, base: true },
+      { name: `startIndex`, type: [`number`], optional: true },
+      { name: `length`, type: [`number`], optional: true }
     ]
   },
   {
     name: `%minutes`,
     returnType: `datetime`,
     parameters: [
-      {name: `duration`, type: [`number`], base: true}
+      { name: `duration`, type: [`number`], base: true }
     ]
   },
   {
     name: `%months`,
     returnType: `datetime`,
     parameters: [
-      {name: `duration`, type: [`number`], base: true}
+      { name: `duration`, type: [`number`], base: true }
     ]
   },
   {
     name: `%mseconds`,
     returnType: `datetime`,
     parameters: [
-      {name: `duration`, type: [`number`], base: true}
+      { name: `duration`, type: [`number`], base: true }
     ]
   },
   {
     name: `%msg`,
     parameters: [
-      {name: `messageId`, type: [`string`]},
-      {name: `messageFile`, type: [`string`]},
-      {name: `replacementText`, type: [`string`], optional: true}
+      { name: `messageId`, type: [`string`] },
+      { name: `messageFile`, type: [`string`] },
+      { name: `replacementText`, type: [`string`], optional: true }
     ]
   },
   {
     name: `%nullind`,
     returnType: `ind`,
     parameters: [
-      {name: `field`, type: [`any`]},
+      { name: `field`, type: [`any`] },
     ]
   },
   {
     name: `%occur`,
     returnType: `int`,
     parameters: [
-      {name: `struct`, type: [`any`], isArray: true},
+      { name: `struct`, type: [`any`], isArray: true },
     ]
   },
   {
     name: `%open`,
     returnType: `int`,
     parameters: [
-      {name: `fileName`, type: [`file`], base: true},
+      { name: `fileName`, type: [`file`], base: true },
     ]
   },
   {
     name: `%seconds`,
     returnType: `datetime`,
     parameters: [
-      {name: `duration`, type: [`number`], base: true}
+      { name: `duration`, type: [`number`], base: true }
     ]
   },
   {
     name: `%paddr`,
     returnType: `pointer`,
     parameters: [
-      {name: `procedure`, type: [`any`]}
+      { name: `procedure`, type: [`any`] }
     ]
   },
   {
     name: `%parms`,
     returnType: `number`,
-    parameters: [] 
+    parameters: []
   },
   {
     name: `%parmnum`,
     returnType: `number`,
     parameters: [
-      {name: `parameterName`, type: [`any`]}
+      { name: `parameterName`, type: [`any`] }
     ]
   },
   {
@@ -532,33 +664,33 @@ const BuiltInFunctions: IleFunction[] = [
   {
     name: `%range`,
     parameters: [
-      {name: `lowerLimit`, type: [`any`]},
-      {name: `upperLimit`, type: [`any`]}
+      { name: `lowerLimit`, type: [`any`] },
+      { name: `upperLimit`, type: [`any`] }
     ]
   },
   {
     name: `%realloc`,
     returnType: `pointer`,
     parameters: [
-      {name: `base`, type: [`pointer`], base: true},
-      {name: `bytes`, type: [`number`]}
+      { name: `base`, type: [`pointer`], base: true },
+      { name: `bytes`, type: [`number`] }
     ]
   },
   {
     name: `%rem`,
     returnType: `number`,
     parameters: [
-      {name: `n`, type: [`number`]},
-      {name: `m`, type: [`number`]}
+      { name: `n`, type: [`number`] },
+      { name: `m`, type: [`number`] }
     ]
   },
   {
     name: `%replace`,
     returnType: `string`,
     parameters: [
-      {name: `replacement`, type: [`string`]},
-      {name: `source`, type: [`string`]},
-      {name: `startIndex`, type: [`number`], optional: true},
+      { name: `replacement`, type: [`string`] },
+      { name: `source`, type: [`string`] },
+      { name: `startIndex`, type: [`number`], optional: true },
       StringOptions,
     ]
   },
@@ -566,8 +698,8 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%right`,
     returnType: `string`,
     parameters: [
-      {name: `value`, type: [`string`], base: true},
-      {name: `length`, type: [`number`]},
+      { name: `value`, type: [`string`], base: true },
+      { name: `length`, type: [`number`] },
       StringOptions
     ]
   },
@@ -580,48 +712,48 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%size`,
     returnType: `number`,
     parameters: [
-      {name: `value`, type: [`any`], base: true}
+      { name: `value`, type: [`any`], base: true }
     ]
   },
   {
     name: `%sqrt`,
     returnType: `number`,
     parameters: [
-      {name: `expression`, type: [`number`], base: true}
+      { name: `expression`, type: [`number`], base: true }
     ]
   },
   {
     name: `%status`,
     returnType: `string`,
     parameters: [
-      {name: `fileName`, type: [`file`], base: true}
+      { name: `fileName`, type: [`file`], base: true }
     ]
   },
   {
     name: `%str`,
     returnType: `string`,
     parameters: [
-      {name: `base`, type: [`pointer`], base: true},
-      {name: `byteLength`, type: [`number`], optional: true},
+      { name: `base`, type: [`pointer`], base: true },
+      { name: `byteLength`, type: [`number`], optional: true },
     ]
   },
   {
     name: `%subarr`,
     returnType: `any`,
     parameters: [
-      {name: `array`, type: [`any`], isArray: true, base: true},
-      {name: `startIndex`, type: [`number`]},
-      {name: `length`, type: [`number`], optional: true}
+      { name: `array`, type: [`any`], isArray: true, base: true },
+      { name: `startIndex`, type: [`number`] },
+      { name: `length`, type: [`number`], optional: true }
     ]
   },
   {
     name: `%subdt`,
     returnType: `datetime`,
     parameters: [
-      {name: `value`, type: [`datetime`], base: true},
-      {name: `unit`, type: [`special`], detail: RpgleTimeUnits.join(`, `)},
-      {name: `digits`, type: [`number`], optional: true},
-      {name: `decimalPositions`, type: [`number`], optional: true}
+      { name: `value`, type: [`datetime`], base: true },
+      { name: `unit`, type: [`special`], detail: RpgleTimeUnits.join(`, `) },
+      { name: `digits`, type: [`number`], optional: true },
+      { name: `decimalPositions`, type: [`number`], optional: true }
     ]
   },
   {
@@ -665,9 +797,9 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%xlate`,
     returnType: `string`,
     parameters: [
-      {name: `from`, type: [`string`]},
-      {name: `to`, type: [`string`]},
-      {name: `baseValue`, type: [`string`]},
+      { name: `from`, type: [`string`] },
+      { name: `to`, type: [`string`] },
+      { name: `baseValue`, type: [`string`] },
       StringOptions
     ]
   },
@@ -675,7 +807,7 @@ const BuiltInFunctions: IleFunction[] = [
     name: `%years`,
     returnType: `datetime`,
     parameters: [
-      {name: `duration`, type: [`number`], base: true}
+      { name: `duration`, type: [`number`], base: true }
     ]
   },
 ]

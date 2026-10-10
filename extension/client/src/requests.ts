@@ -186,3 +186,14 @@ export function clearTableCache(client: LanguageClient) {
 export function getCache(client: LanguageClient, uri: Uri): Promise<any> {
 	return client.sendRequest(`getCache`, uri.toString());
 }
+
+export function updateSystemVersion(client: LanguageClient) {
+	const instance = getInstance();
+	const connection = instance?.getConnection();
+	const raw = connection?.getSystemVersion();
+	client.sendRequest(`updateSystemVersion`, raw ? String(raw) : undefined);
+}
+
+export function resetSystemVersion(client: LanguageClient) {
+	client.sendRequest(`updateSystemVersion`, undefined);
+}

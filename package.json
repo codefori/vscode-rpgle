@@ -82,6 +82,18 @@
 					"default": 1000,
 					"minimum": 1,
 					"markdownDescription": "Maximum number of local RPGLE files that will be pre-parsed. Only applies when `#vscode-rpgle.enableLocalProjectPreparsing#` is enabled. If the workspace contains more files than this limit, pre-parsing is skipped to avoid performance issues."
+				},
+				"vscode-rpgle.documentation.useConnectedSystemVersion": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "When connected to an IBM i, use the system's OS version when fetching IBM i documentation. When disabled, alway use the `#vscode-rpgle.documentation.fallbackOsVersion#`."
+				},
+				"vscode-rpgle.documentation.fallbackOsVersion": {
+					"type": "string",
+					"default": "7.6",
+					"enum": ["7.2", "7.3", "7.4", "7.5", "7.6"],
+					"enumDescriptions": ["IBM i 7.2", "IBM i 7.3", "IBM i 7.4", "IBM i 7.5", "IBM i 7.6"],
+					"markdownDescription": "IBM i OS version used for fetching IBM i documentation when not connected to an IBM i, or when `#vscode-rpgle.documentation.useConnectedSystemVersion#` is disabled."
 				}
 			}
 		},

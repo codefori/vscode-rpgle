@@ -14,11 +14,11 @@ import documentSymbolProvider from './providers/documentSymbols';
 import { documents, getParser, opmParser, parser } from './providers';
 import definitionProvider from './providers/definition';
 import { URI } from 'vscode-uri';
-import completionItemProvider from './providers/completionItem';
+import completionItemProvider, { completionItemResolveProvider } from './providers/completionItem';
 import hoverProvider from './providers/hover';
 import foldingRangeProvider from './providers/foldingRange';
 
-import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp } from "./connection";
+import { connection, filesBeingFetchedForIncludes, getDisplayName, getFileRequest, getObject as getObjectData, handleClientRequests, initializeLogLevel, LogLevel, memberResolve, streamfileResolve, validateUri, logWithTimestamp, updateDocumentationSettings } from "./connection";
 import * as Linter from './providers/linter';
 import { referenceProvider } from './providers/reference';
 import Declaration from '../../../language/models/declaration';
@@ -76,6 +76,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.definitionProvider = true;
 		result.capabilities.completionProvider = {
 			triggerCharacters: [`.`, `:`],
+			resolveProvider: true,
 		};
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
@@ -121,12 +122,14 @@ connection.onInitialize((params: InitializeParams) => {
 connection.onInitialized(() => {
 	initializeLogLevel();
 
-	if (projectEnabled) {
-		let lastPreParseOnStartup: boolean | undefined;
-		let lastFileLimit: number | undefined;
+	let lastPreParseOnStartup: boolean | undefined;
+	let lastFileLimit: number | undefined;
 
-		connection.onDidChangeConfiguration(params => {
-			const settings = params.settings?.['vscode-rpgle'];
+	connection.onDidChangeConfiguration(params => {
+		const settings = params.settings?.['vscode-rpgle'];
+		updateDocumentationSettings(settings);
+
+		if (projectEnabled) {
 			const preParseOnStartup: boolean = settings?.enableLocalProjectPreparsing ?? true;
 			const fileLimit: number = settings?.localProjectPreparsingFileLimit ?? 1000;
 
@@ -136,8 +139,10 @@ connection.onInitialized(() => {
 				console.log(`Reloading workspace as local project preparsing settings changed.`);
 				Project.loadWorkspace();
 			}
-		});
+		}
+	});
 
+	if (projectEnabled) {
 		Project.initialise();
 	}
 
@@ -344,6 +349,7 @@ if (languageToolsEnabled) {
 	connection.onDocumentSymbol(documentSymbolProvider);
 	connection.onDefinition(definitionProvider);
 	connection.onCompletion(completionItemProvider);
+	connection.onCompletionResolve(completionItemResolveProvider);
 	connection.onHover(hoverProvider);
 	connection.onReferences(referenceProvider);
 	connection.onPrepareRename(renamePrepareProvider);
