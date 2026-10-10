@@ -414,7 +414,20 @@ export default async function completionItemProvider(handler: CompletionParams):
 					// Showing the available built-in functions
 					//================================================
 
-					items.push(...builtInFunctionCompletionItems);
+					// `%` is not part of the word pattern, so when it has already been typed
+					// we need to replace it explicitly or it ends up doubled (`%%trim`).
+					const typedBuiltIn = currentLine.substring(0, handler.position.character).match(/%\w*$/);
+
+					if (typedBuiltIn) {
+						const replaceRange = Range.create(lineNumber, typedBuiltIn.index!, lineNumber, handler.position.character);
+						items.push(...builtInFunctionCompletionItems.map(item => ({
+							...item,
+							filterText: item.label,
+							textEdit: TextEdit.replace(replaceRange, item.insertText!)
+						})));
+					} else {
+						items.push(...builtInFunctionCompletionItems);
+					}
 				}
 			}
 		}
