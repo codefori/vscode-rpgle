@@ -1,4 +1,4 @@
-import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
+import { CacheProps, IncludeStatement, Keywords } from "../ile/parserTypes";
 import { trimQuotes } from "../ile/tokens";
 import { IRange } from "../ile/types";
 import Declaration, { DeclarationType } from "./declaration";

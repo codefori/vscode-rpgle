@@ -8,6 +8,8 @@ import {
 	WorkspaceFolder
 } from 'vscode-languageserver/node';
 
+import { clearBifDocsCache } from './providers/apis/bif';
+
 import PQueue from 'p-queue';
 
 import { documents, findFile, parser } from './providers';
@@ -261,7 +263,42 @@ export async function getWorkspaceFolder(baseUri: string) {
 	return workspaceFolder
 }
 
+export type OsVersion = "7.2" | "7.3" | "7.4" | "7.5" | "7.6";
+const DEFAULT_OS_VERSION: OsVersion = "7.6";
+
+/** Version reported by the connected IBM i (undefined = no connection yet). */
+let connectedSystemVersion: OsVersion | undefined;
+
+// Cached doc settings — updated via onDidChangeConfiguration
+let useConnectedSystemVersion: boolean = true;
+let fallbackOsVersion: OsVersion = DEFAULT_OS_VERSION;
+
+export function updateDocumentationSettings(settings: any) {
+	const osVersionBefore = getOsVersion();
+	useConnectedSystemVersion = settings?.documentation?.useConnectedSystemVersion ?? true;
+	fallbackOsVersion = (settings?.documentation?.fallbackOsVersion as OsVersion) ?? DEFAULT_OS_VERSION;
+	const osVersionAfter = getOsVersion();
+
+	if (osVersionBefore !== osVersionAfter) {
+		clearBifDocsCache();
+	}
+}
+
+export function getOsVersion(): OsVersion {
+	if (useConnectedSystemVersion && connectedSystemVersion) {
+		return connectedSystemVersion;
+	}
+	return fallbackOsVersion;
+}
+
 export function handleClientRequests() {
+	connection.onRequest(`updateSystemVersion`, (version: OsVersion | undefined) => {
+		if (version !== connectedSystemVersion) {
+			connectedSystemVersion = version;
+			clearBifDocsCache();
+		}
+	});
+
 	connection.onRequest(`clearTableCache`, () => {
 		parser.clearTableCache();
 	});

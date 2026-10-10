@@ -6,6 +6,9 @@ import { Keywords } from '../../../../language/ile/parserTypes';
 import Cache from '../../../../language/models/cache';
 import Declaration from '../../../../language/models/declaration';
 import { ParserFactory } from '../../../../language/parserFactory';
+import { bifMarkdown, getBuiltIn, getSpecificBifDocs } from './apis/bif';
+
+const eol = `\n`;
 
 export default async function hoverProvider(params: HoverParams): Promise<Hover | undefined> {
 	const currentPath = params.textDocument.uri;
@@ -25,25 +28,34 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 			// qualifiedName is used for display; parts drives Tier 2 symbol resolution.
 			let qualifiedName: string | undefined;
 			let parts: string[] = [];
+			let bifWord: string | undefined;
+			const lineText = (document.getText().split(`\n`)[currentLine]) || ``;
+			const character = Math.min(lineText.length - 1, Math.max(0, params.position.character));
+			const wordMatch = /[\w\#\$@]/;
 			if (word) {
-				const lineText = (document.getText().split(`\n`)[currentLine]) || ``;
-				const character = Math.min(lineText.length - 1, Math.max(0, params.position.character));
-				const wordMatch = /[\w\#\$@]/;
-				let wordStart = character;
-				while (wordStart > 0 && wordMatch.test(lineText.charAt(wordStart - 1))) wordStart--;
+				if (word.startsWith(`%`)) {
+					// Cursor is on the % of a bif
+					bifWord = word;
+				} else {
+					let wordStart = character;
+					while (wordStart > 0 && wordMatch.test(lineText.charAt(wordStart - 1))) wordStart--;
 
-				if (wordStart > 0 && lineText.charAt(wordStart - 1) === `.`) {
-					parts = [word];
-					let scanPos = wordStart - 1;
-					while (scanPos >= 0 && lineText.charAt(scanPos) === `.`) {
-						let segEnd = scanPos;
-						let segStart = segEnd;
-						while (segStart > 0 && wordMatch.test(lineText.charAt(segStart - 1))) segStart--;
-						if (segStart === segEnd) break;
-						parts.unshift(lineText.substring(segStart, segEnd));
-						scanPos = segStart - 1;
+					if (wordStart > 0 && lineText.charAt(wordStart - 1) === `%`) {
+						// Cursor is on the bif name
+						bifWord = `%${word}`;
+					} else if (wordStart > 0 && lineText.charAt(wordStart - 1) === `.`) {
+						parts = [word];
+						let scanPos = wordStart - 1;
+						while (scanPos >= 0 && lineText.charAt(scanPos) === `.`) {
+							let segEnd = scanPos;
+							let segStart = segEnd;
+							while (segStart > 0 && wordMatch.test(lineText.charAt(segStart - 1))) segStart--;
+							if (segStart === segEnd) break;
+							parts.unshift(lineText.substring(segStart, segEnd));
+							scanPos = segStart - 1;
+						}
+						qualifiedName = parts.join(`.`);
 					}
-					qualifiedName = parts.join(`.`);
 				}
 			}
 
@@ -150,6 +162,19 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 				}
 
 			} else {
+				if (bifWord) {
+					const builtIn = getBuiltIn(bifWord);
+					if (builtIn) {
+						const docs = await getSpecificBifDocs(bifWord);
+						return {
+							contents: {
+								kind: MarkupKind.Markdown,
+								value: bifMarkdown(builtIn, docs, true)
+							}
+						};
+					}
+				}
+
 				const lineContent = document.getText(Range.create(currentLine, 0, currentLine, 200));
 
 				const includeDirective = Parser.getIncludeFromDirective(lineContent);
