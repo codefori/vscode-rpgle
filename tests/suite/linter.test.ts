@@ -3437,6 +3437,121 @@ test("issue_251", async () => {
   expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`iCost >= 10000`);
 });
 
+test.each([
+  { name: `simple`, declaration: [`dcl-ds myStruct qualified;`, `  time ind;`, `end-ds;`] },
+  { name: `nested`, declaration: [`dcl-ds myStruct qualified;`, `  dcl-ds nested;`, `    time ind;`, `  end-ds;`, `end-ds;`] },
+])(`issue_477_requires_parameter ignores $name subfield declarations`, async ({ declaration }) => {
+  const lines = [
+    `**FREE`,
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    ...declaration,
+    `*inlr = *on;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+
+  expect(errors).toHaveLength(0);
+});
+
+test(`issue_477_requires_parameter_ignores_qualified_subfield_references`, async () => {
+  const lines = [
+    `**FREE`,
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    `dcl-ds myStruct qualified;`,
+    `  dcl-subf time ind;`,
+    `end-ds;`,
+    `dcl-s found ind;`,
+    `myStruct.time = *on;`,
+    `found = myStruct.time;`,
+    `*inlr = *on;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+
+  expect(errors).toHaveLength(0);
+});
+
+test(`issue_477_requires_parameter_ignores_embedded_sql`, async () => {
+  const lines = [
+    `**FREE`,
+    `dcl-pr open int(10) extproc('open');`,
+    `end-pr;`,
+    `exec sql declare csrTest cursor for select * from sysibm.sysdummy1;`,
+    `exec sql`,
+    `  OPEN csrTest;`,
+    `exec sql close csrTest;`,
+    `*inlr = *on;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+
+  expect(errors).toHaveLength(0);
+});
+
+test(`issue_477_requires_parameter_still_checks_calls_after_declarations_and_sql`, async () => {
+  const lines = [
+    `**FREE`,
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    `dcl-pr open int(10) extproc('open');`,
+    `end-pr;`,
+    `dcl-ds myStruct qualified;`,
+    `  dcl-subf time ind;`,
+    `end-ds;`,
+    `dcl-s result int(10);`,
+    `myStruct.time = time;`,
+    `myStruct.time = time();`,
+    `exec sql values 1 into :result;`,
+    `result = open;`,
+    `result = open();`,
+    `*inlr = *on;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+
+  expect(errors).toHaveLength(2);
+  expect(errors).toMatchObject([
+    { type: `RequiresParameter`, offset: { start: lines.indexOf(`time;`), end: lines.indexOf(`time;`) + 4 } },
+    { type: `RequiresParameter`, offset: { start: lines.indexOf(`open;`), end: lines.indexOf(`open;`) + 4 } },
+  ]);
+});
+
+test.each([
+  { directive: `@rpglint-skip`, boundary: `start` },
+  { directive: `@rpglint-skip`, boundary: `end` },
+  { directive: `@rpglint-skip-rules`, boundary: `start` },
+  { directive: `@rpglint-skip-rules`, boundary: `end` },
+])(`issue_477_requires_parameter tracks struct $boundary with $directive`, async ({ directive, boundary }) => {
+  const lines = [
+    `**FREE`,
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    ...(boundary === `start` ? [`// ${directive}`] : []),
+    `dcl-ds myStruct qualified;`,
+    `  time ind;`,
+    ...(boundary === `end` ? [`// ${directive}`] : []),
+    `end-ds;`,
+    `myStruct.time = time;`,
+    `*inlr = *on;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+  const callOffset = lines.lastIndexOf(`time;`);
+
+  expect(errors).toHaveLength(1);
+  expect(errors[0]).toMatchObject({
+    type: `RequiresParameter`,
+    offset: { start: callOffset, end: callOffset + 4 },
+  });
+});
+
 test('paddr_issue_250', async () => {
   const lines = [
     `**FREE`,
