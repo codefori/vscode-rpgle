@@ -346,6 +346,20 @@ export default class Linter {
           }
         }
 
+        // Track declaration scope even when a skip directive suppresses its checks.
+        const declarationType = firstValue.toUpperCase();
+        if ([`DCL-DS`, `DCL-ENUM`].includes(declarationType)) {
+          // Single-statement data structures do not open a new scope.
+          const hasInlineStructCloser = declarationType === `DCL-DS` && oneLineTriggers[`DCL-DS`].some(trigger =>
+            statement.some(part => part.value && part.value.toUpperCase() === trigger)
+          );
+          if (!hasInlineStructCloser && statement[1]?.value) {
+            inStruct.push(statement[1].value);
+          }
+        } else if ([`END-DS`, `END-ENUM`].includes(declarationType)) {
+          inStruct.pop();
+        }
+
         // Linter checking
         if (ruleCount > 0 && ![skipRules.single, skipRules.singleRules].includes(currentRule)) {
 
@@ -652,12 +666,6 @@ export default class Linter {
                     }
                     break;
 
-                  case `DCL-ENUM`:
-                    if (value) {
-                      inStruct.push(value);
-                    }
-                    break;
-
                   case `DCL-DS`:
                     if (rules.NoOCCURS) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
@@ -695,18 +703,6 @@ export default class Linter {
                       }
                     }
 
-                    // RPG allows a single-statement declaration to close itself with END-DS,
-                    // even when the declaration spans multiple physical lines before the ;.
-                    // Evaluate the full statement, not just the current line.
-                    const hasInlineDclDsCloser = oneLineTriggers["DCL-DS"].some(trigger =>
-                      statement.some(part => part.value && part.value.toUpperCase() === trigger)
-                    );
-
-                    if (!hasInlineDclDsCloser) {
-                      if (value) {
-                        inStruct.push(value);
-                      }
-                    }
                     break;
 
 
@@ -772,11 +768,6 @@ export default class Linter {
                     } else {
                       inSubroutine = undefined;
                     }
-                    break;
-
-                  case `END-DS`:
-                  case `END-ENUM`:
-                    inStruct.pop();
                     break;
 
                   case `END-PROC`:
@@ -1025,10 +1016,10 @@ export default class Linter {
                       }
                     }
 
-                    const isDeclare = [`declare`, `end`].includes(statement[0].type);
+                    const isDeclare = inStruct.length > 0 || [`declare`, `end`].includes(statement[0].type);
 
                     if ((isDeclare && i >= 2) || !isDeclare) {
-                      if (rules.RequiresParameter && !inPrototype && !isDeclare) {
+                      if (rules.RequiresParameter && !inPrototype && !isDeclare && !isEmbeddedSQL && statement[i - 1]?.type !== `dot`) {
                         // Check the procedure reference has a block following it
                         const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
                         if (definedProcedure) {
