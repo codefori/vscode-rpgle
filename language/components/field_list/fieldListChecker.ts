@@ -19,10 +19,11 @@ import { getFieldListCPPSrc } from './fieldListCppSource';
 import { getFieldListSQLSrc } from './fieldListSqlSource';
 import { logError, logInfo } from '../logger';
 
-type ComponentState = 'NotChecked' | 'NotInstalled' | 'Installed' | 'NeedsUpdate' | 'Error';
-type ComponentIdentification = {
+export type ComponentState = 'NotChecked' | 'NotInstalled' | 'Installed' | 'NeedsUpdate' | 'Error';
+export type ComponentIdentification = {
     name: string;
     version: number;
+    signature: string;
 };
 
 /**
@@ -85,7 +86,11 @@ export class FieldListChecker {
     readonly currentVersion = 1;
 
     getIdentification(): ComponentIdentification {
-        return { name: this.id, version: this.currentVersion };
+        return {
+            name: this.id,
+            version: this.currentVersion,
+            signature: `${this.id}:${this.currentVersion}`,
+        };
     }
 
     getCPPSrc(): string {
@@ -96,7 +101,8 @@ export class FieldListChecker {
         return getFieldListSQLSrc(library, version);
     }
 
-    async getRemoteState(connection: any): Promise<ComponentState> {
+    async getRemoteState(connection: any, installDirectory?: string): Promise<ComponentState> {
+        void installDirectory;
         const library = getUDTFLibrary(connection);
         logInfo(`[vscode-rpgle] FIELD_LIST.getRemoteState() — library=${library}`);
 
@@ -106,15 +112,20 @@ export class FieldListChecker {
             logInfo(`[vscode-rpgle] FIELD_LIST.getRemoteState() — version=${version}, status=${status}`);
             return status;
         } catch (e) {
-            logInfo(`[vscode-rpgle] FIELD_LIST.getRemoteState() — query threw: ${e}, returning NeedsUpdate`);
-            return 'NeedsUpdate';
+            logInfo(`[vscode-rpgle] FIELD_LIST.getRemoteState() — query threw: ${e}, returning Error`);
+            return 'Error';
         }
     }
 
-    async update(connection: any): Promise<ComponentState> {
+    async update(connection: any, installDirectory?: string): Promise<ComponentState> {
+        void installDirectory;
         logInfo(`[vscode-rpgle] FIELD_LIST.update() — starting install`);
         return connection.withTempDirectory(async (tempDir: string) => {
             const content = connection.content ?? connection.getContent?.();
+            if (!content || typeof content.writeStreamfileRaw !== 'function') {
+                throw new Error('FIELD_LIST component requires a connection content adapter with writeStreamfileRaw().');
+            }
+
             const encoder = new TextEncoder();
             const library = getUDTFLibrary(connection);
             logInfo(`[vscode-rpgle] FIELD_LIST.update() — tempDir=${tempDir}, library=${library}`);
@@ -127,11 +138,11 @@ export class FieldListChecker {
                 const cppUploadErr = await content.writeStreamfileRaw(cppPath, cppBytes);
                 if (cppUploadErr) {
                     logError(`[vscode-rpgle] writeStreamfileRaw(cpp) failed: ${cppUploadErr}`);
-                    return 'Error';
+                    throw new Error(`Failed to write FIELD_LIST C++ source to ${cppPath}: ${cppUploadErr}`);
                 }
             } catch (e) {
                 logError(`[vscode-rpgle] writeStreamfileRaw(cpp) threw: ${e}`);
-                return 'Error';
+                throw e;
             }
 
             const crtlibResult = await connection.runCommand({ command: `CRTLIB LIB(${library})`, noLibList: true });
@@ -144,7 +155,7 @@ export class FieldListChecker {
                 logError(`[vscode-rpgle] CRTCPPMOD failed (code=${moduleResult.code})`);
                 logError(`[vscode-rpgle] CRTCPPMOD stdout: ${moduleResult.stdout}`);
                 logError(`[vscode-rpgle] CRTCPPMOD stderr: ${moduleResult.stderr}`);
-                return 'Error';
+                throw new Error(`Failed to compile ${this.PGM_NAME}: ${moduleResult.stderr || moduleResult.stdout}`);
             }
 
             const pgmResult = await connection.runCommand({
@@ -153,7 +164,7 @@ export class FieldListChecker {
             });
             if (pgmResult.code !== 0) {
                 logError(`[vscode-rpgle] CRTPGM failed for ${this.PGM_NAME}: ${pgmResult.stderr}`);
-                return 'Error';
+                throw new Error(`Failed to create ${this.PGM_NAME}: ${pgmResult.stderr || pgmResult.stdout}`);
             }
 
             const sqlPath = `${tempDir}_${this.UDTF_SPECIFIC}.sql`;
@@ -164,11 +175,11 @@ export class FieldListChecker {
                 );
                 if (sqlUploadErr) {
                     logError(`[vscode-rpgle] writeStreamfileRaw(sql) failed: ${sqlUploadErr}`);
-                    return 'Error';
+                    throw new Error(`Failed to write FIELD_LIST SQL source to ${sqlPath}: ${sqlUploadErr}`);
                 }
             } catch (e) {
                 logError(`[vscode-rpgle] writeStreamfileRaw(sql) threw: ${e}`);
-                return 'Error';
+                throw e;
             }
 
             try {
@@ -184,7 +195,7 @@ export class FieldListChecker {
             if (runsqlResult.code !== 0) {
                 logError(`[vscode-rpgle] RUNSQLSTM failed (code=${runsqlResult.code})`);
                 logError(`[vscode-rpgle] RUNSQLSTM stderr: ${runsqlResult.stderr}`);
-                return 'Error';
+                throw new Error(`Failed to create ${this.UDTF_SPECIFIC}: ${runsqlResult.stderr || runsqlResult.stdout}`);
             }
 
             logInfo(`[vscode-rpgle] FIELD_LIST.update() — successfully installed`);

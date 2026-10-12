@@ -16,8 +16,10 @@
 		"vscode-uri": "^3.0.6"
 	},
 	"devDependencies": {
-		"@halcyontech/vscode-ibmi-types": "^2.14.0",
+		"@halcyontech/vscode-ibmi-types": "^3.0.13",
+		"@ibm/mapepire-js": "^1.0.1",
 		"@types/glob": "^8.0.0",
+		"node-ssh": "^13.2.1",
 		"webpack": "^5.24.3"
 	}
 }

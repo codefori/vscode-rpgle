@@ -25,6 +25,7 @@ import { getServerImplementationProvider, getServerSymbolProvider } from './lang
 import { checkAndWait, loadBase } from './base';
 import { registerCommands } from './commands';
 import { setLanguageSettings } from './language/config';
+import { onCodeForIBMiConfigurationChange } from '@halcyontech/vscode-ibmi-types/config/Configuration';
 import { fieldListChecker } from '../../../language/components/field_list';
 import { initRpgleOutput, logError, logInfo } from '../../../language/components/logger';
 
@@ -149,7 +150,7 @@ export function activate(context: ExtensionContext) {
 
 				logInfo(`[vscode-rpgle] FIELD_LIST ensure: running update`);
 				const updateState = await fieldListChecker.update(connection);
-				logInfo(`[vscode-rpgle] FIELD_LIST ensure: update result=${updateState}`);
+				logInfo(`[vscode-rpgle] FIELD_LIST ensure: update result=${JSON.stringify(updateState)}`);
 			} catch (e) {
 				logError(`[vscode-rpgle] FIELD_LIST ensure failed`, e);
 			}
@@ -181,7 +182,7 @@ export function activate(context: ExtensionContext) {
 
 		if (base?.componentRegistry) {
 			logInfo(`[vscode-rpgle] Registering FIELD_LIST component checker`);
-			base.componentRegistry.registerComponent(context, fieldListChecker as any);
+			base.componentRegistry.registerComponent(context, fieldListChecker);
 		} else {
 			logInfo(`[vscode-rpgle] FIELD_LIST componentRegistry unavailable`);
 		}
@@ -200,7 +201,7 @@ export function activate(context: ExtensionContext) {
 
 			// When the library list changes
 			context.subscriptions.push(
-				base.onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+				onCodeForIBMiConfigurationChange("connectionSettings", async () => {
 					await clearTableCache(client, 'manual');
 				}),
 			);
