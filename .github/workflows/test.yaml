@@ -3,6 +3,7 @@ on:
     paths:
       - 'language/**'
       - 'tests/**'
+      - 'extension/server/**'
     
 jobs:
   release:
