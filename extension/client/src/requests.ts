@@ -152,6 +152,32 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 				// TODO: handle .env file here?
 
+				if (connection.enableSQL) {
+					// Run everything in the SQL job: going through runCommand would queue
+					// these requests with the user's saves and actions.
+					const currentLibrary = /\*CURLIB/i.test(config.currentLibrary || ``) ? `` : config.currentLibrary;
+					const libraryList = config.libraryList.filter((library, index, list) => list.indexOf(library) === index);
+
+					// runStatements rather than getQTempTable, which Code for IBM i has removed
+					const data: any[] = await content.runStatements(
+						`@QSYS/CHGLIBL CURLIB(${currentLibrary || `*CRTDFT`}) LIBL(${libraryList.join(` `)})`,
+						`@QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`,
+						`select * from ${fullPath.replace(`/`, `.`)}`
+					);
+
+					// Only when DSPFFD worked: if it failed there is no outfile, and a failing
+					// DLTOBJ is one more command in the SQL job
+					content.runStatements(`@QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`).catch(() => {});
+
+					// Same values as the CSV export used without SQL
+					return data.map(row => {
+						for (const key of Object.keys(row)) {
+							if (typeof row[key] === `string`) row[key] = row[key].trimEnd();
+						}
+						return row;
+					});
+				}
+
 				const outfileRes: any = await connection.runCommand({
 					environment: `ile`,
 					command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`

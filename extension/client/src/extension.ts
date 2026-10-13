@@ -83,15 +83,27 @@ export function activate(context: ExtensionContext) {
 
 		// We need to clear table caches when the connection changes
 		if (instance && base) {
+			const getLibraries = () => {
+				const config = instance.getConnection()?.getConfig();
+				return config ? JSON.stringify([config.currentLibrary, config.libraryList]) : undefined;
+			};
+			let libraries = getLibraries();
+
 			// When the connection is established
 			instance.subscribe(context, "connected", "vscode-rpgle", () => {
+				libraries = getLibraries();
 				clearTableCache(client);
 			});
 
 			// When the library list changes
 			context.subscriptions.push(
 				base.onCodeForIBMiConfigurationChange("connectionSettings", async () => {
-					clearTableCache(client);
+					// Connection settings change for many other reasons
+					const newLibraries = getLibraries();
+					if (newLibraries !== libraries) {
+						libraries = newLibraries;
+						clearTableCache(client);
+					}
 				}),
 			);
 		}
