@@ -177,11 +177,18 @@ export function buildRequestHandlers(client: LanguageClient) {
 						`end`
 					].join(`\n`);
 
-					// runStatements rather than getQTempTable, which Code for IBM i has removed
-					const data: any[] = await content.runStatements(
-						dspffd,
-						`select * from ${fullPath.replace(`/`, `.`)}`
-					);
+					let data: any[];
+					try {
+						// runStatements rather than getQTempTable, which Code for IBM i has removed
+						data = await content.runStatements(
+							dspffd,
+							`select * from ${fullPath.replace(`/`, `.`)}`
+						);
+					} catch (e) {
+						// Same as without SQL: a file that is not found has no fields
+						console.log(e);
+						return [];
+					}
 
 					// Only when DSPFFD worked: if it failed there is no outfile, and a failing
 					// DLTOBJ is one more command in the SQL job
