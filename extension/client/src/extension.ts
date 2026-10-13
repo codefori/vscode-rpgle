@@ -20,7 +20,7 @@ import {
 } from 'vscode-languageclient/node';
 
 import { projectFilesGlob } from './configuration';
-import { clearTableCache, buildRequestHandlers } from './requests';
+import { clearTableCache, buildRequestHandlers, getEffectiveLibraries } from './requests';
 import { getServerImplementationProvider, getServerSymbolProvider } from './language/serverReferences';
 import { checkAndWait, loadBase } from './base';
 import { registerCommands } from './commands';
@@ -85,7 +85,7 @@ export function activate(context: ExtensionContext) {
 		if (instance && base) {
 			const getLibraries = () => {
 				const config = instance.getConnection()?.getConfig();
-				return config ? JSON.stringify([config.currentLibrary, config.libraryList]) : undefined;
+				return config ? JSON.stringify(getEffectiveLibraries(config)) : undefined;
 			};
 			let libraries = getLibraries();
 
