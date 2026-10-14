@@ -133,7 +133,8 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 				// A counter rather than the time: two lookups can start in the same millisecond
 				const fileNumber = (outfileCounter++ % 1000000).toString().padStart(6, `0`);
-				const randomFile = `R${table.substring(0, 3)}${fileNumber}`.substring(0, 10);
+				// Only letters and digits from the name: the outfile name goes into SQL and CL without quotes
+				const randomFile = `R${table.replace(/[^A-Z0-9]/gi, ``).substring(0, 3)}${fileNumber}`.substring(0, 10);
 				const fullPath = `QTEMP/${randomFile}`;
 
 				console.log(`Temp OUTFILE: ${fullPath}`);
