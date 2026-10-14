@@ -171,8 +171,8 @@ export function buildRequestHandlers(client: LanguageClient) {
 						`  end;`,
 						`  select coalesce(listagg(SYSTEM_SCHEMA_NAME, ' ') within group (order by ORDINAL_POSITION), '*NONE') into oldLibl from QSYS2.LIBRARY_LIST_INFO where TYPE = 'USER';`,
 						`  select coalesce(max(SYSTEM_SCHEMA_NAME), '*CRTDFT') into oldCurlib from QSYS2.LIBRARY_LIST_INFO where TYPE = 'CURRENT';`,
-						`  call QSYS2.QCMDEXC('QSYS/CHGLIBL LIBL(${libraryList.join(` `) || `*NONE`}) CURLIB(${currentLibrary || `*CRTDFT`})');`,
-						`  call QSYS2.QCMDEXC('QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})');`,
+						`  call QSYS2.QCMDEXC('QSYS/CHGLIBL LIBL(${sqlString(libraryList.join(` `) || `*NONE`)}) CURLIB(${sqlString(currentLibrary || `*CRTDFT`)})');`,
+						`  call QSYS2.QCMDEXC('QSYS/DSPFFD FILE(${sqlString(parts.schema)}/${sqlString(parts.table)}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})');`,
 						`  call QSYS2.QCMDEXC('QSYS/CHGLIBL LIBL(' concat oldLibl concat ') CURLIB(' concat oldCurlib concat ')');`,
 						`end`
 					].join(`\n`);
@@ -231,6 +231,14 @@ export function buildRequestHandlers(client: LanguageClient) {
 }
 
 let outfileCounter = 0;
+
+/**
+ * Doubles the apostrophes of a value put inside an SQL string literal: names can come
+ * from the source (EXTFILE/EXTNAME) or the settings, and must not end the literal.
+ */
+function sqlString(value: string) {
+	return value.replace(/'/g, `''`);
+}
 
 /**
  * The current library and library list used by Code for IBM i's ILE commands:
