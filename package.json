@@ -82,6 +82,11 @@
 					"default": 1000,
 					"minimum": 1,
 					"markdownDescription": "Maximum number of local RPGLE files that will be pre-parsed. Only applies when `#vscode-rpgle.enableLocalProjectPreparsing#` is enabled. If the workspace contains more files than this limit, pre-parsing is skipped to avoid performance issues."
+				},
+				"vscode-rpgle.developerTagEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable or disable the 'Add Developer Tag' context menu command."
 				}
 			}
 		},
@@ -158,6 +163,11 @@
 				"command": "vscode-rpgle.jumpToMatchingBlock",
 				"title": "Jump to Matching Block",
 				"category": "RPGLE"
+			},
+			{
+				"command": "vscode-rpgle.addDeveloperTag",
+				"title": "Add Developer Tag (Block)",
+				"category": "RPGLE"
 			}
 		],
 		"keybindings": [
@@ -204,6 +214,11 @@
 					"command": "vscode-rpgle.toggleComment",
 					"when": "resourceExtname =~ /\\.rpg(le)?|\\.sqlrpgle|\\.rpgleinc/i",
 					"group": "9_cutcopypaste@100"
+				},
+				{
+					"command": "vscode-rpgle.addDeveloperTag",
+					"when": "resourceExtname =~ /\\.rpg(le)?|\\.sqlrpgle|\\.rpgleinc/i && config.vscode-rpgle.developerTagEnabled",
+					"group": "9_cutcopypaste@101"
 				}
 			],
 			"view/item/context": [
