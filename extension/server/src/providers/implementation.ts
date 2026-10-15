@@ -23,19 +23,21 @@ export default async function implementationProvider(params: ImplementationParam
 
 				for (const uri of parsedFiles) {
 					const cache = parser.getParsedCache(uri);
-					for (const proc of cache.procedures) {
-						const keyword = proc.keyword[`EXPORT`];
-						if (keyword) {
-							if (proc.name.toUpperCase() === upperName) {
-								return Location.create(
-									proc.position.path,
-									Range.create(
-										proc.position.range.line,
-										0,
-										proc.position.range.line,
-										0
-									)
-								);
+					if (cache) {
+						for (const proc of cache.procedures) {
+							const keyword = proc.keyword[`EXPORT`];
+							if (keyword) {
+								if (proc.name.toUpperCase() === upperName) {
+									return Location.create(
+										proc.position.path,
+										Range.create(
+											proc.position.range.line,
+											0,
+											proc.position.range.line,
+											0
+										)
+									);
+								}
 							}
 						}
 					}

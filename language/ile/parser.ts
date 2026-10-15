@@ -1462,9 +1462,9 @@ export default class Parser {
                 if (currentItem && [`procedure`, `struct`, `constant`].includes(currentItem.type)) {
                   if (currentItem.readParms && parts.length > 0) {
                     if (parts[0].startsWith(`DCL`)) {
-                      parts.slice(1);
-                      partsLower = partsLower.splice(1);
-                      tokens.splice(1);
+                      parts = parts.slice(1);
+                      partsLower = partsLower.slice(1);
+                      tokens = tokens.slice(1);
                     }
 
                     currentSub = new Declaration(`subitem`);

@@ -2111,3 +2111,119 @@ test('sql prepare reference', async () => {
   const getGenerationTime = assertFound(cache.find(`getGenerationTime`), `getGenerationTime`);
   assertScope(getGenerationTime.scope, `getGenerationTime`);
 })
+
+test("references_qualified_ds_subfield_hover", async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds dirty qualified;`,
+    `  dcl-subf fruit   varchar(16);`,
+    `  dcl-subf tree    varchar(32);`,
+    `  dcl-subf spec    varchar(128);`,
+    `end-ds dirty;`,
+    ``,
+    `dirty.fruit = 'Pickles';`,
+    `dirty.tree  = 'Oak';`,
+    `dirty.spec  = 'Code';`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true }));
+
+  // Verify the parent DS is found at the top level
+  const dirtyDs = assertFound(cache.find(`dirty`), `dirty`);
+  expect(dirtyDs.name.toUpperCase()).toBe(`DIRTY`);
+  expect(dirtyDs.subItems.length).toBe(3);
+
+  // Offset of `fruit` inside `dirty.fruit = 'Pickles'`
+  const fruitRefIndex = lines.indexOf(`dirty.fruit = `) + 6;
+  const fruitSubfield = assertFound(Cache.referenceByOffset(uri, cache, fruitRefIndex), ``);
+  expect(fruitSubfield.name.toUpperCase()).toBe(`FRUIT`);
+  expect(fruitSubfield.type).toBe(`subitem`);
+  expect(fruitSubfield.references.length).toBeGreaterThan(0);
+
+  // Offset of `tree` inside `dirty.tree  = 'Oak'`
+  const treeRefIndex = lines.indexOf(`dirty.tree`) + 6;
+  const treeSubfield = assertFound(Cache.referenceByOffset(uri, cache, treeRefIndex), ``);
+  expect(treeSubfield.name.toUpperCase()).toBe(`TREE`);
+  expect(treeSubfield.type).toBe(`subitem`);
+});
+
+test("references_nested_dcl_subf_likeds_hover", async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds inner_t qualified template;`,
+    `  dcl-subf field varchar(10);`,
+    `end-ds;`,
+    ``,
+    `dcl-ds outer qualified;`,
+    `  dcl-subf inner_a likeds(inner_t);`,
+    `  inner_b likeds(inner_t);`,
+    `end-ds;`,
+    ``,
+    `outer.inner_a.field = 'Pickles';`,
+    `outer.inner_b.field = 'Oak';`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true }));
+
+  const outer = assertFound(cache.find(`outer`), `outer`);
+  expect(outer.subItems.length).toBe(2);
+
+  const innerA = assertFound(outer.subItems.find(sub => sub.name === `inner_a`), `inner_a`);
+  expect(innerA.keyword[`LIKEDS`]).toBe(`inner_t`);
+  expect(innerA.subItems.length).toBe(1);
+
+  const field = assertFound(innerA.subItems.find(sub => sub.name === `field`), `field`);
+  expect(field.keyword[`VARCHAR`]).toBe(`10`);
+});
+
+test("references_nested_mixed_dcl_ds_and_dcl_subf_hover", async () => {
+  const lines = [
+    `**free`,
+    ``,
+    `dcl-ds myStuff qualified;`,
+    `   count int(10);`,
+    `   dataF1 varchar(32);`,
+    `end-ds;`,
+    `dcl-ds multiTear qualified;`,
+    `   stuff likeds(myStuff);`,
+    `   dcl-subf description varchar(50);`,
+    `   dcl-ds pickles qualified;`,
+    `      type char(10);`,
+    `      id int(10);`,
+    `      dcl-subf eval varchar(12);`,
+    `   end-ds;`,
+    `   other_stuff varchar(50);`,
+    `end-ds;`,
+    ``,
+    `multiTear.stuff.count = 1;`,
+    `multiTear.description = 'abc';`,
+    `multiTear.pickles.eval = 'xyz';`,
+    `multiTear.other_stuff = 'tail';`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, collectReferences: true }));
+
+  const multiTear = assertFound(cache.find(`multiTear`), `multiTear`);
+  expect(multiTear.subItems.map(sub => sub.name)).toEqual([
+    `stuff`,
+    `description`,
+    `pickles`,
+    `other_stuff`
+  ]);
+
+  const stuff = assertFound(multiTear.subItems.find(sub => sub.name === `stuff`), `stuff`);
+  expect(stuff.keyword[`LIKEDS`]).toBe(`myStuff`);
+  expect(stuff.subItems.map(sub => sub.name)).toEqual([`count`, `dataF1`]);
+
+  const pickles = assertFound(multiTear.subItems.find(sub => sub.name === `pickles`), `pickles`);
+  expect(pickles.keyword[`QUALIFIED`]).toBe(true);
+  expect(pickles.subItems.map(sub => sub.name)).toEqual([`type`, `id`, `eval`]);
+
+  const description = assertFound(multiTear.subItems.find(sub => sub.name === `description`), `description`);
+  expect(description.keyword[`VARCHAR`]).toBe(`50`);
+
+  const evalField = assertFound(pickles.subItems.find(sub => sub.name === `eval`), `eval`);
+  expect(evalField.keyword[`VARCHAR`]).toBe(`12`);
+});

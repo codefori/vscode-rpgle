@@ -4,6 +4,7 @@ export const DEFAULT_SCHEMA = {
   NoOCCURS: true,
   NoSELECTAll: true,
   UppercaseConstants: true,
+  MissingSemicolon: true,
   IncorrectVariableCase: true,
   NoSQLJoins: true,
   PrettyComments: true,

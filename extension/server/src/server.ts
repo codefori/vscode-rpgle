@@ -80,7 +80,7 @@ connection.onInitialize((params: InitializeParams) => {
 		result.capabilities.hoverProvider = true;
 		result.capabilities.referencesProvider = true;
 		result.capabilities.implementationProvider = true;
-		result.capabilities.renameProvider = {prepareProvider: true};
+		result.capabilities.renameProvider = { prepareProvider: true };
 		result.capabilities.signatureHelpProvider = {
 			triggerCharacters: [`(`, `:`]
 		};
@@ -122,6 +122,22 @@ connection.onInitialized(() => {
 	initializeLogLevel();
 
 	if (projectEnabled) {
+		let lastPreParseOnStartup: boolean | undefined;
+		let lastFileLimit: number | undefined;
+
+		connection.onDidChangeConfiguration(params => {
+			const settings = params.settings?.['vscode-rpgle'];
+			const preParseOnStartup: boolean = settings?.enableLocalProjectPreparsing ?? true;
+			const fileLimit: number = settings?.localProjectPreparsingFileLimit ?? 1000;
+
+			if (preParseOnStartup !== lastPreParseOnStartup || fileLimit !== lastFileLimit) {
+				lastPreParseOnStartup = preParseOnStartup;
+				lastFileLimit = fileLimit;
+				console.log(`Reloading workspace as local project preparsing settings changed.`);
+				Project.loadWorkspace();
+			}
+		});
+
 		Project.initialise();
 	}
 

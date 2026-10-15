@@ -80,11 +80,6 @@ export function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean
       continue;
     }
 
-    if (/^end-ds\b/.test(line)) {
-      depth++;
-      continue;
-    }
-
     if (/^dcl-ds\b/.test(line)) {
       // A dcl-ds that is self-contained on this line does not leave a block
       // open: either likeds()/likerec() (a single-line declaration) or an
@@ -99,6 +94,14 @@ export function isInsideOpenDclDsBlock(text: string, lineStart: number): boolean
       }
 
       depth--;
+      continue;
+    }
+
+    // `end-ds` can appear on a continuation line in the same statement as a
+    // preceding `dcl-ds` declaration (for example after `prefix(...)`). Treat
+    // those lines as balancing closers while scanning.
+    if (/\bend-ds\b/.test(line)) {
+      depth++;
     }
   }
 

@@ -10,7 +10,7 @@ export async function findAllProjectReferences(def: Declaration): Promise<Locati
 
 	if (isEnabled) {
 		const parsedFiles = Object.keys(parser.parsedCache);
-		
+
 		if (def.keyword[`EXPORT`]) {
 			// If we are looking for references to an export function
 			// scan entire project for `EXTPROC` definitions that point to this
@@ -21,41 +21,41 @@ export async function findAllProjectReferences(def: Declaration): Promise<Locati
 
 				if (document) {
 					const cache = parser.getParsedCache(keyPath);
+					if (cache) {
+						cache.procedures.forEach(proc => {
+							let addReference = false;
+							const keyword = proc.keyword[`EXTPROC`];
+							if (keyword) {
+								if (keyword === true) {
+									if (proc.name.toUpperCase() === upperName) {
 
-					cache.procedures.forEach(proc => {
-						let addReference = false;
-						const keyword = proc.keyword[`EXTPROC`];
-						if (keyword) {
-							if (keyword === true) {
-								if (proc.name.toUpperCase() === upperName) {
-
-									addReference = true;
-								}
+										addReference = true;
+									}
+								} else
+									if (trimQuotes(keyword).toUpperCase() === upperName) {
+										addReference = true;
+									}
 							} else
-								if (trimQuotes(keyword).toUpperCase() === upperName) {
+
+								// Also turns out, any `DCL-PR` without any keywords is `EXTPROC` by default.
+								if (!proc.keyword[`EXPORT`] && proc.name.toUpperCase() === upperName) {
 									addReference = true;
 								}
-						} else
 
-							// Also turns out, any `DCL-PR` without any keywords is `EXTPROC` by default.
-							if (!proc.keyword[`EXPORT`] && proc.name.toUpperCase() === upperName) {
-								addReference = true;
+							if (addReference) {
+								// Don't add duplicates
+								if (!locations.some(loc => loc.uri === keyPath)) {
+									locations.push(
+										// Then we push the references. Empty for non-**free
+										...proc.references.map(ref => Location.create(
+											keyPath,
+											calculateOffset(document, ref)
+										))
+									);
+								}
 							}
-
-						if (addReference) {
-							// Don't add duplicates
-							if (!locations.some(loc => loc.uri === keyPath)) {
-								locations.push(
-									// Then we push the references. Empty for non-**free
-									...proc.references.map(ref => Location.create(
-										keyPath,
-										calculateOffset(document, ref)
-									))
-								);
-							}
-						}
-
-					})
+						});
+					}
 				}
 			}
 

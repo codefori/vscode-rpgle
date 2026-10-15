@@ -23,7 +23,7 @@
 		"PrototypeCheck": {
 			"$id": "#/properties/PrototypeCheck",
 			"type": "boolean",
-			"description": "Prototypes can only be defined with either EXTPGM or EXTPROC."
+			"description": "Prototypes must specify EXTPGM, EXTPROC, or OVERLOAD."
 		},
 		"ForceOptionalParens": {
 			"$id": "#/properties/ForceOptionalParens",
@@ -186,6 +186,11 @@
 			"$id": "#/properties/RequireOtherBlock",
 			"type": "boolean",
 			"description": "Require SELECT blocks to have an OTHER block."
+		},
+		"MissingSemicolon": {
+			"$id": "#/properties/MissingSemicolon",
+			"type": "boolean",
+			"description": "Detect free-format RPG statements that are missing a terminating semicolon."
 		}
 	},
 	"additionalProperties": true
