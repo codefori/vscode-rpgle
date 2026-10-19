@@ -149,51 +149,47 @@ function detectOSpecType(filename: string, type: string, andOrKeyword:string, fi
     return 'OXF';
 }
 
-//TODO: return type annotations are required to be 
-//updated once feedback wrt fields required in outline is received
 /**
  * Parse O-Spec (Output Specification) line
  * @param {number} lineNumber
  * @param {number} lineIndex
  * @param {string} content
+ * @returns parsed token object, or null for lines that are not part of the outline (OFC, OAnd)
  */
 export function parseOLine(lineNumber: number, lineIndex: number, content: string): any {
   content = content.padEnd(80);
 
-  const fileName = content.substring(6, 16).trim();//col[7,..,16] which o/p file or record this spec belongs to
-  const type = content.substring(16, 17).trim();//col[17]D:Detailed o/p, T:Total o/p, H:Heading, E:Exception o/p
-  const andOrKeyword = content.substring(18, 20).trim().toUpperCase();//col[16,..,20]conditioal operators
-  const fieldName = content.substring(29, 43).trim();//col[30,43] var name (14 chars; col 44 is edit code)
-  const endPos = content.substring(46, 52).trim();//col[47,52]
-  const constant = content.substring(52).trim();//col[53,..] constant name
+  const fileName = content.substring(6, 16).trim();  // col 7-16: output file name
+  const type = content.substring(16, 17).trim();      // col 17: D/T/H/E record type
+  const andOrKeyword = content.substring(18, 20).trim().toUpperCase(); // col 19-20: AND/OR
+  const fieldName = content.substring(29, 43).trim(); // col 30-43: field/variable name
+  const endPos = content.substring(46, 52).trim();    // col 47-52: end position
+  const constant = content.substring(52).trim();       // col 53+: constant value
+
+  // Conditioning indicators: col 21-22, 24-25, 27-28 (0-indexed: 20-21, 23-24, 26-27)
+  const ind1 = content.substring(20, 22).trim();
+  const ind2 = content.substring(23, 25).trim();
+  const ind3 = content.substring(26, 28).trim();
 
   const lineType = detectOSpecType(fileName, type, andOrKeyword, fieldName, endPos, constant);
-  
-  //OFC is not handled as its not supposed to be part of outline
-  //currently 3 diff cases are maintained , once feedback for desc is received
-  //OF and OXF case should look diff , if no changes then they can be combined
-  //as 1 case as it is repetitative
-  switch(lineType) {
-    case 'O': {
-       return {
-        fileName: calculateToken(lineNumber, lineIndex+6, fileName),
-        fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
-        type,
-        endPos,
-       };
-    }
-    case 'OF': {
-      return {
-        fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
-      };
-    }
-    case 'OXF': {
-      return {
-        fieldName: calculateToken(lineNumber, lineIndex+29, fieldName),
-      };
-    }
-    default: return null;
-  }
+
+  // OFC (output constant) and OAnd (AND/OR continuation) are not part of the outline
+  if (lineType === 'OFC' || lineType === 'OAnd') return null;
+
+  // excptName occupies col 30-39 (substring 29,39) - only valid on Record lines ('O').
+  // On field lines the same columns overlap with fieldName, so we must not read it there.
+  const excptName = lineType === 'O' ? content.substring(29, 39).trim() : undefined;
+
+  return {
+    type: type || ``,                                                              // '' on field lines → falsy, truthy on record lines
+    fileName: fileName ? calculateToken(lineNumber, lineIndex+6, fileName) : undefined,
+    excptName: excptName ? calculateToken(lineNumber, lineIndex+29, excptName) : undefined,
+    fieldName: fieldName ? calculateToken(lineNumber, lineIndex+29, fieldName) : undefined,
+    ind1: ind1 ? calculateToken(lineNumber, lineIndex+20, ind1) : undefined,
+    ind2: ind2 ? calculateToken(lineNumber, lineIndex+23, ind2) : undefined,
+    ind3: ind3 ? calculateToken(lineNumber, lineIndex+26, ind3) : undefined,
+    endPos: endPos || undefined,
+  };
 }
 
 export function prettyTypeFromDSpecTokens(dSpec) {

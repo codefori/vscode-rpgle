@@ -196,6 +196,12 @@ export default class Cache {
         }
 
         if (symbol.name.toUpperCase() === name) {
+          if (symbol.type === `output`) {
+            // Several O-spec records can share one EXCEPT name. Resolve to the group head (first record with a file name).
+            const outputs = symbols.filter(s => s.type === `output`);
+            return outputs.find(s => s.keyword[`fileName`]) || outputs[0];
+          }
+
           return symbol;
         }
       }

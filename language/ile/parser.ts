@@ -2096,27 +2096,44 @@ export default class Parser {
                 // Flush the previous O-spec parent into scope before starting a new one
                 if (currentItem && currentItem.type === `output` && currentItem.readParms) {
                   currentItem.readParms = false;
-                  scope.addSymbol(currentItem);
+                  //if group head exists in declaration already then rest of the batch/duplicates
+                  //should not be added to the list
+                  if(!scope.find(currentItem.name, `output`)) {
+                    scope.addSymbol(currentItem);
+                  }
                 }
 
-                currentItem = new Declaration(`output`);
-                currentItem.name = oSpec.fileName?.value;
-                currentItem.keyword = {
-                  [oSpec.type]: oSpec.fieldName?.value || true  //TODO: update keywords based on feedback
-                };
+                //create declaration only if its a new group head
+                const existing: Declaration | undefined = oSpec.excptName?.value ? scope.find(oSpec.excptName.value, `output`) : undefined;
+                
+                if 
+                (existing) {
+                  currentItem = existing;
+                  currentItem.range.end = lineNumber;
+                  currentItem.readParms = true;
+                } else {
+                  currentItem = new Declaration(`output`);
+                  currentItem.name = oSpec.excptName?.value || ``;
+                  currentItem.keyword = {
+                    fileName: oSpec.fileName?.value,
+                    recordType: oSpec.type
+                  };
+                  
+                  currentItem.position = {
+                    path: fileUri,
+                    range: oSpec.excptName?.range || oSpec.fileName?.range || { line: lineNumber, start: 0, end: 0 }
+                  };
 
-                currentItem.position = {
-                  path: fileUri,
-                  range: oSpec.fileName?.range || { line: lineNumber, start: 0, end: 0 }
-                };
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
 
-                currentItem.range = {
-                  start: lineNumber,
-                  end: lineNumber
-                };
-
-                currentItem.readParms = true;//true suggests its nested and has children
-              } 
+                  currentItem.readParms = true;//true suggests its nested and has children
+                }
+                // Track references: fileName (→ F-spec file), excptName (→ self), indicators
+                tokens = [oSpec.fileName, oSpec.excptName, oSpec.ind1, oSpec.ind2, oSpec.ind3].filter(Boolean);
+              }
               else if (oSpec && currentItem?.readParms) {
                 const currentChild = new Declaration(`subitem`);
                 currentChild.name = oSpec.fieldName?.value || '';
@@ -2130,6 +2147,9 @@ export default class Parser {
                 };
                 currentItem.range.end = lineNumber;
                 currentItem.subItems.push(currentChild);
+
+                // Track references: fieldName (→ D/I-spec variable), indicators
+                tokens = [oSpec.fieldName, oSpec.ind1, oSpec.ind2, oSpec.ind3].filter(Boolean);
               }
               break;
           }
@@ -2155,7 +2175,9 @@ export default class Parser {
       // Flush the last O-spec parent if the file ends while still collecting children
       if (currentItem && currentItem.type === `output` && currentItem.readParms) {
         currentItem.readParms = false;
-        scopes[scopes.length - 1].addSymbol(currentItem);
+        if (!scopes[scopes.length - 1].find(currentItem.name, `output`)) {
+          scopes[scopes.length - 1].addSymbol(currentItem);
+        }
       }
 
       if (options.collectReferences) {
