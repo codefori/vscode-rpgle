@@ -3552,6 +3552,130 @@ test.each([
   });
 });
 
+test.each([false, true])(`issue_477_requires_parameter after conditional DS (defined=%s)`, async (defined) => {
+  const lines = [
+    `**free`,
+    ...(defined ? [`/define A`] : []),
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    `/if defined(A)`,
+    `dcl-ds myStruct qualified;`,
+    `/else`,
+    `dcl-ds myStruct qualified template;`,
+    `/endif`,
+    `  a ind;`,
+    `end-ds;`,
+    `dcl-s x ind;`,
+    `x = time;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+  const callOffset = lines.lastIndexOf(`time;`);
+
+  expect(errors).toHaveLength(1);
+  expect(errors).toMatchObject([
+    { type: `RequiresParameter`, offset: { start: callOffset, end: callOffset + 4 } },
+  ]);
+});
+
+test.each([
+  { name: `local nested DS`, declaration: [`dcl-ds data qualified;`, `dcl-ds nested;`, `time ind;`, `end-ds;`, `end-ds;`], local: true },
+  { name: `global enum`, declaration: [`dcl-enum values qualified;`, `time;`, `end-enum;`], local: false },
+  { name: `local enum`, declaration: [`dcl-enum values qualified;`, `time;`, `end-enum;`], local: true },
+  { name: `unfinished DS`, declaration: [`dcl-ds data qualified;`, `a ind;`], local: false },
+  { name: `inline DS`, declaration: [`dcl-ds data qualified;`, `time ind;`, `end-ds;`, `dcl-ds other likeds(data);`], local: false },
+  { name: `multiline field`, declaration: [`dcl-ds data qualified;`, `time`, `  ind;`, `end-ds;`], local: false },
+])(`issue_477_requires_parameter preserves calls after $name`, async ({ declaration, local }) => {
+  const lines = [
+    `**free`,
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    ...(local ? [`dcl-proc example;`] : []),
+    `dcl-s result ind;`,
+    ...declaration,
+    `result = time;`,
+    ...(local ? [`end-proc;`] : []),
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+  const callOffset = lines.lastIndexOf(`time;`);
+
+  expect(errors).toHaveLength(1);
+  expect(errors).toMatchObject([
+    { type: `RequiresParameter`, offset: { start: callOffset, end: callOffset + 4 } },
+  ]);
+});
+
+test.each([
+  {
+    name: `complete included DS with overlapping line numbers`,
+    declaration: [`/copy fields`],
+    include: [`**free`, `dcl-ds copied qualified;`, ...Array(3).fill(`// padding`), `time ind;`, `end-ds;`],
+  },
+  {
+    name: `DS closed on an earlier line in a copy member`,
+    declaration: [`dcl-ds data qualified;`, `time ind;`, `/copy fields`],
+    include: [`**free`, `end-ds;`],
+  },
+  {
+    name: `DS closed on a later line in a copy member`,
+    declaration: [`dcl-ds data qualified;`, `time ind;`, `/copy fields`],
+    include: [`**free`, ...Array(12).fill(`// padding`), `end-ds;`],
+  },
+  {
+    name: `DS opened in a copy member`,
+    declaration: [`/copy fields`, `time ind;`, `end-ds;`],
+    include: [`**free`, `dcl-ds data qualified;`],
+  },
+])(`issue_477_requires_parameter respects source files for $name`, async ({ declaration, include }) => {
+  const includeParser = setupParser();
+  includeParser.setIncludeFileFetch(async () => ({ found: true, uri: includeUri, content: include.join(`\n`) }));
+  const lines = [
+    `**free`,
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    `dcl-s result ind;`,
+    ...declaration,
+    `result = time;`,
+  ].join(`\n`);
+
+  const cache = assertCache(await includeParser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+  const callOffset = lines.lastIndexOf(`time;`);
+
+  expect(errors).toHaveLength(1);
+  expect(errors).toMatchObject([
+    { type: `RequiresParameter`, offset: { start: callOffset, end: callOffset + 4 } },
+  ]);
+});
+
+test(`issue_477_requires_parameter checks calls inside qualified array indexes`, async () => {
+  const lines = [
+    `**free`,
+    `dcl-pr time ind extproc('time');`,
+    `end-pr;`,
+    `dcl-pr nextIndex int(10) extproc('nextIndex');`,
+    `end-pr;`,
+    `dcl-ds data qualified;`,
+    `time ind dim(5);`,
+    `end-ds;`,
+    `dcl-s result ind;`,
+    `result = data.time(nextIndex());`,
+    `result = data.time(nextIndex);`,
+  ].join(`\n`);
+
+  const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
+  const callOffset = lines.lastIndexOf(`nextIndex`);
+
+  expect(errors).toHaveLength(1);
+  expect(errors).toMatchObject([
+    { type: `RequiresParameter`, offset: { start: callOffset, end: callOffset + 9 } },
+  ]);
+});
+
 test('paddr_issue_250', async () => {
   const lines = [
     `**FREE`,

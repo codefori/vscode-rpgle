@@ -62,6 +62,34 @@ type IndentError = {
   currentIndent: number,
 };
 
+function getSubfieldRanges(scope: Cache, uri: string): { start: number, end: number }[] {
+  const ranges: { start: number, end: number }[] = [];
+  const visited = new Set<Declaration>();
+
+  const collect = (declaration: Declaration) => {
+    if (visited.has(declaration)) return;
+    visited.add(declaration);
+
+    for (const subfield of declaration.subItems) {
+      // A DS can start and end in different /COPY files. Use each field's own
+      // source range instead of treating the enclosing DS as one file's range.
+      const { start, end } = subfield.range;
+      if (subfield.type === `subitem` && subfield.position?.path === uri && start !== null && end !== null) {
+        ranges.push({ start, end });
+      }
+      collect(subfield);
+    }
+  };
+
+  const scopes = [scope, ...scope.procedures.flatMap(procedure => procedure.scope ? [procedure.scope] : [])];
+  for (const currentScope of scopes) {
+    // The parser stores enums as constants with subitems.
+    [...currentScope.structs, ...currentScope.constants].forEach(collect);
+  }
+
+  return ranges;
+}
+
 function getCodeBeforeComment(sourceLine: string) {
   const comment = tokenise(sourceLine).find(token => token.type === `comment`);
   return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
@@ -255,12 +283,12 @@ export default class Linter {
       globalScope = new Cache();
 
     const globalProcs = globalScope.procedures;
+    const subfieldRanges = rules.RequiresParameter ? getSubfieldRanges(globalScope, data.uri) : [];
 
     interface ReferenceInfo { name: string, skipRules?: boolean };
 
     let inProcedure: ReferenceInfo | undefined;
     let inSubroutine: ReferenceInfo | undefined;
-    let inStruct: string[] = [];
     let inPrototype = false;
     let inOnExit = false;
 
@@ -346,20 +374,6 @@ export default class Linter {
           }
         }
 
-        // Track declaration scope even when a skip directive suppresses its checks.
-        const declarationType = firstValue.toUpperCase();
-        if ([`DCL-DS`, `DCL-ENUM`].includes(declarationType)) {
-          // Single-statement data structures do not open a new scope.
-          const hasInlineStructCloser = declarationType === `DCL-DS` && oneLineTriggers[`DCL-DS`].some(trigger =>
-            statement.some(part => part.value && part.value.toUpperCase() === trigger)
-          );
-          if (!hasInlineStructCloser && statement[1]?.value) {
-            inStruct.push(statement[1].value);
-          }
-        } else if ([`END-DS`, `END-ENUM`].includes(declarationType)) {
-          inStruct.pop();
-        }
-
         // Linter checking
         if (ruleCount > 0 && ![skipRules.single, skipRules.singleRules].includes(currentRule)) {
 
@@ -369,6 +383,8 @@ export default class Linter {
           let isEmbeddedSQL = false;
 
           const isDirective = firstToken.type === `directive`;
+          const isDeclare = [`declare`, `end`].includes(firstToken.type)
+            || subfieldRanges.some(range => lineNumber >= range.start && lineNumber <= range.end);
 
           if (statement.length >= 1) {
             if (isDirective) {
@@ -1016,35 +1032,18 @@ export default class Linter {
                       }
                     }
 
-                    const isDeclare = inStruct.length > 0 || [`declare`, `end`].includes(statement[0].type);
-
-                    if ((isDeclare && i >= 2) || !isDeclare) {
-                      if (rules.RequiresParameter && !inPrototype && !isDeclare && !isEmbeddedSQL && statement[i - 1]?.type !== `dot`) {
-                        // Check the procedure reference has a block following it
-                        const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
-                        if (definedProcedure) {
-                          let requiresBlock = false;
-                          // Don't require parms for procedures found in Ctl-Opt or directives
-                          if (isDeclare || isDirective) {
-                            // do nothing
-                          } else if (statement[i - 2] && statement[i - 2].type === `builtin` && statement[i - 2].value?.toUpperCase() === `%PADDR`) {
-                            // Do nothing because you can pass a function to PADDR as a reference
-
-                          } else if (statement.length <= i + 1) {
-                            requiresBlock = true;
-                          } else if (statement[i + 1].type !== `openbracket`) {
-                            requiresBlock = true;
-                          }
-
-                          if (requiresBlock) {
-                            errors.push({
-                              offset: part.range,
-                              type: `RequiresParameter`,
-                            });
-                          }
-                        }
-                      }
+                  if (rules.RequiresParameter && !inPrototype && !isDeclare && !isDirective && !isEmbeddedSQL && statement[i - 1]?.type !== `dot`) {
+                    // %PADDR accepts a procedure reference without calling it.
+                    const isProcedureAddress = statement[i - 2]?.type === `builtin`
+                      && statement[i - 2].value?.toUpperCase() === `%PADDR`;
+                    const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
+                    if (definedProcedure && !isProcedureAddress && statement[i + 1]?.type !== `openbracket`) {
+                      errors.push({
+                        offset: part.range,
+                        type: `RequiresParameter`,
+                      });
                     }
+                  }
                     break;
 
                   case `string`:
