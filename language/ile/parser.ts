@@ -366,7 +366,7 @@ export default class Parser {
           if (currentDef) {
             if (currentDef.name.toUpperCase() === lookupName) {
               defRef = currentDef;
-            } else if (currentDef.subItems.length > 0) {
+            } else if (currentDef.subItems.length > 0 && currentDef.type !== `output`) {
               defRef = currentDef.subItems.find(sub => sub.name.toUpperCase() === lookupName);
             }
           }
@@ -1542,6 +1542,9 @@ export default class Parser {
                 });
 
                 scope.addSymbol(currentItem);
+
+                // The file name itself is a reference, so find references from the F-spec includes the O-specs
+                tokens = [fSpec.name];
               } else {
                 // currentItem = scope.symbols[scope.symbols.length-1];
                 if (currentItem) {
@@ -2137,6 +2140,12 @@ export default class Parser {
               else if (oSpec && currentItem?.readParms) {
                 const currentChild = new Declaration(`subitem`);
                 currentChild.name = oSpec.fieldName?.value || '';
+
+                currentChild.keyword = {
+                  lineType: oSpec.lineType,
+                  andOr: oSpec.andOr,
+                  constant: oSpec.constant
+                };
                 currentChild.position = {
                   path: fileUri,
                   range: oSpec.fieldName?.range || { line: lineNumber, start: 0, end: 0 }

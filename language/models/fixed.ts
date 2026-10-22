@@ -154,7 +154,8 @@ function detectOSpecType(filename: string, type: string, andOrKeyword:string, fi
  * @param {number} lineNumber
  * @param {number} lineIndex
  * @param {string} content
- * @returns parsed token object, or null for lines that are not part of the outline (OFC, OAnd)
+ * @returns parsed token object for every O-spec line. `lineType` tells the caller what kind of line it is
+ * (O, OAnd, OF, OFC, OXF) so that consumers (outline, PRTF DDS conversion, ...) can decide what to use.
  */
 export function parseOLine(lineNumber: number, lineIndex: number, content: string): any {
   content = content.padEnd(80);
@@ -166,28 +167,27 @@ export function parseOLine(lineNumber: number, lineIndex: number, content: strin
   const endPos = content.substring(46, 52).trim();    // col 47-52: end position
   const constant = content.substring(52).trim();       // col 53+: constant value
 
-  // Conditioning indicators: col 21-22, 24-25, 27-28 (0-indexed: 20-21, 23-24, 26-27)
-  const ind1 = content.substring(20, 22).trim();
-  const ind2 = content.substring(23, 25).trim();
-  const ind3 = content.substring(26, 28).trim();
+  const ind1 = content.substring(21, 23).trim();
+  const ind2 = content.substring(24, 26).trim();
+  const ind3 = content.substring(27, 29).trim();
 
   const lineType = detectOSpecType(fileName, type, andOrKeyword, fieldName, endPos, constant);
-
-  // OFC (output constant) and OAnd (AND/OR continuation) are not part of the outline
-  if (lineType === 'OFC' || lineType === 'OAnd') return null;
 
   // excptName occupies col 30-39 (substring 29,39) - only valid on Record lines ('O').
   // On field lines the same columns overlap with fieldName, so we must not read it there.
   const excptName = lineType === 'O' ? content.substring(29, 39).trim() : undefined;
 
   return {
+    lineType,
+    andOr: andOrKeyword || undefined,
+    constant: constant || undefined,
     type: type || ``,                                                              // '' on field lines → falsy, truthy on record lines
     fileName: fileName ? calculateToken(lineNumber, lineIndex+6, fileName) : undefined,
     excptName: excptName ? calculateToken(lineNumber, lineIndex+29, excptName) : undefined,
     fieldName: fieldName ? calculateToken(lineNumber, lineIndex+29, fieldName) : undefined,
-    ind1: ind1 ? calculateToken(lineNumber, lineIndex+20, ind1) : undefined,
-    ind2: ind2 ? calculateToken(lineNumber, lineIndex+23, ind2) : undefined,
-    ind3: ind3 ? calculateToken(lineNumber, lineIndex+26, ind3) : undefined,
+    ind1: ind1 ? calculateToken(lineNumber, lineIndex+21, content.substring(21, 23), `special-ind`) : undefined,
+    ind2: ind2 ? calculateToken(lineNumber, lineIndex+24, content.substring(24, 26), `special-ind`) : undefined,
+    ind3: ind3 ? calculateToken(lineNumber, lineIndex+27, content.substring(27, 29), `special-ind`) : undefined,
     endPos: endPos || undefined,
   };
 }
