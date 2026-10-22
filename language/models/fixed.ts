@@ -132,6 +132,66 @@ export function parsePLine(content: string, lineNumber: number, lineIndex: numbe
   };
 }
 
+/**
+ * Detect O-Spec line type
+ */
+function detectOSpecType(filename: string, type: string, andOrKeyword:string, fieldName: string, endPos: string, constant: string): 'O' | 'OAnd' | 'OF' | 'OFC' | 'OXF' {
+  const conditioalOperators = ['AND', 'OR'];
+  if (filename || type) 
+    return 'O'; 
+  else if (conditioalOperators.includes(andOrKeyword)) 
+    return 'OAnd';
+  else if (!fieldName && constant)//if no field name and constant literal is present its OFC or Output constant
+    return 'OFC';                 //This is need not be part of outline
+  else if (fieldName && endPos)
+    return 'OF';
+  else
+    return 'OXF';
+}
+
+/**
+ * Parse O-Spec (Output Specification) line
+ * @param {number} lineNumber
+ * @param {number} lineIndex
+ * @param {string} content
+ * @returns parsed token object for every O-spec line. `lineType` tells the caller what kind of line it is
+ * (O, OAnd, OF, OFC, OXF) so that consumers (outline, PRTF DDS conversion, ...) can decide what to use.
+ */
+export function parseOLine(lineNumber: number, lineIndex: number, content: string): any {
+  content = content.padEnd(80);
+
+  const fileName = content.substring(6, 16).trim();  // col 7-16: output file name
+  const type = content.substring(16, 17).trim();      // col 17: D/T/H/E record type
+  const andOrKeyword = content.substring(18, 20).trim().toUpperCase(); // col 19-20: AND/OR
+  const fieldName = content.substring(29, 43).trim(); // col 30-43: field/variable name
+  const endPos = content.substring(46, 52).trim();    // col 47-52: end position
+  const constant = content.substring(52).trim();       // col 53+: constant value
+
+  const ind1 = content.substring(21, 23).trim();
+  const ind2 = content.substring(24, 26).trim();
+  const ind3 = content.substring(27, 29).trim();
+
+  const lineType = detectOSpecType(fileName, type, andOrKeyword, fieldName, endPos, constant);
+
+  // excptName occupies col 30-39 (substring 29,39) - only valid on Record lines ('O').
+  // On field lines the same columns overlap with fieldName, so we must not read it there.
+  const excptName = lineType === 'O' ? content.substring(29, 39).trim() : undefined;
+
+  return {
+    lineType,
+    andOr: andOrKeyword || undefined,
+    constant: constant || undefined,
+    type: type || ``,                                                              // '' on field lines → falsy, truthy on record lines
+    fileName: fileName ? calculateToken(lineNumber, lineIndex+6, fileName) : undefined,
+    excptName: excptName ? calculateToken(lineNumber, lineIndex+29, excptName) : undefined,
+    fieldName: fieldName ? calculateToken(lineNumber, lineIndex+29, fieldName) : undefined,
+    ind1: ind1 ? calculateToken(lineNumber, lineIndex+21, content.substring(21, 23), `special-ind`) : undefined,
+    ind2: ind2 ? calculateToken(lineNumber, lineIndex+24, content.substring(24, 26), `special-ind`) : undefined,
+    ind3: ind3 ? calculateToken(lineNumber, lineIndex+27, content.substring(27, 29), `special-ind`) : undefined,
+    endPos: endPos || undefined,
+  };
+}
+
 export function prettyTypeFromDSpecTokens(dSpec) {
   return getPrettyType({
     type: dSpec.type ? dSpec.type.value : ``,

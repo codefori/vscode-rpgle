@@ -262,6 +262,20 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 
 					currentScopeDefs.push(fileDef);
 				});
+			scope.outputs
+				// Outline shows record O-specs that have a file name or an EXCEPT name (e.g. HDRL01, TOTAL2).
+				// The parser already merges records sharing an EXCEPT name into one group head.
+				.filter(output => (output.keyword[`fileName`] || output.name) && output.position && output.position.path === currentPath && validRange(output))
+				.forEach(output => {
+					const outputDef = DocumentSymbol.create(
+						output.name,
+						prettyKeywords(output.keyword),
+						output.subItems.length > 0 ? SymbolKind.Object : SymbolKind.String,
+						Range.create(output.range.start!, 0, output.range.end!, 0),
+						Range.create(output.range.start!, 0, output.range.start!, 0)
+					);
+					currentScopeDefs.push(outputDef);
+				});
 
 			scope.structs
 				.filter(struct => struct.position && struct.position.path === currentPath && validRange(struct))

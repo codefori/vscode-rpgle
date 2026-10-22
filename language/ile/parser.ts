@@ -6,7 +6,7 @@ import Cache from "../models/cache";
 import Declaration from "../models/declaration";
 
 import oneLineTriggers from "../models/oneLineTriggers";
-import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens } from "../models/fixed";
+import { parseFLine, parseCLine, parsePLine, parseDLine, getPrettyType, prettyTypeFromDSpecTokens, parseISpec, prettyTypeFromISpecTokens, parseOLine } from "../models/fixed";
 import { Token } from "./types";
 import { Keywords } from "./parserTypes";
 import { NO_NAME } from "./statement";
@@ -366,7 +366,7 @@ export default class Parser {
           if (currentDef) {
             if (currentDef.name.toUpperCase() === lookupName) {
               defRef = currentDef;
-            } else if (currentDef.subItems.length > 0) {
+            } else if (currentDef.subItems.length > 0 && currentDef.type !== `output`) {
               defRef = currentDef.subItems.find(sub => sub.name.toUpperCase() === lookupName);
             }
           }
@@ -726,7 +726,7 @@ export default class Parser {
               baseLine = ``.padEnd(7) + baseLine.substring(7);
               lineIsFree = true;
 
-            } else if (![`D`, `I`, `P`, `C`, `F`, `H`].includes(spec)) {
+            } else if (![`D`, `I`, `P`, `C`, `F`, `H`, `O`].includes(spec)) {
               continue;
             }
           }
@@ -1542,6 +1542,9 @@ export default class Parser {
                 });
 
                 scope.addSymbol(currentItem);
+
+                // The file name itself is a reference, so find references from the F-spec includes the O-specs
+                tokens = [fSpec.name];
               } else {
                 // currentItem = scope.symbols[scope.symbols.length-1];
                 if (currentItem) {
@@ -2084,7 +2087,78 @@ export default class Parser {
                     break;
                 }
 
-                potentialName = undefined;
+              potentialName = undefined;
+            }
+            break;
+
+            case `O`:
+              const oSpec = parseOLine(lineNumber, lineIndex, line);
+
+              // Handle based on line type
+              if (oSpec?.type) {
+                // Flush the previous O-spec parent into scope before starting a new one
+                if (currentItem && currentItem.type === `output` && currentItem.readParms) {
+                  currentItem.readParms = false;
+                  //if group head exists in declaration already then rest of the batch/duplicates
+                  //should not be added to the list
+                  if(!scope.find(currentItem.name, `output`)) {
+                    scope.addSymbol(currentItem);
+                  }
+                }
+
+                //create declaration only if its a new group head
+                const existing: Declaration | undefined = oSpec.excptName?.value ? scope.find(oSpec.excptName.value, `output`) : undefined;
+                
+                if 
+                (existing) {
+                  currentItem = existing;
+                  currentItem.range.end = lineNumber;
+                  currentItem.readParms = true;
+                } else {
+                  currentItem = new Declaration(`output`);
+                  currentItem.name = oSpec.excptName?.value || ``;
+                  currentItem.keyword = {
+                    fileName: oSpec.fileName?.value,
+                    recordType: oSpec.type
+                  };
+                  
+                  currentItem.position = {
+                    path: fileUri,
+                    range: oSpec.excptName?.range || oSpec.fileName?.range || { line: lineNumber, start: 0, end: 0 }
+                  };
+
+                  currentItem.range = {
+                    start: lineNumber,
+                    end: lineNumber
+                  };
+
+                  currentItem.readParms = true;//true suggests its nested and has children
+                }
+                // Track references: fileName (→ F-spec file), excptName (→ self), indicators
+                tokens = [oSpec.fileName, oSpec.excptName, oSpec.ind1, oSpec.ind2, oSpec.ind3].filter(Boolean);
+              }
+              else if (oSpec && currentItem?.readParms) {
+                const currentChild = new Declaration(`subitem`);
+                currentChild.name = oSpec.fieldName?.value || '';
+
+                currentChild.keyword = {
+                  lineType: oSpec.lineType,
+                  andOr: oSpec.andOr,
+                  constant: oSpec.constant
+                };
+                currentChild.position = {
+                  path: fileUri,
+                  range: oSpec.fieldName?.range || { line: lineNumber, start: 0, end: 0 }
+                };
+                currentChild.range = {
+                  start: lineNumber,
+                  end: lineNumber
+                };
+                currentItem.range.end = lineNumber;
+                currentItem.subItems.push(currentChild);
+
+                // Track references: fieldName (→ D/I-spec variable), indicators
+                tokens = [oSpec.fieldName, oSpec.ind1, oSpec.ind2, oSpec.ind3].filter(Boolean);
               }
               break;
           }
@@ -2104,6 +2178,14 @@ export default class Parser {
           currentDescription = [];
           currentTags = [];
           resetDefinition = false;
+        }
+      }
+
+      // Flush the last O-spec parent if the file ends while still collecting children
+      if (currentItem && currentItem.type === `output` && currentItem.readParms) {
+        currentItem.readParms = false;
+        if (!scopes[scopes.length - 1].find(currentItem.name, `output`)) {
+          scopes[scopes.length - 1].addSymbol(currentItem);
         }
       }
 

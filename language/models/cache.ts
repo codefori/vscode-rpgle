@@ -148,6 +148,10 @@ export default class Cache {
     return this.symbols.filter(s => s.type === `parameter`);
   }
 
+  get outputs() {
+    return this.symbols.filter(s => s.type === `output`);
+  }
+
   addSymbol(symbol: Declaration) {
     const name = symbol.name.toUpperCase();
     if (this.symbolRegister.has(name)) {
@@ -192,6 +196,12 @@ export default class Cache {
         }
 
         if (symbol.name.toUpperCase() === name) {
+          if (symbol.type === `output`) {
+            // Several O-spec records can share one EXCEPT name. Resolve to the group head (first record with a file name).
+            const outputs = symbols.filter(s => s.type === `output`);
+            return outputs.find(s => s.keyword[`fileName`]) || outputs[0];
+          }
+
           return symbol;
         }
       }
