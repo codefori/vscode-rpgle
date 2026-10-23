@@ -15,6 +15,12 @@ Depends on the Code for IBM i extension due to source code living on the remote 
 
 Check out the [official documentation](https://codefori.github.io/docs/#/pages/extensions/rpgle/linter) for a usage guide.
 
+For indentation warnings in `**FREE` source, place the cursor on the affected line
+or select several lines, then choose **Fix indentation** from Quick Fix (`Ctrl+.`
+on Windows/Linux, `Cmd+.` on macOS). This corrects indentation on those lines using
+your linter configuration, without applying other formatting changes. Lines marked
+with `@rpglint-skip` or `@rpglint-skip-indent` are respected.
+
 # Developing
 
 1. Fork & clone
@@ -38,6 +44,7 @@ To run debug the extension and server, from the VS Code debugger:
 The test suite covers both RPG language variants:
 
 - **ILE RPG tests**: `tests/suite/*.test.ts`
+- **Language server Quick Fix tests**: `extension/server/tests/*.test.ts`
 - **OPM RPG tests**: `tests/suite/opm/*.test.ts`
   - Specification parsing (`specs.test.ts`)
   - Symbol resolution and scoping (`scope.test.ts`)
@@ -61,3 +68,4 @@ Thanks so much to everyone [who has contributed](https://github.com/codefori/vsc
 - [@Mohammed-Yaseen-Ali-2081](https://github.com/Mohammed-Yaseen-Ali-2081)
 - [@eric-simpson](https://github.com/eric-simpson)
 - [@bpmcpherson](https://github.com/bpmcpherson)
+- [@arora23saurabh](https://github.com/arora23saurabh)
