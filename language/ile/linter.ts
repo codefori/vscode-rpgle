@@ -62,34 +62,6 @@ type IndentError = {
   currentIndent: number,
 };
 
-function getSubfieldRanges(scope: Cache, uri: string): { start: number, end: number }[] {
-  const ranges: { start: number, end: number }[] = [];
-  const visited = new Set<Declaration>();
-
-  const collect = (declaration: Declaration) => {
-    if (visited.has(declaration)) return;
-    visited.add(declaration);
-
-    for (const subfield of declaration.subItems) {
-      // A DS can start and end in different /COPY files. Use each field's own
-      // source range instead of treating the enclosing DS as one file's range.
-      const { start, end } = subfield.range;
-      if (subfield.type === `subitem` && subfield.position?.path === uri && start !== null && end !== null) {
-        ranges.push({ start, end });
-      }
-      collect(subfield);
-    }
-  };
-
-  const scopes = [scope, ...scope.procedures.flatMap(procedure => procedure.scope ? [procedure.scope] : [])];
-  for (const currentScope of scopes) {
-    // The parser stores enums as constants with subitems.
-    [...currentScope.structs, ...currentScope.constants].forEach(collect);
-  }
-
-  return ranges;
-}
-
 function getCodeBeforeComment(sourceLine: string) {
   const comment = tokenise(sourceLine).find(token => token.type === `comment`);
   return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
@@ -283,7 +255,6 @@ export default class Linter {
       globalScope = new Cache();
 
     const globalProcs = globalScope.procedures;
-    const subfieldRanges = rules.RequiresParameter ? getSubfieldRanges(globalScope, data.uri) : [];
 
     interface ReferenceInfo { name: string, skipRules?: boolean };
 
@@ -383,8 +354,16 @@ export default class Linter {
           let isEmbeddedSQL = false;
 
           const isDirective = firstToken.type === `directive`;
+          const containsCurrentLine = (declaration: Declaration) => declaration.containsLine(data.uri, lineNumber);
+          const localScope = globalProcs.find(procedure => procedure.scope && containsCurrentLine(procedure))?.scope;
+          // Enums are stored as constants; use the parser's ranges for both scopes.
           const isDeclare = [`declare`, `end`].includes(firstToken.type)
-            || subfieldRanges.some(range => lineNumber >= range.start && lineNumber <= range.end);
+            || (rules.RequiresParameter && (
+              globalScope.structs.some(containsCurrentLine)
+              || globalScope.constants.some(containsCurrentLine)
+              || localScope?.structs.some(containsCurrentLine)
+              || localScope?.constants.some(containsCurrentLine)
+            ));
 
           if (statement.length >= 1) {
             if (isDirective) {
