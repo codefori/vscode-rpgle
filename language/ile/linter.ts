@@ -260,7 +260,6 @@ export default class Linter {
 
     let inProcedure: ReferenceInfo | undefined;
     let inSubroutine: ReferenceInfo | undefined;
-    let inStruct: string[] = [];
     let inPrototype = false;
     let inOnExit = false;
 
@@ -355,6 +354,16 @@ export default class Linter {
           let isEmbeddedSQL = false;
 
           const isDirective = firstToken.type === `directive`;
+          const containsCurrentLine = (declaration: Declaration) => declaration.containsLine(data.uri, lineNumber);
+          const localScope = globalProcs.find(procedure => procedure.scope && containsCurrentLine(procedure))?.scope;
+          // Enums are stored as constants; use the parser's ranges for both scopes.
+          const isDeclare = [`declare`, `end`].includes(firstToken.type)
+            || (rules.RequiresParameter && (
+              globalScope.structs.some(containsCurrentLine)
+              || globalScope.constants.some(containsCurrentLine)
+              || localScope?.structs.some(containsCurrentLine)
+              || localScope?.constants.some(containsCurrentLine)
+            ));
 
           if (statement.length >= 1) {
             if (isDirective) {
@@ -652,12 +661,6 @@ export default class Linter {
                     }
                     break;
 
-                  case `DCL-ENUM`:
-                    if (value) {
-                      inStruct.push(value);
-                    }
-                    break;
-
                   case `DCL-DS`:
                     if (rules.NoOCCURS) {
                       if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
@@ -695,18 +698,6 @@ export default class Linter {
                       }
                     }
 
-                    // RPG allows a single-statement declaration to close itself with END-DS,
-                    // even when the declaration spans multiple physical lines before the ;.
-                    // Evaluate the full statement, not just the current line.
-                    const hasInlineDclDsCloser = oneLineTriggers["DCL-DS"].some(trigger =>
-                      statement.some(part => part.value && part.value.toUpperCase() === trigger)
-                    );
-
-                    if (!hasInlineDclDsCloser) {
-                      if (value) {
-                        inStruct.push(value);
-                      }
-                    }
                     break;
 
 
@@ -772,11 +763,6 @@ export default class Linter {
                     } else {
                       inSubroutine = undefined;
                     }
-                    break;
-
-                  case `END-DS`:
-                  case `END-ENUM`:
-                    inStruct.pop();
                     break;
 
                   case `END-PROC`:
@@ -1025,35 +1011,18 @@ export default class Linter {
                       }
                     }
 
-                    const isDeclare = [`declare`, `end`].includes(statement[0].type);
-
-                    if ((isDeclare && i >= 2) || !isDeclare) {
-                      if (rules.RequiresParameter && !inPrototype && !isDeclare) {
-                        // Check the procedure reference has a block following it
-                        const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
-                        if (definedProcedure) {
-                          let requiresBlock = false;
-                          // Don't require parms for procedures found in Ctl-Opt or directives
-                          if (isDeclare || isDirective) {
-                            // do nothing
-                          } else if (statement[i - 2] && statement[i - 2].type === `builtin` && statement[i - 2].value?.toUpperCase() === `%PADDR`) {
-                            // Do nothing because you can pass a function to PADDR as a reference
-
-                          } else if (statement.length <= i + 1) {
-                            requiresBlock = true;
-                          } else if (statement[i + 1].type !== `openbracket`) {
-                            requiresBlock = true;
-                          }
-
-                          if (requiresBlock) {
-                            errors.push({
-                              offset: part.range,
-                              type: `RequiresParameter`,
-                            });
-                          }
-                        }
-                      }
+                  if (rules.RequiresParameter && !inPrototype && !isDeclare && !isDirective && !isEmbeddedSQL && statement[i - 1]?.type !== `dot`) {
+                    // %PADDR accepts a procedure reference without calling it.
+                    const isProcedureAddress = statement[i - 2]?.type === `builtin`
+                      && statement[i - 2].value?.toUpperCase() === `%PADDR`;
+                    const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
+                    if (definedProcedure && !isProcedureAddress && statement[i + 1]?.type !== `openbracket`) {
+                      errors.push({
+                        offset: part.range,
+                        type: `RequiresParameter`,
+                      });
                     }
+                  }
                     break;
 
                   case `string`:
