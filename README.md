@@ -20,6 +20,10 @@ or select several lines, then choose **Fix indentation** from Quick Fix (`Ctrl+.
 on Windows/Linux, `Cmd+.` on macOS). This corrects indentation on those lines using
 your linter configuration, without applying other formatting changes. Lines marked
 with `@rpglint-skip` or `@rpglint-skip-indent` are respected.
+Tabs and spaces in the leading whitespace are replaced with the configured number
+of spaces. If an unmatched closing statement makes the linter's indentation level
+negative, the Quick Fix only edits lines before that statement; correct the block
+structure before fixing indentation later in the file.
 
 # Developing
 
@@ -49,6 +53,9 @@ The test suite covers both RPG language variants:
   - Specification parsing (`specs.test.ts`)
   - Symbol resolution and scoping (`scope.test.ts`)
   - Real-world OPM fixtures (`tests/fixtures/opm/*.rpg`)
+
+Language server tests are included in `tests/tsconfig.json` for `npm run compile:tests`.
+Run `npm run lint:server-tests` to lint them; this check also runs in CI.
 
 # Previous contributors
 
