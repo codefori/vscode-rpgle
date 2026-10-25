@@ -23,7 +23,7 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 			if (isFree) {
 				const subroutineOption = getSubroutineActions(document, docs, range);
 				if (subroutineOption) {
-					return [subroutineOption];
+					actions.push(subroutineOption);
 				}
 
 				const extractOption = getExtractProcedureAction(document, docs, range);

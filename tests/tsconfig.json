@@ -16,7 +16,8 @@
   "include": [
     "./**/*.ts",
     "../language/**/*.ts",
-    "../extension/server/src/**/*.ts"
+    "../extension/server/src/**/*.ts",
+    "../extension/server/tests/**/*.ts"
   ],
   "exclude": [
     "node_modules",
