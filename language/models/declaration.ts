@@ -17,11 +17,38 @@ export default class Declaration {
   subItems: Declaration[] = [];
   readParms: boolean = false;
   /**
-   * This range property is solely line numbers.
+   * Inclusive, zero-based line numbers in position.path.
    */
   range: {start: number|null, end: number|null} = {start: null, end: null};
+  /** File-specific portions of a declaration that can span /COPY boundaries. */
+  sourceRanges: {path: string, start: number, end: number}[] = [];
   scope?: Cache;
   constructor(public type: DeclarationType) {}
+
+  addSourceRange(path: string, start: number, end = start) {
+    let sourceRange = this.sourceRanges.find(range => range.path === path);
+    if (sourceRange) {
+      sourceRange.start = Math.min(sourceRange.start, start);
+      sourceRange.end = Math.max(sourceRange.end, end);
+    } else {
+      sourceRange = {path, start, end};
+      this.sourceRanges.push(sourceRange);
+    }
+
+    if (this.position?.path === path) {
+      this.range.start = sourceRange.start;
+      this.range.end = sourceRange.end;
+    }
+  }
+
+  containsLine(path: string, line: number): boolean {
+    if (this.sourceRanges.length > 0) {
+      return this.sourceRanges.some(range => range.path === path && line >= range.start && line <= range.end);
+    }
+
+    return this.position?.path === path && this.range.start !== null && this.range.end !== null
+      && line >= this.range.start && line <= this.range.end;
+  }
 
   clone() {
     const clone = new Declaration(this.type);
@@ -39,6 +66,7 @@ export default class Declaration {
       start: this.range.start,
       end: this.range.end
     };
+    clone.sourceRanges = this.sourceRanges.map(range => ({...range}));
 
     //clone.references = this.references;
     //clone.readParms = this.readParms;

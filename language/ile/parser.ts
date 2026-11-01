@@ -683,6 +683,11 @@ export default class Parser {
         lineIsFree = false;
         lineNumber += 1;
 
+        // Open structures may originate in a different /COPY file.
+        for (const ds of dsScopes) {
+          ds.addSourceRange(fileUri, lineNumber);
+        }
+
         if (baseLine.startsWith(`**`) && baseLine[2] !== `*`) {
           if (baseLine.toLowerCase().startsWith(`**free`)) {
             // **free only works when set on the first line
@@ -831,6 +836,11 @@ export default class Parser {
 
                           try {
                             await parseContent(include.uri, include.content);
+                            // A structure opened in the include may continue in this file.
+                            // Structures closed in the include have already left dsScopes.
+                            for (const ds of dsScopes) {
+                              ds.addSourceRange(fileUri, lineNumber);
+                            }
                           } catch (e) {
                             console.log(`Error parsing include: ${include.uri}`);
                             console.log(e);
@@ -1096,6 +1106,7 @@ export default class Parser {
                   } else {
                     // If it's not a single line defintion, flag the item to keep adding new fields
                     currentItem.readParms = true;
+                    currentItem.addSourceRange(fileUri, currentStmtStart.line, lineNumber);
                     dsScopes.push(currentItem);
                   }
 
@@ -1109,7 +1120,7 @@ export default class Parser {
             case `END-DS`:
               if (dsScopes.length > 0) {
                 const currentDs = dsScopes[dsScopes.length - 1];
-                currentDs.range.end = currentStmtStart.line;
+                currentDs.addSourceRange(fileUri, currentStmtStart.line, lineNumber);
               }
 
               if (dsScopes.length === 1) {
