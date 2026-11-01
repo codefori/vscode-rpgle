@@ -56,7 +56,7 @@ const skipRules = {
   singleRules: 3, // Skips rule check
 };
 
-type IndentError = {
+export type IndentError = {
   line: number,
   expectedIndent: number,
   currentIndent: number,

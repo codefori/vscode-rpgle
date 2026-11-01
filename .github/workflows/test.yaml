@@ -3,6 +3,8 @@ on:
     paths:
       - 'language/**'
       - 'tests/**'
+      - 'extension/server/**'
+      - 'package.json'
     
 jobs:
   release:
@@ -28,3 +30,6 @@ jobs:
 
       - name: Run tests
         run: npm run test
+
+      - name: Lint server tests
+        run: npm run lint:server-tests

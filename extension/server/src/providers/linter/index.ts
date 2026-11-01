@@ -7,6 +7,7 @@ import { IssueRange, Rules } from '../../../../../language/ile/parserTypes';
 import Linter from '../../../../../language/ile/linter';
 import Cache from '../../../../../language/models/cache';
 import documentFormattingProvider from './documentFormatting';
+import { getIndentationDiagnostic } from './indentation';
 
 import * as Project from "../project";
 import { connection, getDisplayName, getFileRequest, getWorkingDirectory, validateUri, watchedFilesChangeEvent } from '../../connection';
@@ -228,13 +229,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 
 		if (indentErrors.length > 0) {
 			indentErrors.forEach(error => {
-				const range = Range.create(error.line, 0, error.line, error.currentIndent);
-
-				indentDiags.push(Diagnostic.create(
-					range,
-					`Incorrect indentation. Expected ${error.expectedIndent}, got ${error.currentIndent}`,
-					DiagnosticSeverity.Warning
-				));
+				indentDiags.push(getIndentationDiagnostic(document, error));
 			});
 		}
 

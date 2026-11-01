@@ -235,7 +235,8 @@
 		"compile:client": "tsc -b ./extension/client/tsconfig.json",
 		"compile:server": "tsc -b ./extension/server/tsconfig.json",
 		"watch": "tsc -b -w",
-		"lint": "eslint ./extension/client/src ./extension/server/src --ext .ts,.tsx",
+		"lint": "eslint ./extension/client/src ./extension/server/src ./extension/server/tests --ext .ts,.tsx",
+		"lint:server-tests": "eslint ./extension/server/tests --ext .ts",
 		"postinstall": "cd extension/client && npm install && cd ../server && npm install && cd ../..",
 		"cli:dev:rpglint": "cd cli/rpglint && npm run webpack:dev"
 	},
