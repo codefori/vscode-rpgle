@@ -11,15 +11,14 @@ import * as path from "path";
 import { TextDocument } from 'vscode-languageserver-textdocument';
 const projectFilesGlob = `**/*.{rpgle,sqlrpgle,rpgleinc}`;
 
-export let includePath: {[workspaceUri: string]: string[]} = {};
+export let includePath: { [workspaceUri: string]: string[] } = {};
 
-export let isEnabled = false;
+export let isEnabled = true;
+let isWorkspaceLoading = false;
 /**
  * Assumes client has workspace
  */
 export async function initialise() {
-	isEnabled = true;
-
 	loadWorkspace();
 
 	watchedFilesChangeEvent.push((params: DidChangeWatchedFilesParams) => {
@@ -53,54 +52,72 @@ export async function initialise() {
 	});
 }
 
-async function loadWorkspace() {
-	const workspaces = await connection.workspace.getWorkspaceFolders();
+export async function loadWorkspace() {
+	if (isWorkspaceLoading) {
+		console.log(`Workspace loading already in progress.`);
+		return;
+	}
 
-	if (workspaces) {
-		let uris: string[] = [];
+	isWorkspaceLoading = true;
 
-		workspaces.forEach((workspaceUri => {
-			const folderPath = URI.parse(workspaceUri.uri).fsPath;
+	try {
+		const workspaces = await connection.workspace.getWorkspaceFolders();
 
-			console.log(`Starting search of: ${folderPath}`);
-			const files = glob.sync(projectFilesGlob, {
-				cwd: folderPath,
-				absolute: true,
-				nocase: true,
-			});
+		if (workspaces) {
+			let uris: string[] = [];
 
-			console.log(`Found RPGLE files: ${files.length}`);
+			workspaces.forEach((workspaceUri => {
+				const folderPath = URI.parse(workspaceUri.uri).fsPath;
 
-			uris.push(...files.map(file => URI.from({
-				scheme: `file`,
-				path: file
-			}).toString()));
+				console.log(`Starting search of: ${folderPath}`);
+				const files = glob.sync(projectFilesGlob, {
+					cwd: folderPath,
+					absolute: true,
+					nocase: true,
+				});
 
-			const iprojFiles = glob.sync(`**/iproj.json`, {
-				cwd: folderPath,
-				absolute: true,
-				nocase: true,
-			});
+				console.log(`Found RPGLE files: ${files.length}`);
 
-			if (iprojFiles.length > 0) {
-				const base = iprojFiles[0];
-				const iprojUri = URI.from({
+				uris.push(...files.map(file => URI.from({
 					scheme: `file`,
-					path: base
-				}).toString();
+					path: file
+				}).toString()));
 
-				updateIProj(iprojUri);
-			}
-		}));
+				const iprojFiles = glob.sync(`**/iproj.json`, {
+					cwd: folderPath,
+					absolute: true,
+					nocase: true,
+				});
 
-		if (uris.length < 1000) {
-			for (const uri of uris) {
-				await loadLocalFile(uri);
+				if (iprojFiles.length > 0) {
+					const base = iprojFiles[0];
+					const iprojUri = URI.from({
+						scheme: `file`,
+						path: base
+					}).toString();
+
+					updateIProj(iprojUri);
+				}
+			}));
+
+			const config = await connection.workspace.getConfiguration('vscode-rpgle');
+			const preParseOnStartup: boolean = config?.enableLocalProjectPreparsing ?? true;
+			const fileLimit: number = config?.localProjectPreparsingFileLimit ?? 1000;
+
+			if (preParseOnStartup) {
+				if (uris.length <= fileLimit) {
+					console.log(`Pre-parsing ${uris.length} files.`);
+					await Promise.all(uris.map(uri => loadLocalFile(uri)));
+					console.log(`Finished pre-parsing ${uris.length} files.`);
+				} else {
+					console.log(`Skipping pre-parse: ${uris.length} files exceeds limit of ${fileLimit}.`);
+				}
+			} else {
+				console.log(`Pre-parsing disabled; files will be parsed on open.`);
 			}
-		} else {
-			console.log(`Disabling project mode for large project.`);
-			isEnabled = false;
 		}
+	} finally {
+		isWorkspaceLoading = false;
 	}
 }
 
@@ -151,7 +168,7 @@ export async function getTextDoc(uri: string): Promise<TextDocument | undefined>
 	try {
 		const content = await fs.readFile(URI.parse(uri).fsPath, { encoding: `utf-8` });
 		return TextDocument.create(uri, `rpgle`, 1, content);
-	} catch (e) {}
+	} catch (e) { }
 
 	return;
 }

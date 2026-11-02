@@ -89,6 +89,17 @@
 					"type": "string",
 					"default": "*TEMPLIB",
 					"description": "Library containing the FIELD_LIST UDTF when fieldMetadataProvider is set to UDTF. Use *TEMPLIB to follow the IBM i temp library setting."
+				},
+				"vscode-rpgle.enableLocalProjectPreparsing": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "When enabled, all RPGLE files in the workspace are pre-parsed at startup to support cross-file features such as go-to-definition, hover information, and completions. The maximum number of files parsed is controlled by `#vscode-rpgle.localProjectPreparsingFileLimit#`."
+				},
+				"vscode-rpgle.localProjectPreparsingFileLimit": {
+					"type": "number",
+					"default": 1000,
+					"minimum": 1,
+					"markdownDescription": "Maximum number of local RPGLE files that will be pre-parsed. Only applies when `#vscode-rpgle.enableLocalProjectPreparsing#` is enabled. If the workspace contains more files than this limit, pre-parsing is skipped to avoid performance issues."
 				}
 			}
 		},
