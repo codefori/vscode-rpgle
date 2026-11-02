@@ -148,9 +148,6 @@ valid choices are:<ul>
 </ul>'
 );
 
-
-
-
 `;
 
 export function getFieldListSQLSrc(library: string, version: number): string {
