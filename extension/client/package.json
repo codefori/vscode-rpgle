@@ -12,8 +12,10 @@
 		"vscode-languageclient": "^7.0.0"
 	},
 	"devDependencies": {
-		"@halcyontech/vscode-ibmi-types": "^3.0.12",
+		"@halcyontech/vscode-ibmi-types": "^3.0.13",
+		"@ibm/mapepire-js": "^1.0.1",
 		"@types/vscode": "^1.63.0",
-		"@vscode/test-electron": "^2.1.2"
+		"@vscode/test-electron": "^2.1.2",
+		"node-ssh": "^13.2.1"
 	}
 }

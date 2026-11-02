@@ -14,10 +14,32 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 
 	const currentLine = params.position.line;
 	const document = documents.get(currentPath);
+	const normalizeUri = (uri: string) => uri.split(`?`)[0].split(`#`)[0];
 
 	if (document) {
-		// Use only the warm cache; avoids triggering expensive include fetches on every hover
-		const doc = parser.getParsedCache(currentPath);
+		let doc = parser.getParsedCache(currentPath);
+
+		// Some member URIs can differ only by query/hash between parse and hover requests.
+		if (!doc) {
+			const normalizedCurrentPath = normalizeUri(currentPath);
+			const matchedCacheKey = Object.keys(parser.parsedCache).find((cacheKey) => {
+				return normalizeUri(cacheKey) === normalizedCurrentPath && parser.getParsedCache(cacheKey) !== undefined;
+			});
+
+			if (matchedCacheKey) {
+				doc = parser.getParsedCache(matchedCacheKey);
+			}
+		}
+
+		// Fallback: build cache on demand when no warm cache exists yet.
+		if (!doc) {
+			doc = await parser.getDocs(currentPath, document.getText(), {
+				withIncludes: true,
+				ignoreCache: false,
+				collectReferences: true
+			});
+		}
+
 		if (doc) {
 			const word = getWordRangeAtPosition(document, params.position);
 

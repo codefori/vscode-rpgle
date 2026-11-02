@@ -92,7 +92,7 @@ export async function validateUri(stringUri: string, scheme = ``) {
 	logWithTimestamp(`URI validation: ${stringUri} (requesting from server...)`, LogLevel.DEBUG);
 
 	// Then reach out to the extension to find it
-	const uri: string|undefined = await connection.sendRequest("getUri", stringUri);
+	const uri: string | undefined = await connection.sendRequest("getUri", stringUri);
 	const duration = Date.now() - startTime;
 
 	if (uri) {
@@ -128,7 +128,7 @@ export async function getFileRequest(uri: string, skipDebounce: boolean = false)
 
 	try {
 		// If not, then grab it from remote
-		const body: string|undefined = await connection.sendRequest("getFile", uri);
+		const body: string | undefined = await connection.sendRequest("getFile", uri);
 		const duration = Date.now() - startTime;
 
 		if (body) {
@@ -153,11 +153,11 @@ export async function getFileRequest(uri: string, skipDebounce: boolean = false)
 }
 
 // Global caches - not scoped per file since library list is connection-level
-export let resolvedMembers: {[fileKey: string]: IBMiMember} = {};
-export let resolvedStreamfiles: {[fileKey: string]: string} = {};
+export let resolvedMembers: { [fileKey: string]: IBMiMember } = {};
+export let resolvedStreamfiles: { [fileKey: string]: string } = {};
 
-export async function memberResolve(baseUri: string, member: string, file: string): Promise<IBMiMember|undefined> {
-	const fileKey = file+member;
+export async function memberResolve(baseUri: string, member: string, file: string): Promise<IBMiMember | undefined> {
+	const fileKey = file + member;
 	const startTime = Date.now();
 
 	// Check global cache
@@ -171,7 +171,7 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 	logWithTimestamp(`Member resolve CACHE MISS: ${file}/${member}`, LogLevel.DEBUG);
 
 	try {
-		const resolvedMember = await queue.add(() => {return connection.sendRequest("memberResolve", [member, file])}) as IBMiMember|undefined;
+		const resolvedMember = await queue.add(() => { return connection.sendRequest("memberResolve", [member, file]) }) as IBMiMember | undefined;
 		const duration = Date.now() - startTime;
 
 		if (resolvedMember) {
@@ -187,14 +187,14 @@ export async function memberResolve(baseUri: string, member: string, file: strin
 	} catch (e) {
 		const duration = Date.now() - startTime;
 		logWithTimestamp(`Member resolve ERROR: ${file}/${member} (${duration}ms)`, LogLevel.ERROR);
-		console.log(JSON.stringify({baseUri, member, file}));
+		console.log(JSON.stringify({ baseUri, member, file }));
 		console.log(e);
 	}
 
 	return undefined;
 }
 
-export async function streamfileResolve(baseUri: string, base: string[]): Promise<string|undefined> {
+export async function streamfileResolve(baseUri: string, base: string[]): Promise<string | undefined> {
 	const baseString = base.join(`-`);
 	const startTime = Date.now();
 
@@ -213,7 +213,7 @@ export async function streamfileResolve(baseUri: string, base: string[]): Promis
 	const paths = (workspace ? includePath[workspace.uri] : []) || [];
 
 	try {
-		const resolvedPath = await queue.add(() => {return connection.sendRequest("streamfileResolve", [base, paths])}) as string|undefined;
+		const resolvedPath = await queue.add(() => { return connection.sendRequest("streamfileResolve", [base, paths]) }) as string | undefined;
 		const duration = Date.now() - startTime;
 
 		if (resolvedPath) {
@@ -229,14 +229,14 @@ export async function streamfileResolve(baseUri: string, base: string[]): Promis
 	} catch (e) {
 		const duration = Date.now() - startTime;
 		logWithTimestamp(`Streamfile resolve ERROR: ${base[0]} (${duration}ms)`, LogLevel.ERROR);
-		console.log(JSON.stringify({baseUri, base, paths}));
+		console.log(JSON.stringify({ baseUri, base, paths }));
 		console.log(e);
 	}
 
 	return undefined;
 }
 
-export function getWorkingDirectory(): Promise<string|undefined> {
+export function getWorkingDirectory(): Promise<string | undefined> {
 	return connection.sendRequest("getWorkingDirectory");
 }
 
@@ -261,9 +261,27 @@ export async function getWorkspaceFolder(baseUri: string) {
 	return workspaceFolder
 }
 
+export async function refreshTableCache(): Promise<void> {
+	parser.clearTableCache();
+
+	for (const document of documents.all()) {
+		const uri = document.uri;
+		parser.clearParsedCache(uri);
+		await parser.getDocs(uri, document.getText(), {
+			withIncludes: true,
+			ignoreCache: true,
+			collectReferences: true
+		});
+	}
+}
+
 export function handleClientRequests() {
 	connection.onRequest(`clearTableCache`, () => {
 		parser.clearTableCache();
+	});
+
+	connection.onRequest(`refreshTableCache`, async () => {
+		await refreshTableCache();
 	});
 
 	connection.onRequest(`getCache`, (uri: string) => {
