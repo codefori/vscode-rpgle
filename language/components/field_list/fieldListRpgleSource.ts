@@ -11,7 +11,16 @@ export function getFieldListRPGLESrc(): string {
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 by R. Cozzi, Jr.
 
-ctl-opt main(main) dftactgrp(*no) actgrp(*caller) option(*srcstmt);
+ctl-opt   main(main) OPTION(*SRCSTMT);
+
+/if defined(*CRTBNDRPG)
+ctl-opt DFTACTGRP(*NO) ACTGRP(*CALLER);
+/endif
+
+         // Use the PSDS to obtain "this" Program's name
+dcl-Ds psds psds qualified;
+    Pgmname *proc;
+end-Ds;
 
 dcl-c SQL_FETCH 0;
 dcl-c SQL_OPEN -1;
@@ -38,7 +47,39 @@ dcl-ds QUSEC_t qualified template;
     msgData   char(1024) inz;
 end-ds;
 
-dcl-pr QUSListRcdFmt extpgm('QUSLRCD');
+
+         // Delete Object API
+dcl-pr QLIDLTO extpgm('QLIDLTO');
+    qualObjName char(20) const;
+    objType     char(10) const;
+    aspName     char(10) const; // Use '*'
+    rmvMsg      char(1)  const; // '1'=Remove "Object deleted" msg
+    apiError    likeds(QUSEC_T) options(*varsize);
+end-pr;
+
+         // Retrieve System Name (long SQL name to system name)
+dcl-pr QDBRTVSN extpgm('QDBRTVSN');
+    sysName     char(20);
+    sqlName     char(128) const options(*varsize);
+    sqlNameLen  int(10)   const;
+    libName     char(10)  const;
+    apiError    likeds(QUSEC_T) options(*varsize);
+end-pr;
+
+         // Send Program Message API (used to resignal API errors)
+dcl-pr QMHSNDPM extpgm('QMHSNDPM');
+    msgID       char(7)   const;
+    msgFile     char(20)  const;
+    msgData     char(256) const options(*varsize);
+    msgDataLen  int(10)   const;
+    msgType     char(10)  const;
+    callStkEnt  char(10)  const;
+    callStkCnt  int(10)   const;
+    msgKey      char(4);
+    apiError    likeds(QUSEC_T) options(*varsize);
+end-pr;
+
+dcl-pr QUSLRCD extpgm('QUSLRCD');
     UsrSpace char(20) const;
     Format char(8) const;
     FileName char(20) const;
@@ -99,14 +140,6 @@ dcl-pr RTVJOBA extpgm('QUSRJOBI');
     apiFormat char(8) const;
     Job char(26) const;
     InternalJobID char(16) const;
-    apiError likeds(QUSEC_t) options(*varsize);
-end-pr;
-
-dcl-pr QLIDLTO extpgm('QLIDLTO');
-    QualObj char(20) const;
-    ObjType char(10) const;
-    ASP char(10) const;
-    rmvMessages char(1) const;
     apiError likeds(QUSEC_t) options(*varsize);
 end-pr;
 
@@ -311,7 +344,7 @@ dcl-proc main;
         inOVR varchar(10) const;
         inLOG varchar(10) const;
 
-
+    // Output parameters (return values)
         outLibrary_name varchar(10);
         outFile_name varchar(10);
         outFILE_TYPE varchar(10);
@@ -506,7 +539,7 @@ dcl-proc main;
         if (%subst(scratchPad.rcdFmt : 1 : 1) = '*');
             reset ec;
             //  Create List of Record Format names
-            QUSListRcdFmt(
+            QUSLRCD(
                 scratchPad.fmtUs :
                 'RCDL0100' :
                 scratchPad.qualFile :
@@ -514,6 +547,7 @@ dcl-proc main;
                 ec
             );
             if (ec.bytes_Returned > 0);
+                resignalMsg( ec );
                 outSQLSTATE = '38701';
                 outSQLMSG = 'QUSLRCD failed: ' + ec.msgID;
                 return;
@@ -1213,33 +1247,12 @@ dcl-proc getShortName;
         objectname varchar(128) const;
         libName    varchar(128) const OPTIONS(*NOPASS : *OMIT);
     end-pi;
-
-    dcl-pr QDBRTVSN  extPgm('QDBRTVSN');
-        rtnQualObj char(20);
-        longObjName char(128) Const;
-        longObjNameLength int(10) Const;
-        longObjLibrary char(10) Const;
-        apiError  LikeDS(QUSEC_T) OPTIONS(*VARSIZE);
-    end-pr QDBRTVSN;
-    dcl-s  library varchar(10);
-    dcl-s  fileLib char(20);
-    dcl-ds ec likeDS(QUSEC_T) inz(*LIKEDS);
-
-    if (%Parms() >= %ParmNum(LibName) and
-        %addr(libName) <> *NULL and
-        %len(%TrimR(libName)) > 10);
-        library =  getShortName( libName : ' ');
-    else;
-        library = %TrimR(libName);
-    endif;
-
-    reset ec;
-    QDBRTVSN( fileLib : objectName : %Len(%TrimR(objectName)) :
-              library : ec);
-
-    // %SUBST(objName : 1 : 10) = getShortName(objectName : library);
-    %SUBST(fileLib : 11 : 10) = library;
-    return fileLib;
+    dcl-s rtnObj char(10);
+    dcl-s rtnLib char(10);
+    dcl-s rtnFile char(20);
+    getObjSysName(rtnObj : rtnLib : objectName : libName);
+    rtnFile = rtnObj + rtnLib;
+    return rtnFile;
 end-proc;
 
 dcl-proc getPtrUsrSpace;
@@ -1357,5 +1370,162 @@ dcl-proc getNextField;
     fieldData.pField = pEntry;
 
     return %addr(fieldData);
-end-proc;`;
+end-proc;
+
+
+    ////////////////////////////////////////////////////////////////////////
+    // getObjSysName - Convert long SQL object/library names to the
+    // corresponding 10-character system names via the QDBRTVSN API.
+    // Returns *ON = success, *OFF = error (errors are resignaled).
+    ////////////////////////////////////////////////////////////////////////
+dcl-proc getObjSysName;
+    dcl-pi getObjSysName ind;
+        outObject    char(10);
+        outLibrary   char(10);
+        inLongObject varchar(128) const;
+        inLongLibrary varchar(128) const;
+    end-pi;
+
+    dcl-ds ec likeds(QUSEC_T) inz(*LIKEDS);
+    dcl-s rtnName  char(20);
+    dcl-s shortObj char(10);
+    dcl-s shortLib char(10);
+
+         // Resolve a long library name first (skip if it contains '*')
+    if (%len(inLongLibrary) > 10 and %scan('*' : inLongLibrary) = 0);
+        reset ec;
+        QDBRTVSN(rtnName : inLongLibrary :
+                 %len(inLongLibrary) : ' ' : ec);
+        if (ec.bytes_returned > 0);
+            resignalMsg(ec);
+            return *off;
+        endif;
+             // Library name is in positions 1 to 10 of the result
+        shortLib = %subst(rtnName : 1 : 10);
+    else;
+        shortLib = inLongLibrary;
+    endif;
+
+         // Resolve a long object name (skip if it contains '*')
+    if (%len(inLongObject) > 10 and %scan('*' : inLongObject) = 0);
+        reset ec;
+        QDBRTVSN(rtnName : inLongObject :
+                 %len(inLongObject) : shortLib : ec);
+        if (ec.bytes_returned > 0);
+            resignalMsg(ec);
+            return *off;
+        endif;
+             // Object in pos 1-10, library in pos 11-20; copy the
+             // library too in case *CURLIB/*LIBL were resolved.
+        shortObj = %subst(rtnName : 1 : 10);
+        shortLib = %subst(rtnName : 11 : 10);
+    else;
+        shortObj = inLongObject;
+    endif;
+
+    if (%SUBST(shortObj : 1 : 1) <> '"');
+        outObject = %upper(shortObj);
+    else;
+        outObject  = shortObj;
+    endif;
+    if (%SUBST(shortLib : 1 : 1) <> '"');
+        outLibrary = %upper(shortLib);
+    else;
+        outLibrary = shortLib;
+    endif;
+    return *on;
+end-proc;
+
+    ////////////////////////////////////////////////////////////////////////
+    // deleteObject - Deletes an IBM i object via the QLIDLTO API.
+    // Returns 1 if deleted, 0 otherwise (API errors are resignaled).
+    ////////////////////////////////////////////////////////////////////////
+dcl-proc deleteObject;
+    dcl-pi deleteObject int(10);
+        qualObjName char(20) const;
+        objType     char(10) const;
+        aspName     char(10) const;
+        rmvMsg      char(1)  const;
+    end-pi;
+
+    dcl-ds ec likeds(QUSEC_T) inz(*LIKEDS);
+
+    if (qualObjName = *blanks);
+        return 0;
+    endif;
+
+    QLIDLTO(qualObjName : objType : aspName : rmvMsg : ec);
+    if (ec.bytes_returned > 0);
+        resignalMsg(ec);
+        return 0;
+    endif;
+    return 1;
+end-proc;
+
+    ////////////////////////////////////////////////////////////////////////
+    // resignalMsg - Re-send an IBM i API error as a program message.
+    ////////////////////////////////////////////////////////////////////////
+dcl-proc resignalMsg;
+    dcl-pi resignalMsg;
+        apiError likeds(QUSEC_T) const;
+    end-pi;
+
+    dcl-ds fc likeds(QUSEC_T) inz(*LIKEDS);
+    dcl-s msgFile    char(20);
+    dcl-s msgType    char(10);
+    dcl-s msgKey     char(4) inz(*blanks);
+    dcl-s msgPrefix  char(2);
+    dcl-s msgDataLen int(10);
+
+    if (apiError.bytes_returned = 0);
+        return;
+    endif;
+
+    msgPrefix = %subst(apiError.msgid : 1 : 2);
+
+    select;  // Guess the MSGF since QUSEC does not contain it
+        when msgPrefix = 'RN';
+            msgFile = 'QRPGLEMSG';
+            %subst(msgFile : 11 : 10) = 'QDEVTOOLS';
+        when msgPrefix = 'HT';
+            msgFile = 'QHTTPMSG';
+            %subst(msgFile : 11 : 10) = 'QHTTPSVR';
+        when msgPrefix = 'CE';
+            msgFile = 'QCEEMSG';
+            %subst(msgFile : 11 : 10) = 'QSYS';
+        when msgPrefix = 'GU';
+            msgFile = 'QGUIMSG';
+            %subst(msgFile : 11 : 10) = 'QSYS';
+        when msgPrefix = 'IW';
+            msgFile = 'QIWSMSG';
+            %subst(msgFile : 11 : 10) = 'QSYS';
+        other;      // CP and everything else use QCPFMSG
+            msgFile = 'QCPFMSG';
+            %subst(msgFile : 11 : 10) = '*LIBL';
+    endsl;
+
+    select;
+        when %subst(apiError.msgid : 3 : 1) = 'E';
+            msgType = '*ESCAPE';
+        when %subst(apiError.msgid : 3 : 1) = 'D';
+            msgType = '*DIAG';
+        when %subst(apiError.msgid : 3 : 1) = 'C';
+            msgType = '*COMP';
+        other;      // F, I and everything else
+            msgType = '*INFO';
+    endsl;
+
+    msgDataLen = apiError.bytes_returned - 16;
+    if (msgDataLen < 0);
+        msgDataLen = 0;
+    endif;
+    if (msgDataLen > %size(apiError.msgdata));
+        msgDataLen = %size(apiError.msgdata);
+    endif;
+
+    QMHSNDPM(apiError.msgid : msgFile : apiError.msgdata :
+             msgDataLen : msgType : '*' : 1 : msgKey : fc);
+end-proc;
+
+`;
 }
