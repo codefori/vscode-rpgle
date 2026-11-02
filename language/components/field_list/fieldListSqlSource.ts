@@ -85,7 +85,7 @@ RETURNS TABLE (
     TIMESTAMP_PRECISION SMALLINT,
     DEFAULT_VALUE VARCHAR(2000)
 )
-LANGUAGE C++
+LANGUAGE RPGLE
 NO SQL
 NOT DETERMINISTIC
 NOT FENCED
@@ -97,7 +97,7 @@ PARAMETER STYLE DB2SQL;
 
 
 LABEL on specific routine \${library}.FIELD_LIST IS
-'List File Field definitions (similar to DSPFFD)';
+'\${version} - List File Field definitions';
 
 comment on specific function \${library}.FIELD_LIST IS
 '\${version} - List of definitions for the fileds (columns) in the file(s) specified.

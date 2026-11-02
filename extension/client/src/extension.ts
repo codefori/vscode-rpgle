@@ -142,9 +142,9 @@ export function activate(context: ExtensionContext) {
 
 				logInfo(`[vscode-rpgle] FIELD_LIST ensure: checking remote state`);
 				const state = await fieldListChecker.getRemoteState(connection);
-				logInfo(`[vscode-rpgle] FIELD_LIST ensure: remote state=${state}`);
+				logInfo(`[vscode-rpgle] FIELD_LIST ensure: remote state=${JSON.stringify(state)}`);
 
-				if (state === 'Installed') {
+				if (state.status === 'Installed') {
 					return;
 				}
 
