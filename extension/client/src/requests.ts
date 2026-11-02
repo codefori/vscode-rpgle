@@ -131,8 +131,10 @@ export function buildRequestHandlers(client: LanguageClient) {
 				const content = connection.getContent();
 				const config = connection.getConfig();
 
-				const dateStr = Date.now().toString().substr(-6);
-				const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
+				// A counter rather than the time: two lookups can start in the same millisecond
+				const fileNumber = (outfileCounter++ % 1000000).toString().padStart(6, `0`);
+				// Only letters and digits from the name: the outfile name goes into SQL and CL without quotes
+				const randomFile = `R${table.replace(/[^A-Z0-9]/gi, ``).substring(0, 3)}${fileNumber}`.substring(0, 10);
 				const fullPath = `QTEMP/${randomFile}`;
 
 				console.log(`Temp OUTFILE: ${fullPath}`);
@@ -151,6 +153,56 @@ export function buildRequestHandlers(client: LanguageClient) {
 				}
 
 				// TODO: handle .env file here?
+
+				if (connection.enableSQL) {
+					// Run everything in the SQL job: going through runCommand would queue
+					// these requests with the user's saves and actions.
+					const { currentLibrary, libraryList } = getEffectiveLibraries(config);
+
+					// One statement, so nothing else runs in the SQL job between CHGLIBL and DSPFFD.
+					// The job's library list is put back afterwards: an Action may be running
+					// in the same job with its own library list.
+					const dspffd = [
+						`begin`,
+						`  declare oldLibl varchar(2750) default '*NONE';`,
+						`  declare oldCurlib varchar(10) default '*CRTDFT';`,
+						`  declare exit handler for sqlexception begin`,
+						`    call QSYS2.QCMDEXC('QSYS/CHGLIBL LIBL(' concat oldLibl concat ') CURLIB(' concat oldCurlib concat ')');`,
+						`    resignal;`,
+						`  end;`,
+						`  select coalesce(listagg(SYSTEM_SCHEMA_NAME, ' ') within group (order by ORDINAL_POSITION), '*NONE') into oldLibl from QSYS2.LIBRARY_LIST_INFO where TYPE = 'USER';`,
+						`  select coalesce(max(SYSTEM_SCHEMA_NAME), '*CRTDFT') into oldCurlib from QSYS2.LIBRARY_LIST_INFO where TYPE = 'CURRENT';`,
+						`  call QSYS2.QCMDEXC('QSYS/CHGLIBL LIBL(${sqlString(libraryList.join(` `) || `*NONE`)}) CURLIB(${sqlString(currentLibrary || `*CRTDFT`)})');`,
+						`  call QSYS2.QCMDEXC('QSYS/DSPFFD FILE(${sqlString(parts.schema)}/${sqlString(parts.table)}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})');`,
+						`  call QSYS2.QCMDEXC('QSYS/CHGLIBL LIBL(' concat oldLibl concat ') CURLIB(' concat oldCurlib concat ')');`,
+						`end`
+					].join(`\n`);
+
+					let data: any[];
+					try {
+						// runStatements rather than getQTempTable, which Code for IBM i has removed
+						data = await content.runStatements(
+							dspffd,
+							`select * from ${fullPath.replace(`/`, `.`)}`
+						);
+					} catch (e) {
+						// Same as without SQL: a file that is not found has no fields
+						console.log(e);
+						return [];
+					}
+
+					// Only when DSPFFD worked: if it failed there is no outfile, and a failing
+					// DLTOBJ is one more command in the SQL job
+					content.runStatements(`@QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`).catch(() => {});
+
+					// Same values as the CSV export used without SQL
+					return data.map(row => {
+						for (const key of Object.keys(row)) {
+							if (typeof row[key] === `string`) row[key] = row[key].trimEnd();
+						}
+						return row;
+					});
+				}
 
 				const outfileRes: any = await connection.runCommand({
 					environment: `ile`,
@@ -177,6 +229,32 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 		return [];
 	});
+}
+
+let outfileCounter = 0;
+
+/**
+ * Doubles the apostrophes of a value put inside an SQL string literal: names can come
+ * from the source (EXTFILE/EXTNAME) or the settings, and must not end the literal.
+ */
+function sqlString(value: string) {
+	return value.replace(/'/g, `''`);
+}
+
+/**
+ * The current library and library list used by Code for IBM i's ILE commands:
+ * the CURLIB and LIBL custom variables override the connection settings.
+ */
+export function getEffectiveLibraries(config: { currentLibrary: string, libraryList: string[], customVariables?: { name: string, value: string }[] }) {
+	const variable = (name: string) => config.customVariables?.find(v => v.name.toUpperCase() === name)?.value;
+
+	const currentLibrary = variable(`CURLIB`) || config.currentLibrary || ``;
+	const libraryList = variable(`LIBL`)?.split(` `).filter(library => library) || config.libraryList;
+
+	return {
+		currentLibrary: /\*CURLIB/i.test(currentLibrary) ? `` : currentLibrary,
+		libraryList: libraryList.filter((library, index, list) => list.indexOf(library) === index)
+	};
 }
 
 export function clearTableCache(client: LanguageClient) {
