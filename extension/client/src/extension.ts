@@ -25,7 +25,6 @@ import { getServerImplementationProvider, getServerSymbolProvider } from './lang
 import { checkAndWait, loadBase } from './base';
 import { registerCommands } from './commands';
 import { setLanguageSettings } from './language/config';
-import { onCodeForIBMiConfigurationChange } from '@halcyontech/vscode-ibmi-types/config/Configuration';
 import { fieldListChecker } from '../../../language/components/field_list';
 import { initRpgleOutput, logError, logInfo } from '../../../language/components/logger';
 
@@ -202,7 +201,7 @@ export function activate(context: ExtensionContext) {
 
 			// When the library list changes
 			context.subscriptions.push(
-				onCodeForIBMiConfigurationChange("connectionSettings", async () => {
+				base.onCodeForIBMiConfigurationChange("connectionSettings", async () => {
 					await clearTableCache(client, 'manual');
 				}),
 			);
