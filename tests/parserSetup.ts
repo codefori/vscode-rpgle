@@ -24,6 +24,8 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 		absolute: true,
 		ignore,
 		nocase: true,
+		// glob 13 returns `\`-delimited paths on Windows; keep `/` like glob 7 did.
+		posix: true,
 	}
 
 	parser.setIncludeFileFetch(async (baseFile: string, includeFile: string) => {
