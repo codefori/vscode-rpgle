@@ -10,14 +10,14 @@ const TESTS_DIR = path.join(__dirname, "..");
 test("resolves absolute path by joining workspace fsPath and relative include", () => {
 	const workspaceUri = URI.file("/home/user/project").toString();
 	const { absolutePath } = resolveWorkspaceIncludePath(workspaceUri, "includes/mylib.rpgleinc");
-	expect(absolutePath).toBe("/home/user/project/includes/mylib.rpgleinc");
+	expect(absolutePath).toBe(path.normalize("/home/user/project/includes/mylib.rpgleinc"));
 });
 
 test("resolves leading ./ in include path", () => {
 	// path.join normalises './' just like path.posix.join would.
 	const workspaceUri = URI.file("/home/user/project").toString();
 	const { absolutePath } = resolveWorkspaceIncludePath(workspaceUri, "./includes/mylib.rpgleinc");
-	expect(absolutePath).toBe("/home/user/project/includes/mylib.rpgleinc");
+	expect(absolutePath).toBe(path.normalize("/home/user/project/includes/mylib.rpgleinc"));
 });
 
 test("fileUri is a valid file:// URI", () => {
@@ -143,5 +143,7 @@ test("include position.path fsPath roundtrips to the original absolute path", as
 	if (!cache) throw new Error("Expected parser cache to be defined");
 
 	expect(cache.procedures.length).toBe(1);
-	expect(URI.parse(cache.procedures[0].position.path).fsPath).toBe(includeAbsPath);
+	// vscode-uri always lower-cases the Windows drive letter in fsPath ("c:\..."),
+	// so compare against the canonical fsPath of the original absolute path.
+	expect(URI.parse(cache.procedures[0].position.path).fsPath).toBe(URI.file(includeAbsPath).fsPath);
 });
