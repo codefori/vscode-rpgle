@@ -8,8 +8,9 @@ import skipRules from './linter/skipRules';
 import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/ile/parser';
-import { getBuiltIn, getBuiltIns, getBuiltInsForType } from './apis/bif';
+import { getBuiltIn, getBuiltInsForType } from './apis/bif';
 import { ParserFactory } from '../../../../language/parserFactory';
+import { getBuiltInCompletionItems } from './builtInCompletion';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -18,26 +19,13 @@ const completionKind = {
 
 const eol = `\n`;
 
-const builtInFunctionCompletionItems: CompletionItem[] = getBuiltIns().map(builtIn => {
-	const item = CompletionItem.create(builtIn.name);
-	item.filterText = builtIn.name.substring(1);
-	item.kind = CompletionItemKind.Function;
-	item.detail = builtIn.returnType || `void`;
-	item.documentation = `Built-in function`;
-	item.insertText = builtIn.name + `(\${1})`;
-	item.insertTextFormat = InsertTextFormat.Snippet;
-	item.command = { command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints` };
-	item.sortText = item.filterText;
-	return item;
-});
-
 export default async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
 	const items: CompletionItem[] = [];
 	const lineNumber = handler.position.line;
 
 	const trigger = handler.context?.triggerCharacter;
 	const currentPath = handler.textDocument.uri;
-
+	
 	if (ParserFactory.isOpmFile(currentPath)) return items;
 
 	const document = documents.get(currentPath);
@@ -64,7 +52,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 				let tokens = Parser.lineTokens(isFree ? currentLine : currentLine.length >= 7 ? ``.padEnd(7) + currentLine.substring(7) : ``, 0, 0, true);
 
 				if (tokens.length > 0) {
-
+					
 					// We need to find the innermost block we are part of
 					tokens = Parser.fromBlocksGetTokens(tokens, cursorIndex).block;
 
@@ -80,7 +68,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 
 					let tokenIndex = referenceStart;
 
-					let currentDef: Declaration | undefined;
+					let currentDef: Declaration|undefined;
 
 					for (tokenIndex; tokenIndex < tokens.length; tokenIndex++) {
 						if (tokens[tokenIndex] === undefined || [`block`, `dot`, `newline`].includes(tokens[tokenIndex].type)) {
@@ -111,7 +99,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 						}
 					}
 
-					let onType: RpgleType | undefined;
+					let onType: RpgleType|undefined;
 					let onArray = false;
 
 					if (currentDef) {
@@ -149,10 +137,10 @@ export default async function completionItemProvider(handler: CompletionParams):
 								handler.position.line,
 								tokens[referenceStart].range.start,
 								handler.position.line,
-								tokens[tokens.length - 1].range.end
+								tokens[tokens.length-1].range.end
 							);
 
-							const refValue = currentLine.substring(tokens[referenceStart].range.start, tokens[tokens.length - 1].range.start);
+							const refValue = currentLine.substring(tokens[referenceStart].range.start, tokens[tokens.length-1].range.start);
 
 							for (let func of usableFunctions) {
 								let builtInFunction = CompletionItem.create(func.name.substring(1));
@@ -165,13 +153,13 @@ export default async function completionItemProvider(handler: CompletionParams):
 									if (p.base) {
 										return refValue
 									} else {
-										return `\${${i + 1}:${p.name}}`
+										return `\${${i+1}:${p.name}}`
 									}
 								}).join(`:`) + `)`;
 								builtInFunction.insertTextFormat = InsertTextFormat.Snippet;
 
 								// To trigger the signature information
-								builtInFunction.command = { command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints` };
+								builtInFunction.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
 
 								builtInFunction.detail = `Built-in function`;
 								items.push(builtInFunction);
@@ -414,7 +402,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 					// Showing the available built-in functions
 					//================================================
 
-					items.push(...builtInFunctionCompletionItems);
+					items.push(...getBuiltInCompletionItems(currentLine, handler.position));
 				}
 			}
 		}
