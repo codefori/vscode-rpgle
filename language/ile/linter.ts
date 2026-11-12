@@ -79,6 +79,8 @@ interface OpenDeclaration {
 	offset: IRange;
 	/** Opened inside a `/IF` block: another branch may open or close it, so it is never reported. */
 	conditional: boolean;
+	/** Still open at a `/COPY` or `/INCLUDE`: the member may close it, and only the current file is linted, so it is never reported. */
+	beforeInclude: boolean;
 }
 
 function getDeclarationBlockType(token: Token | undefined): DeclarationBlockType | undefined {
@@ -446,13 +448,15 @@ export default class Linter {
     	type,
     	offset: token.range,
     	conditional: directiveScope > 0,
+    	beforeInclude: false,
     });
+
+    const getOpenDeclarations = () => inPrototype ? [...inStruct, inPrototype] : inStruct;
 
     // Reports the blocks still open at a scope boundary (DCL-PROC, END-PROC, end of source) and closes them.
     const reportOpenDeclarations = () => {
-    	const open = inPrototype ? [...inStruct, inPrototype] : inStruct;
-    	for (const block of open) {
-    		if (!block.conditional) {
+    	for (const block of getOpenDeclarations()) {
+    		if (!block.conditional && !block.beforeInclude) {
     			errors.push({ type: declarationBlocks[block.type].error, offset: block.offset });
     		}
     	}
@@ -575,7 +579,13 @@ export default class Linter {
     							if (directive === `/ENDIF`) {
     								// Directive ENDIF
     								directiveScope -= 1;
-    							}
+    							} else
+    								if (directive === `/COPY` || directive === `/INCLUDE`) {
+    									// The member may close the open blocks, for example with the END-DS
+    									for (const block of getOpenDeclarations()) {
+    										block.beforeInclude = true;
+    									}
+    								}
     				}
 
     				switch (firstToken.type) {

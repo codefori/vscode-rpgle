@@ -3599,7 +3599,7 @@ test.each([
   ].join(`\n`);
 
   const cache = assertCache(await parser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
-  // MissingEnd* diagnostics are always reported; this test only covers RequiresParameter.
+  // The unfinished DS is also reported as MissingEndDS; this test only covers RequiresParameter.
   const errors = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache).errors
     .filter(error => error.type === `RequiresParameter`);
   const callOffset = lines.lastIndexOf(`time;`);
@@ -3644,9 +3644,7 @@ test.each([
   ].join(`\n`);
 
   const cache = assertCache(await includeParser.getDocs(uri, lines, { ignoreCache: true, withIncludes: true }));
-  // MissingEnd* diagnostics are always reported; this test only covers RequiresParameter.
-  const errors = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache).errors
-    .filter(error => error.type === `RequiresParameter`);
+  const { errors } = Linter.getErrors({ uri, content: lines }, { RequiresParameter: true }, cache);
   const callOffset = lines.lastIndexOf(`time;`);
 
   expect(errors).toHaveLength(1);
@@ -4795,6 +4793,43 @@ test('missing end-xx: block still open at dcl-proc / end-proc', () => {
 		].join(`\n`)
 	}, { SQLRunner: true });
 	expect(pi.errors).toMatchObject([{ type: `MissingEndPI`, offset: { start: 21, end: 27 } }]);
+});
+
+test('missing end-xx: not reported when a /copy or /include may close the block', () => {
+	// The END-DS is in the copy member, which is not part of the linted file
+	const ds = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-ds foo qualified;`,
+			`  a char(1);`,
+			`/copy qrpglesrc,foo_end`,
+			`dcl-s x int(10);`,
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(ds.errors).toHaveLength(0);
+
+	const pr = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-pr a extpgm('A');`,
+			`/include qrpglesrc,a_parms`,
+			`dcl-proc p;`,
+			`end-proc;`,
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(pr.errors).toHaveLength(0);
+
+	// A block opened after the /copy is still checked
+	const after = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-ds foo qualified;`,
+			`/copy qrpglesrc,foo_end`,
+			`dcl-ds bar qualified;`,
+			`  b char(1);`,
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(after.errors).toMatchObject([{ type: `MissingEndDS`, offset: { start: 53, end: 59 } }]);
 });
 
 test('missing end-pr and end-enum: semicolon present', () => {
