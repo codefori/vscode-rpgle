@@ -97,8 +97,12 @@ function getMergedDeclarationError(statement: Token[]): IssueRange | undefined {
 	if (!type) return;
 
 	const { closer, error } = declarationBlocks[type];
+	// e.g. LIKEDS/LIKEREC/OVERLOAD: the declaration needs no END-xx, only the `;` is missing.
+	const selfClosing: string[] = oneLineTriggers[type as keyof typeof oneLineTriggers] || [];
 	for (let i = 1; i < statement.length; i++) {
-		if (statement[i].type === `end` && statement[i].value?.toUpperCase() === closer) return;
+		const value = statement[i].value?.toUpperCase();
+		if (statement[i].type === `end` && value === closer) return;
+		if (value && selfClosing.includes(value)) return;
 
 		if (getDeclarationBlockType(statement[i])) {
 			return { type: error, offset: statement[0].range };
@@ -137,6 +141,80 @@ function getParenthesisDelta(code: string) {
 	}, 0);
 }
 
+const DECLARATION_DATA_TYPES = new Set([
+	`BINDEC`, `CHAR`, `DATE`, `FLOAT`, `GRAPH`, `IND`, `INT`, `OBJECT`, `PACKED`, `POINTER`, `TIME`, `TIMESTAMP`,
+	`UCS2`, `UNS`, `VARCHAR`, `VARGRAPH`, `VARUCS2`, `ZONED`, `LIKE`, `LIKEDS`, `LIKEREC`,
+]);
+
+/** Keywords that can continue a free-form declaration (CTL-OPT, DCL-F, DCL-xx, subfields and parameters) on a new line. */
+const DECLARATION_KEYWORDS = new Set([
+	...DECLARATION_DATA_TYPES,
+	// Definitions
+	`ALIAS`, `ALIGN`, `ALT`, `ALTSEQ`, `ASCEND`, `BASED`, `CCSID`, `CLASS`, `CONST`, `CTDATA`, `DATFMT`, `DESCEND`,
+	`DIM`, `DTAARA`, `EXPORT`, `EXT`, `EXTFLD`, `EXTFMT`, `EXTNAME`, `EXTPGM`, `EXTPROC`, `FROMFILE`, `IMPORT`, `INZ`,
+	`LEN`, `LIKEFILE`, `NOOPT`, `NULLIND`, `OCCURS`, `OPDESC`, `OPTIONS`, `OVERLAY`, `OVERLOAD`, `PACKEVEN`, `PERRCD`,
+	`PGMINFO`, `POS`, `PREFIX`, `PSDS`, `QUALIFIED`, `REQPROC`, `RTNPARM`, `SAMEPOS`, `SERIALIZE`, `SQLTYPE`, `STATIC`,
+	`TEMPLATE`, `TIMFMT`, `TOFILE`, `VALUE`, `VARYING`,
+	// Files
+	`BLOCK`, `COMMIT`, `DEVID`, `DISK`, `EXTDESC`, `EXTFILE`, `EXTIND`, `EXTMBR`, `FORMLEN`, `FORMOFL`, `HANDLER`,
+	`IGNORE`, `INCLUDE`, `INDDS`, `INFDS`, `INFSR`, `KEYED`, `KEYLOC`, `MAXDEV`, `OFLIND`, `PASS`, `PGMNAME`, `PLIST`,
+	`PRINTER`, `PRTCTL`, `RAFDATA`, `RECNO`, `RENAME`, `SAVEDS`, `SAVEIND`, `SEQ`, `SFILE`, `SLN`, `SPECIAL`, `USAGE`,
+	`USROPN`, `WORKSTN`,
+	// Control options
+	`ACTGRP`, `ALLOC`, `ALWNULL`, `AUT`, `BNDDIR`, `CCSIDCVT`, `COPYNEST`, `COPYRIGHT`, `CURSYM`, `CVTOPT`, `DATEDIT`,
+	`DCLOPT`, `DEBUG`, `DECEDIT`, `DECPREC`, `DFTACTGRP`, `DFTNAME`, `ENBPFRCOL`, `EXPROPTS`, `EXTBININT`, `FIXNBR`,
+	`FLTDIV`, `FORMSALIGN`, `FTRANS`, `GENLVL`, `INDENT`, `INTPREC`, `LANGID`, `MAIN`, `NOMAIN`, `OPENOPT`, `OPTIMIZE`,
+	`OPTION`, `PRFDTA`, `REQPREXP`, `SRTSEQ`, `STGMDL`, `TEXT`, `THREAD`, `TRUNCNBR`, `USRPRF`, `VALIDATE`,
+]);
+
+/** Declaration blocks (DCL-xx ... END-xx) tracked by the missing semicolon check. */
+const SEMICOLON_DECLARATION_BLOCKS = [`DS`, `PR`, `PI`, `ENUM`];
+
+/** A statement, possibly spanning several lines, that is not terminated yet. */
+interface PendingStatement {
+	code: string;
+	/** Part of a declaration: a CTL-OPT/DCL-xx statement or a subfield, parameter or enum value. */
+	isDeclaration: boolean;
+	/** The `DS`/`PR`/`PI`/`ENUM` block opened by this statement, when it is the DCL-xx header. */
+	block?: string;
+}
+
+function startPendingStatement(code: string, inDeclarationBlock: boolean): PendingStatement {
+	const declaration = code.match(/^(?:dcl-([a-z]+)|ctl-opt)\b/i);
+	const block = declaration?.[1]?.toUpperCase();
+
+	return {
+		code,
+		isDeclaration: declaration !== null || (inDeclarationBlock && !/^end-/i.test(code)),
+		block: block && SEMICOLON_DECLARATION_BLOCKS.includes(block) ? block : undefined,
+	};
+}
+
+/**
+ * Whether `code` continues the pending declaration on a new line, e.g. `likeds(y)` or `qualified`
+ * after `dcl-ds x`, or `end-ds` after an externally described `dcl-ds x extname('F')`.
+ * A line like `date char(8)` is a new subfield named after a keyword, not a continuation.
+ */
+function continuesDeclaration(code: string, statement: PendingStatement): boolean {
+	if (!statement.isDeclaration || !/^[a-z]/i.test(code)) return false;
+
+	const [first, second] = (code.match(/[a-z][\w-]*/gi) || []).map((word: string) => word.toUpperCase());
+
+	if (statement.block && first === `END-${statement.block}`) return true;
+
+	const startsWithKeyword = new RegExp(`^${first}\\s*(?:\\(|;|$)`, `i`).test(code)
+		|| (second !== undefined && !DECLARATION_DATA_TYPES.has(second));
+
+	return DECLARATION_KEYWORDS.has(first) && startsWithKeyword;
+}
+
+/** Whether, once `statement` is terminated, the following lines are inside a declaration block. */
+function isInDeclarationBlockAfter(statement: PendingStatement, inDeclarationBlock: boolean): boolean {
+	if (/\bend-(?:ds|pr|pi|enum)\b/i.test(statement.code)) return false;
+	if (statement.block) return !/\b(?:likeds|likerec|overload)\b/i.test(statement.code);
+	return inDeclarationBlock;
+}
+
 function getMissingSemicolonErrors(content: string): IssueRange[] {
   type SourceLine = { code: string, endOffset: number, indent: number };
   const errors: IssueRange[] = [];
@@ -160,6 +238,15 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   let inEmbeddedSql = false;
   let sqlIndent = 0;
   let openParentheses = 0;
+  let pendingStatement: PendingStatement | undefined;
+  let inDeclarationBlock = false;
+
+  const endPendingStatement = () => {
+  	if (pendingStatement) {
+  		inDeclarationBlock = isInDeclarationBlockAfter(pendingStatement, inDeclarationBlock);
+  		pendingStatement = undefined;
+  	}
+  };
 
   for (const sourceLineWithEnding of content.split(`\n`)) {
   	const sourceLine = sourceLineWithEnding.endsWith(`\r`)
@@ -183,7 +270,8 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   		continue;
   	}
 
-  	if (code.toUpperCase() === `**CTDATA` || /^\/EOF\b/i.test(code)) {
+  	// Compile-time data (`**CTDATA name`, `**FTRANS`, `**ALTSEQ`) is not RPG code
+  	if (/^\*\*(?:CTDATA|FTRANS|ALTSEQ)?(?:\s|$)/i.test(code) || /^\/EOF\b/i.test(code)) {
   		break;
   	}
 
@@ -211,6 +299,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   			});
   			inEmbeddedSql = false;
   			previousLine = undefined;
+  			pendingStatement = undefined;
   			lastSqlLine = undefined;
   			sqlIndent = 0;
   		} else {
@@ -222,6 +311,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   			if (sqlCode.endsWith(`;`)) {
   				inEmbeddedSql = false;
   				previousLine = undefined;
+  				pendingStatement = undefined;
   				lastSqlLine = undefined;
   				sqlIndent = 0;
   			}
@@ -230,7 +320,12 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   		}
   	}
 
-  	const previousContinues = previousLine
+  	const declarationContinues = previousLine !== undefined
+      && !previousLine.code.endsWith(`;`)
+      && pendingStatement !== undefined
+      && continuesDeclaration(code, pendingStatement);
+
+  	const previousContinues = !declarationContinues && (previousLine
       && (!previousLine.code.endsWith(`;`))
       && (!previousLine.code.endsWith(`...`))
       && !expressionContinuation.test(previousLine.code)
@@ -240,7 +335,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       && !conditionContinuation.test(code)
       || (previousLine
         && !previousLine.code.endsWith(`;`)
-        && startsNewRpgStatement);
+        && startsNewRpgStatement));
 
   	if (previousContinues && previousLine) {
   		errors.push({
@@ -248,6 +343,18 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   			type: `MissingSemicolon`,
   		});
   		openParentheses = 0;
+  		// The previous statement ends here, without its `;`
+  		endPendingStatement();
+  	}
+
+  	if (pendingStatement) {
+  		pendingStatement.code += ` ${code}`;
+  	} else {
+  		pendingStatement = startPendingStatement(code, inDeclarationBlock);
+  	}
+
+  	if (code.endsWith(`;`)) {
+  		endPendingStatement();
   	}
 
   	openParentheses = Math.max(0, openParentheses + getParenthesisDelta(code));
@@ -382,11 +489,12 @@ export default class Linter {
     		if (!rules.MissingSemicolon) {
     			errors.push(mergedDeclaration);
     		}
-    	} else if (checkRules && !getDeclarationBlockType(firstToken)) {
+    	} else if (!getDeclarationBlockType(firstToken)) {
     		// An END-xx merged with other code because of a missing `;` still closes its block,
-    		// otherwise it would be reported as missing at the end of the scope. The first token
-    		// is handled by the rules below, unless the negative indent makes them skip it.
-    		for (const part of statement.slice(currentIndent < 0 ? 0 : 1)) {
+    		// otherwise it would be reported as missing at the end of the scope. The same goes for
+    		// a statement skipped with @rpglint-skip. Otherwise the first token is handled by the
+    		// rules below, unless the negative indent makes them skip it.
+    		for (const part of statement.slice(!checkRules || currentIndent < 0 ? 0 : 1)) {
     			const closer = part.type === `end` ? part.value?.toUpperCase() : undefined;
     			if (closer === `END-DS` || closer === `END-ENUM`) {
     				inStruct.pop();

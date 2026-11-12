@@ -177,9 +177,9 @@ test("linter_missing_semicolon_between_prototypes", () => {
 
 	const errors = getMissingSemicolonErrors(lines);
 
-	expect(errors).toHaveLength(2);
+	// `Dcl-Pr ... End-Pr;` is a single valid statement: only the `;` after `End-Pr` is missing
+	expect(errors).toHaveLength(1);
 	expect(errors.map(error => error.offset.start)).toEqual([
-		endOfLineOffset(lines, `Dcl-Pr GetServerTimestamp Timestamp`),
 		endOfLineOffset(lines, `End-Pr`),
 	]);
 });
@@ -4455,7 +4455,10 @@ test('missing end-ds: merged statement is not reported when MissingSemicolon is 
 		MissingSemicolon: true,
 	});
 
-	expect(errors.map(error => error.type)).toEqual([`MissingSemicolon`, `MissingSemicolon`]);
+	// `prefix(b4)` continues the declaration: only the `;` after it is missing
+	expect(errors).toMatchObject([
+		{ type: `MissingSemicolon`, offset: { start: endOfLineOffset(lines, `  prefix(b4)`) } }
+	]);
 });
 
 test('missing end-pr, end-pi and end-enum: merged with the next declaration', () => {
@@ -4808,4 +4811,94 @@ test('subfield casing #402', async () => {
 	expect(errors[0].type).toBe(`IncorrectVariableCase`);
 	expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toContain(`NAmE`);
 	expect(errors[0].newValue).toBe(`NAME`);
+});
+test('missing end-ds: END-DS skipped with @rpglint-skip still closes the block', () => {
+	for (const skip of [`// @rpglint-skip`, `// @rpglint-skip-rules`]) {
+		const { errors } = Linter.getErrors({
+			uri, content: [
+				`**free`,
+				`dcl-ds foo qualified;`,
+				`  a char(1);`,
+				skip,
+				`end-ds;`,
+			].join(`\n`)
+		}, { SQLRunner: true });
+
+		expect(errors).toHaveLength(0);
+	}
+});
+
+test('missing end-ds: merged LIKEDS/LIKEREC/OVERLOAD declarations need no END-xx', () => {
+	for (const declaration of [`dcl-ds foo likeds(bar)`, `dcl-ds foo likerec(fmt : *ALL)`, `dcl-pr foo overload(fooA : fooB)`]) {
+		const { errors } = Linter.getErrors({
+			uri, content: [
+				`**free`,
+				declaration,
+				`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+				`return;`
+			].join(`\n`)
+		}, { SQLRunner: true });
+
+		expect(errors).toHaveLength(0);
+	}
+});
+
+test("linter_missing_semicolon_ignores_multiline_declarations", () => {
+	const lines = [
+		`**FREE`,
+		`ctl-opt dftactgrp(*no)`,
+		`  actgrp(*new);`,
+		`dcl-f myfile usage(*input)`,
+		`  keyed;`,
+		`dcl-s text`,
+		`  char(10)`,
+		`  inz('a');`,
+		`dcl-ds copy qualified`,
+		`  likeds(text);`,
+		`dcl-ds ext extname('SOMEFILE') qualified`,
+		`end-ds;`,
+		`dcl-ds prog qualified`,
+		`  template;`,
+		`  date char(8)`,
+		`    inz('20260101');`,
+		`end-ds;`,
+		`dcl-pr proc extproc('PROC')`,
+		`end-pr;`,
+		`return;`,
+	].join(`\n`);
+
+	expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
+});
+
+test("linter_missing_semicolon_reports_declaration_followed_by_subfield", () => {
+	const lines = [
+		`**FREE`,
+		`dcl-ds header qualified`,
+		`  a char(1);`,
+		`end-ds;`,
+		`dcl-ds subfields qualified;`,
+		`  date char(8)`,
+		`  time char(6);`,
+		`end-ds;`,
+	].join(`\n`);
+
+	const errors = getMissingSemicolonErrors(lines);
+
+	expect(errors.map(error => error.offset.start)).toEqual([
+		endOfLineOffset(lines, `dcl-ds header qualified`),
+		endOfLineOffset(lines, `  date char(8)`),
+	]);
+});
+
+test("linter_missing_semicolon_ignores_named_compile_time_data", () => {
+	const lines = [
+		`**FREE`,
+		`dcl-s arr char(10) dim(2) ctdata;`,
+		`return;`,
+		`**CTDATA arr`,
+		`first`,
+		`second`,
+	].join(`\n`);
+
+	expect(getMissingSemicolonErrors(lines)).toHaveLength(0);
 });
