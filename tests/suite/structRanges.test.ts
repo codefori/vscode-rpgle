@@ -97,7 +97,9 @@ test.each([
   }
   expect(ds.containsLine(`unrelated.rpgle`, range.start)).toBe(false);
 
-  const { errors } = Linter.getErrors({ uri, content }, { RequiresParameter: true }, cache);
+  // MissingEnd* diagnostics are always reported; this test only covers RequiresParameter.
+  const errors = Linter.getErrors({ uri, content }, { RequiresParameter: true }, cache).errors
+    .filter(error => error.type === `RequiresParameter`);
   const callOffset = content.lastIndexOf(`time;`);
   expect(errors).toHaveLength(1);
   expect(errors[0]).toMatchObject({ type: `RequiresParameter`, offset: { start: callOffset, end: callOffset + 4 } });
@@ -149,7 +151,9 @@ test(`closing a structure in a copy does not suppress executable code in either 
   const cache = assertCache(await parser.getDocs(uri, content, { withIncludes: true }));
 
   for (const [file, text] of [[uri, content], [includeUri, include]]) {
-    const { errors } = Linter.getErrors({ uri: file, content: text }, { RequiresParameter: true }, cache);
+    // MissingEnd* diagnostics are always reported; this test only covers RequiresParameter.
+    const errors = Linter.getErrors({ uri: file, content: text }, { RequiresParameter: true }, cache).errors
+      .filter(error => error.type === `RequiresParameter`);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatchObject({
       type: `RequiresParameter`,

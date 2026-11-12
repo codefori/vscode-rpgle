@@ -1,5 +1,3 @@
-/* eslint-disable no-case-declarations */
-
 import Cache from "../models/cache";
 import oneLineTriggers from "../models/oneLineTriggers";
 import opcodes from "../models/opcodes";
@@ -14,46 +12,50 @@ const BANNED_FROM_INCLUDES: (`NoUnreferenced`)[] = [`NoUnreferenced`];
 const INCLUDE_EXTENSIONS = [`rpgleinc`, `rpgleh`];
 
 const errorText = {
-  'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
-  'QualifiedCheck': `Struct names must be qualified (\`QUALIFIED\`).`,
-  'PrototypeCheck': `Prototypes must specify \`EXTPGM\`, \`EXTPROC\`, or \`OVERLOAD\``,
-  'ForceOptionalParens': `Expressions must be surrounded by brackets.`,
-  'NoOCCURS': `\`OCCURS\` is not allowed.`,
-  'NoSELECTAll': `\`SELECT *\` is not allowed in Embedded SQL.`,
-  'UselessOperationCheck': `Redundant operation codes (EVAL, CALLP, DCL-PARM, DCL-SUBF) not allowed.`,
-  'UppercaseConstants': `Constants must be in uppercase.`,
-  'SpecificCasing': `Does not match required case.`,
-  'InvalidDeclareNumber': `Variable names cannot start with a number`,
-  'IncorrectVariableCase': `Variable name casing does not match definition.`,
-  'RequiresParameter': `Procedure calls require brackets.`,
-  'RequiresProcedureDescription': `Procedures require a title and description.`,
-  'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
-  'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
-  'CopybookDirective': `Directive does not match requirement.`,
-  'DirectiveCase': `Does not match required case.`,
-  'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
-  'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
-  'NoCTDATA': `\`CTDATA\` is not allowed.`,
-  'PrettyComments': `Comments must be correctly formatted.`,
-  'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
-  'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
-  'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\`/\`BEG..\``,
-  'NoUnreferenced': `No reference to definition.`,
-  'NoExternalTo': `Cannot declare prototype to this external API.`,
-  'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`,
-  'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`,
-  'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
-  'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
-  'RequireOtherBlock': `OTHER block missing from SELECT block.`,
-  'MissingSemicolon': `Missing semicolon at the end of this statement.`,
-  'SQLRunner': `Execute this statement through Db2 for i`
+	'BlankStructNamesCheck': `Struct names cannot be blank (\`*N\`).`,
+	'QualifiedCheck': `Struct names must be qualified (\`QUALIFIED\`).`,
+	'PrototypeCheck': `Prototypes must specify \`EXTPGM\`, \`EXTPROC\`, or \`OVERLOAD\``,
+	'ForceOptionalParens': `Expressions must be surrounded by brackets.`,
+	'NoOCCURS': `\`OCCURS\` is not allowed.`,
+	'NoSELECTAll': `\`SELECT *\` is not allowed in Embedded SQL.`,
+	'UselessOperationCheck': `Redundant operation codes (EVAL, CALLP, DCL-PARM, DCL-SUBF) not allowed.`,
+	'UppercaseConstants': `Constants must be in uppercase.`,
+	'SpecificCasing': `Does not match required case.`,
+	'InvalidDeclareNumber': `Variable names cannot start with a number`,
+	'IncorrectVariableCase': `Variable name casing does not match definition.`,
+	'RequiresParameter': `Procedure calls require brackets.`,
+	'RequiresProcedureDescription': `Procedures require a title and description.`,
+	'StringLiteralDupe': `Same string literal used more than once. Consider using a constant instead.`,
+	'RequireBlankSpecial': `\`*BLANK\` should be used over empty string literals.`,
+	'CopybookDirective': `Directive does not match requirement.`,
+	'DirectiveCase': `Does not match required case.`,
+	'NoSQLJoins': `SQL joins are not allowed. Consider creating a view instead.`,
+	'NoGlobalsInProcedures': `Global variables should not be referenced in procedures.`,
+	'NoCTDATA': `\`CTDATA\` is not allowed.`,
+	'PrettyComments': `Comments must be correctly formatted.`,
+	'NoGlobalSubroutines': `Subroutines should not be defined in the global scope.`,
+	'NoLocalSubroutines': `Subroutines should not be defined in procedures.`,
+	'UnexpectedEnd': `Statement unexpected. Likely missing the equivalent \`DCL..\`/\`BEG..\``,
+	'MissingEndDS': `Missing \`END-DS\` for \`DCL-DS\` block.`,
+	'MissingEndPR': `Missing \`END-PR\` for \`DCL-PR\` block.`,
+	'MissingEndPI': `Missing \`END-PI\` for \`DCL-PI\` block.`,
+	'MissingEndENUM': `Missing \`END-ENUM\` for \`DCL-ENUM\` block.`,
+	'NoUnreferenced': `No reference to definition.`,
+	'NoExternalTo': `Cannot declare prototype to this external API.`,
+	'NoExecuteImmediate': `EXECUTE IMMEDIATE is not allowed.`,
+	'NoExtProgramVariable': `Not allowed to use variable in EXTPGM or EXTPROC.`,
+	'IncludeMustBeRelative': `Path not valid. It must be relative to the project.`,
+	'SQLHostVarCheck': `Also defined in scope. Should likely be host variable.`,
+	'RequireOtherBlock': `OTHER block missing from SELECT block.`,
+	'MissingSemicolon': `Missing semicolon at the end of this statement.`,
+	'SQLRunner': `Execute this statement through Db2 for i`
 };
 
 const skipRules = {
-  none: 0,
-  single: 1, // Skips all checking
-  singleIndent: 2, // Skips indent check
-  singleRules: 3, // Skips rule check
+	none: 0,
+	single: 1, // Skips all checking
+	singleIndent: 2, // Skips indent check
+	singleRules: 3, // Skips rule check
 };
 
 type IndentError = {
@@ -62,35 +64,155 @@ type IndentError = {
   currentIndent: number,
 };
 
+type DeclarationBlockType = `DCL-DS` | `DCL-PR` | `DCL-PI` | `DCL-ENUM`;
+
+const declarationBlocks: Record<DeclarationBlockType, { closer: string, error: ErrorType }> = {
+	'DCL-DS': { closer: `END-DS`, error: `MissingEndDS` },
+	'DCL-PR': { closer: `END-PR`, error: `MissingEndPR` },
+	'DCL-PI': { closer: `END-PI`, error: `MissingEndPI` },
+	'DCL-ENUM': { closer: `END-ENUM`, error: `MissingEndENUM` },
+};
+
+/** A declaration block that has been opened and still needs its `END-xx`. */
+interface OpenDeclaration {
+	type: DeclarationBlockType;
+	offset: IRange;
+	/** Opened inside a `/IF` block: another branch may open or close it, so it is never reported. */
+	conditional: boolean;
+}
+
+function getDeclarationBlockType(token: Token | undefined): DeclarationBlockType | undefined {
+	const value = token?.value?.toUpperCase();
+	if (token?.type === `declare` && value && Object.prototype.hasOwnProperty.call(declarationBlocks, value)) {
+		return value as DeclarationBlockType;
+	}
+}
+
+/**
+ * Detects two declarations merged in a single statement, e.g. a `DCL-DS` missing its `;`
+ * followed by another `DCL-DS`: another block starts before the first one is closed.
+ */
+function getMergedDeclarationError(statement: Token[]): IssueRange | undefined {
+	const type = getDeclarationBlockType(statement[0]);
+	if (!type) return;
+
+	const { closer, error } = declarationBlocks[type];
+	// e.g. LIKEDS/LIKEREC/OVERLOAD: the declaration needs no END-xx, only the `;` is missing.
+	const selfClosing: string[] = oneLineTriggers[type as keyof typeof oneLineTriggers] || [];
+	for (let i = 1; i < statement.length; i++) {
+		const value = statement[i].value?.toUpperCase();
+		if (statement[i].type === `end` && value === closer) return;
+		if (value && selfClosing.includes(value)) return;
+
+		if (getDeclarationBlockType(statement[i])) {
+			return { type: error, offset: statement[0].range };
+		}
+	}
+}
+
 function getCodeBeforeComment(sourceLine: string) {
-  const comment = tokenise(sourceLine).find(token => token.type === `comment`);
-  return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
+	const comment = tokenise(sourceLine).find(token => token.type === `comment`);
+	return (comment ? sourceLine.substring(0, comment.range.start) : sourceLine).trimEnd();
 }
 
 function getSqlCodeBeforeComment(sourceLine: string) {
-  let inString = false;
+	let inString = false;
 
-  for (let index = 0; index < sourceLine.length - 1; index++) {
-    if (sourceLine[index] === `'`) {
-      if (inString && sourceLine[index + 1] === `'`) {
-        index += 1;
-      } else {
-        inString = !inString;
-      }
-    } else if (!inString && sourceLine[index] === `-` && sourceLine[index + 1] === `-`) {
-      return sourceLine.substring(0, index).trimEnd();
-    }
-  }
+	for (let index = 0; index < sourceLine.length - 1; index++) {
+		if (sourceLine[index] === `'`) {
+			if (inString && sourceLine[index + 1] === `'`) {
+				index += 1;
+			} else {
+				inString = !inString;
+			}
+		} else if (!inString && sourceLine[index] === `-` && sourceLine[index + 1] === `-`) {
+			return sourceLine.substring(0, index).trimEnd();
+		}
+	}
 
-  return sourceLine;
+	return sourceLine;
 }
 
 function getParenthesisDelta(code: string) {
-  return tokenise(code).reduce((depth, token) => {
-    if (token.type === `openbracket`) return depth + 1;
-    if (token.type === `closebracket`) return depth - 1;
-    return depth;
-  }, 0);
+	return tokenise(code).reduce((depth, token) => {
+		if (token.type === `openbracket`) return depth + 1;
+		if (token.type === `closebracket`) return depth - 1;
+		return depth;
+	}, 0);
+}
+
+const DECLARATION_DATA_TYPES = new Set([
+	`BINDEC`, `CHAR`, `DATE`, `FLOAT`, `GRAPH`, `IND`, `INT`, `OBJECT`, `PACKED`, `POINTER`, `TIME`, `TIMESTAMP`,
+	`UCS2`, `UNS`, `VARCHAR`, `VARGRAPH`, `VARUCS2`, `ZONED`, `LIKE`, `LIKEDS`, `LIKEREC`,
+]);
+
+/** Keywords that can continue a free-form declaration (CTL-OPT, DCL-F, DCL-xx, subfields and parameters) on a new line. */
+const DECLARATION_KEYWORDS = new Set([
+	...DECLARATION_DATA_TYPES,
+	// Definitions
+	`ALIAS`, `ALIGN`, `ALT`, `ALTSEQ`, `ASCEND`, `BASED`, `CCSID`, `CLASS`, `CONST`, `CTDATA`, `DATFMT`, `DESCEND`,
+	`DIM`, `DTAARA`, `EXPORT`, `EXT`, `EXTFLD`, `EXTFMT`, `EXTNAME`, `EXTPGM`, `EXTPROC`, `FROMFILE`, `IMPORT`, `INZ`,
+	`LEN`, `LIKEFILE`, `NOOPT`, `NULLIND`, `OCCURS`, `OPDESC`, `OPTIONS`, `OVERLAY`, `OVERLOAD`, `PACKEVEN`, `PERRCD`,
+	`PGMINFO`, `POS`, `PREFIX`, `PSDS`, `QUALIFIED`, `REQPROC`, `RTNPARM`, `SAMEPOS`, `SERIALIZE`, `SQLTYPE`, `STATIC`,
+	`TEMPLATE`, `TIMFMT`, `TOFILE`, `VALUE`, `VARYING`,
+	// Files
+	`BLOCK`, `COMMIT`, `DEVID`, `DISK`, `EXTDESC`, `EXTFILE`, `EXTIND`, `EXTMBR`, `FORMLEN`, `FORMOFL`, `HANDLER`,
+	`IGNORE`, `INCLUDE`, `INDDS`, `INFDS`, `INFSR`, `KEYED`, `KEYLOC`, `MAXDEV`, `OFLIND`, `PASS`, `PGMNAME`, `PLIST`,
+	`PRINTER`, `PRTCTL`, `RAFDATA`, `RECNO`, `RENAME`, `SAVEDS`, `SAVEIND`, `SEQ`, `SFILE`, `SLN`, `SPECIAL`, `USAGE`,
+	`USROPN`, `WORKSTN`,
+	// Control options
+	`ACTGRP`, `ALLOC`, `ALWNULL`, `AUT`, `BNDDIR`, `CCSIDCVT`, `COPYNEST`, `COPYRIGHT`, `CURSYM`, `CVTOPT`, `DATEDIT`,
+	`DCLOPT`, `DEBUG`, `DECEDIT`, `DECPREC`, `DFTACTGRP`, `DFTNAME`, `ENBPFRCOL`, `EXPROPTS`, `EXTBININT`, `FIXNBR`,
+	`FLTDIV`, `FORMSALIGN`, `FTRANS`, `GENLVL`, `INDENT`, `INTPREC`, `LANGID`, `MAIN`, `NOMAIN`, `OPENOPT`, `OPTIMIZE`,
+	`OPTION`, `PRFDTA`, `REQPREXP`, `SRTSEQ`, `STGMDL`, `TEXT`, `THREAD`, `TRUNCNBR`, `USRPRF`, `VALIDATE`,
+]);
+
+/** Declaration blocks (DCL-xx ... END-xx) tracked by the missing semicolon check. */
+const SEMICOLON_DECLARATION_BLOCKS = [`DS`, `PR`, `PI`, `ENUM`];
+
+/** A statement, possibly spanning several lines, that is not terminated yet. */
+interface PendingStatement {
+	code: string;
+	/** Part of a declaration: a CTL-OPT/DCL-xx statement or a subfield, parameter or enum value. */
+	isDeclaration: boolean;
+	/** The `DS`/`PR`/`PI`/`ENUM` block opened by this statement, when it is the DCL-xx header. */
+	block?: string;
+}
+
+function startPendingStatement(code: string, inDeclarationBlock: boolean): PendingStatement {
+	const declaration = code.match(/^(?:dcl-([a-z]+)|ctl-opt)\b/i);
+	const block = declaration?.[1]?.toUpperCase();
+
+	return {
+		code,
+		isDeclaration: declaration !== null || (inDeclarationBlock && !/^end-/i.test(code)),
+		block: block && SEMICOLON_DECLARATION_BLOCKS.includes(block) ? block : undefined,
+	};
+}
+
+/**
+ * Whether `code` continues the pending declaration on a new line, e.g. `likeds(y)` or `qualified`
+ * after `dcl-ds x`, or `end-ds` after an externally described `dcl-ds x extname('F')`.
+ * A line like `date char(8)` is a new subfield named after a keyword, not a continuation.
+ */
+function continuesDeclaration(code: string, statement: PendingStatement): boolean {
+	if (!statement.isDeclaration || !/^[a-z]/i.test(code)) return false;
+
+	const [first, second] = (code.match(/[a-z][\w-]*/gi) || []).map((word: string) => word.toUpperCase());
+
+	if (statement.block && first === `END-${statement.block}`) return true;
+
+	const startsWithKeyword = new RegExp(`^${first}\\s*(?:\\(|;|$)`, `i`).test(code)
+		|| (second !== undefined && !DECLARATION_DATA_TYPES.has(second));
+
+	return DECLARATION_KEYWORDS.has(first) && startsWithKeyword;
+}
+
+/** Whether, once `statement` is terminated, the following lines are inside a declaration block. */
+function isInDeclarationBlockAfter(statement: PendingStatement, inDeclarationBlock: boolean): boolean {
+	if (/\bend-(?:ds|pr|pi|enum)\b/i.test(statement.code)) return false;
+	if (statement.block) return !/\b(?:likeds|likerec|overload)\b/i.test(statement.code);
+	return inDeclarationBlock;
 }
 
 function getMissingSemicolonErrors(content: string): IssueRange[] {
@@ -107,7 +229,7 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   const leadingExpressionContinuation = /^(?:[+\-*/]|<=|>=|<>|=|<|>)/;
 
   if (!hasFreeDirective) {
-    return errors;
+  	return errors;
   }
 
   let offset = 0;
@@ -116,77 +238,94 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
   let inEmbeddedSql = false;
   let sqlIndent = 0;
   let openParentheses = 0;
+  let pendingStatement: PendingStatement | undefined;
+  let inDeclarationBlock = false;
+
+  const endPendingStatement = () => {
+  	if (pendingStatement) {
+  		inDeclarationBlock = isInDeclarationBlockAfter(pendingStatement, inDeclarationBlock);
+  		pendingStatement = undefined;
+  	}
+  };
 
   for (const sourceLineWithEnding of content.split(`\n`)) {
-    const sourceLine = sourceLineWithEnding.endsWith(`\r`)
-      ? sourceLineWithEnding.slice(0, -1)
-      : sourceLineWithEnding;
-    const codeBeforeComment = getCodeBeforeComment(sourceLine);
-    const code = codeBeforeComment.trim();
-    const currentLine: SourceLine = {
-      code,
-      endOffset: offset + codeBeforeComment.length,
-      indent: codeBeforeComment.length - codeBeforeComment.trimStart().length,
-    };
+  	const sourceLine = sourceLineWithEnding.endsWith(`\r`)
+  		? sourceLineWithEnding.slice(0, -1)
+  		: sourceLineWithEnding;
+  	const codeBeforeComment = getCodeBeforeComment(sourceLine);
+  	const code = codeBeforeComment.trim();
+  	const currentLine: SourceLine = {
+  		code,
+  		endOffset: offset + codeBeforeComment.length,
+  		indent: codeBeforeComment.length - codeBeforeComment.trimStart().length,
+  	};
 
-    if (!code) {
-      offset += sourceLineWithEnding.length + 1;
-      continue;
-    }
+  	if (!code) {
+  		offset += sourceLineWithEnding.length + 1;
+  		continue;
+  	}
 
-    if (code.toUpperCase() === `**FREE`) {
-      offset += sourceLineWithEnding.length + 1;
-      continue;
-    }
+  	if (code.toUpperCase() === `**FREE`) {
+  		offset += sourceLineWithEnding.length + 1;
+  		continue;
+  	}
 
-    if (code.toUpperCase() === `**CTDATA` || /^\/EOF\b/i.test(code)) {
-      break;
-    }
+  	// Compile-time data (`**CTDATA name`, `**FTRANS`, `**ALTSEQ`) is not RPG code
+  	if (/^\*\*(?:CTDATA|FTRANS|ALTSEQ)?(?:\s|$)/i.test(code) || /^\/EOF\b/i.test(code)) {
+  		break;
+  	}
 
-    if (tokenise(code).some(token => token.type === `directive`)) {
-      offset += sourceLineWithEnding.length + 1;
-      continue;
-    }
+  	if (tokenise(code).some(token => token.type === `directive`)) {
+  		offset += sourceLineWithEnding.length + 1;
+  		continue;
+  	}
 
-    const startsNewRpgStatement = rpgStatementStart.test(code)
+  	const startsNewRpgStatement = rpgStatementStart.test(code)
       || rpgOpcodeStart.test(code)
       || (currentLine.indent === 0 && assignmentStart.test(code));
-    const startsNewRpgStatementAfterSql = !sqlContinuationStart.test(code)
+  	const startsNewRpgStatementAfterSql = !sqlContinuationStart.test(code)
       && (rpgStatementStart.test(code)
         || rpgOpcodeStart.test(code)
         || (currentLine.indent <= sqlIndent && assignmentStart.test(code)));
 
-    if (inEmbeddedSql) {
-      const sqlCode = getSqlCodeBeforeComment(code);
+  	if (inEmbeddedSql) {
+  		const sqlCode = getSqlCodeBeforeComment(code);
 
-      if (startsNewRpgStatementAfterSql) {
-        const errorLine = lastSqlLine!;
-        errors.push({
-          offset: { start: errorLine.endOffset - 1, end: errorLine.endOffset },
-          type: `MissingSemicolon`,
-        });
-        inEmbeddedSql = false;
-        previousLine = undefined;
-        lastSqlLine = undefined;
-        sqlIndent = 0;
-      } else {
-        lastSqlLine = {
-          ...currentLine,
-          code: sqlCode,
-          endOffset: offset + currentLine.indent + sqlCode.length,
-        };
-        if (sqlCode.endsWith(`;`)) {
-          inEmbeddedSql = false;
-          previousLine = undefined;
-          lastSqlLine = undefined;
-          sqlIndent = 0;
-        }
-        offset += sourceLineWithEnding.length + 1;
-        continue;
-      }
-    }
+  		if (startsNewRpgStatementAfterSql) {
+  			const errorLine = lastSqlLine!;
+  			errors.push({
+  				offset: { start: errorLine.endOffset - 1, end: errorLine.endOffset },
+  				type: `MissingSemicolon`,
+  			});
+  			inEmbeddedSql = false;
+  			previousLine = undefined;
+  			pendingStatement = undefined;
+  			lastSqlLine = undefined;
+  			sqlIndent = 0;
+  		} else {
+  			lastSqlLine = {
+  				...currentLine,
+  				code: sqlCode,
+  				endOffset: offset + currentLine.indent + sqlCode.length,
+  			};
+  			if (sqlCode.endsWith(`;`)) {
+  				inEmbeddedSql = false;
+  				previousLine = undefined;
+  				pendingStatement = undefined;
+  				lastSqlLine = undefined;
+  				sqlIndent = 0;
+  			}
+  			offset += sourceLineWithEnding.length + 1;
+  			continue;
+  		}
+  	}
 
-    const previousContinues = previousLine
+  	const declarationContinues = previousLine !== undefined
+      && !previousLine.code.endsWith(`;`)
+      && pendingStatement !== undefined
+      && continuesDeclaration(code, pendingStatement);
+
+  	const previousContinues = !declarationContinues && (previousLine
       && (!previousLine.code.endsWith(`;`))
       && (!previousLine.code.endsWith(`...`))
       && !expressionContinuation.test(previousLine.code)
@@ -196,71 +335,84 @@ function getMissingSemicolonErrors(content: string): IssueRange[] {
       && !conditionContinuation.test(code)
       || (previousLine
         && !previousLine.code.endsWith(`;`)
-        && startsNewRpgStatement);
+        && startsNewRpgStatement));
 
-    if (previousContinues && previousLine) {
-      errors.push({
-        offset: { start: previousLine.endOffset - 1, end: previousLine.endOffset },
-        type: `MissingSemicolon`,
-      });
-      openParentheses = 0;
-    }
+  	if (previousContinues && previousLine) {
+  		errors.push({
+  			offset: { start: previousLine.endOffset - 1, end: previousLine.endOffset },
+  			type: `MissingSemicolon`,
+  		});
+  		openParentheses = 0;
+  		// The previous statement ends here, without its `;`
+  		endPendingStatement();
+  	}
 
-    openParentheses = Math.max(0, openParentheses + getParenthesisDelta(code));
-    previousLine = currentLine;
-    if (/^exec\s+sql\b/i.test(code) && !code.endsWith(`;`)) {
-      inEmbeddedSql = true;
-      lastSqlLine = currentLine;
-      sqlIndent = currentLine.indent;
-    }
-    offset += sourceLineWithEnding.length + 1;
+  	if (pendingStatement) {
+  		pendingStatement.code += ` ${code}`;
+  	} else {
+  		pendingStatement = startPendingStatement(code, inDeclarationBlock);
+  	}
+
+  	if (code.endsWith(`;`)) {
+  		endPendingStatement();
+  	}
+
+  	openParentheses = Math.max(0, openParentheses + getParenthesisDelta(code));
+  	previousLine = currentLine;
+  	if (/^exec\s+sql\b/i.test(code) && !code.endsWith(`;`)) {
+  		inEmbeddedSql = true;
+  		lastSqlLine = currentLine;
+  		sqlIndent = currentLine.indent;
+  	}
+  	offset += sourceLineWithEnding.length + 1;
   }
 
   const finalIncompleteLine = inEmbeddedSql ? lastSqlLine : previousLine;
   if (finalIncompleteLine
     && !finalIncompleteLine.code.endsWith(`;`)) {
-    errors.push({
-      offset: { start: finalIncompleteLine.endOffset - 1, end: finalIncompleteLine.endOffset },
-      type: `MissingSemicolon`,
-    });
+  	errors.push({
+  		offset: { start: finalIncompleteLine.endOffset - 1, end: finalIncompleteLine.endOffset },
+  		type: `MissingSemicolon`,
+  	});
   }
 
   return errors;
 }
 
 export default class Linter {
-  static getErrorText(error: ErrorType): string {
-    return errorText[error];
-  }
+	static getErrorText(error: ErrorType): string {
+		return errorText[error];
+	}
 
-  static getErrors(data: { uri: string, content: string, availableIncludes?: string[] }, rules: Rules, globalScope?: Cache): { indentErrors: IndentError[], errors: IssueRange[], doc: Document } {
-    const indentEnabled = rules.indent !== undefined;
-    const indent = rules.indent || 2;
+	static getErrors(data: { uri: string, content: string, availableIncludes?: string[] }, rules: Rules, globalScope?: Cache): { indentErrors: IndentError[], errors: IssueRange[], doc: Document } {
+		const indentEnabled = rules.indent !== undefined;
+		const indent = rules.indent || 2;
 
-    let uriExtension = (data.uri.split('.').pop() || ``).toLowerCase();
-    if (uriExtension.includes(`?`)) {
-      uriExtension = uriExtension.split(`?`)[0];
-    }
+		let uriExtension = (data.uri.split('.').pop() || ``).toLowerCase();
+		if (uriExtension.includes(`?`)) {
+			uriExtension = uriExtension.split(`?`)[0];
+		}
 
-    if (INCLUDE_EXTENSIONS.includes(uriExtension)) {
-      for (const banned of BANNED_FROM_INCLUDES) {
-        rules[banned] = false;
-      }
-    }
+		if (INCLUDE_EXTENSIONS.includes(uriExtension)) {
+			for (const banned of BANNED_FROM_INCLUDES) {
+				rules[banned] = false;
+			}
+		}
 
-    // Excluding indent
-    const ruleCount = Object.keys(rules).length - (rules.indent ? 1 : 0);
+		// Excluding indent
+		const ruleCount = Object.keys(rules).length - (rules.indent ? 1 : 0);
 
-    if (!globalScope)
-      globalScope = new Cache();
+		if (!globalScope)
+			globalScope = new Cache();
 
-    const globalProcs = globalScope.procedures;
+		const globalProcs = globalScope.procedures;
 
     interface ReferenceInfo { name: string, skipRules?: boolean };
 
     let inProcedure: ReferenceInfo | undefined;
     let inSubroutine: ReferenceInfo | undefined;
-    let inPrototype = false;
+    let inStruct: OpenDeclaration[] = [];
+    let inPrototype: OpenDeclaration | undefined;
     let inOnExit = false;
 
     let lineNumber = -1;
@@ -280,7 +432,7 @@ export default class Linter {
 
     // Make all external refs uppercase.
     if (rules.NoExternalTo && rules.NoExternalTo.length) {
-      rules.NoExternalTo = rules.NoExternalTo.map(val => val.toUpperCase());
+    	rules.NoExternalTo = rules.NoExternalTo.map(val => val.toUpperCase());
     }
 
     const selectBlocks: SelectBlock[] = [];
@@ -290,1030 +442,1117 @@ export default class Linter {
     let directiveScope = 0;
     let currentRule = skipRules.none;
 
+    const openDeclaration = (type: DeclarationBlockType, token: Token): OpenDeclaration => ({
+    	type,
+    	offset: token.range,
+    	conditional: directiveScope > 0,
+    });
+
+    // Reports the blocks still open at a scope boundary (DCL-PROC, END-PROC, end of source) and closes them.
+    const reportOpenDeclarations = () => {
+    	const open = inPrototype ? [...inStruct, inPrototype] : inStruct;
+    	for (const block of open) {
+    		if (!block.conditional) {
+    			errors.push({ type: declarationBlocks[block.type].error, offset: block.offset });
+    		}
+    	}
+
+    	inStruct = [];
+    	inPrototype = undefined;
+    };
+
     const doc = new Document(data.content);
 
     if (rules.MissingSemicolon) {
-      errors.push(...getMissingSemicolonErrors(data.content));
+    	errors.push(...getMissingSemicolonErrors(data.content));
     }
 
     for (let si = 0; si < doc.statements.length; si++) {
-      const docStatement = doc.statements[si];
-      const statement = docStatement.tokens.some(t => t.type === `newline`) ? docStatement.tokens.filter(t => t.type !== `newline`) : docStatement.tokens;
-      if (statement.length === 0) {
-        continue;
-      }
+    	const docStatement = doc.statements[si];
+    	const statement = docStatement.tokens.some(t => t.type === `newline`) ? docStatement.tokens.filter(t => t.type !== `newline`) : docStatement.tokens;
+    	if (statement.length === 0) {
+    		continue;
+    	}
 
-      const firstToken = statement[0];
-      const firstValue = firstToken.value || ``;
-      lineNumber = docStatement.range.line;
-      currentIndent = docStatement.indent;
+    	const firstToken = statement[0];
+    	const firstValue = firstToken.value || ``;
+    	lineNumber = docStatement.range.line;
+    	currentIndent = docStatement.indent;
 
-      if (currentIndent >= 0) {
-        skipIndentCheck = false;
+    	const checkRules = ruleCount > 0 && ![skipRules.single, skipRules.singleRules].includes(currentRule);
 
-        // Comment checking
-        if (firstToken.type === `comment`) {
-          const comment = firstValue.substring(2).trimEnd();
-          if (rules.PrettyComments) {
-            // We check for the slash because the documentation requires ///.
-            if (comment && comment[0] !== `/`) {
-              const startSpaces = comment.search(/\S/);
+    	// Checked here and not with the other rules: a merged statement often contains
+    	// a blank line, which gives it a negative indent and skips the rules below.
+    	const mergedDeclaration = checkRules ? getMergedDeclarationError(statement) : undefined;
+    	if (mergedDeclaration) {
+    		// With MissingSemicolon enabled, the missing `;` is already reported as the root cause.
+    		if (!rules.MissingSemicolon) {
+    			errors.push(mergedDeclaration);
+    		}
+    	} else if (!getDeclarationBlockType(firstToken)) {
+    		// An END-xx merged with other code because of a missing `;` still closes its block,
+    		// otherwise it would be reported as missing at the end of the scope. The same goes for
+    		// a statement skipped with @rpglint-skip. Otherwise the first token is handled by the
+    		// rules below, unless the negative indent makes them skip it.
+    		for (const part of statement.slice(!checkRules || currentIndent < 0 ? 0 : 1)) {
+    			const closer = part.type === `end` ? part.value?.toUpperCase() : undefined;
+    			if (closer === `END-DS` || closer === `END-ENUM`) {
+    				inStruct.pop();
+    			} else if (closer === `END-PR` || closer === `END-PI`) {
+    				inPrototype = undefined;
+    			}
+    		}
+    	}
 
-              if (startSpaces === 0) {
-                errors.push({
-                  offset: { start: firstToken.range.start, end: firstToken.range.start + 2 },
-                  type: `PrettyComments`,
-                  newValue: `// `,
-                });
-              }
-            }
-          } else {
-            skipIndentCheck = true;
-          }
+    	if (currentIndent >= 0) {
+    		skipIndentCheck = false;
 
-          // Special comment check
-          switch (comment.trim()) {
-            case `@rpglint-skip`:
-              currentRule = skipRules.single;
-              continue;
-            case `@rpglint-skip-indent`:
-              currentRule = skipRules.singleIndent;
-              continue;
-            case `@rpglint-skip-rules`:
-              currentRule = skipRules.singleRules;
-              continue;
-          }
-        }
+    		// Comment checking
+    		if (firstToken.type === `comment`) {
+    			const comment = firstValue.substring(2).trimEnd();
+    			if (rules.PrettyComments) {
+    				// We check for the slash because the documentation requires ///.
+    				if (comment && comment[0] !== `/`) {
+    					const startSpaces = comment.search(/\S/);
 
-        // Linter checking
-        if (ruleCount > 0 && ![skipRules.single, skipRules.singleRules].includes(currentRule)) {
+    					if (startSpaces === 0) {
+    						errors.push({
+    							offset: { start: firstToken.range.start, end: firstToken.range.start + 2 },
+    							type: `PrettyComments`,
+    							newValue: `// `,
+    						});
+    					}
+    				}
+    			} else {
+    				skipIndentCheck = true;
+    			}
 
-          const currentScope = globalScope;
+    			// Special comment check
+    			switch (comment.trim()) {
+    				case `@rpglint-skip`:
+    					currentRule = skipRules.single;
+    					continue;
+    				case `@rpglint-skip-indent`:
+    					currentRule = skipRules.singleIndent;
+    					continue;
+    				case `@rpglint-skip-rules`:
+    					currentRule = skipRules.singleRules;
+    					continue;
+    			}
+    		}
 
-          let value: string | undefined;
-          let isEmbeddedSQL = false;
+    		// Linter checking
+    		if (ruleCount > 0 && ![skipRules.single, skipRules.singleRules].includes(currentRule)) {
 
-          const isDirective = firstToken.type === `directive`;
-          const containsCurrentLine = (declaration: Declaration) => declaration.containsLine(data.uri, lineNumber);
-          const localScope = globalProcs.find(procedure => procedure.scope && containsCurrentLine(procedure))?.scope;
-          // Enums are stored as constants; use the parser's ranges for both scopes.
-          const isDeclare = [`declare`, `end`].includes(firstToken.type)
-            || (rules.RequiresParameter && (
-              globalScope.structs.some(containsCurrentLine)
-              || globalScope.constants.some(containsCurrentLine)
-              || localScope?.structs.some(containsCurrentLine)
-              || localScope?.constants.some(containsCurrentLine)
-            ));
+    			const currentScope = globalScope;
 
-          if (statement.length >= 1) {
-            if (isDirective) {
-              const directive = firstValue.toUpperCase();
-              // We only want to process the EOF if it is not inside an IF scope
-              if (directive === `/EOF` && directiveScope === 0) {
-                // End of parsing for this file
-                break;
-              } else
-                if (directive === `/IF`) {
-                  // Directive IF
-                  directiveScope += 1;
-                } else
-                  if (directive === `/ENDIF`) {
-                    // Directive ENDIF
-                    directiveScope -= 1;
-                  }
-            }
+    			let value: string | undefined;
+    			let isEmbeddedSQL = false;
 
-            switch (firstToken.type) {
-              case `format`:
-                if (lineNumber > 0 && firstValue.startsWith(`**`)) {
-                  if (rules.NoCTDATA) {
-                    errors.push({
-                      offset: firstToken.range,
-                      type: `NoCTDATA`,
-                    });
-                  }
-                }
-                break;
+    			const isDirective = firstToken.type === `directive`;
+    			let isDeclare = [`declare`, `end`].includes(firstToken.type);
+    			if (!isDeclare && rules.RequiresParameter) {
+    				// Subfields and enum members are not procedure calls. Use the parser's
+    				// declaration ranges (enums are stored as constants) for both scopes.
+    				const containsCurrentLine = (declaration: Declaration) => declaration.containsLine(data.uri, lineNumber);
+    				const localScope = globalProcs.find(procedure => procedure.scope && containsCurrentLine(procedure))?.scope;
+    				isDeclare = [globalScope, localScope].some(scope => scope !== undefined
+    					&& (scope.structs.some(containsCurrentLine) || scope.constants.some(containsCurrentLine)));
+    			}
 
-              case `directive`:
-                value = firstValue;
+    			if (statement.length >= 1) {
+    				if (isDirective) {
+    					const directive = firstValue.toUpperCase();
+    					// We only want to process the EOF if it is not inside an IF scope
+    					if (directive === `/EOF` && directiveScope === 0) {
+    						// End of parsing for this file
+    						break;
+    					} else
+    						if (directive === `/IF`) {
+    							// Directive IF
+    							directiveScope += 1;
+    						} else
+    							if (directive === `/ENDIF`) {
+    								// Directive ENDIF
+    								directiveScope -= 1;
+    							}
+    				}
 
-                if (rules.CopybookDirective || rules.IncludeMustBeRelative) {
-                  if (value && [`/COPY`, `/INCLUDE`].includes(value.toUpperCase())) {
-                    if (rules.IncludeMustBeRelative) {
-                      if (statement.length === 2) {
-                        const path = statement[1];
+    				switch (firstToken.type) {
+    					case `format`:
+    						if (lineNumber > 0 && firstValue.startsWith(`**`)) {
+    							if (rules.NoCTDATA) {
+    								errors.push({
+    									offset: firstToken.range,
+    									type: `NoCTDATA`,
+    								});
+    							}
+    						}
+    						break;
 
-                        if (path.type === `word` && typeof path.value === `string`) {
-                          // /INCLUDE MEMBER
-                          // This is bad.
-                          const pathValue = path.value.substring(1, path.value.length - 1).trim().toUpperCase();
-                          const possibleValue = (data.availableIncludes && data.availableIncludes.length > 0) ? data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase())) : undefined;
+    					case `directive`:
+    						value = firstValue;
 
-                          errors.push({
-                            offset: { start: path.range.start, end: path.range.end + path.value.length },
-                            type: `IncludeMustBeRelative`,
-                            newValue: possibleValue ? `'${possibleValue}'` : undefined
-                          });
-                        } else if (path.type === `string` && typeof path.value === `string`) {
-                          // /INCLUDE 'path/to/file'
-                          const pathValue = path.value.substring(1, path.value.length - 1).trim();
+    						if (rules.CopybookDirective || rules.IncludeMustBeRelative) {
+    							if (value && [`/COPY`, `/INCLUDE`].includes(value.toUpperCase())) {
+    								if (rules.IncludeMustBeRelative) {
+    									if (statement.length === 2) {
+    										const path = statement[1];
 
-                          if (pathValue.startsWith(`/`) === true) {
-                            // Bad. Path must not be absolute.
-                            errors.push({
-                              offset: { start: path.range.start, end: path.range.end },
-                              type: `IncludeMustBeRelative`
-                            });
-                          } else
-                            if (data.availableIncludes && data.availableIncludes.length > 0) {
-                              const possibleValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase()));
-                              if (possibleValue) {
-                                // This means there was a possible match
-                                if (pathValue !== possibleValue) {
-                                  // But if they're not the same, offer a fix
-                                  errors.push({
-                                    offset: { start: path.range.start, end: path.range.end },
-                                    type: `IncludeMustBeRelative`,
-                                    newValue: `'${possibleValue}'`
-                                  });
-                                }
-                              }
-                              // If there's no match, we can't complain incase they're using incdir or something...
-                            }
-                        }
-                      } else if (statement.length === 4 && statement[2].type === `comma`) {
-                        // /COPY FILE/MEMBER
+    										if (path.type === `word` && typeof path.value === `string`) {
+    											// /INCLUDE MEMBER
+    											// This is bad.
+    											const pathValue = path.value.substring(1, path.value.length - 1).trim().toUpperCase();
+    											const possibleValue = (data.availableIncludes && data.availableIncludes.length > 0) ? data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase())) : undefined;
 
-                        // We only make this suggestion if it exists locally
-                        // Technically, even though we're developing in the IFS/locally,
-                        // we can still include members.
+    											errors.push({
+    												offset: { start: path.range.start, end: path.range.end + path.value.length },
+    												type: `IncludeMustBeRelative`,
+    												newValue: possibleValue ? `'${possibleValue}'` : undefined
+    											});
+    										} else if (path.type === `string` && typeof path.value === `string`) {
+    											// /INCLUDE 'path/to/file'
+    											const pathValue = path.value.substring(1, path.value.length - 1).trim();
 
-                        if (data.availableIncludes && data.availableIncludes.length > 0) {
-                          const pathValue = `${statement[1].value || ``}/${statement[3].value || ``}`.toUpperCase();
-                          const possibleValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue));
-                          if (possibleValue) {
-                            // This means there was a possible match
-                            if (pathValue !== possibleValue) {
-                              // But if they're not the same, offer a fix
-                              errors.push({
-                                offset: { start: statement[1].range.start, end: statement[3].range.end },
-                                type: `IncludeMustBeRelative`,
-                                newValue: `'${possibleValue}'`
-                              });
-                            }
-                          }
-                          // If there's no match, we can't complain incase they're using incdir or something...
-                        }
+    											if (pathValue.startsWith(`/`) === true) {
+    												// Bad. Path must not be absolute.
+    												errors.push({
+    													offset: { start: path.range.start, end: path.range.end },
+    													type: `IncludeMustBeRelative`
+    												});
+    											} else
+    												if (data.availableIncludes && data.availableIncludes.length > 0) {
+    													const possibleValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue.toUpperCase()));
+    													if (possibleValue) {
+    														// This means there was a possible match
+    														if (pathValue !== possibleValue) {
+    															// But if they're not the same, offer a fix
+    															errors.push({
+    																offset: { start: path.range.start, end: path.range.end },
+    																type: `IncludeMustBeRelative`,
+    																newValue: `'${possibleValue}'`
+    															});
+    														}
+    													}
+    													// If there's no match, we can't complain incase they're using incdir or something...
+    												}
+    										}
+    									} else if (statement.length === 4 && statement[2].type === `comma`) {
+    										// /COPY FILE/MEMBER
 
-                      } else {
-                        // /INCLUDE or /COPY is way to long.
-                        errors.push({
-                          type: `IncludeMustBeRelative`,
-                          offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    }
+    										// We only make this suggestion if it exists locally
+    										// Technically, even though we're developing in the IFS/locally,
+    										// we can still include members.
 
-                    if (rules.CopybookDirective) {
-                      let correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
-                      let correctValue = value.toUpperCase();
-                      if (rules.DirectiveCase === `lower`) {
-                        correctDirective = correctDirective.toLowerCase();
-                        correctValue = value.toLowerCase();
-                      }
-                      if (correctValue !== correctDirective) {
-                        errors.push({
-                          offset: firstToken.range,
-                          type: `CopybookDirective`,
-                          newValue: correctDirective
-                        });
-                      }
-                    }
-                  }
-                }
+    										if (data.availableIncludes && data.availableIncludes.length > 0) {
+    											const pathValue = `${statement[1].value || ``}/${statement[3].value || ``}`.toUpperCase();
+    											const possibleValue = data.availableIncludes.find(cPathValue => cPathValue.toUpperCase().includes(pathValue));
+    											if (possibleValue) {
+    												// This means there was a possible match
+    												if (pathValue !== possibleValue) {
+    													// But if they're not the same, offer a fix
+    													errors.push({
+    														offset: { start: statement[1].range.start, end: statement[3].range.end },
+    														type: `IncludeMustBeRelative`,
+    														newValue: `'${possibleValue}'`
+    													});
+    												}
+    											}
+    											// If there's no match, we can't complain incase they're using incdir or something...
+    										}
 
-                if (rules.DirectiveCase === `lower`) {
-                  if (value && value !== value.toLowerCase()) {
-                    errors.push({
-                      offset: firstToken.range,
-                      type: `DirectiveCase`,
-                      newValue: value.toLowerCase()
-                    });
-                  }
-                }
+    									} else {
+    										// /INCLUDE or /COPY is way to long.
+    										errors.push({
+    											type: `IncludeMustBeRelative`,
+    											offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								}
 
-                if (rules.DirectiveCase === `upper`) {
-                  if (value && value !== value.toUpperCase()) {
-                    errors.push({
-                      offset: firstToken.range,
-                      type: `DirectiveCase`,
-                      newValue: value.toUpperCase()
-                    });
-                  }
-                }
-                break;
+    								if (rules.CopybookDirective) {
+    									let correctDirective = `/${rules.CopybookDirective.toUpperCase()}`;
+    									let correctValue = value.toUpperCase();
+    									if (rules.DirectiveCase === `lower`) {
+    										correctDirective = correctDirective.toLowerCase();
+    										correctValue = value.toLowerCase();
+    									}
+    									if (correctValue !== correctDirective) {
+    										errors.push({
+    											offset: firstToken.range,
+    											type: `CopybookDirective`,
+    											newValue: correctDirective
+    										});
+    									}
+    								}
+    							}
+    						}
 
-              case `declare`:
-                if (statement.length < 2) break;
+    						if (rules.DirectiveCase === `lower`) {
+    							if (value && value !== value.toLowerCase()) {
+    								errors.push({
+    									offset: firstToken.range,
+    									type: `DirectiveCase`,
+    									newValue: value.toLowerCase()
+    								});
+    							}
+    						}
 
-                if (rules.SpecificCasing) {
-                  const caseRule = rules.SpecificCasing.find(rule => [firstValue.toUpperCase(), `*DECLARE`].includes(rule.operation.toUpperCase()));
-                  if (caseRule) {
-                    let expected = caseRule.expected;
-                    switch (expected.toUpperCase()) {
-                      case `*UPPER`:
-                        expected = firstValue.toUpperCase();
-                        break;
-                      case `*LOWER`:
-                        expected = firstValue.toLowerCase();
-                        break;
-                    }
-                    if (firstValue !== expected) {
-                      errors.push({
-                        offset: firstToken.range,
-                        type: `SpecificCasing`,
-                        newValue: expected
-                      });
-                    }
-                  }
-                }
+    						if (rules.DirectiveCase === `upper`) {
+    							if (value && value !== value.toUpperCase()) {
+    								errors.push({
+    									offset: firstToken.range,
+    									type: `DirectiveCase`,
+    									newValue: value.toUpperCase()
+    								});
+    							}
+    						}
+    						break;
 
-                value = statement[1].value;
+    					case `declare`:
+    						if (statement.length < 2) break;
 
-                if (value && value.match(/^\d/)) {
-                  errors.push({
-                    offset: { start: statement[1].range.start, end: statement[1].range.end },
-                    type: `InvalidDeclareNumber`,
-                  });
-                }
+    						const declarationOperation = firstValue.toUpperCase();
 
-                switch (firstValue.toUpperCase()) {
-                  case `BEGSR`:
-                    if (inSubroutine) {
-                      errors.push({
-                        offset: statement[0].range,
-                        type: `UnexpectedEnd`,
-                      });
-                    }
+    						if (rules.SpecificCasing) {
+    							const caseRule = rules.SpecificCasing.find(rule => [firstValue.toUpperCase(), `*DECLARE`].includes(rule.operation.toUpperCase()));
+    							if (caseRule) {
+    								let expected = caseRule.expected;
+    								switch (expected.toUpperCase()) {
+    									case `*UPPER`:
+    										expected = firstValue.toUpperCase();
+    										break;
+    									case `*LOWER`:
+    										expected = firstValue.toLowerCase();
+    										break;
+    								}
+    								if (firstValue !== expected) {
+    									errors.push({
+    										offset: firstToken.range,
+    										type: `SpecificCasing`,
+    										newValue: expected
+    									});
+    								}
+    							}
+    						}
 
-                    inSubroutine = { name: statement[1].value || NO_NAME, skipRules: statement[1].type === `special` };
+    						value = statement[1].value;
 
-                    if (inProcedure) {
-                      if (rules.NoLocalSubroutines) {
-                        errors.push({
-                          type: `NoLocalSubroutines`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    } else {
-                      if (rules.NoGlobalSubroutines && inSubroutine && inSubroutine.skipRules !== true) {
-                        errors.push({
-                          offset: firstToken.range,
-                          type: `NoGlobalSubroutines`
-                        });
-                      }
-                    }
-                    break;
-                  case `DCL-PROC`:
-                    if (inSubroutine || inProcedure) {
-                      errors.push({
-                        offset: statement[0].range,
-                        type: `UnexpectedEnd`,
-                      });
-                    }
+    						if (value && value.match(/^\d/)) {
+    							errors.push({
+    								offset: { start: statement[1].range.start, end: statement[1].range.end },
+    								type: `InvalidDeclareNumber`,
+    							});
+    						}
 
-                    value = statement[1].value;
-                    inProcedure = { name: value || NO_NAME };
+    						switch (declarationOperation) {
+    							case `BEGSR`:
+    								if (inSubroutine) {
+    									errors.push({
+    										offset: statement[0].range,
+    										type: `UnexpectedEnd`,
+    									});
+    								}
 
-                    if (statement.length < 2) break;
-                    if (rules.RequiresProcedureDescription) {
-                      const procName = value;
-                      const procDef = procName ? globalProcs.find(def => def.name.toUpperCase() === procName.toUpperCase()) : undefined;
-                      if (procDef) {
-                        if (!procDef.tags.some(tag => tag.tag === `description`)) {
-                          errors.push({
-                            type: `RequiresProcedureDescription`,
-                            offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
-                          });
-                        }
-                      }
-                    }
-                    break;
-                  case `DCL-C`:
-                    if (rules.UppercaseConstants) {
-                      if (value && value !== value.toUpperCase()) {
-                        errors.push({
-                          offset: { start: statement[1].range.start, end: statement[1].range.end },
-                          type: `UppercaseConstants`,
-                          newValue: value.toUpperCase()
-                        });
-                      }
-                    }
-                    break;
+    								inSubroutine = { name: statement[1].value || NO_NAME, skipRules: statement[1].type === `special` };
 
-                  case `DCL-PI`:
-                    if (!statement.some(s => s.type === `end`)) {
-                      inPrototype = true;
-                    }
-                    break;
+    								if (inProcedure) {
+    									if (rules.NoLocalSubroutines) {
+    										errors.push({
+    											type: `NoLocalSubroutines`,
+    											offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								} else {
+    									if (rules.NoGlobalSubroutines && inSubroutine && inSubroutine.skipRules !== true) {
+    										errors.push({
+    											offset: firstToken.range,
+    											type: `NoGlobalSubroutines`
+    										});
+    									}
+    								}
+    								break;
+    							case `DCL-PROC`:
+    								reportOpenDeclarations();
 
-                  case `DCL-PR`:
-                    // First, determine if we can locate "OVERLOAD" followed by an open parenthesis '('.
-                    const hasOverload = statement.some((part, index) =>
-                      index > 1 &&
+    								if (inSubroutine || inProcedure) {
+    									errors.push({
+    										offset: statement[0].range,
+    										type: `UnexpectedEnd`,
+    									});
+    								}
+
+    								value = statement[1].value;
+    								inProcedure = { name: value || NO_NAME };
+
+    								if (statement.length < 2) break;
+    								if (rules.RequiresProcedureDescription) {
+    									const procName = value;
+    									const procDef = procName ? globalProcs.find(def => def.name.toUpperCase() === procName.toUpperCase()) : undefined;
+    									if (procDef) {
+    										if (!procDef.tags.some(tag => tag.tag === `description`)) {
+    											errors.push({
+    												type: `RequiresProcedureDescription`,
+    												offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
+    											});
+    										}
+    									}
+    								}
+    								break;
+    							case `DCL-C`:
+    								if (rules.UppercaseConstants) {
+    									if (value && value !== value.toUpperCase()) {
+    										errors.push({
+    											offset: { start: statement[1].range.start, end: statement[1].range.end },
+    											type: `UppercaseConstants`,
+    											newValue: value.toUpperCase()
+    										});
+    									}
+    								}
+    								break;
+
+    							case `DCL-PI`:
+    								const hasInlineEndPI = statement.some(part => part.value && part.value.toUpperCase() === `END-PI`);
+    								// A new interface starts: the previous prototype/interface was never closed.
+    								if (inPrototype) {
+    									reportOpenDeclarations();
+    								}
+
+    								if (!hasInlineEndPI && !mergedDeclaration) {
+    									inPrototype = openDeclaration(`DCL-PI`, firstToken);
+    								}
+    								break;
+
+    							case `DCL-PR`:
+    								// First, determine if we can locate "OVERLOAD" followed by an open parenthesis '('.
+    								const hasOverload = statement.some((part, index) =>
+    									index > 1 &&
                       part.value?.toUpperCase() === `OVERLOAD` &&
                       statement[index + 1]?.type === `openbracket`
-                    );
+    								);
 
-                    // Next, determine if an "END-PR" is also within the prototype statement.
-                    const hasInlineEnd = statement.some(
-                      part => part.type === `end` &&
+    								// Next, determine if an "END-PR" is also within the prototype statement.
+    								const hasInlineEnd = statement.some(
+    									part => part.type === `end` &&
                       part.value?.toUpperCase() === `END-PR`
-                    );
+    								);
 
-                    // Condition inPrototype based on the results of our prior two checks.
-                    inPrototype = !(hasOverload || hasInlineEnd);
-                    if (rules.PrototypeCheck || rules.NoExtProgramVariable) {
+    								// A new prototype starts: the previous one was never closed.
+    								if (inPrototype) {
+    									reportOpenDeclarations();
+    								}
 
-                      const extIndex = statement.findIndex(part => part.value && [`EXTPGM`, `EXTPROC`].includes(part.value.toUpperCase()));
-                      if (extIndex >= 0) {
-                        if (rules.NoExtProgramVariable) {
+    								// Condition inPrototype based on the results of our prior two checks.
+    								inPrototype = hasOverload || hasInlineEnd || mergedDeclaration ? undefined : openDeclaration(`DCL-PR`, firstToken);
+    								if (rules.PrototypeCheck || rules.NoExtProgramVariable) {
 
-                          const keywordValue = statement.find((part, index) => index > extIndex && part.type === `word`);
-                          if (keywordValue) {
-                            errors.push({
-                              offset: { start: keywordValue.range.start, end: keywordValue.range.end },
-                              type: `NoExtProgramVariable`
-                            });
-                          }
-                        }
+    									const extIndex = statement.findIndex(part => part.value && [`EXTPGM`, `EXTPROC`].includes(part.value.toUpperCase()));
+    									if (extIndex >= 0) {
+    										if (rules.NoExtProgramVariable) {
 
-                      } else if (rules.PrototypeCheck) {
-                        if (!hasOverload) {
-                          // No EXTPROC / EXTPGM / OVERLOAD found. Likely don't need this PR if it's for a local procedure.
-                          errors.push({
-                            type: `PrototypeCheck`,
-                            offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                          });
-                        }
-                      }
-                    }
-                    break;
+    											const keywordValue = statement.find((part, index) => index > extIndex && part.type === `word`);
+    											if (keywordValue) {
+    												errors.push({
+    													offset: { start: keywordValue.range.start, end: keywordValue.range.end },
+    													type: `NoExtProgramVariable`
+    												});
+    											}
+    										}
 
-                  case `DCL-DS`:
-                    if (rules.NoOCCURS) {
-                      if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
-                        errors.push({
-                          type: `NoOCCURS`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    }
+    									} else if (rules.PrototypeCheck) {
+    										if (!hasOverload) {
+    											// No EXTPROC / EXTPGM / OVERLOAD found. Likely don't need this PR if it's for a local procedure.
+    											errors.push({
+    												type: `PrototypeCheck`,
+    												offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+    											});
+    										}
+    									}
+    								}
+    								break;
 
-                    if (rules.QualifiedCheck) {
-                      if (!statement.some(part => part.value && [`LIKEDS`, `LIKEREC`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
-                        errors.push({
-                          type: `QualifiedCheck`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    }
+    							case `DCL-ENUM`:
+    								const hasInlineEndEnum = statement.some(part => part.value && part.value.toUpperCase() === `END-ENUM`);
+    								if (value && !hasInlineEndEnum && !mergedDeclaration) {
+    									inStruct.push(openDeclaration(`DCL-ENUM`, firstToken));
+    								}
+    								break;
 
-                    if (rules.BlankStructNamesCheck) {
-                      if (statement.some(part => part.type === `special` && part.value?.toUpperCase() === `*N`)) {
-                        errors.push({
-                          type: `BlankStructNamesCheck`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    }
+    							case `DCL-DS`:
+    								if (rules.NoOCCURS) {
+    									if (statement.some(part => part.value && part.value.toUpperCase() === `OCCURS`)) {
+    										errors.push({
+    											type: `NoOCCURS`,
+    											offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								}
 
-                    if (rules.NoCTDATA) {
-                      if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value?.toUpperCase() || ``))) {
-                        errors.push({
-                          type: `NoCTDATA`,
-                          offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    }
+    								if (rules.QualifiedCheck) {
+    									if (!statement.some(part => part.value && [`LIKEDS`, `LIKEREC`, `QUALIFIED`].includes(part.value.toUpperCase()))) {
+    										errors.push({
+    											type: `QualifiedCheck`,
+    											offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								}
 
-                    break;
+    								if (rules.BlankStructNamesCheck) {
+    									if (statement.some(part => part.type === `special` && part.value?.toUpperCase() === `*N`)) {
+    										errors.push({
+    											type: `BlankStructNamesCheck`,
+    											offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								}
+
+    								if (rules.NoCTDATA) {
+    									if (statement.some(part => [`CTDATA`, `*CTDATA`].includes(part.value?.toUpperCase() || ``))) {
+    										errors.push({
+    											type: `NoCTDATA`,
+    											offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								}
+
+    								// RPG allows a single-statement declaration to close itself with END-DS,
+    								// even when the declaration spans multiple physical lines before the ;.
+    								// Evaluate the full statement, not just the current line.
+    								const hasInlineDclDsCloser = oneLineTriggers["DCL-DS"].some(trigger =>
+    									statement.some(part => part.value && part.value.toUpperCase() === trigger)
+    								);
+
+    								if (!hasInlineDclDsCloser && !mergedDeclaration) {
+    									if (value) {
+    										inStruct.push(openDeclaration(`DCL-DS`, firstToken));
+    									}
+    								}
+    								break;
 
 
-                  case `DCL-SUBF`:
-                  case `DCL-PARM`:
-                    if (rules.UselessOperationCheck) {
-                      if (statement[1] && statement[1].value) {
-                        const name = statement[1].value.toUpperCase();
-                        if (!opcodes.includes(name)) {
-                          errors.push({
-                            offset: { start: statement[0].range.start, end: statement[0].range.end + 1 },
-                            type: `UselessOperationCheck`,
-                          });
-                        }
-                      }
-                    }
-                    break;
-                }
+    							case `DCL-SUBF`:
+    							case `DCL-PARM`:
+    								if (rules.UselessOperationCheck) {
+    									if (statement[1] && statement[1].value) {
+    										const name = statement[1].value.toUpperCase();
+    										if (!opcodes.includes(name)) {
+    											errors.push({
+    												offset: { start: statement[0].range.start, end: statement[0].range.end + 1 },
+    												type: `UselessOperationCheck`,
+    											});
+    										}
+    									}
+    								}
+    								break;
+    						}
 
-                break;
+    						break;
 
-              case `end`:
-                value = firstValue.toUpperCase();
+    					case `end`:
+    						value = firstValue.toUpperCase();
 
-                if (rules.SpecificCasing) {
-                  const caseRule = rules.SpecificCasing.find(rule => [value, `*DECLARE`].includes(rule.operation.toUpperCase()));
-                  if (caseRule) {
-                    let expected = caseRule.expected;
-                    switch (expected.toUpperCase()) {
-                      case `*UPPER`:
-                        expected = firstValue.toUpperCase();
-                        break;
-                      case `*LOWER`:
-                        expected = firstValue.toLowerCase();
-                        break;
-                    }
-                    if (firstValue !== expected) {
-                      errors.push({
-                        offset: firstToken.range,
-                        type: `SpecificCasing`,
-                        newValue: expected
-                      });
-                    }
-                  }
-                }
+    						if (rules.SpecificCasing) {
+    							const caseRule = rules.SpecificCasing.find(rule => [value, `*DECLARE`].includes(rule.operation.toUpperCase()));
+    							if (caseRule) {
+    								let expected = caseRule.expected;
+    								switch (expected.toUpperCase()) {
+    									case `*UPPER`:
+    										expected = firstValue.toUpperCase();
+    										break;
+    									case `*LOWER`:
+    										expected = firstValue.toLowerCase();
+    										break;
+    								}
+    								if (firstValue !== expected) {
+    									errors.push({
+    										offset: firstToken.range,
+    										type: `SpecificCasing`,
+    										newValue: expected
+    									});
+    								}
+    							}
+    						}
 
-                switch (value) {
-                  case `ENDSR`:
-                    if (inProcedure === undefined && inSubroutine) {
-                      if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
-                        errors.push({
-                          offset: firstToken.range,
-                          type: `NoGlobalSubroutines`
-                        });
-                      }
-                    }
+    						switch (value) {
+    							case `ENDSR`:
+    								if (inProcedure === undefined && inSubroutine) {
+    									if (rules.NoGlobalSubroutines && inSubroutine.skipRules !== true) {
+    										errors.push({
+    											offset: firstToken.range,
+    											type: `NoGlobalSubroutines`
+    										});
+    									}
+    								}
 
-                    if (!inSubroutine) {
-                      errors.push({
-                        offset: firstToken.range,
-                        type: `UnexpectedEnd`,
-                      });
-                    } else {
-                      inSubroutine = undefined;
-                    }
-                    break;
+    								if (!inSubroutine) {
+    									errors.push({
+    										offset: firstToken.range,
+    										type: `UnexpectedEnd`,
+    									});
+    								} else {
+    									inSubroutine = undefined;
+    								}
+    								break;
 
-                  case `END-PROC`:
-                    if (inProcedure === undefined || inSubroutine) {
-                      errors.push({
-                        offset: firstToken.range,
-                        type: `UnexpectedEnd`,
-                      });
-                    }
+    							case `END-DS`:
+    							case `END-ENUM`:
+    								inStruct.pop();
+    								break;
 
-                    inProcedure = undefined;
-                    break;
-                  case `END-PR`:
-                  case `END-PI`:
-                    if (inPrototype === false) {
-                      errors.push({
-                        offset: firstToken.range,
-                        type: `UnexpectedEnd`,
-                      });
-                    }
+    							case `END-PROC`:
+    								reportOpenDeclarations();
 
-                    inPrototype = false;
-                    break;
-                }
-                break;
+    								if (inProcedure === undefined || inSubroutine) {
+    									errors.push({
+    										offset: firstToken.range,
+    										type: `UnexpectedEnd`,
+    									});
+    								}
 
-              case `word`:
-                value = firstValue.toUpperCase();
+    								inProcedure = undefined;
+    								break;
+    							case `END-PR`:
+    							case `END-PI`:
+    								if (!inPrototype) {
+    									errors.push({
+    										offset: firstToken.range,
+    										type: `UnexpectedEnd`,
+    									});
+    								}
 
-                if (rules.SpecificCasing) {
-                  const caseRule = rules.SpecificCasing.find(rule => value === rule.operation.toUpperCase());
-                  if (caseRule) {
-                    let expected = caseRule.expected;
-                    switch (expected.toUpperCase()) {
-                      case `*UPPER`:
-                        expected = firstValue.toUpperCase();
-                        break;
-                      case `*LOWER`:
-                        expected = firstValue.toLowerCase();
-                        break;
-                    }
-                    if (firstValue !== expected) {
-                      errors.push({
-                        offset: firstToken.range,
-                        type: `SpecificCasing`,
-                        newValue: expected
-                      });
-                    }
-                  }
-                }
+    								inPrototype = undefined;
+    								break;
+    						}
+    						break;
 
-                switch (value.toUpperCase()) {
-                  case `EVAL`:
-                  case `CALLP`:
-                    if (statement[1] && statement[1].type !== `openbracket`) {
-                      if (rules.UselessOperationCheck) {
-                        errors.push({
-                          offset: { start: statement[0].range.start, end: statement[0].range.end + 1 },
-                          type: `UselessOperationCheck`,
-                        });
-                      }
-                    }
-                    break;
-                  case `LEAVESR`:
-                    if (rules.NoGlobalSubroutines && !inProcedure) {
-                      errors.push({
-                        type: `NoGlobalSubroutines`,
-                        offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
-                      });
-                    }
-                    break;
-                  case `EXSR`:
-                    if (rules.NoGlobalSubroutines) {
-                      if (statement.length === 2) {
-                        if (statement[1].value && globalScope.subroutines.find(sub => sub.name.toUpperCase() === statement[1].value!.toUpperCase())) {
-                          errors.push({
-                            type: `NoGlobalSubroutines`,
-                            offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
-                          });
-                        }
-                      }
-                    }
-                    break;
+    					case `word`:
+    						value = firstValue.toUpperCase();
 
-                  case `EXEC`:
-                    const statementOffset = { start: firstToken.range.start, end: statement[statement.length - 1].range.end };
-                    isEmbeddedSQL = true;
+    						if (rules.SpecificCasing) {
+    							const caseRule = rules.SpecificCasing.find(rule => value === rule.operation.toUpperCase());
+    							if (caseRule) {
+    								let expected = caseRule.expected;
+    								switch (expected.toUpperCase()) {
+    									case `*UPPER`:
+    										expected = firstValue.toUpperCase();
+    										break;
+    									case `*LOWER`:
+    										expected = firstValue.toLowerCase();
+    										break;
+    								}
+    								if (firstValue !== expected) {
+    									errors.push({
+    										offset: firstToken.range,
+    										type: `SpecificCasing`,
+    										newValue: expected
+    									});
+    								}
+    							}
+    						}
 
-                    if (rules.NoSELECTAll) {
-                      const selectIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `SELECT`);
-                      const allIndex = statement.findIndex(part => part.value && part.value === `*`);
-                      if (selectIndex >= 0) {
-                        if (selectIndex + 1 === allIndex) {
-                          errors.push({
-                            offset: statementOffset,
-                            type: `NoSELECTAll`,
-                          });
-                        }
-                      }
-                    }
+    						switch (value.toUpperCase()) {
+    							case `EVAL`:
+    							case `CALLP`:
+    								if (statement[1] && statement[1].type !== `openbracket`) {
+    									if (rules.UselessOperationCheck) {
+    										errors.push({
+    											offset: { start: statement[0].range.start, end: statement[0].range.end + 1 },
+    											type: `UselessOperationCheck`,
+    										});
+    									}
+    								}
+    								break;
+    							case `LEAVESR`:
+    								if (rules.NoGlobalSubroutines && !inProcedure) {
+    									errors.push({
+    										type: `NoGlobalSubroutines`,
+    										offset: { start: statement[0].range.start, end: statement[statement.length - 1].range.end }
+    									});
+    								}
+    								break;
+    							case `EXSR`:
+    								if (rules.NoGlobalSubroutines) {
+    									if (statement.length === 2) {
+    										if (statement[1].value && globalScope.subroutines.find(sub => sub.name.toUpperCase() === statement[1].value!.toUpperCase())) {
+    											errors.push({
+    												type: `NoGlobalSubroutines`,
+    												offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
+    											});
+    										}
+    									}
+    								}
+    								break;
 
-                    if (rules.NoSQLJoins) {
-                      if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
-                        errors.push({
-                          type: `NoSQLJoins`,
-                          offset: statementOffset
-                        });
-                      }
-                    }
+    							case `EXEC`:
+    								const statementOffset = { start: firstToken.range.start, end: statement[statement.length - 1].range.end };
+    								isEmbeddedSQL = true;
 
-                    if (rules.NoExecuteImmediate) {
-                      const executeIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `EXECUTE`);
-                      const immediateIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `IMMEDIATE`);
+    								if (rules.NoSELECTAll) {
+    									const selectIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `SELECT`);
+    									const allIndex = statement.findIndex(part => part.value && part.value === `*`);
+    									if (selectIndex >= 0) {
+    										if (selectIndex + 1 === allIndex) {
+    											errors.push({
+    												offset: statementOffset,
+    												type: `NoSELECTAll`,
+    											});
+    										}
+    									}
+    								}
 
-                      if (executeIndex >= 0) {
-                        if (executeIndex + 1 === immediateIndex) {
-                          errors.push({
-                            type: `NoExecuteImmediate`,
-                            offset: statementOffset
-                          });
-                        }
-                      }
-                    }
+    								if (rules.NoSQLJoins) {
+    									if (statement.some(part => part.value && part.value.toUpperCase() === `JOIN`)) {
+    										errors.push({
+    											type: `NoSQLJoins`,
+    											offset: statementOffset
+    										});
+    									}
+    								}
 
-                    if (rules.SQLHostVarCheck) {
-                      statement.forEach((part, index) => {
-                        if (part.type === `word` && part.value && currentScope.findDefinition(lineNumber, part.value)) {
-                          const prior = statement[index - 1];
-                          if (prior && ![`dot`, `seperator`].includes(prior.type)) {
-                            errors.push({
-                              offset: part.range,
-                              type: `SQLHostVarCheck`,
-                              newValue: `:${part.value}`
-                            });
-                          }
-                        }
-                      });
-                    }
+    								if (rules.NoExecuteImmediate) {
+    									const executeIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `EXECUTE`);
+    									const immediateIndex = statement.findIndex(part => part.value && part.value.toUpperCase() === `IMMEDIATE`);
 
-                    if (rules.SQLRunner) {
-                      // For running SQL statements
-                      const sqlStatementType = statement.find((t, i) => i >= 2 && t.type !== `newline`)?.value?.toLowerCase();
-                      const validStatements = sqlStatementType ? [`declare`, `with`, `select`, `values`, `merge`, `insert`, `update`, `delete`, `call`, `create`, `drop`].includes(sqlStatementType) : false;
-                      if (validStatements) {
-                        errors.push({
-                          type: `SQLRunner`,
-                          offset: statementOffset,
-                          newValue: data.content.substring(statementOffset.start, statementOffset.end)
-                        });
-                      }
-                    }
-                    break;
+    									if (executeIndex >= 0) {
+    										if (executeIndex + 1 === immediateIndex) {
+    											errors.push({
+    												type: `NoExecuteImmediate`,
+    												offset: statementOffset
+    											});
+    										}
+    									}
+    								}
 
-                  case `SELECT`:
-                    selectBlocks.push({
-                      otherBlockExists: false,
-                      offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
-                    });
-                    break;
-                  case `OTHER`:
-                    if (selectBlocks.length > 0) {
-                      const latestSelect: SelectBlock = selectBlocks[selectBlocks.length - 1];
-                      latestSelect.otherBlockExists = true;
-                    }
-                    // else - bad code?!
-                    break;
-                  case `ENDSL`:
-                    if (selectBlocks.length > 0) {
-                      const latestSelect = selectBlocks.pop();
-                      if (rules.RequireOtherBlock && latestSelect && !latestSelect.otherBlockExists) {
-                        errors.push({
-                          type: `RequireOtherBlock`,
-                          offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    }
-                    break;
+    								if (rules.SQLHostVarCheck) {
+    									statement.forEach((part, index) => {
+    										if (part.type === `word` && part.value && currentScope.findDefinition(lineNumber, part.value)) {
+    											const prior = statement[index - 1];
+    											if (prior && ![`dot`, `seperator`].includes(prior.type)) {
+    												errors.push({
+    													offset: part.range,
+    													type: `SQLHostVarCheck`,
+    													newValue: `:${part.value}`
+    												});
+    											}
+    										}
+    									});
+    								}
 
-                  case `IF`:
-                  case `ELSEIF`:
-                  case `WHEN`:
-                  case `DOW`:
-                  case `DOU`:
-                    if (rules.ForceOptionalParens) {
-                      const lastStatement = statement[statement.length - 1];
-                      if (lastStatement && statement[1] && (statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`)) {
-                        errors.push({
-                          type: `ForceOptionalParens`,
-                          offset: { start: statement[1].range.start, end: statement[statement.length - 1].range.end }
-                        });
-                      }
-                    }
-                    break;
-                }
-                break;
-            }
-          }
+    								if (rules.SQLRunner) {
+    									// For running SQL statements
+    									const sqlStatementType = statement.find((t, i) => i >= 2 && t.type !== `newline`)?.value?.toLowerCase();
+    									const validStatements = sqlStatementType ? [`declare`, `with`, `select`, `values`, `merge`, `insert`, `update`, `delete`, `call`, `create`, `drop`].includes(sqlStatementType) : false;
+    									if (validStatements) {
+    										errors.push({
+    											type: `SQLRunner`,
+    											offset: statementOffset,
+    											newValue: data.content.substring(statementOffset.start, statementOffset.end)
+    										});
+    									}
+    								}
+    								break;
 
-          let part: Token;
+    							case `SELECT`:
+    								selectBlocks.push({
+    									otherBlockExists: false,
+    									offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
+    								});
+    								break;
+    							case `OTHER`:
+    								if (selectBlocks.length > 0) {
+    									const latestSelect: SelectBlock = selectBlocks[selectBlocks.length - 1];
+    									latestSelect.otherBlockExists = true;
+    								}
+    								// else - bad code?!
+    								break;
+    							case `ENDSL`:
+    								if (selectBlocks.length > 0) {
+    									const latestSelect = selectBlocks.pop();
+    									if (rules.RequireOtherBlock && latestSelect && !latestSelect.otherBlockExists) {
+    										errors.push({
+    											type: `RequireOtherBlock`,
+    											offset: { start: firstToken.range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								}
+    								break;
 
-          if (statement.length > 0) {
-            // const isSQL = (statement[0].type === `word` && statement[0].value.toUpperCase() === `EXEC`);
+    							case `IF`:
+    							case `ELSEIF`:
+    							case `WHEN`:
+    							case `DOW`:
+    							case `DOU`:
+    								if (rules.ForceOptionalParens) {
+    									const lastStatement = statement[statement.length - 1];
+    									if (lastStatement && statement[1] && (statement[1].type !== `openbracket` || lastStatement.type !== `closebracket`)) {
+    										errors.push({
+    											type: `ForceOptionalParens`,
+    											offset: { start: statement[1].range.start, end: statement[statement.length - 1].range.end }
+    										});
+    									}
+    								}
+    								break;
+    						}
+    						break;
+    				}
+    			}
 
-            for (let i = 0; i < statement.length; i++) {
-              part = statement[i];
+    			let part: Token;
 
-              if (part.value) {
-                switch (part.type) {
-                  case `builtin`:
-                    if (rules.SpecificCasing) {
-                      const partValue = part.value;
-                      const caseRule = rules.SpecificCasing.find(rule => [partValue.toUpperCase(), `*BIF`].includes(rule.operation.toUpperCase()));
-                      if (caseRule) {
-                        let expected = caseRule.expected;
-                        switch (expected.toUpperCase()) {
-                          case `*UPPER`:
-                            expected = partValue.toUpperCase();
-                            break;
-                          case `*LOWER`:
-                            expected = partValue.toLowerCase();
-                            break;
-                        }
-                        if (partValue !== expected) {
-                          errors.push({
-                            offset: part.range,
-                            type: `SpecificCasing`,
-                            newValue: expected
-                          });
-                        }
-                      }
-                    }
-                    break;
+    			if (statement.length > 0) {
+    				// const isSQL = (statement[0].type === `word` && statement[0].value.toUpperCase() === `EXEC`);
 
-                  case `word`:
-                    const upperName = part.value.toUpperCase();
+    				for (let i = 0; i < statement.length; i++) {
+    					part = statement[i];
 
-                    if (rules.NoGlobalsInProcedures) {
-                      if (inProcedure && !inPrototype) {
-                        const existingVariable = globalScope.variables.find(variable => variable.name.toUpperCase() === upperName);
-                        if (existingVariable) {
-                          errors.push({
-                            offset: part.range,
-                            type: `NoGlobalsInProcedures`,
-                          });
-                        }
-                      }
-                    }
+    					if (part.value) {
+    						switch (part.type) {
+    							case `builtin`:
+    								if (rules.SpecificCasing) {
+    									const partValue = part.value;
+    									const caseRule = rules.SpecificCasing.find(rule => [partValue.toUpperCase(), `*BIF`].includes(rule.operation.toUpperCase()));
+    									if (caseRule) {
+    										let expected = caseRule.expected;
+    										switch (expected.toUpperCase()) {
+    											case `*UPPER`:
+    												expected = partValue.toUpperCase();
+    												break;
+    											case `*LOWER`:
+    												expected = partValue.toLowerCase();
+    												break;
+    										}
+    										if (partValue !== expected) {
+    											errors.push({
+    												offset: part.range,
+    												type: `SpecificCasing`,
+    												newValue: expected
+    											});
+    										}
+    									}
+    								}
+    								break;
 
-                  if (rules.RequiresParameter && !inPrototype && !isDeclare && !isDirective && !isEmbeddedSQL && statement[i - 1]?.type !== `dot`) {
-                    // %PADDR accepts a procedure reference without calling it.
-                    const isProcedureAddress = statement[i - 2]?.type === `builtin`
-                      && statement[i - 2].value?.toUpperCase() === `%PADDR`;
-                    const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
-                    if (definedProcedure && !isProcedureAddress && statement[i + 1]?.type !== `openbracket`) {
-                      errors.push({
-                        offset: part.range,
-                        type: `RequiresParameter`,
-                      });
-                    }
-                  }
-                    break;
+    							case `word`:
+    								const upperName = part.value.toUpperCase();
 
-                  case `string`:
-                    if (part.value.substring(1, part.value.length - 1).trim() === `` && rules.RequireBlankSpecial && !isEmbeddedSQL) {
-                      errors.push({
-                        offset: part.range,
-                        type: `RequireBlankSpecial`,
-                        newValue: `*BLANK`
-                      });
+    								if (rules.NoGlobalsInProcedures) {
+    									if (inProcedure && !inPrototype) {
+    										const existingVariable = globalScope.variables.find(variable => variable.name.toUpperCase() === upperName);
+    										if (existingVariable) {
+    											errors.push({
+    												offset: part.range,
+    												type: `NoGlobalsInProcedures`,
+    											});
+    										}
+    									}
+    								}
 
-                    } else if (rules.StringLiteralDupe && !isEmbeddedSQL && statement[0].type !== `declare`) {
-                      let foundBefore = stringLiterals.find(literal => literal.value === part.value);
+    								if (rules.RequiresParameter && !inPrototype && !isDeclare && !isDirective && !isEmbeddedSQL && statement[i - 1]?.type !== `dot`) {
+    									// %PADDR accepts a procedure reference without calling it.
+    									const isProcedureAddress = statement[i - 2]?.type === `builtin`
+    										&& statement[i - 2].value?.toUpperCase() === `%PADDR`;
+    									const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
+    									if (definedProcedure && !isProcedureAddress && statement[i + 1]?.type !== `openbracket`) {
+    										errors.push({
+    											offset: part.range,
+    											type: `RequiresParameter`,
+    										});
+    									}
+    								}
+    								break;
 
-                      // If it does not exist on our list, we can add it
-                      if (!foundBefore) {
-                        foundBefore = {
-                          value: part.value,
-                          list: []
-                        };
+    							case `string`:
+    								if (part.value.substring(1, part.value.length - 1).trim() === `` && rules.RequireBlankSpecial && !isEmbeddedSQL) {
+    									errors.push({
+    										offset: part.range,
+    										type: `RequireBlankSpecial`,
+    										newValue: `*BLANK`
+    									});
 
-                        stringLiterals.push(foundBefore);
-                      }
+    								} else if (rules.StringLiteralDupe && !isEmbeddedSQL && statement[0].type !== `declare`) {
+    									let foundBefore = stringLiterals.find(literal => literal.value === part.value);
 
-                      // Then add our new found literal location to the list
-                      foundBefore.list.push({
-                        line: lineNumber,
-                        offset: part.range
-                      });
-                    }
-                    break;
-                }
-              }
-            }
-          }
+    									// If it does not exist on our list, we can add it
+    									if (!foundBefore) {
+    										foundBefore = {
+    											value: part.value,
+    											list: []
+    										};
 
-        }
+    										stringLiterals.push(foundBefore);
+    									}
 
-        // We don't want to lint CTDATA... so that's the end
-        if (firstToken.type === `format` && firstValue.toUpperCase() === `**CTDATA`) {
-          break;
-        }
+    									// Then add our new found literal location to the list
+    									foundBefore.list.push({
+    										line: lineNumber,
+    										offset: part.range
+    									});
+    								}
+    								break;
+    						}
+    					}
+    				}
+    			}
 
-        // Next, check for indentation errors
+    		}
 
-        // Check to see if we are ending a multi-line conditional
-        // and now need to increase the expected indent level
+    		// We don't want to lint CTDATA... so that's the end
+    		if (firstToken.type === `format` && firstValue.toUpperCase() === `**CTDATA`) {
+    			break;
+    		}
 
-        if (!skipIndentCheck) {
-          // Check if this line should be skipped.
-          skipIndentCheck = [skipRules.singleIndent, skipRules.single].includes(currentRule);
-        }
+    		// Next, check for indentation errors
 
-        // We don't report lint issues for a statement that is on the same line as the last statement
-        // While this isn't technically possible in RPG, we still check it because it's not an indent error
+    		// Check to see if we are ending a multi-line conditional
+    		// and now need to increase the expected indent level
 
-        if (doc.statements[si - 1] === undefined || (doc.statements[si - 1].range.line !== lineNumber)) {
-          if (indentEnabled && skipIndentCheck === false) {
-            opcode = firstValue.toUpperCase();
+    		if (!skipIndentCheck) {
+    			// Check if this line should be skipped.
+    			skipIndentCheck = [skipRules.singleIndent, skipRules.single].includes(currentRule);
+    		}
 
-            if ([
-              `ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ON-EXCP`, `ENDMON`, `ENDSR`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `END-ENUM`, `ENDSL`
-            ].includes(opcode)) {
-              expectedIndent -= indent;
+    		// We don't report lint issues for a statement that is on the same line as the last statement
+    		// While this isn't technically possible in RPG, we still check it because it's not an indent error
 
-              //Special case for `ENDSL` and `END-PROC
-              if ([
-                `ENDSL`
-              ].includes(opcode)) {
-                expectedIndent -= indent;
-              }
+    		if (doc.statements[si - 1] === undefined || (doc.statements[si - 1].range.line !== lineNumber)) {
+    			if (indentEnabled && skipIndentCheck === false) {
+    				opcode = firstValue.toUpperCase();
 
-              // Support for on-exit
-              if (opcode === `END-PROC` && inOnExit) {
-                inOnExit = false;
-                expectedIndent -= indent;
-              }
-            }
+    				if ([
+    					`ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ON-EXCP`, `ENDMON`, `ENDSR`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `END-ENUM`, `ENDSL`
+    				].includes(opcode)) {
+    					expectedIndent -= indent;
 
-            if (currentIndent !== expectedIndent) {
-              indentErrors.push({
-                line: lineNumber,
-                expectedIndent,
-                currentIndent
-              });
-            }
+    					//Special case for `ENDSL` and `END-PROC
+    					if ([
+    						`ENDSL`
+    					].includes(opcode)) {
+    						expectedIndent -= indent;
+    					}
 
-            if ([
-              `IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXCP`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`, `DCL-ENUM`
-            ].includes(opcode)) {
-              const oneLineTriggerOps = [`DCL-DS`, `DCL-PI`, `DCL-PR`] as const;
-              const isOneLineTriggerOp = (oneLineTriggerOps as readonly string[]).includes(opcode);
-              if (isOneLineTriggerOp) {
-                const hasInlineTerminal = oneLineTriggers[opcode as keyof typeof oneLineTriggers].some((trigger: string) =>
-                  statement.some(part => part.value && part.value.toUpperCase() === trigger)
-                );
-                if (!hasInlineTerminal) {
-                  if (opcode === `SELECT`) {
-                    if (skipIndentCheck === false) expectedIndent += (indent * 2);
-                  }
-                  else if (opcode === `ON-EXIT`) {
-                    expectedIndent += indent;
-                    inOnExit = true;
-                  }
-                  else
-                    expectedIndent += indent;
-                }
-              }
-              else if (opcode === `SELECT`) {
-                if (skipIndentCheck === false) expectedIndent += (indent * 2);
-              }
-              else if (opcode === `ON-EXIT`) {
-                expectedIndent += indent;
-                inOnExit = true;
-              }
-              else
-                expectedIndent += indent;
-            }
+    					// Support for on-exit
+    					if (opcode === `END-PROC` && inOnExit) {
+    						inOnExit = false;
+    						expectedIndent -= indent;
+    					}
+    				}
 
-          }
+    				if (currentIndent !== expectedIndent) {
+    					indentErrors.push({
+    						line: lineNumber,
+    						expectedIndent,
+    						currentIndent
+    					});
+    				}
 
-          // Reset the rule back.
-          currentRule = skipRules.none;
-        }
-      }
+    				if ([
+    					`IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXCP`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`, `DCL-ENUM`
+    				].includes(opcode)) {
+    					const oneLineTriggerOps = [`DCL-DS`, `DCL-PI`, `DCL-PR`] as const;
+    					const isOneLineTriggerOp = (oneLineTriggerOps as readonly string[]).includes(opcode);
+    					if (isOneLineTriggerOp) {
+    						const hasInlineTerminal = oneLineTriggers[opcode as keyof typeof oneLineTriggers].some((trigger: string) =>
+    							statement.some(part => part.value && part.value.toUpperCase() === trigger)
+    						);
+    						if (!hasInlineTerminal) {
+    							if (opcode === `SELECT`) {
+    								if (skipIndentCheck === false) expectedIndent += (indent * 2);
+    							}
+    							else if (opcode === `ON-EXIT`) {
+    								expectedIndent += indent;
+    								inOnExit = true;
+    							}
+    							else
+    								expectedIndent += indent;
+    						}
+    					}
+    					else if (opcode === `SELECT`) {
+    						if (skipIndentCheck === false) expectedIndent += (indent * 2);
+    					}
+    					else if (opcode === `ON-EXIT`) {
+    						expectedIndent += indent;
+    						inOnExit = true;
+    					}
+    					else
+    						expectedIndent += indent;
+    				}
+
+    			}
+
+    			// Reset the rule back.
+    			currentRule = skipRules.none;
+    		}
+    	}
 
     }
 
+    // Blocks still open at the end of the source
+    reportOpenDeclarations();
+
     if (stringLiterals.length > 0) {
-      const literalMinimum = rules.literalMinimum || 2;
-      stringLiterals.forEach(literal => {
-        if (literal.list.length >= literalMinimum) {
-          literal.list.forEach(location => {
-            const possibleConst = globalScope.findConstByValue(location.line, literal.value);
-            errors.push({
-              offset: location.offset,
-              type: `StringLiteralDupe`,
-              newValue: possibleConst ? possibleConst.name : undefined
-            });
-          });
-        }
-      });
+    	const literalMinimum = rules.literalMinimum || 2;
+    	stringLiterals.forEach(literal => {
+    		if (literal.list.length >= literalMinimum) {
+    			literal.list.forEach(location => {
+    				const possibleConst = globalScope.findConstByValue(location.line, literal.value);
+    				errors.push({
+    					offset: location.offset,
+    					type: `StringLiteralDupe`,
+    					newValue: possibleConst ? possibleConst.name : undefined
+    				});
+    			});
+    		}
+    	});
     }
 
     const noExternalToRules = rules.NoExternalTo;
     if (noExternalToRules && noExternalToRules.length) {
-      [
-        globalScope,
-        ...globalScope.procedures.map(proc => proc.scope).filter((scope): scope is Cache => scope !== undefined)
-      ].forEach(scope => {
-        scope.procedures.forEach(localDef => {
-          if (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]) {
-            let callLoc = (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]);
+    	[
+    		globalScope,
+    		...globalScope.procedures.map(proc => proc.scope).filter((scope): scope is Cache => scope !== undefined)
+    	].forEach(scope => {
+    		scope.procedures.forEach(localDef => {
+    			if (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]) {
+    				let callLoc = (localDef.keyword[`EXTPROC`] || localDef.keyword[`EXTPGM`]);
 
-            if (callLoc === true) {
-              callLoc = localDef.name.toUpperCase();
-            } else {
-              callLoc = callLoc.toUpperCase();
-            }
+    				if (callLoc === true) {
+    					callLoc = localDef.name.toUpperCase();
+    				} else {
+    					callLoc = callLoc.toUpperCase();
+    				}
 
-            // Remove potential string around value
-            callLoc = (callLoc.startsWith(`'`) && callLoc.endsWith(`'`) ? callLoc.substring(1, callLoc.length - 1) : callLoc);
+    				// Remove potential string around value
+    				callLoc = (callLoc.startsWith(`'`) && callLoc.endsWith(`'`) ? callLoc.substring(1, callLoc.length - 1) : callLoc);
 
-            if (noExternalToRules.includes(callLoc)) {
-              const possibleStatement = doc.getStatementByLine(localDef.position.range.line);
-              if (possibleStatement) {
-                errors.push({
-                  type: `NoExternalTo`,
-                  offset: { start: possibleStatement.range.start, end: possibleStatement.range.end },
-                });
-              }
-            }
-          }
-        });
-      });
+    				if (noExternalToRules.includes(callLoc)) {
+    					const possibleStatement = doc.getStatementByLine(localDef.position.range.line);
+    					if (possibleStatement) {
+    						errors.push({
+    							type: `NoExternalTo`,
+    							offset: { start: possibleStatement.range.start, end: possibleStatement.range.end },
+    						});
+    					}
+    				}
+    			}
+    		});
+    	});
     }
 
     if (rules.NoUnreferenced || rules.IncorrectVariableCase) {
-      const noRefCheck = (def: Declaration) => {
-        if (def.name !== undefined && def.name.toUpperCase() !== NO_NAME && def.position.path === data.uri) {
-          if (def.references.length <= 1) {
-            const possibleStatement = doc.getStatementByLine(def.position.range.line);
-            if (possibleStatement) {
-              errors.push({
-                type: `NoUnreferenced`,
-                offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
-              });
-            }
-          }
-        }
-      }
-      const casingCheck = (def: Declaration) => {
-        if (def.name !== undefined && def.name.toUpperCase() !== NO_NAME) {
-          def.references.forEach(ref => {
-            if (ref.uri === data.uri) { // We're only checking the active file
-              if (!errors.some(e => e.offset.start === ref.offset.start)) { //This is required because LIKEDS shares subfields
-                const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
-                if (contentPosition !== def.name) {
-                  errors.push({
-                    type: `IncorrectVariableCase`,
-                    offset: { start: ref.offset.start, end: ref.offset.end },
-                    newValue: def.name
-                  });
-                }
-              }
-            }
-          });
-        }
-      }
+    	const noRefCheck = (def: Declaration) => {
+    		if (def.name !== undefined && def.name.toUpperCase() !== NO_NAME && def.position.path === data.uri) {
+    			if (def.references.length <= 1) {
+    				const possibleStatement = doc.getStatementByLine(def.position.range.line);
+    				if (possibleStatement) {
+    					errors.push({
+    						type: `NoUnreferenced`,
+    						offset: { start: possibleStatement.range.start, end: possibleStatement.range.end }
+    					});
+    				}
+    			}
+    		}
+    	}
+    	const casingCheck = (def: Declaration) => {
+    		if (def.name !== undefined && def.name.toUpperCase() !== NO_NAME) {
+    			def.references.forEach(ref => {
+    				if (ref.uri === data.uri) { // We're only checking the active file
+    					if (!errors.some(e => e.offset.start === ref.offset.start)) { //This is required because LIKEDS shares subfields
+    						const contentPosition = data.content.substring(ref.offset.start, ref.offset.end);
+    						if (contentPosition !== def.name) {
+    							errors.push({
+    								type: `IncorrectVariableCase`,
+    								offset: { start: ref.offset.start, end: ref.offset.end },
+    								newValue: def.name
+    							});
+    						}
+    					}
+    				}
+    			});
+    		}
+    	}
 
-      [
-        globalScope,
-        ...globalScope.procedures.map(proc => proc.scope).filter((scope): scope is Cache => scope !== undefined)
-      ].forEach(dec => {
-        [...dec.constants, ...dec.variables]
-          .forEach(def => {
-            if (rules.NoUnreferenced) {
-              noRefCheck(def);
-            }
+    	[
+    		globalScope,
+    		...globalScope.procedures.map(proc => proc.scope).filter((scope): scope is Cache => scope !== undefined)
+    	].forEach(dec => {
+    		[...dec.constants, ...dec.variables]
+    			.forEach(def => {
+    				if (rules.NoUnreferenced) {
+    					noRefCheck(def);
+    				}
 
-            if (rules.IncorrectVariableCase) {
-              casingCheck(def);
-            }
-          });
+    				if (rules.IncorrectVariableCase) {
+    					casingCheck(def);
+    				}
+    			});
 
-        dec.subroutines
-          .filter(def => def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
-          .forEach(def => {
-            if (rules.NoUnreferenced) {
-              noRefCheck(def);
-            }
+    		dec.subroutines
+    			.filter(def => def.name && ![`*INZSR`, `*PSSR`].includes(def.name.toUpperCase()))
+    			.forEach(def => {
+    				if (rules.NoUnreferenced) {
+    					noRefCheck(def);
+    				}
 
-            if (rules.IncorrectVariableCase) {
-              casingCheck(def);
-            }
-          });
+    				if (rules.IncorrectVariableCase) {
+    					casingCheck(def);
+    				}
+    			});
 
-        dec.procedures
-          .forEach(proc => {
-            if (!proc.keyword[`EXPORT`]) {
-              if (rules.NoUnreferenced) {
-                noRefCheck(proc);
-              }
+    		dec.procedures
+    			.forEach(proc => {
+    				if (!proc.keyword[`EXPORT`]) {
+    					if (rules.NoUnreferenced) {
+    						noRefCheck(proc);
+    					}
 
-              if (rules.IncorrectVariableCase) {
-                casingCheck(proc);
-              }
+    					if (rules.IncorrectVariableCase) {
+    						casingCheck(proc);
+    					}
 
-              if (!proc.keyword[`EXTPGM`] && !proc.keyword[`EXTPROC`]) {
-                proc.subItems.forEach(parm => {
-                  if (rules.NoUnreferenced) {
-                    noRefCheck(parm);
-                  }
+    					if (!proc.keyword[`EXTPGM`] && !proc.keyword[`EXTPROC`]) {
+    						proc.subItems.forEach(parm => {
+    							if (rules.NoUnreferenced) {
+    								noRefCheck(parm);
+    							}
 
-                  if (rules.IncorrectVariableCase) {
-                    casingCheck(parm);
-                  }
-                });
-              }
-            }
-          });
+    							if (rules.IncorrectVariableCase) {
+    								casingCheck(parm);
+    							}
+    						});
+    					}
+    				}
+    			});
 
-        dec.structs
-          .forEach(struct => {
+    		dec.structs
+    			.forEach(struct => {
 
-            struct.subItems.forEach(subf => {
-              // We only check the subfields if the parent is never references.
-              if (rules.NoUnreferenced && struct.references.length <= 1) {
-                noRefCheck(subf);
-              }
+    				struct.subItems.forEach(subf => {
+    					// We only check the subfields if the parent is never references.
+    					if (rules.NoUnreferenced && struct.references.length <= 1) {
+    						noRefCheck(subf);
+    					}
 
-              if (rules.IncorrectVariableCase) {
-                casingCheck(subf);
-              }
-            });
+    					if (rules.IncorrectVariableCase) {
+    						casingCheck(subf);
+    					}
+    				});
 
-            const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 1);
-            if (rules.NoUnreferenced && subFieldIsUsed === false) {
-              noRefCheck(struct);
-            }
+    				const subFieldIsUsed = struct.subItems.some(subf => subf.references.length > 1);
+    				if (rules.NoUnreferenced && subFieldIsUsed === false) {
+    					noRefCheck(struct);
+    				}
 
-            if (rules.IncorrectVariableCase) {
-              casingCheck(struct);
-            }
-          });
-      });
+    				if (rules.IncorrectVariableCase) {
+    					casingCheck(struct);
+    				}
+    			});
+    	});
     }
 
     return {
-      indentErrors,
-      errors,
-      doc
+    	indentErrors,
+    	errors,
+    	doc
     };
-  }
+	}
 }
