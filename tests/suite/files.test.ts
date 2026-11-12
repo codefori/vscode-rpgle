@@ -8,256 +8,256 @@ const parser = setupParser();
 const uri = `source.rpgle`;
 
 test("simple_file", async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `dcl-f employee disk usage(*input);`,
-    ``,
-    `dsply employee.workdept;`,
-    ``,
-    `return;`
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`dcl-f employee disk usage(*input);`,
+		``,
+		`dsply employee.workdept;`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.files.length).toBe(1);
-  expect(cache.structs.length).toBe(0);
+	expect(cache.files.length).toBe(1);
+	expect(cache.structs.length).toBe(0);
 
-  const fileDef = assertFound(cache.find(`employee`), `employee`);
-  expect(fileDef.name).toBe(`employee`);
-  expect(fileDef.keyword[`DISK`]).toBe(true);
-  expect(fileDef.keyword[`USAGE`]).toBe(`*input`);
+	const fileDef = assertFound(cache.find(`employee`), `employee`);
+	expect(fileDef.name).toBe(`employee`);
+	expect(fileDef.keyword[`DISK`]).toBe(true);
+	expect(fileDef.keyword[`USAGE`]).toBe(`*input`);
 
-  // file record formats should be expanded into the subitems
-  expect(fileDef.subItems.length).toBe(1);
+	// file record formats should be expanded into the subitems
+	expect(fileDef.subItems.length).toBe(1);
 
-  const empRdcFmt = fileDef.subItems[0];
+	const empRdcFmt = fileDef.subItems[0];
 
-  expect(empRdcFmt.name).toBe(`EMPLOYEE`);
+	expect(empRdcFmt.name).toBe(`EMPLOYEE`);
 
-  expect(empRdcFmt.subItems[1].keyword[`VARCHAR`]).toBe(`12`);
-  // 14 fields inside of this record format
-  expect(empRdcFmt.subItems.length).toBe(14);
+	expect(empRdcFmt.subItems[1].keyword[`VARCHAR`]).toBe(`12`);
+	// 14 fields inside of this record format
+	expect(empRdcFmt.subItems.length).toBe(14);
 });
 
 test("many_formats", async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `dcl-f emps workstn;`,
-    ``,
-    `write SFLDTA;`,
-    ``,
-    `return;`
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`dcl-f emps workstn;`,
+		``,
+		`write SFLDTA;`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.files.length).toBe(1);
+	expect(cache.files.length).toBe(1);
 
-  const fileDef = assertFound(cache.find(`emps`), `emps`);
-  expect(fileDef.name).toBe(`emps`);
-  expect(fileDef.keyword[`WORKSTN`]).toBe(true);
+	const fileDef = assertFound(cache.find(`emps`), `emps`);
+	expect(fileDef.name).toBe(`emps`);
+	expect(fileDef.keyword[`WORKSTN`]).toBe(true);
 
-  // file record formats should be expanded into the subitems
-  expect(fileDef.subItems.length).toBe(2);
+	// file record formats should be expanded into the subitems
+	expect(fileDef.subItems.length).toBe(2);
 
-  const sfldta = fileDef.subItems[0];
-  expect(sfldta.name).toBe(`SFLDTA`);
-  expect(sfldta.subItems.length).toBe(5);
+	const sfldta = fileDef.subItems[0];
+	expect(sfldta.name).toBe(`SFLDTA`);
+	expect(sfldta.subItems.length).toBe(5);
 
-  const sflctl = fileDef.subItems[1];
-  expect(sflctl.name).toBe(`SFLCTL`);
-  expect(sflctl.subItems.length).toBe(1);
+	const sflctl = fileDef.subItems[1];
+	expect(sflctl.name).toBe(`SFLCTL`);
+	expect(sflctl.subItems.length).toBe(1);
 });
 
 test("ds_extname", async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `Dcl-Ds Employee ExtName('EMPLOYEE') Qualified;`,
-    `end-ds;`,
-    ``,
-    `Dsply Employee.empno;`,
-    ``,
-    `return;`
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`Dcl-Ds Employee ExtName('EMPLOYEE') Qualified;`,
+		`end-ds;`,
+		``,
+		`Dsply Employee.empno;`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.files.length).toBe(0);
-  expect(cache.structs.length).toBe(1);
+	expect(cache.files.length).toBe(0);
+	expect(cache.structs.length).toBe(1);
 
-  const structDef = assertFound(cache.find(`employee`), `employee`);
-  expect(structDef.name).toBe(`Employee`);
-  expect(structDef.subItems.length).toBe(14);
+	const structDef = assertFound(cache.find(`employee`), `employee`);
+	expect(structDef.name).toBe(`Employee`);
+	expect(structDef.subItems.length).toBe(14);
 });
 
 test("ds_extname", async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `Dcl-Ds Employee ExtName('EMPLOYEE') Qualified;`,
-    `end-ds;`,
-    ``,
-    `Dsply Employee.empno;`,
-    ``,
-    `return;`
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`Dcl-Ds Employee ExtName('EMPLOYEE') Qualified;`,
+		`end-ds;`,
+		``,
+		`Dsply Employee.empno;`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.files.length).toBe(0);
-  expect(cache.structs.length).toBe(1);
+	expect(cache.files.length).toBe(0);
+	expect(cache.structs.length).toBe(1);
 
-  const structDef = assertFound(cache.find(`employee`), `employee`);
-  expect(structDef.name).toBe(`Employee`);
-  expect(structDef.subItems.length).toBe(14);
+	const structDef = assertFound(cache.find(`employee`), `employee`);
+	expect(structDef.name).toBe(`Employee`);
+	expect(structDef.subItems.length).toBe(14);
 });
 
 test("ds_extname_template", async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `Dcl-Ds dept ExtName('department') Qualified template end-ds;`,
-    ``,
-    `Dcl-DS dsExample qualified inz;`,
-    `  Field1 like(tmpDS.Field1) inz;`,
-    `  Field2 like(tmpDS.Field2) inz;`,
-    `END-DS`,
-    ``,
-    `return;`
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`Dcl-Ds dept ExtName('department') Qualified template end-ds;`,
+		``,
+		`Dcl-DS dsExample qualified inz;`,
+		`  Field1 like(tmpDS.Field1) inz;`,
+		`  Field2 like(tmpDS.Field2) inz;`,
+		`END-DS`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.structs.length).toBe(2);
+	expect(cache.structs.length).toBe(2);
 
-  const dept = assertFound(cache.find(`dsExample`), `dsExample`);
-  expect(dept.subItems.length).toBe(2);
+	const dept = assertFound(cache.find(`dsExample`), `dsExample`);
+	expect(dept.subItems.length).toBe(2);
 });
 
 test("ds_extname_alias", async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `Dcl-Ds dept ExtName('department') alias Qualified;`,
-    `end-ds;`,
-    ``,
-    `Dsply dept.deptname;`,
-    ``,
-    `return;`
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`Dcl-Ds dept ExtName('department') alias Qualified;`,
+		`end-ds;`,
+		``,
+		`Dsply dept.deptname;`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.files.length).toBe(0);
-  expect(cache.structs.length).toBe(1);
+	expect(cache.files.length).toBe(0);
+	expect(cache.structs.length).toBe(1);
 
-  const dept = assertFound(cache.find(`dept`), `dept`);
-  expect(dept.subItems.length).toBe(5);
+	const dept = assertFound(cache.find(`dept`), `dept`);
+	expect(dept.subItems.length).toBe(5);
 
-  expect(dept.subItems[0].name).toBe(`DEPTNO`);
-  expect(dept.subItems[1].name).toBe(`DEPTNAME`);
+	expect(dept.subItems[0].name).toBe(`DEPTNO`);
+	expect(dept.subItems[1].name).toBe(`DEPTNAME`);
 });
 
 test("file_prefix", async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `Dcl-f display workstn usropn prefix(d);`,
-    ``,
-    `Exfmt display;`,
-    ``,
-    `return;`
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`Dcl-f display workstn usropn prefix(d);`,
+		``,
+		`Exfmt display;`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const disp = assertFound(cache.find(`display`), `display`);
-  expect(disp.subItems[0].subItems[0].name).toBe(`DE1_OPTION`);
+	const disp = assertFound(cache.find(`display`), `display`);
+	expect(disp.subItems[0].subItems[0].name).toBe(`DE1_OPTION`);
 });
 
 test('file DS in a copy book', async () => {
-  const lines = [
-    `**free`,
-    `ctl-opt main(Main);`,
-    `/copy './rpgle/file1.rpgleinc'`,
-    ``,
-    `dcl-proc Main;`,
-    `dcl-pi *n;`,
-    `end-pi;`,
-    ``,
-    `dcl-ds SomeStruct likeds(GlobalStruct) inz;`,
-    ``,
-    `end-proc;`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		`ctl-opt main(Main);`,
+		`/copy './rpgle/file1.rpgleinc'`,
+		``,
+		`dcl-proc Main;`,
+		`dcl-pi *n;`,
+		`end-pi;`,
+		``,
+		`dcl-ds SomeStruct likeds(GlobalStruct) inz;`,
+		``,
+		`end-proc;`,
+	].join(`\n`);
 
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const globalStruct = assertFound(cache.find(`GlobalStruct`), `GlobalStruct`);
-  expect(globalStruct.subItems.length).toBeGreaterThan(0);
+	const globalStruct = assertFound(cache.find(`GlobalStruct`), `GlobalStruct`);
+	expect(globalStruct.subItems.length).toBeGreaterThan(0);
 
-  const mainProc = assertFound(cache.find(`Main`), `Main`);
+	const mainProc = assertFound(cache.find(`Main`), `Main`);
 
-  expect(mainProc).toBeDefined();
+	expect(mainProc).toBeDefined();
 
-  const mainProcScope = assertScope(mainProc.scope, `Main`);
-  const someStruct = assertFound(mainProcScope.find(`SomeStruct`), `SomeStruct`);
-  expect(someStruct.subItems.length).toBeGreaterThan(0);
+	const mainProcScope = assertScope(mainProc.scope, `Main`);
+	const someStruct = assertFound(mainProcScope.find(`SomeStruct`), `SomeStruct`);
+	expect(someStruct.subItems.length).toBeGreaterThan(0);
 
-  expect(someStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword }))).toMatchObject(globalStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword })));
+	expect(someStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword }))).toMatchObject(globalStruct.subItems.map(s => ({ name: s.name, keyword: s.keyword })));
 });
 
 test('test rename (#407)', async () => {
-  const lines = [
+	const lines = [
 
-    `      *`,
-    `     FDEPARTMENTO  A E             DISK`,
-    `     F                                     RENAME(DEPARTMENT:DEPTR)`,
-    `      ******************************************`,
+		`      *`,
+		`     FDEPARTMENTO  A E             DISK`,
+		`     F                                     RENAME(DEPARTMENT:DEPTR)`,
+		`      ******************************************`,
 
-  ].join(`\n`);
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.files.length).toBe(1);
+	expect(cache.files.length).toBe(1);
 
-  const dept = assertFound(cache.find(`DEPARTMENT`), `DEPARTMENT`);
-  expect(dept.name).toBe(`DEPARTMENT`);
-  expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
+	const dept = assertFound(cache.find(`DEPARTMENT`), `DEPARTMENT`);
+	expect(dept.name).toBe(`DEPARTMENT`);
+	expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
 
-  // One record format
-  expect(dept.subItems.length).toBe(1);
-  expect(dept.subItems[0].name).toBe(`DEPTR`);
+	// One record format
+	expect(dept.subItems.length).toBe(1);
+	expect(dept.subItems[0].name).toBe(`DEPTR`);
 
-  expect(dept.subItems[0].subItems.length).toBeGreaterThan(0);
-  expect(dept.subItems[0].subItems[0].name).toBe(`DEPTNO`);
+	expect(dept.subItems[0].subItems.length).toBeGreaterThan(0);
+	expect(dept.subItems[0].subItems[0].name).toBe(`DEPTNO`);
 });
 
 test('test rename + prefix (#407)', async () => {
-  const lines = [
+	const lines = [
 
-    `      *`,
-    `     FDEPARTMENTO  A E             DISK`,
-    `     F                                     RENAME(DEPARTMENT:DEPTR)`,
-    `     F                                     PREFIX(CC)`,
-    `      ******************************************`,
+		`      *`,
+		`     FDEPARTMENTO  A E             DISK`,
+		`     F                                     RENAME(DEPARTMENT:DEPTR)`,
+		`     F                                     PREFIX(CC)`,
+		`      ******************************************`,
 
-  ].join(`\n`);
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.files.length).toBe(1);
+	expect(cache.files.length).toBe(1);
 
-  const dept = assertFound(cache.find(`DEPARTMENT`), `DEPARTMENT`);
-  expect(dept.name).toBe(`DEPARTMENT`);
-  expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
+	const dept = assertFound(cache.find(`DEPARTMENT`), `DEPARTMENT`);
+	expect(dept.name).toBe(`DEPARTMENT`);
+	expect(dept.keyword[`RENAME`]).toBe(`DEPARTMENT:DEPTR`);
 
-  // One record format
-  expect(dept.subItems.length).toBe(1);
-  expect(dept.subItems[0].name).toBe(`DEPTR`);
-  expect(dept.subItems[0].subItems.length).toBeGreaterThan(0);
-  expect(dept.subItems[0].subItems[0].name).toBe(`CCDEPTNO`);
+	// One record format
+	expect(dept.subItems.length).toBe(1);
+	expect(dept.subItems[0].name).toBe(`DEPTR`);
+	expect(dept.subItems[0].subItems.length).toBeGreaterThan(0);
+	expect(dept.subItems[0].subItems[0].name).toBe(`CCDEPTNO`);
 });

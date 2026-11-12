@@ -286,22 +286,22 @@ export function registerToggleCommentCommand(context: vscode.ExtensionContext) {
  * @returns The commented line
  */
 function commentFixedFormatLine(line: string): string {
-  // Ensure line is at least 6 characters to have columns 1-6
-  if (line.length < 6) {
-    line = line.padEnd(6, ' ');
-  }
+	// Ensure line is at least 6 characters to have columns 1-6
+	if (line.length < 6) {
+		line = line.padEnd(6, ' ');
+	}
 
-  // Extract the parts:
-  // Columns 1-6 (positions 0-5): Line sequence/label and form type
-  // Columns 7+ (positions 6+): The statement
-  const prefix = line.substring(0, 6);      // Columns 1-6
-  const statement = line.substring(6);      // Columns 7+
+	// Extract the parts:
+	// Columns 1-6 (positions 0-5): Line sequence/label and form type
+	// Columns 7+ (positions 6+): The statement
+	const prefix = line.substring(0, 6);      // Columns 1-6
+	const statement = line.substring(6);      // Columns 7+
 
-  // Create commented line: prefix + '*' + statement
-  // This inserts the asterisk at column 7 and shifts everything else right
-  let commentedLine = prefix + '*' + statement;
+	// Create commented line: prefix + '*' + statement
+	// This inserts the asterisk at column 7 and shifts everything else right
+	let commentedLine = prefix + '*' + statement;
 
-  return commentedLine;
+	return commentedLine;
 }
 
 /**
@@ -311,18 +311,18 @@ function commentFixedFormatLine(line: string): string {
  * @returns The uncommented line
  */
 function uncommentFixedFormatLine(line: string): string {
-  // Extract the parts:
-  // Columns 1-6 (positions 0-5): Line sequence/label and form type
-  // Column 7 (position 6): Should be '*'
-  // Columns 8+ (positions 7+): The statement
-  const prefix = line.substring(0, 6);      // Columns 1-6
-  const statement = line.substring(7);      // Columns 8+
+	// Extract the parts:
+	// Columns 1-6 (positions 0-5): Line sequence/label and form type
+	// Column 7 (position 6): Should be '*'
+	// Columns 8+ (positions 7+): The statement
+	const prefix = line.substring(0, 6);      // Columns 1-6
+	const statement = line.substring(7);      // Columns 8+
 
-  // Create uncommented line: prefix + statement
-  // This removes the asterisk and shifts everything back left
-  let uncommentedLine = prefix + statement;
+	// Create uncommented line: prefix + statement
+	// This removes the asterisk and shifts everything back left
+	let uncommentedLine = prefix + statement;
 
-  return uncommentedLine;
+	return uncommentedLine;
 }
 
 /**
