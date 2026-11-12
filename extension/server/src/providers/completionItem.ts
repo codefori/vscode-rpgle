@@ -1,4 +1,4 @@
-import path = require('path');
+import * as path from "path";
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Cache, { RpgleType, RpgleVariableType } from '../../../../language/models/cache';

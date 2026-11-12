@@ -77,13 +77,13 @@ export function prettyKeywords(keywords: Keywords, filter: boolean = false): str
 }
 
 export function getReturnValue(symbol: Declaration): string {
-  let returnValue = `void`
+	let returnValue = `void`
 
-  let returnKeywords: Keywords = {
-    ...symbol.keyword,
-  };
-  delete returnKeywords[`EXTPROC`];
+	let returnKeywords: Keywords = {
+		...symbol.keyword,
+	};
+	delete returnKeywords[`EXTPROC`];
 
-  if (Object.keys(returnKeywords).length > 0) returnValue = prettyKeywords(returnKeywords);
-  return returnValue;
+	if (Object.keys(returnKeywords).length > 0) returnValue = prettyKeywords(returnKeywords);
+	return returnValue;
 }

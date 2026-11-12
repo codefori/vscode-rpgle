@@ -45,8 +45,7 @@ export default function workspaceSymbolProvider(params: WorkspaceSymbolParams): 
 								)
 							)
 						);
-					} else
-					if (cache.keyword[`NOMAIN`]) {
+					} else if (cache.keyword[`NOMAIN`]) {
 						cache.procedures.forEach(proc => {
 							if (proc.keyword[`EXPORT`]) {
 								symbols.push(
