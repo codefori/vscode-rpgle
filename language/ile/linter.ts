@@ -79,6 +79,8 @@ interface OpenDeclaration {
 	offset: IRange;
 	/** Opened inside a `/IF` block: another branch may open or close it, so it is never reported. */
 	conditional: boolean;
+	/** Still open at a `/COPY` or `/INCLUDE`: the member may close it, and only the current file is linted, so it is never reported. */
+	beforeInclude: boolean;
 }
 
 function getDeclarationBlockType(token: Token | undefined): DeclarationBlockType | undefined {
@@ -446,13 +448,15 @@ export default class Linter {
     	type,
     	offset: token.range,
     	conditional: directiveScope > 0,
+    	beforeInclude: false,
     });
+
+    const getOpenDeclarations = () => inPrototype ? [...inStruct, inPrototype] : inStruct;
 
     // Reports the blocks still open at a scope boundary (DCL-PROC, END-PROC, end of source) and closes them.
     const reportOpenDeclarations = () => {
-    	const open = inPrototype ? [...inStruct, inPrototype] : inStruct;
-    	for (const block of open) {
-    		if (!block.conditional) {
+    	for (const block of getOpenDeclarations()) {
+    		if (!block.conditional && !block.beforeInclude) {
     			errors.push({ type: declarationBlocks[block.type].error, offset: block.offset });
     		}
     	}
@@ -550,6 +554,15 @@ export default class Linter {
     			let isEmbeddedSQL = false;
 
     			const isDirective = firstToken.type === `directive`;
+    			let isDeclare = [`declare`, `end`].includes(firstToken.type);
+    			if (!isDeclare && rules.RequiresParameter) {
+    				// Subfields and enum members are not procedure calls. Use the parser's
+    				// declaration ranges (enums are stored as constants) for both scopes.
+    				const containsCurrentLine = (declaration: Declaration) => declaration.containsLine(data.uri, lineNumber);
+    				const localScope = globalProcs.find(procedure => procedure.scope && containsCurrentLine(procedure))?.scope;
+    				isDeclare = [globalScope, localScope].some(scope => scope !== undefined
+    					&& (scope.structs.some(containsCurrentLine) || scope.constants.some(containsCurrentLine)));
+    			}
 
     			if (statement.length >= 1) {
     				if (isDirective) {
@@ -566,7 +579,13 @@ export default class Linter {
     							if (directive === `/ENDIF`) {
     								// Directive ENDIF
     								directiveScope -= 1;
-    							}
+    							} else
+    								if (directive === `/COPY` || directive === `/INCLUDE`) {
+    									// The member may close the open blocks, for example with the END-DS
+    									for (const block of getOpenDeclarations()) {
+    										block.beforeInclude = true;
+    									}
+    								}
     				}
 
     				switch (firstToken.type) {
@@ -1238,33 +1257,16 @@ export default class Linter {
     									}
     								}
 
-    								const isDeclare = [`declare`, `end`].includes(statement[0].type);
-
-    								if ((isDeclare && i >= 2) || !isDeclare) {
-    									if (rules.RequiresParameter && !inPrototype && !isDeclare) {
-    										// Check the procedure reference has a block following it
-    										const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
-    										if (definedProcedure) {
-    											let requiresBlock = false;
-    											// Don't require parms for procedures found in Ctl-Opt or directives
-    											if (isDeclare || isDirective) {
-    												// do nothing
-    											} else if (statement[i - 2] && statement[i - 2].type === `builtin` && statement[i - 2].value?.toUpperCase() === `%PADDR`) {
-    												// Do nothing because you can pass a function to PADDR as a reference
-
-    											} else if (statement.length <= i + 1) {
-    												requiresBlock = true;
-    											} else if (statement[i + 1].type !== `openbracket`) {
-    												requiresBlock = true;
-    											}
-
-    											if (requiresBlock) {
-    												errors.push({
-    													offset: part.range,
-    													type: `RequiresParameter`,
-    												});
-    											}
-    										}
+    								if (rules.RequiresParameter && !inPrototype && !isDeclare && !isDirective && !isEmbeddedSQL && statement[i - 1]?.type !== `dot`) {
+    									// %PADDR accepts a procedure reference without calling it.
+    									const isProcedureAddress = statement[i - 2]?.type === `builtin`
+    										&& statement[i - 2].value?.toUpperCase() === `%PADDR`;
+    									const definedProcedure = globalProcs.find(proc => proc.name.toUpperCase() === upperName);
+    									if (definedProcedure && !isProcedureAddress && statement[i + 1]?.type !== `openbracket`) {
+    										errors.push({
+    											offset: part.range,
+    											type: `RequiresParameter`,
+    										});
     									}
     								}
     								break;
