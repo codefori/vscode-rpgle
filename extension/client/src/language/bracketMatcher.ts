@@ -727,6 +727,7 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
 		'gi'
 	);
 	const matches: BlockMatch[] = [];
+	const isFullyFree = rpgle.isFreeFormatRPG(document);
 
 	let match;
 	regex.lastIndex = 0;
@@ -734,8 +735,16 @@ function findAllMatches(text: string, document: vscode.TextDocument): BlockMatch
 		const matchWord = match[0].toLowerCase();
 
 		// Skip keywords found on RPG comment lines (fixed-format '*' comments and // comments).
-		const lineNumber = document.positionAt(match.index).line;
+		const matchPos = document.positionAt(match.index);
+		const lineNumber = matchPos.line;
 		if (rpgle.isComment(document.lineAt(lineNumber).text, document)) {
+			continue;
+		}
+
+		// Outside **FREE, columns 1-5 (sequence/comment area), 6 (spec type) and 7
+		// (comment/directive indicator) never contain code, nor do columns 81+.
+		// E.g. compile-listing nesting markers like "IF  1C     ..." in columns 1-5.
+		if (!isFullyFree && (matchPos.character < 7 || matchPos.character >= 80)) {
 			continue;
 		}
 
