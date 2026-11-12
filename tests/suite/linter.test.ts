@@ -4384,39 +4384,251 @@ test('inline end-ds closes dcl-ds in the same statement', async () => {
 	expect(indentErrors).toHaveLength(0);
 });
 
-test('reports missing end-ds when a new declaration starts first', () => {
-  const lines = [
-    `**free`,
-    `dcl-ds foo extname('SOMEFILE')`,
-    `  prefix(b4)`,
-    `dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
-    `return;`
-  ].join(`\n`);
+test('missing end-ds: merged with the next declaration', () => {
+	const lines = [
+		`**free`,
+		`dcl-ds foo extname('SOMEFILE')`,
+		`  prefix(b4)`,
+		`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+		`return;`
+	].join(`\n`);
 
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    SQLRunner: true,
-  });
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		SQLRunner: true,
+	});
 
-  expect(errors.some(error => error.type === `MissingEndDS`)).toBe(true);
+	expect(errors).toMatchObject([
+		{ type: `MissingEndDS`, offset: { start: 7, end: 13 } }
+	]);
 });
 
-test('reports missing end-ds for malformed continued declaration with blank line', () => {
-  const lines = [
-    `**free`,
-    ``,
-    `dcl-ds foo extname('SOMEFILE')`,
-    `   prefix(b4) `,
-    ``,
-    `dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
-    ``,
-    `return;`
-  ].join(`\n`);
+test('missing end-ds: merged statement with blank line (negative indent)', () => {
+	const lines = [
+		`**free`,
+		``,
+		`dcl-ds foo extname('SOMEFILE')`,
+		`   prefix(b4) `,
+		``,
+		`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+		``,
+		`return;`
+	].join(`\n`);
 
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    SQLRunner: true,
-  });
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		SQLRunner: true,
+	});
 
-  expect(errors.some(error => error.type === `MissingEndDS`)).toBe(true);
+	expect(errors).toMatchObject([
+		{ type: `MissingEndDS`, offset: { start: 8, end: 14 } }
+	]);
+});
+
+test('missing end-ds: merged statement respects @rpglint-skip and needs a rule enabled', () => {
+	const merged = [
+		`dcl-ds foo extname('SOMEFILE')`,
+		`   prefix(b4) `,
+		``,
+		`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+		``,
+		`return;`
+	];
+
+	const skipped = Linter.getErrors({ uri, content: [`**free`, ``, `// @rpglint-skip`, ...merged].join(`\n`) }, {
+		SQLRunner: true,
+	});
+	expect(skipped.errors).toHaveLength(0);
+
+	const noRules = Linter.getErrors({ uri, content: [`**free`, ``, ...merged].join(`\n`) }, {});
+	expect(noRules.errors).toHaveLength(0);
+});
+
+test('missing end-ds: merged statement is not reported when MissingSemicolon is enabled', () => {
+	const lines = [
+		`**free`,
+		`dcl-ds foo extname('SOMEFILE')`,
+		`  prefix(b4)`,
+		`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+		`return;`
+	].join(`\n`);
+
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		MissingSemicolon: true,
+	});
+
+	expect(errors.map(error => error.type)).toEqual([`MissingSemicolon`, `MissingSemicolon`]);
+});
+
+test('missing end-pr, end-pi and end-enum: merged with the next declaration', () => {
+	const pr = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-pr bar extpgm('BAR')`,
+			`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+			`return;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(pr.errors).toMatchObject([{ type: `MissingEndPR`, offset: { start: 7, end: 13 } }]);
+
+	const pi = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-proc p;`,
+			`  dcl-pi *n`,
+			`  dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+			`end-proc;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(pi.errors).toMatchObject([{ type: `MissingEndPI`, offset: { start: 21, end: 27 } }]);
+
+	const enumeration = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-enum colors`,
+			`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+			`return;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(enumeration.errors).toMatchObject([{ type: `MissingEndENUM`, offset: { start: 7, end: 15 } }]);
+});
+
+test('missing end-ds: semicolon present, block still open at end of source', () => {
+	const eof = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-ds foo extname('SOMEFILE')`,
+			`  prefix(b4);`,
+			`dcl-s x int(10);`,
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(eof.errors).toMatchObject([{ type: `MissingEndDS`, offset: { start: 7, end: 13 } }]);
+
+	// The inner DS is closed, the outer one is not
+	const nested = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-ds foo extname('SOMEFILE');`,
+			`dcl-ds foo2 extname('SOMEFILE2') end-ds;`,
+			`return;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(nested.errors).toMatchObject([{ type: `MissingEndDS`, offset: { start: 7, end: 13 } }]);
+});
+
+test('missing end-xx: block still open at dcl-proc / end-proc', () => {
+	const beforeProc = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-ds foo qualified;`,
+			`  a char(1);`,
+			`dcl-proc p;`,
+			`end-proc;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(beforeProc.errors).toMatchObject([{ type: `MissingEndDS`, offset: { start: 7, end: 13 } }]);
+
+	const atEndProc = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-proc p;`,
+			`  dcl-ds foo qualified;`,
+			`    a char(1);`,
+			`end-proc;`,
+			`dcl-proc q;`,
+			`end-proc;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(atEndProc.errors).toMatchObject([{ type: `MissingEndDS`, offset: { start: 21, end: 27 } }]);
+
+	const pi = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-proc p;`,
+			`  dcl-pi *n;`,
+			`    p1 int(10);`,
+			`end-proc;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(pi.errors).toMatchObject([{ type: `MissingEndPI`, offset: { start: 21, end: 27 } }]);
+});
+
+test('missing end-pr and end-enum: semicolon present', () => {
+	const pr = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-pr a extpgm('A');`,
+			`  p1 int(10);`,
+			`dcl-pr b extpgm('B');`,
+			`end-pr;`
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(pr.errors).toMatchObject([{ type: `MissingEndPR`, offset: { start: 7, end: 13 } }]);
+
+	const enumeration = Linter.getErrors({
+		uri, content: [
+			`**free`,
+			`dcl-enum colors;`,
+			`  red 1;`,
+		].join(`\n`)
+	}, { SQLRunner: true });
+	expect(enumeration.errors).toMatchObject([{ type: `MissingEndENUM`, offset: { start: 7, end: 15 } }]);
+});
+
+test('missing end-xx: not reported for valid declarations', () => {
+	const lines = [
+		`**free`,
+		`dcl-ds a extname('A') end-ds;`,
+		`dcl-ds b extname('B')`,
+		`  end-ds;`,
+		`dcl-ds c qualified;`,
+		`  x char(1);`,
+		`end-ds;`,
+		`dcl-ds d likeds(c);`,
+		`dcl-ds e qualified;`,
+		`  dcl-ds f;`,
+		`    y char(1);`,
+		`  end-ds;`,
+		`end-ds;`,
+		`dcl-pr g extpgm('G') end-pr;`,
+		`dcl-pr h overload(g);`,
+		`dcl-enum i;`,
+		`  z 1;`,
+		`end-enum;`,
+		`dcl-proc p;`,
+		`  dcl-pi *n end-pi;`,
+		`end-proc;`
+	].join(`\n`);
+
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		SQLRunner: true,
+	});
+
+	expect(errors).toHaveLength(0);
+});
+
+test('missing end-xx: not reported for blocks opened inside /if', () => {
+	const lines = [
+		`**free`,
+		`/if defined(V1)`,
+		`dcl-pr a extproc('A');`,
+		`/else`,
+		`dcl-pr a extproc('B');`,
+		`/endif`,
+		`  p1 int(10);`,
+		`end-pr;`,
+		`/if defined(V1)`,
+		`dcl-ds d qualified;`,
+		`/else`,
+		`dcl-ds d qualified template;`,
+		`/endif`,
+		`  a char(1);`,
+		`end-ds;`
+	].join(`\n`);
+
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		SQLRunner: true,
+	});
+
+	expect(errors).toHaveLength(0);
 });
 
 test("DS template references", async () => {

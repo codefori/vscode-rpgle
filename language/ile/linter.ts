@@ -66,54 +66,44 @@ type IndentError = {
 
 type DeclarationBlockType = `DCL-DS` | `DCL-PR` | `DCL-PI` | `DCL-ENUM`;
 
-const declarationClosers: Record<DeclarationBlockType, string> = {
-	"DCL-DS": `END-DS`,
-	"DCL-PR": `END-PR`,
-	"DCL-PI": `END-PI`,
-	"DCL-ENUM": `END-ENUM`,
+const declarationBlocks: Record<DeclarationBlockType, { closer: string, error: ErrorType }> = {
+	'DCL-DS': { closer: `END-DS`, error: `MissingEndDS` },
+	'DCL-PR': { closer: `END-PR`, error: `MissingEndPR` },
+	'DCL-PI': { closer: `END-PI`, error: `MissingEndPI` },
+	'DCL-ENUM': { closer: `END-ENUM`, error: `MissingEndENUM` },
 };
 
-const missingDeclarationErrors: Record<DeclarationBlockType, ErrorType> = {
-	"DCL-DS": `MissingEndDS`,
-	"DCL-PR": `MissingEndPR`,
-	"DCL-PI": `MissingEndPI`,
-	"DCL-ENUM": `MissingEndENUM`,
-};
+/** A declaration block that has been opened and still needs its `END-xx`. */
+interface OpenDeclaration {
+	type: DeclarationBlockType;
+	offset: IRange;
+	/** Opened inside a `/IF` block: another branch may open or close it, so it is never reported. */
+	conditional: boolean;
+}
 
-const declarationOpeners = new Set<DeclarationBlockType>([
-	`DCL-DS`,
-	`DCL-PR`,
-	`DCL-PI`,
-	`DCL-ENUM`,
-]);
-
-function hasUnclosedDeclarationBeforeBoundary(statement: Token[], opener: DeclarationBlockType): boolean {
-	const closer = declarationClosers[opener];
-	const openerIndex = statement.findIndex(part =>
-		part.type === `declare` &&
-		part.value &&
-		part.value.toUpperCase() === opener
-	);
-
-	if (openerIndex < 0) {
-		return false;
+function getDeclarationBlockType(token: Token | undefined): DeclarationBlockType | undefined {
+	const value = token?.value?.toUpperCase();
+	if (token?.type === `declare` && value && Object.prototype.hasOwnProperty.call(declarationBlocks, value)) {
+		return value as DeclarationBlockType;
 	}
+}
 
-	for (let i = openerIndex + 1; i < statement.length; i++) {
-		const part = statement[i];
-		const upper = (part.value || ``).toUpperCase();
+/**
+ * Detects two declarations merged in a single statement, e.g. a `DCL-DS` missing its `;`
+ * followed by another `DCL-DS`: another block starts before the first one is closed.
+ */
+function getMergedDeclarationError(statement: Token[]): IssueRange | undefined {
+	const type = getDeclarationBlockType(statement[0]);
+	if (!type) return;
 
-		if (upper === closer) {
-			return false;
+	const { closer, error } = declarationBlocks[type];
+	for (let i = 1; i < statement.length; i++) {
+		if (statement[i].type === `end` && statement[i].value?.toUpperCase() === closer) return;
+
+		if (getDeclarationBlockType(statement[i])) {
+			return { type: error, offset: statement[0].range };
 		}
-
-		if (part.type === `declare` && declarationOpeners.has(upper as DeclarationBlockType)) {
-			return true;
-		}
-
 	}
-
-	return false;
 }
 
 function getCodeBeforeComment(sourceLine: string) {
@@ -314,8 +304,8 @@ export default class Linter {
 
     let inProcedure: ReferenceInfo | undefined;
     let inSubroutine: ReferenceInfo | undefined;
-    let inStruct: string[] = [];
-    let inPrototype = false;
+    let inStruct: OpenDeclaration[] = [];
+    let inPrototype: OpenDeclaration | undefined;
     let inOnExit = false;
 
     let lineNumber = -1;
@@ -340,19 +330,29 @@ export default class Linter {
 
     const selectBlocks: SelectBlock[] = [];
 
-    const reportMissingDeclarationEndInStatement = (statement: Token[], type: DeclarationBlockType, offset: IRange) => {
-    	if (hasUnclosedDeclarationBeforeBoundary(statement, type)) {
-    		errors.push({
-    			type: missingDeclarationErrors[type],
-    			offset,
-    		});
-    	}
-    };
-
     const stringLiterals: { value: string, list: { line: number, offset: IRange }[] }[] = [];
 
     let directiveScope = 0;
     let currentRule = skipRules.none;
+
+    const openDeclaration = (type: DeclarationBlockType, token: Token): OpenDeclaration => ({
+    	type,
+    	offset: token.range,
+    	conditional: directiveScope > 0,
+    });
+
+    // Reports the blocks still open at a scope boundary (DCL-PROC, END-PROC, end of source) and closes them.
+    const reportOpenDeclarations = () => {
+    	const open = inPrototype ? [...inStruct, inPrototype] : inStruct;
+    	for (const block of open) {
+    		if (!block.conditional) {
+    			errors.push({ type: declarationBlocks[block.type].error, offset: block.offset });
+    		}
+    	}
+
+    	inStruct = [];
+    	inPrototype = undefined;
+    };
 
     const doc = new Document(data.content);
 
@@ -372,15 +372,27 @@ export default class Linter {
     	lineNumber = docStatement.range.line;
     	currentIndent = docStatement.indent;
 
-    	// Some malformed multi-line statements can produce negative indent values,
-    	// which currently bypass normal lint-rule processing. Keep MissingEndDS
-    	// detection active so broken merged DCL-DS statements still report.
-    	if (currentIndent < 0 && firstToken.type === `declare` && firstValue.toUpperCase() === `DCL-DS`) {
-    		if (hasUnclosedDeclarationBeforeBoundary(statement, `DCL-DS`)) {
-    			errors.push({
-    				type: `MissingEndDS`,
-    				offset: firstToken.range,
-    			});
+    	const checkRules = ruleCount > 0 && ![skipRules.single, skipRules.singleRules].includes(currentRule);
+
+    	// Checked here and not with the other rules: a merged statement often contains
+    	// a blank line, which gives it a negative indent and skips the rules below.
+    	const mergedDeclaration = checkRules ? getMergedDeclarationError(statement) : undefined;
+    	if (mergedDeclaration) {
+    		// With MissingSemicolon enabled, the missing `;` is already reported as the root cause.
+    		if (!rules.MissingSemicolon) {
+    			errors.push(mergedDeclaration);
+    		}
+    	} else if (checkRules && !getDeclarationBlockType(firstToken)) {
+    		// An END-xx merged with other code because of a missing `;` still closes its block,
+    		// otherwise it would be reported as missing at the end of the scope. The first token
+    		// is handled by the rules below, unless the negative indent makes them skip it.
+    		for (const part of statement.slice(currentIndent < 0 ? 0 : 1)) {
+    			const closer = part.type === `end` ? part.value?.toUpperCase() : undefined;
+    			if (closer === `END-DS` || closer === `END-ENUM`) {
+    				inStruct.pop();
+    			} else if (closer === `END-PR` || closer === `END-PI`) {
+    				inPrototype = undefined;
+    			}
     		}
     	}
 
@@ -644,6 +656,8 @@ export default class Linter {
     								}
     								break;
     							case `DCL-PROC`:
+    								reportOpenDeclarations();
+
     								if (inSubroutine || inProcedure) {
     									errors.push({
     										offset: statement[0].range,
@@ -682,8 +696,13 @@ export default class Linter {
 
     							case `DCL-PI`:
     								const hasInlineEndPI = statement.some(part => part.value && part.value.toUpperCase() === `END-PI`);
-    								if (!hasInlineEndPI) {
-    									inPrototype = true;
+    								// A new interface starts: the previous prototype/interface was never closed.
+    								if (inPrototype) {
+    									reportOpenDeclarations();
+    								}
+
+    								if (!hasInlineEndPI && !mergedDeclaration) {
+    									inPrototype = openDeclaration(`DCL-PI`, firstToken);
     								}
     								break;
 
@@ -701,8 +720,13 @@ export default class Linter {
                       part.value?.toUpperCase() === `END-PR`
     								);
 
+    								// A new prototype starts: the previous one was never closed.
+    								if (inPrototype) {
+    									reportOpenDeclarations();
+    								}
+
     								// Condition inPrototype based on the results of our prior two checks.
-    								inPrototype = !(hasOverload || hasInlineEnd);
+    								inPrototype = hasOverload || hasInlineEnd || mergedDeclaration ? undefined : openDeclaration(`DCL-PR`, firstToken);
     								if (rules.PrototypeCheck || rules.NoExtProgramVariable) {
 
     									const extIndex = statement.findIndex(part => part.value && [`EXTPGM`, `EXTPROC`].includes(part.value.toUpperCase()));
@@ -732,8 +756,8 @@ export default class Linter {
 
     							case `DCL-ENUM`:
     								const hasInlineEndEnum = statement.some(part => part.value && part.value.toUpperCase() === `END-ENUM`);
-    								if (value && !hasInlineEndEnum) {
-    									inStruct.push(value);
+    								if (value && !hasInlineEndEnum && !mergedDeclaration) {
+    									inStruct.push(openDeclaration(`DCL-ENUM`, firstToken));
     								}
     								break;
 
@@ -781,11 +805,9 @@ export default class Linter {
     									statement.some(part => part.value && part.value.toUpperCase() === trigger)
     								);
 
-    								reportMissingDeclarationEndInStatement(statement, `DCL-DS`, statement[0].range);
-
-    								if (!hasInlineDclDsCloser) {
+    								if (!hasInlineDclDsCloser && !mergedDeclaration) {
     									if (value) {
-    										inStruct.push(value);
+    										inStruct.push(openDeclaration(`DCL-DS`, firstToken));
     									}
     								}
     								break;
@@ -861,6 +883,8 @@ export default class Linter {
     								break;
 
     							case `END-PROC`:
+    								reportOpenDeclarations();
+
     								if (inProcedure === undefined || inSubroutine) {
     									errors.push({
     										offset: firstToken.range,
@@ -872,14 +896,14 @@ export default class Linter {
     								break;
     							case `END-PR`:
     							case `END-PI`:
-    								if (inPrototype === false) {
+    								if (!inPrototype) {
     									errors.push({
     										offset: firstToken.range,
     										type: `UnexpectedEnd`,
     									});
     								}
 
-    								inPrototype = false;
+    								inPrototype = undefined;
     								break;
     						}
     						break;
@@ -1261,6 +1285,9 @@ export default class Linter {
     	}
 
     }
+
+    // Blocks still open at the end of the source
+    reportOpenDeclarations();
 
     if (stringLiterals.length > 0) {
     	const literalMinimum = rules.literalMinimum || 2;
