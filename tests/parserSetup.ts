@@ -38,7 +38,7 @@ export default function setupParser(projectRoot = TEST_INCLUDE_DIR): Parser {
 		}
 
 
-		const globPath = path.join(`**`, includeFile);
+		const globPath = path.posix.join(`**`, includeFile);
 		const files: string[] = glob.sync(globPath, { ...globSettings });
 
 		if (files.length >= 1) {

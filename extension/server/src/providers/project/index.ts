@@ -78,10 +78,7 @@ export async function loadWorkspace() {
 
 				console.log(`Found RPGLE files: ${files.length}`);
 
-				uris.push(...files.map(file => URI.from({
-					scheme: `file`,
-					path: file
-				}).toString()));
+				uris.push(...files.map(file => URI.file(file).toString()));
 
 				const iprojFiles = glob.sync(`**/iproj.json`, {
 					cwd: folderPath,
@@ -91,10 +88,7 @@ export async function loadWorkspace() {
 
 				if (iprojFiles.length > 0) {
 					const base = iprojFiles[0];
-					const iprojUri = URI.from({
-						scheme: `file`,
-						path: base
-					}).toString();
+					const iprojUri = URI.file(base).toString();
 
 					updateIProj(iprojUri);
 				}
@@ -178,7 +172,7 @@ let currentIncludes: PossibleInclude[] = [];
 export async function getIncludes(baseUri: string) {
 	const workspace = await getWorkspaceFolder(baseUri);
 	if (workspace) {
-		const workspacePath = URI.parse(workspace?.uri).path;
+		const workspacePath = URI.parse(workspace?.uri).fsPath;
 
 		if (!currentIncludes || currentIncludes && currentIncludes.length === 0) {
 			currentIncludes = glob.sync(`**/*.{rpgleinc,rpgleh}`, {
@@ -187,7 +181,7 @@ export async function getIncludes(baseUri: string) {
 				absolute: true
 			}).map(truePath => ({
 				uri: URI.file(truePath).toString(),
-				relative: path.relative(workspacePath, truePath)
+				relative: path.relative(workspacePath, truePath).split(path.sep).join(`/`)
 			}))
 		}
 	}
