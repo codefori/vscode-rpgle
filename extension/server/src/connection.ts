@@ -261,12 +261,30 @@ export async function getWorkspaceFolder(baseUri: string) {
 	return workspaceFolder
 }
 
+export async function refreshTableCache(): Promise<void> {
+	parser.clearTableCache();
+
+	for (const document of documents.all()) {
+		const uri = document.uri;
+		parser.clearParsedCache(uri);
+		await parser.getDocs(uri, document.getText(), {
+			withIncludes: true,
+			ignoreCache: true,
+			collectReferences: true
+		});
+	}
+}
+
 export function handleClientRequests() {
 	connection.onRequest(`clearTableCache`, () => {
 		parser.clearTableCache();
 	});
 
-	connection.onRequest(`getCache`, (uri: string): any | undefined => {
+	connection.onRequest(`refreshTableCache`, async () => {
+		await refreshTableCache();
+	});
+
+	connection.onRequest(`getCache`, (uri: string) => {
 		const doc = parser.getParsedCache(uri);
 		if (!doc) return undefined;
 		return {

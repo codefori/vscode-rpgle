@@ -12,7 +12,7 @@ import type { tablePromise, includeFilePromise, IncludeFetchResult } from "../pa
 
 const HALF_HOUR = (30 * 60 * 1000);
 
-export type TableDetail = { [name: string]: { fetched: number, fetching?: boolean, recordFormats: Declaration[] } };
+export type TableDetail = { [name: string]: { fetched: number, fetching?: boolean, fetchPromise?: Promise<Declaration[]>, recordFormats: Declaration[] } };
 export interface ParseOptions { withIncludes?: boolean, ignoreCache?: boolean, collectReferences?: boolean };
 
 const PROGRAMPARMS_NAME = `PROGRAMPARMS`;
@@ -47,41 +47,47 @@ export default class Parser {
 		const now = Date.now();
 
 		if (this.tables[existingVersion]) {
-			// We use this to make sure we aren't running this all over the place
-			if (this.tables[existingVersion].fetching) return [];
+			const existingTableEntry = this.tables[existingVersion];
+
+			// Share an in-flight fetch so concurrent parses receive the same metadata.
+			if (existingTableEntry.fetching && existingTableEntry.fetchPromise) {
+				const sharedDefs = await existingTableEntry.fetchPromise;
+				return sharedDefs.map(d => d.clone());
+			}
 
 			// If we still have a cached version, let's use that
-			if (now <= (this.tables[existingVersion].fetched + HALF_HOUR)) {
-				return this.tables[existingVersion].recordFormats.map(d => d.clone());
+			if (now <= (existingTableEntry.fetched + HALF_HOUR)) {
+				return existingTableEntry.recordFormats.map(d => d.clone());
 			}
 		}
 
+		const fetchPromise = (async () => {
+			try {
+				const fetchedDefs = await this.tableFetch!(table, aliases);
+				this.tables[existingVersion] = {
+					fetched: Date.now(),
+					fetching: false,
+					recordFormats: fetchedDefs
+				};
+				return fetchedDefs;
+			} catch {
+				this.tables[existingVersion] = {
+					fetched: Date.now(),
+					fetching: false,
+					recordFormats: []
+				};
+				return [];
+			}
+		})();
+
 		this.tables[existingVersion] = {
 			fetching: true,
-			fetched: 0,
-			recordFormats: []
+			fetched: this.tables[existingVersion]?.fetched || 0,
+			fetchPromise,
+			recordFormats: this.tables[existingVersion]?.recordFormats || []
 		};
 
-		let newDefs: Declaration[];
-
-		try {
-			newDefs = await this.tableFetch(table, aliases);
-
-			this.tables[existingVersion] = {
-				fetched: now,
-				recordFormats: newDefs
-			};
-		} catch (e) {
-			// Failed. Don't fetch it again
-			this.tables[existingVersion] = {
-				fetched: now,
-				recordFormats: []
-			};
-			newDefs = [];
-		}
-
-		this.tables[existingVersion].fetching = false;
-
+		const newDefs = await fetchPromise;
 		return newDefs.map(d => d.clone());
 	}
 

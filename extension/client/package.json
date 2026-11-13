@@ -13,6 +13,8 @@
 	},
 	"devDependencies": {
 		"@halcyontech/vscode-ibmi-types": "^3.0.13",
-		"@types/vscode": "^1.63.0"
+		"@ibm/mapepire-js": "^1.0.1",
+		"@types/vscode": "^1.63.0",
+		"node-ssh": "^13.2.1"
 	}
 }
