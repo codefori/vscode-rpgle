@@ -9,260 +9,260 @@ const parser = setupParser();
 const uri = `source.rpgle`;
 
 test('skip1', async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `/copy myds.ds`,
-    `end-ds;`,
-    ``,
-    `dsply thingy;`,
-    ``,
-    `return`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`/copy myds.ds`,
+		`end-ds;`,
+		``,
+		`dsply thingy;`,
+		``,
+		`return`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-    indent: 2
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+		indent: 2
+	}, cache);
 
-  expect(cache.includes.length).toBe(0); // Because it's not found.
-  expect(indentErrors.length > 0).toBe(true);
+	expect(cache.includes.length).toBe(0); // Because it's not found.
+	expect(indentErrors.length > 0).toBe(true);
 })
 
 test('skip2', async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `/copy myds.ds`,
-    `// @rpglint-skip`,
-    `end-ds;`,
-    ``,
-    `dsply thingy;`,
-    ``,
-    `return`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`/copy myds.ds`,
+		`// @rpglint-skip`,
+		`end-ds;`,
+		``,
+		`dsply thingy;`,
+		``,
+		`return`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-    indent: 2
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+		indent: 2
+	}, cache);
 
-  expect(cache.includes.length).toBe(0); // Because it's not found.
-  expect(indentErrors.length).toBe(0);
+	expect(cache.includes.length).toBe(0); // Because it's not found.
+	expect(indentErrors.length).toBe(0);
 })
 
 test('skip2_issue91_1', async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `/copy myds.ds`,
-    `// @rpglint-skip-indent`,
-    `end-ds;`,
-    ``,
-    `dsply thingy;`,
-    ``,
-    `return`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`/copy myds.ds`,
+		`// @rpglint-skip-indent`,
+		`end-ds;`,
+		``,
+		`dsply thingy;`,
+		``,
+		`return`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-    indent: 2
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+		indent: 2
+	}, cache);
 
-  expect(cache.includes.length).toBe(0); // Because it's not found.
-  expect(indentErrors.length).toBe(0);
+	expect(cache.includes.length).toBe(0); // Because it's not found.
+	expect(indentErrors.length).toBe(0);
 })
 
 test('skip2_issue91_2', async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `/copy myds.ds`,
-    `// @rpglint-skip-rules`,
-    `end-ds;`,
-    ``,
-    `dsply thingy;`,
-    ``,
-    `return`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`/copy myds.ds`,
+		`// @rpglint-skip-rules`,
+		`end-ds;`,
+		``,
+		`dsply thingy;`,
+		``,
+		`return`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
-    indent: 2
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { indentErrors } = Linter.getErrors({ uri, content: lines }, {
+		indent: 2
+	}, cache);
 
-  expect(cache.includes.length).toBe(0); // Because it's not found.
-  expect(indentErrors.length).toBe(3);
+	expect(cache.includes.length).toBe(0); // Because it's not found.
+	expect(indentErrors.length).toBe(3);
 })
 
 test('skip2_issue91', async () => {
-  const lines = [
-    `**FREE`,
-    ``,
-    `/IF DEFINED(ABCEEF)`,
-    `/eof`,
-    `/EndIf`,
-    `/DEFINE ABCEEF`,
+	const lines = [
+		`**FREE`,
+		``,
+		`/IF DEFINED(ABCEEF)`,
+		`/eof`,
+		`/EndIf`,
+		`/DEFINE ABCEEF`,
 
-    `// @rpglint-skip-rules`,
-    `CallP THEPROCEDURE2;`,
-    ``,
-    `Dcl-Proc theProcedure2;`,
-    `  Dcl-S mylocal char(20);`,
-    `  MyVariable2 = 'Hello world';`,
-    `  mylocal = Myvariable2;`,
-    `End-Proc;`,
-  ].join(`\n`);
+		`// @rpglint-skip-rules`,
+		`CallP THEPROCEDURE2;`,
+		``,
+		`Dcl-Proc theProcedure2;`,
+		`  Dcl-S mylocal char(20);`,
+		`  MyVariable2 = 'Hello world';`,
+		`  mylocal = Myvariable2;`,
+		`End-Proc;`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    IncorrectVariableCase: true
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		IncorrectVariableCase: true
+	}, cache);
 
-  expect(cache.procedures.length).toBe(1);
-  const theProcedure2 = assertFound(cache.find(`theProcedure2`), `theProcedure2`);
-  expect(theProcedure2.name).toBe(`theProcedure2`);
+	expect(cache.procedures.length).toBe(1);
+	const theProcedure2 = assertFound(cache.find(`theProcedure2`), `theProcedure2`);
+	expect(theProcedure2.name).toBe(`theProcedure2`);
 
-  expect(errors.length).toBe(0);
+	expect(errors.length).toBe(0);
 })
 
 
 test('skip3', async () => {
-  const lines = [
-    `**free`,
-    `dcl-s xxField1 char(1);`,
-    ``,
-    `// @rpglint-skip`,
-    `/copy myds.ds`,
-    ``,
-    `dsply xxfield1;`,
-    ``,
-    `return`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		`dcl-s xxField1 char(1);`,
+		``,
+		`// @rpglint-skip`,
+		`/copy myds.ds`,
+		``,
+		`dsply xxfield1;`,
+		``,
+		`return`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    IncorrectVariableCase: true
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		IncorrectVariableCase: true
+	}, cache);
 
-  expect(cache.includes.length).toBe(0); // Because it's not found.
-  expect(errors.length).toBe(1);
+	expect(cache.includes.length).toBe(0); // Because it's not found.
+	expect(errors.length).toBe(1);
 })
 
 test('eof1', async () => {
-  const lines = [
-    `     D UPPERCASE       PR          4096    Varying`,
-    `     D   String                    4096    Const Varying`,
-    `     D   Escaped                       n   Const Options(*NoPass)`,
-    `      /EoF`,
-    `            Converts all of the letters in String to their`,
-    `            UPPER CASE equivalents.  Non-alphabetic characters`,
-    `            remain unchanged.`,
-    ``,
-    `            Escaped = *ON = converts characters that would crash iPDF and`,
-    `                            HTML to approximately equivalent characters.`,
-    `                            For example, translate " and ' to \` .`,
-    `                            (Default)`,
-    `                      *OFF= Do not convert any characters other than A-Z.`,
-  ].join(`\n`);
+	const lines = [
+		`     D UPPERCASE       PR          4096    Varying`,
+		`     D   String                    4096    Const Varying`,
+		`     D   Escaped                       n   Const Options(*NoPass)`,
+		`      /EoF`,
+		`            Converts all of the letters in String to their`,
+		`            UPPER CASE equivalents.  Non-alphabetic characters`,
+		`            remain unchanged.`,
+		``,
+		`            Escaped = *ON = converts characters that would crash iPDF and`,
+		`                            HTML to approximately equivalent characters.`,
+		`                            For example, translate " and ' to \` .`,
+		`                            (Default)`,
+		`                      *OFF= Do not convert any characters other than A-Z.`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
-  expect(uppercase.name).toBe(`UPPERCASE`);
-  expect(uppercase.position.range.line).toBe(0);
-  expect(uppercase.subItems.length).toBe(2);
+	const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
+	expect(uppercase.name).toBe(`UPPERCASE`);
+	expect(uppercase.position.range.line).toBe(0);
+	expect(uppercase.subItems.length).toBe(2);
 })
 
 test('eof2', async () => {
-  const lines = [
-    `     D UPPERCASE       PR          4096    Varying`,
-    `     D   String                    4096    Const Varying`,
-    `     D   Escaped                       n   Const Options(*NoPass)`,
-    `      /EoF`,
-    ``,
-    `     D LOWERCASE       PR          4096    Varying`,
-    `     D   String                    4096    Const Varying`,
-    `     D   Escaped                       n   Const Options(*NoPass)`,
-  ].join(`\n`);
+	const lines = [
+		`     D UPPERCASE       PR          4096    Varying`,
+		`     D   String                    4096    Const Varying`,
+		`     D   Escaped                       n   Const Options(*NoPass)`,
+		`      /EoF`,
+		``,
+		`     D LOWERCASE       PR          4096    Varying`,
+		`     D   String                    4096    Const Varying`,
+		`     D   Escaped                       n   Const Options(*NoPass)`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.procedures.length).toBe(1);
+	expect(cache.procedures.length).toBe(1);
 
-  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
-  expect(uppercase.name).toBe(`UPPERCASE`);
-  expect(uppercase.position.range.line).toBe(0);
-  expect(uppercase.subItems.length).toBe(2);
+	const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
+	expect(uppercase.name).toBe(`UPPERCASE`);
+	expect(uppercase.position.range.line).toBe(0);
+	expect(uppercase.subItems.length).toBe(2);
 })
 
 /**
  * Similar to linter18 test
  */
 test('eof3', async () => {
-  const lines = [
-    `**FREE`,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `theProcedure();`,
-    `Dsply MyVariable2;`,
-    ``,
-    `Dcl-Proc theProcedure;`,
-    `  Dcl-S mylocal char(20);`,
-    `  MyVariable2 = 'Hello world';`,
-    `  mylocal = Myvariable2;`,
-    `End-Proc;`,
-    ``,
-    `/eof`,
-    ``,
-    `Dcl-Proc theProcedure2;`,
-    `  Dcl-S mylocal char(20);`,
-    `  MyVariable2 = 'Hello world';`,
-    `  mylocal = Myvariable2;`,
-    `End-Proc;`,
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Dcl-s MyVariable2 Char(20);`,
+		``,
+		`theProcedure();`,
+		`Dsply MyVariable2;`,
+		``,
+		`Dcl-Proc theProcedure;`,
+		`  Dcl-S mylocal char(20);`,
+		`  MyVariable2 = 'Hello world';`,
+		`  mylocal = Myvariable2;`,
+		`End-Proc;`,
+		``,
+		`/eof`,
+		``,
+		`Dcl-Proc theProcedure2;`,
+		`  Dcl-S mylocal char(20);`,
+		`  MyVariable2 = 'Hello world';`,
+		`  mylocal = Myvariable2;`,
+		`End-Proc;`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    NoGlobalsInProcedures: true
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		NoGlobalsInProcedures: true
+	}, cache);
 
-  expect(cache.procedures.length).toBe(1);
-  expect(errors.length).toBe(2);
+	expect(cache.procedures.length).toBe(1);
+	expect(errors.length).toBe(2);
 })
 
 test('eof4', async () => {
-  const lines = [
-    `**FREE`,
-    ``,
-    `Ctl-Opt DftActGrp(*No);`,
-    ``,
-    `/copy './rpgle/eof4.rpgle'`,
-    ``,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `CallP UPPERCASE(myVariable:*on);`,
-    ``,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		``,
+		`Ctl-Opt DftActGrp(*No);`,
+		``,
+		`/copy './rpgle/eof4.rpgle'`,
+		``,
+		`Dcl-s MyVariable2 Char(20);`,
+		``,
+		`CallP UPPERCASE(myVariable:*on);`,
+		``,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.includes.length).toBe(1);
-  expect(cache.includes[0].line).toBe(4);
-  expect(cache.includes[0].fromPath).toBe(uri);
-  expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `eof4.rpgle`))).toBeTruthy();
+	expect(cache.includes.length).toBe(1);
+	expect(cache.includes[0].line).toBe(4);
+	expect(cache.includes[0].fromPath).toBe(uri);
+	expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `eof4.rpgle`))).toBeTruthy();
 
-  expect(cache.variables.length).toBe(1);
-  expect(cache.procedures.length).toBe(1);
+	expect(cache.variables.length).toBe(1);
+	expect(cache.procedures.length).toBe(1);
 
-  const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
+	const uppercase = assertFound(cache.find(`UPPERCASE`), `UPPERCASE`);
 
-  expect(uppercase.subItems.length).toBe(2);
+	expect(uppercase.subItems.length).toBe(2);
 
-  const baseNameInclude = path.basename(uppercase.position.path);
-  expect(baseNameInclude).toBe(`eof4.rpgle`);
-  expect(uppercase.position.range.line).toBe(0);
+	const baseNameInclude = path.basename(uppercase.position.path);
+	expect(baseNameInclude).toBe(`eof4.rpgle`);
+	expect(uppercase.position.range.line).toBe(0);
 })
 
 
@@ -270,572 +270,572 @@ test('eof4', async () => {
  * EOF inside of IF directive
  */
 test('eof5_issue181', async () => {
-  const lines = [
-    `**FREE`,
-    ``,
-    `/IF DEFINED(ABCEEF)`,
-    `/eof`,
-    `/EndIf`,
-    `/DEFINE ABCEEF`,
+	const lines = [
+		`**FREE`,
+		``,
+		`/IF DEFINED(ABCEEF)`,
+		`/eof`,
+		`/EndIf`,
+		`/DEFINE ABCEEF`,
 
-    `CallP THEPROCEDURE2;`,
-    ``,
-    `Dcl-Proc theProcedure2;`,
-    `  Dcl-S mylocal char(20);`,
-    `  MyVariable2 = 'Hello world';`,
-    `  mylocal = Myvariable2;`,
-    `End-Proc;`,
-  ].join(`\n`);
+		`CallP THEPROCEDURE2;`,
+		``,
+		`Dcl-Proc theProcedure2;`,
+		`  Dcl-S mylocal char(20);`,
+		`  MyVariable2 = 'Hello world';`,
+		`  mylocal = Myvariable2;`,
+		`End-Proc;`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    IncorrectVariableCase: true
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		IncorrectVariableCase: true
+	}, cache);
 
-  expect(cache.procedures.length).toBe(1);
-  const theProcedure2 = assertFound(cache.find(`theProcedure2`), `theProcedure2`);
-  expect(theProcedure2.name).toBe(`theProcedure2`);
+	expect(cache.procedures.length).toBe(1);
+	const theProcedure2 = assertFound(cache.find(`theProcedure2`), `theProcedure2`);
+	expect(theProcedure2.name).toBe(`theProcedure2`);
 
-  expect(errors.length).toBe(1);
+	expect(errors.length).toBe(1);
 })
 
 test('incorrectEnd1', async () => {
-  const lines = [
-    `Dcl-S Text Char(52);`,
-    ``,
-    `Text = 'Hello world';`,
-    ``,
-    `End-Proc;`
-  ].join(`\n`);
+	const lines = [
+		`Dcl-S Text Char(52);`,
+		``,
+		`Text = 'Hello world';`,
+		``,
+		`End-Proc;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    PrettyComments: true
-  }, cache);
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		PrettyComments: true
+	}, cache);
 
-  expect(errors[0]).toMatchObject({
-    offset: { start: 45, end: 53 }, type: `UnexpectedEnd`
-  });
+	expect(errors[0]).toMatchObject({
+		offset: { start: 45, end: 53 }, type: `UnexpectedEnd`
+	});
 
-  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`End-Proc`);
+	expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`End-Proc`);
 })
 
 test('incorrectEnd2', async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `dcl-proc *inzsr;`,
-    `  dsply 'hello world';`,
-    `endsr;`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`dcl-proc *inzsr;`,
+		`  dsply 'hello world';`,
+		`endsr;`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    PrettyComments: true
-  }, cache);
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		PrettyComments: true
+	}, cache);
 
-  expect(errors[0]).toMatchObject({
-    offset: { start: 48, end: 53 }, type: `UnexpectedEnd`
-  });
+	expect(errors[0]).toMatchObject({
+		offset: { start: 48, end: 53 }, type: `UnexpectedEnd`
+	});
 
-  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`endsr`);
+	expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`endsr`);
 })
 
 test('incorrectEnd3', async () => {
-  const lines = [
-    `**free`,
-    ``,
-    `begsr hello;`,
-    `  dsply 'hello world';`,
-    `end-proc;`,
-  ].join(`\n`);
+	const lines = [
+		`**free`,
+		``,
+		`begsr hello;`,
+		`  dsply 'hello world';`,
+		`end-proc;`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    PrettyComments: true
-  }, cache);
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		PrettyComments: true
+	}, cache);
 
-  expect(errors[0]).toMatchObject({
-    offset: { start: 44, end: 52 }, type: `UnexpectedEnd`
-  });
+	expect(errors[0]).toMatchObject({
+		offset: { start: 44, end: 52 }, type: `UnexpectedEnd`
+	});
 
-  expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`end-proc`);
+	expect(lines.substring(errors[0].offset.start, errors[0].offset.end)).toBe(`end-proc`);
 })
 
 test('incorrectEnd4', async () => {
-  const lines = [
-    `**FREE`,
-    `Dcl-s MyVariable2 Char(20);`,
-    ``,
-    `theProcedure();`,
-    `Dsply MyVariable2;`,
-    ``,
-    `Dcl-Proc theProcedure;`,
-    `  Exsr theSubroutine;`,
-    `  Begsr theSubroutine;`,
-    `    MyVariable2 = 'Hello world';`,
-    `    // Endsr;`,
-    `End-Proc;`,
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Dcl-s MyVariable2 Char(20);`,
+		``,
+		`theProcedure();`,
+		`Dsply MyVariable2;`,
+		``,
+		`Dcl-Proc theProcedure;`,
+		`  Exsr theSubroutine;`,
+		`  Begsr theSubroutine;`,
+		`    MyVariable2 = 'Hello world';`,
+		`    // Endsr;`,
+		`End-Proc;`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    PrettyComments: true
-  }, cache);
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		PrettyComments: true
+	}, cache);
 
-  expect(errors[0]).toMatchObject({
-    offset: { start: 187, end: 195 }, type: `UnexpectedEnd`
-  });
+	expect(errors[0]).toMatchObject({
+		offset: { start: 187, end: 195 }, type: `UnexpectedEnd`
+	});
 })
 
 test('if1', async () => {
-  const lines = [
-    `**FREE`,
-    `// Function Return Param Definitions`,
-    `Dcl-Ds Prp00a Qualified`,
-    `/IF DEFINED(PRP00A_TEMPLATE_ALL_DS)`,
-    ` Template`,
-    `/ENDIF`,
-    `;`,
-    `  Address Char(220);`,
-    `  Emp Packed(6);`,
-    `  Empname Char(60);`,
-    `  Phone_w_errm Char(95);`,
-    `  Phone Char(15) Overlay(Phone_w_errm :1);`,
-    `  Zipcode_w_errm Char(90);`,
-    `  Zipcode Char(10) Overlay(Zipcode_w_errm :1);`,
-    `End-Ds;`,
-    ``,
-    `Dcl-Ds Tmplt_EmpFmtAddress Qualified Template;`,
-    `  Name Char(60);`,
-    `  Addr1 Char(40);`,
-    `  Addr2 Char(40);`,
-    `  Addr3 Char(40);`,
-    `  Addr4 Char(40);`,
-    `End-Ds;`,
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`// Function Return Param Definitions`,
+		`Dcl-Ds Prp00a Qualified`,
+		`/IF DEFINED(PRP00A_TEMPLATE_ALL_DS)`,
+		` Template`,
+		`/ENDIF`,
+		`;`,
+		`  Address Char(220);`,
+		`  Emp Packed(6);`,
+		`  Empname Char(60);`,
+		`  Phone_w_errm Char(95);`,
+		`  Phone Char(15) Overlay(Phone_w_errm :1);`,
+		`  Zipcode_w_errm Char(90);`,
+		`  Zipcode Char(10) Overlay(Zipcode_w_errm :1);`,
+		`End-Ds;`,
+		``,
+		`Dcl-Ds Tmplt_EmpFmtAddress Qualified Template;`,
+		`  Name Char(60);`,
+		`  Addr1 Char(40);`,
+		`  Addr2 Char(40);`,
+		`  Addr3 Char(40);`,
+		`  Addr4 Char(40);`,
+		`End-Ds;`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.structs.length).toBe(2);
+	expect(cache.structs.length).toBe(2);
 
-  const Prp00a = assertFound(cache.find(`Prp00a`), `Prp00a`);
-  expect(Prp00a.subItems.length).toBe(7);
-  expect(Prp00a.keyword[`QUALIFIED`]).toBe(true);
-  expect(Prp00a.keyword[`TEMPLATE`]).toBeUndefined();
+	const Prp00a = assertFound(cache.find(`Prp00a`), `Prp00a`);
+	expect(Prp00a.subItems.length).toBe(7);
+	expect(Prp00a.keyword[`QUALIFIED`]).toBe(true);
+	expect(Prp00a.keyword[`TEMPLATE`]).toBeUndefined();
 })
 
 test('if2', async () => {
-  const lines = [
-    `     D ObjNam          s             10a`,
-    `     d someDs          ds`,
-    `       /IF DEFINED(RPGBNV)`,
-    `     d                                     based(somepointer)`,
-    `       /ENDIF`,
-    `     d  xxxxxx                       10i 0`,
-    `     d  xxxxxxxx                     10i 0`,
-    `     d  xxxxxx                       20i 0`,
-    `     d  xxx                          10i 0`,
-    `     d  xxxxx                        10i 0`,
-    `     d  yyyyy                        10i 0`,
-    `     d  zzzzz                        10i 0`,
-    `     d  fffffff                        N`,
-    `     d  jjjjj                          N`,
-    `     d  jjjjjjj                        N`,
-    `     d  mmmmm                        10`,
-    `     d  cccccc                        3`,
-    `     d  bbbbbbd                      10i 0`,
-    `     d  dddd                         10i 0`,
-    `     d  ddddd                        10i 0`,
-    `     d  bbbbb                        10i 0`,
-    `     d  ccc                          10i 0`,
-    `     d  bbbwee                        7`,
-    `     d  fffbb                        10i 0`,
-    `     d  ff                         1024a`,
-  ].join(`\n`);
+	const lines = [
+		`     D ObjNam          s             10a`,
+		`     d someDs          ds`,
+		`       /IF DEFINED(RPGBNV)`,
+		`     d                                     based(somepointer)`,
+		`       /ENDIF`,
+		`     d  xxxxxx                       10i 0`,
+		`     d  xxxxxxxx                     10i 0`,
+		`     d  xxxxxx                       20i 0`,
+		`     d  xxx                          10i 0`,
+		`     d  xxxxx                        10i 0`,
+		`     d  yyyyy                        10i 0`,
+		`     d  zzzzz                        10i 0`,
+		`     d  fffffff                        N`,
+		`     d  jjjjj                          N`,
+		`     d  jjjjjjj                        N`,
+		`     d  mmmmm                        10`,
+		`     d  cccccc                        3`,
+		`     d  bbbbbbd                      10i 0`,
+		`     d  dddd                         10i 0`,
+		`     d  ddddd                        10i 0`,
+		`     d  bbbbb                        10i 0`,
+		`     d  ccc                          10i 0`,
+		`     d  bbbwee                        7`,
+		`     d  fffbb                        10i 0`,
+		`     d  ff                         1024a`,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.structs.length).toBe(1);
+	expect(cache.structs.length).toBe(1);
 
-  const someDs = assertFound(cache.find(`someDs`), `someDs`);
-  expect(someDs.keyword[`BASED`]).toBeUndefined();
+	const someDs = assertFound(cache.find(`someDs`), `someDs`);
+	expect(someDs.keyword[`BASED`]).toBeUndefined();
 })
 
 test('variable_case1', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/copy './rpgle/copy3.rpgle'`,
-    `Dcl-S MyCustomerName1 like(customername_t);`,
-    `Dcl-S MyCustomerName2 like(CustomerName_t);`,
-    `Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
-    `Dcl-S MyCustomerName4 like(CUSTOMERNAME_T);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`/copy './rpgle/copy3.rpgle'`,
+		`Dcl-S MyCustomerName1 like(customername_t);`,
+		`Dcl-S MyCustomerName2 like(CustomerName_t);`,
+		`Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
+		`Dcl-S MyCustomerName4 like(CUSTOMERNAME_T);`,
+		`MyCustomerName1 = 'John Smith';`,
+		`dsply MyCustomerName1;`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    IncorrectVariableCase: true
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true, collectReferences: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		IncorrectVariableCase: true
+	}, cache);
 
-  expect(errors.length).toBe(3);
+	expect(errors.length).toBe(3);
 
-  expect(errors).toContainEqual({
-    offset: { start: 86, end: 100 },
-    type: `IncorrectVariableCase`,
-    newValue: `CustomerName_t`
-  });
+	expect(errors).toContainEqual({
+		offset: { start: 86, end: 100 },
+		type: `IncorrectVariableCase`,
+		newValue: `CustomerName_t`
+	});
 
-  expect(errors).toContainEqual({
-    offset: { start: 174, end: 188 },
-    type: `IncorrectVariableCase`,
-    newValue: `CustomerName_t`
-  });
+	expect(errors).toContainEqual({
+		offset: { start: 174, end: 188 },
+		type: `IncorrectVariableCase`,
+		newValue: `CustomerName_t`
+	});
 
-  expect(errors).toContainEqual({
-    offset: { start: 218, end: 232 },
-    type: `IncorrectVariableCase`,
-    newValue: `CustomerName_t`
-  });
+	expect(errors).toContainEqual({
+		offset: { start: 218, end: 232 },
+		type: `IncorrectVariableCase`,
+		newValue: `CustomerName_t`
+	});
 });
 
 test('variable_case1 commented out', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `// /copy './rpgle/copy3.rpgle'`,
-    `Dcl-S MyCustomerName1 like(customername_t);`,
-    `Dcl-S MyCustomerName2 like(CustomerName_t);`,
-    `Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
-    `Dcl-S MyCustomerName4 like(CUSTOMERNAME_T);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`// /copy './rpgle/copy3.rpgle'`,
+		`Dcl-S MyCustomerName1 like(customername_t);`,
+		`Dcl-S MyCustomerName2 like(CustomerName_t);`,
+		`Dcl-S MyCustomerName3 like(CUSTOMERNAME_t);`,
+		`Dcl-S MyCustomerName4 like(CUSTOMERNAME_T);`,
+		`MyCustomerName1 = 'John Smith';`,
+		`dsply MyCustomerName1;`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    IncorrectVariableCase: true
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		IncorrectVariableCase: true
+	}, cache);
 
-  expect(errors.length).toBe(0);
+	expect(errors.length).toBe(0);
 });
 
 test('uppercase1', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/copy './rpgle/copy1.rpgle'`,
-    `/Copy './rpgle/copy2.rpgle'`,
-    `/COPY './rpgle/copy3.rpgle'`,
-    `Dcl-S MyCustomerName1 like(CustomerName_t);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`/copy './rpgle/copy1.rpgle'`,
+		`/Copy './rpgle/copy2.rpgle'`,
+		`/COPY './rpgle/copy3.rpgle'`,
+		`Dcl-S MyCustomerName1 like(CustomerName_t);`,
+		`MyCustomerName1 = 'John Smith';`,
+		`dsply MyCustomerName1;`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    DirectiveCase: `upper`
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		DirectiveCase: `upper`
+	}, cache);
 
-  expect(errors.length).toBe(2);
+	expect(errors.length).toBe(2);
 
-  expect(errors[0]).toMatchObject({
-    offset: { start: 31, end: 36 },
-    type: `DirectiveCase`,
-    newValue: `/COPY`
-  });
+	expect(errors[0]).toMatchObject({
+		offset: { start: 31, end: 36 },
+		type: `DirectiveCase`,
+		newValue: `/COPY`
+	});
 
-  expect(errors[1]).toMatchObject({
-    offset: { start: 59, end: 64 },
-    type: `DirectiveCase`,
-    newValue: `/COPY`
-  });
+	expect(errors[1]).toMatchObject({
+		offset: { start: 59, end: 64 },
+		type: `DirectiveCase`,
+		newValue: `/COPY`
+	});
 })
 
 test('lowercase1', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/copy './rpgle/copy1.rpgle'`,
-    `/Copy './rpgle/copy2.rpgle'`,
-    `/COPY './rpgle/copy3.rpgle'`,
-    `Dcl-S MyCustomerName1 like(CustomerName_t);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`/copy './rpgle/copy1.rpgle'`,
+		`/Copy './rpgle/copy2.rpgle'`,
+		`/COPY './rpgle/copy3.rpgle'`,
+		`Dcl-S MyCustomerName1 like(CustomerName_t);`,
+		`MyCustomerName1 = 'John Smith';`,
+		`dsply MyCustomerName1;`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  const { errors } = Linter.getErrors({ uri, content: lines }, {
-    DirectiveCase: `lower`
-  }, cache);
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const { errors } = Linter.getErrors({ uri, content: lines }, {
+		DirectiveCase: `lower`
+	}, cache);
 
-  expect(errors.length).toBe(2);
+	expect(errors.length).toBe(2);
 
-  expect(errors[0]).toMatchObject({
-    offset: { start: 59, end: 64 },
-    type: `DirectiveCase`,
-    newValue: `/copy`
-  });
+	expect(errors[0]).toMatchObject({
+		offset: { start: 59, end: 64 },
+		type: `DirectiveCase`,
+		newValue: `/copy`
+	});
 
-  expect(errors[1]).toMatchObject({
-    offset: { start: 87, end: 92 },
-    type: `DirectiveCase`,
-    newValue: `/copy`
-  });
+	expect(errors[1]).toMatchObject({
+		offset: { start: 87, end: 92 },
+		type: `DirectiveCase`,
+		newValue: `/copy`
+	});
 })
 
 test('macro defined test 1', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/copy './rpgle/copy4.rpgleinc'`,
-    `Dcl-S MyCustomerName1 char(5);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`/copy './rpgle/copy4.rpgleinc'`,
+		`Dcl-S MyCustomerName1 char(5);`,
+		`MyCustomerName1 = 'John Smith';`,
+		`dsply MyCustomerName1;`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.includes.length).toBe(1);
-  expect(cache.procedures.length).toBe(1);
+	expect(cache.includes.length).toBe(1);
+	expect(cache.procedures.length).toBe(1);
 })
 
 test('macro defined test 2', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/DEFINE QRPGLEH_RPMAR001`,
-    `/copy './rpgle/copy4.rpgleinc'`,
-    `Dcl-S MyCustomerName1 char(5);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`/DEFINE QRPGLEH_RPMAR001`,
+		`/copy './rpgle/copy4.rpgleinc'`,
+		`Dcl-S MyCustomerName1 char(5);`,
+		`MyCustomerName1 = 'John Smith';`,
+		`dsply MyCustomerName1;`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.includes.length).toBe(1);
-  expect(cache.procedures.length).toBe(0);
+	expect(cache.includes.length).toBe(1);
+	expect(cache.procedures.length).toBe(0);
 });
 
 
 test('depth test', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/copy './rpgle/depth1.rpgleinc'`,
-    `Dcl-S MyCustomerName1 char(5);`,
-    `MyCustomerName1 = 'John Smith';`,
-    `dsply MyCustomerName1;`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`/copy './rpgle/depth1.rpgleinc'`,
+		`Dcl-S MyCustomerName1 char(5);`,
+		`MyCustomerName1 = 'John Smith';`,
+		`dsply MyCustomerName1;`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.includes.length).toBe(2);
+	expect(cache.includes.length).toBe(2);
 
-  expect(cache.includes[0].fromPath).toBe(uri);
-  expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `depth1.rpgleinc`))).toBeTruthy();
-  expect(cache.includes[0].line).toBe(2); // zero indexed
+	expect(cache.includes[0].fromPath).toBe(uri);
+	expect(cache.includes[0].toPath.endsWith(path.posix.join(`rpgle`, `depth1.rpgleinc`))).toBeTruthy();
+	expect(cache.includes[0].line).toBe(2); // zero indexed
 
-  expect(cache.includes[1].fromPath).toBe(cache.includes[0].toPath);
-  expect(cache.includes[1].toPath.endsWith(path.posix.join(`rpgle`, `copy3.rpgle`))).toBeTruthy();
-  expect(cache.includes[1].line).toBe(4); // zero indexed
+	expect(cache.includes[1].fromPath).toBe(cache.includes[0].toPath);
+	expect(cache.includes[1].toPath.endsWith(path.posix.join(`rpgle`, `copy3.rpgle`))).toBeTruthy();
+	expect(cache.includes[1].line).toBe(4); // zero indexed
 
-  expect(cache.variables.length).toBe(3);
+	expect(cache.variables.length).toBe(3);
 });
 
 test('fixed copy with comment and using double quotes', async () => {
-  const lines = [
-    `     h bnddir('M11')`,
-    `      /copy "./rpgle/db00030s_h.rpgleinc"    // Recycling codes`,
-    `      /copy "./rpgle/db00040s_h.rpgleinc" `,
-  ].join(`\n`);
+	const lines = [
+		`     h bnddir('M11')`,
+		`      /copy "./rpgle/db00030s_h.rpgleinc"    // Recycling codes`,
+		`      /copy "./rpgle/db00040s_h.rpgleinc" `,
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  expect(cache.includes.length).toBe(2);
+	expect(cache.includes.length).toBe(2);
 });
 
 test('test copy with *libl', async () => {
-  const valueA = Parser.getIncludeFromDirective(`/copy qrpgleref,stufh`);
-  expect(valueA).toBe(`qrpgleref,stufh`);
+	const valueA = Parser.getIncludeFromDirective(`/copy qrpgleref,stufh`);
+	expect(valueA).toBe(`qrpgleref,stufh`);
 
-  const valueB = Parser.getIncludeFromDirective(`/copy *libl/qrpgleref,stufh`);
-  expect(valueB).toBe(`*libl/qrpgleref,stufh`);
+	const valueB = Parser.getIncludeFromDirective(`/copy *libl/qrpgleref,stufh`);
+	expect(valueB).toBe(`*libl/qrpgleref,stufh`);
 });
 
 test('/IF DEFINED - uppercase', async () => {
-  const lines = [
-    `**FREE`,
-    `/DEFINE MYMACRO`,
-    `/IF NOT DEFINED(MYMACRO)`,
-    `Dcl-S Var1 char(10);`,
-    `/ELSE`,
-    `Dcl-S Var2 char(10);`,
-    `/ENDIF`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`/DEFINE MYMACRO`,
+		`/IF NOT DEFINED(MYMACRO)`,
+		`Dcl-S Var1 char(10);`,
+		`/ELSE`,
+		`Dcl-S Var2 char(10);`,
+		`/ENDIF`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  expect(cache.variables.length).toBe(1);
-  expect(cache.variables[0].name).toBe('Var2');
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	expect(cache.variables.length).toBe(1);
+	expect(cache.variables[0].name).toBe('Var2');
 });
 
 test('/IF DEFINED - lowercase', async () => {
-  const lines = [
-    `**FREE`,
-    `/define mymacro`,
-    `/if not defined(mymacro)`,
-    `Dcl-S Var1 char(10);`,
-    `/else`,
-    `Dcl-S Var2 char(10);`,
-    `/endif`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`/define mymacro`,
+		`/if not defined(mymacro)`,
+		`Dcl-S Var1 char(10);`,
+		`/else`,
+		`Dcl-S Var2 char(10);`,
+		`/endif`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  expect(cache.variables.length).toBe(1);
-  expect(cache.variables[0].name).toBe('Var2');
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	expect(cache.variables.length).toBe(1);
+	expect(cache.variables[0].name).toBe('Var2');
 });
 
 test('/IF DEFINED with Not - mixed case', async () => {
-  const lines = [
-    `**FREE`,
-    `/DEFINE MYMACRO`,
-    `/IF Not DEFINED(MYMACRO)`,
-    `Dcl-S Var1 char(10);`,
-    `/ELSE`,
-    `Dcl-S Var2 char(10);`,
-    `/ENDIF`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`/DEFINE MYMACRO`,
+		`/IF Not DEFINED(MYMACRO)`,
+		`Dcl-S Var1 char(10);`,
+		`/ELSE`,
+		`Dcl-S Var2 char(10);`,
+		`/ENDIF`,
+		`Return;`
+	].join(`\n`);
 
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
-  expect(cache.variables.length).toBe(1);
-  expect(cache.variables[0].name).toBe('Var2');
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	expect(cache.variables.length).toBe(1);
+	expect(cache.variables[0].name).toBe('Var2');
 });
 
 test('rapid re-parse produces consistent offsets', async () => {
-  const base = [
-    `**FREE`,
-    `Dcl-S MyVar Char(10);`,
-  ].join(`\n`);
+	const base = [
+		`**FREE`,
+		`Dcl-S MyVar Char(10);`,
+	].join(`\n`);
 
-  const versions = [
-    base + `\nMyVar = 'hello';`,
-    base + `\nMyVar = 'hello';\nDcl-S MyVar2 Char(20);`,
-    base + `\nMyVar = 'hello';\nDcl-S MyVar2 Char(20);\nMyVar2 = 'world';`,
-  ];
+	const versions = [
+		base + `\nMyVar = 'hello';`,
+		base + `\nMyVar = 'hello';\nDcl-S MyVar2 Char(20);`,
+		base + `\nMyVar = 'hello';\nDcl-S MyVar2 Char(20);\nMyVar2 = 'world';`,
+	];
 
-  for (const content of versions) {
-    const cache = assertCache(await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: true }));
-    const myVarDefs = cache.variables.filter(v => v.name.toUpperCase() === 'MYVAR');
-    expect(myVarDefs.length).toBe(1);
-    expect(myVarDefs[0].position.range.line).toBe(1);
-  }
+	for (const content of versions) {
+		const cache = assertCache(await parser.getDocs(uri, content, { ignoreCache: true, withIncludes: true }));
+		const myVarDefs = cache.variables.filter(v => v.name.toUpperCase() === 'MYVAR');
+		expect(myVarDefs.length).toBe(1);
+		expect(myVarDefs[0].position.range.line).toBe(1);
+	}
 });
 
 test('re-parse with includes does not duplicate definitions', async () => {
-  const lines = [
-    `**FREE`,
-    `Ctl-Opt DftActGrp(*No);`,
-    `/copy './rpgle/depth1.rpgleinc'`,
-    `Dcl-S MyCustomerName1 char(5);`,
-    `Return;`
-  ].join(`\n`);
+	const lines = [
+		`**FREE`,
+		`Ctl-Opt DftActGrp(*No);`,
+		`/copy './rpgle/depth1.rpgleinc'`,
+		`Dcl-S MyCustomerName1 char(5);`,
+		`Return;`
+	].join(`\n`);
 
-  // Parse the same content twice with ignoreCache
-  await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
-  const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
+	// Parse the same content twice with ignoreCache
+	await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true });
+	const cache = assertCache(await parser.getDocs(uri, lines, { withIncludes: true, ignoreCache: true }));
 
-  // Should have exactly 2 includes (depth1 -> copy3), not duplicates
-  expect(cache.includes.length).toBe(2);
+	// Should have exactly 2 includes (depth1 -> copy3), not duplicates
+	expect(cache.includes.length).toBe(2);
 
-  // Each variable should appear exactly once
-  const varNames = cache.variables.map(v => v.name.toUpperCase());
-  const uniqueVarNames = [...new Set(varNames)];
-  expect(varNames.length).toBe(uniqueVarNames.length);
+	// Each variable should appear exactly once
+	const varNames = cache.variables.map(v => v.name.toUpperCase());
+	const uniqueVarNames = [...new Set(varNames)];
+	expect(varNames.length).toBe(uniqueVarNames.length);
 });
 
 test('editing around include directives maintains offsets', async () => {
-  const lines1 = [
-    `**FREE`,
-    `/copy './rpgle/copy4.rpgleinc'`,
-    `Dcl-S LocalVar Char(10);`,
-    `Return;`
-  ].join(`\n`);
+	const lines1 = [
+		`**FREE`,
+		`/copy './rpgle/copy4.rpgleinc'`,
+		`Dcl-S LocalVar Char(10);`,
+		`Return;`
+	].join(`\n`);
 
-  const cache1 = assertCache(await parser.getDocs(uri, lines1, { withIncludes: true, ignoreCache: true }));
-  const localVarLine1 = cache1.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
+	const cache1 = assertCache(await parser.getDocs(uri, lines1, { withIncludes: true, ignoreCache: true }));
+	const localVarLine1 = cache1.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
 
-  // Add a new include line before LocalVar
-  const lines2 = [
-    `**FREE`,
-    `/copy './rpgle/copy4.rpgleinc'`,
-    `/copy './rpgle/file1.rpgleinc'`,
-    `Dcl-S LocalVar Char(10);`,
-    `Return;`
-  ].join(`\n`);
+	// Add a new include line before LocalVar
+	const lines2 = [
+		`**FREE`,
+		`/copy './rpgle/copy4.rpgleinc'`,
+		`/copy './rpgle/file1.rpgleinc'`,
+		`Dcl-S LocalVar Char(10);`,
+		`Return;`
+	].join(`\n`);
 
-  const cache2 = assertCache(await parser.getDocs(uri, lines2, { withIncludes: true, ignoreCache: true }));
-  const localVarLine2 = cache2.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
+	const cache2 = assertCache(await parser.getDocs(uri, lines2, { withIncludes: true, ignoreCache: true }));
+	const localVarLine2 = cache2.variables.find(v => v.name.toUpperCase() === 'LOCALVAR')?.position.range.line;
 
-  // LocalVar should shift down by 1 line
-  expect(localVarLine2).toBe(localVarLine1! + 1);
+	// LocalVar should shift down by 1 line
+	expect(localVarLine2).toBe(localVarLine1! + 1);
 });
 
 test('include graph should fetch shared include once per parse pass (issue 503)', async () => {
-  const graphParser = new Parser();
+	const graphParser = new Parser();
 
-  const includeContents: { [name: string]: string } = {
-    'b.rpgleinc': [`**FREE`, `/copy 'd.rpgleinc'`].join(`\n`),
-    'c.rpgleinc': [`**FREE`, `/copy 'd.rpgleinc'`].join(`\n`),
-    'd.rpgleinc': [`**FREE`, `Dcl-S SharedValue Int(10);`].join(`\n`),
-  };
+	const includeContents: { [name: string]: string } = {
+		'b.rpgleinc': [`**FREE`, `/copy 'd.rpgleinc'`].join(`\n`),
+		'c.rpgleinc': [`**FREE`, `/copy 'd.rpgleinc'`].join(`\n`),
+		'd.rpgleinc': [`**FREE`, `Dcl-S SharedValue Int(10);`].join(`\n`),
+	};
 
-  const fetchCounts: { [name: string]: number } = {};
+	const fetchCounts: { [name: string]: number } = {};
 
-  graphParser.setIncludeFileFetch(async (_baseFile: string, includeFile: string) => {
-    const normalized = includeFile.replace(/^['"]|['"]$/g, ``).toLowerCase();
-    fetchCounts[normalized] = (fetchCounts[normalized] || 0) + 1;
+	graphParser.setIncludeFileFetch(async (_baseFile: string, includeFile: string) => {
+		const normalized = includeFile.replace(/^['"]|['"]$/g, ``).toLowerCase();
+		fetchCounts[normalized] = (fetchCounts[normalized] || 0) + 1;
 
-    const content = includeContents[normalized];
-    if (content) {
-      return {
-        found: true,
-        uri: `mock://${normalized}`,
-        content,
-      };
-    }
+		const content = includeContents[normalized];
+		if (content) {
+			return {
+				found: true,
+				uri: `mock://${normalized}`,
+				content,
+			};
+		}
 
-    return {
-      found: false,
-    };
-  });
+		return {
+			found: false,
+		};
+	});
 
-  const entry = [
-    `**FREE`,
-    `/copy 'b.rpgleinc'`,
-    `/copy 'c.rpgleinc'`,
-    `return;`,
-  ].join(`\n`);
+	const entry = [
+		`**FREE`,
+		`/copy 'b.rpgleinc'`,
+		`/copy 'c.rpgleinc'`,
+		`return;`,
+	].join(`\n`);
 
-  const cache = await graphParser.getDocs(`a.rpgle`, entry, { withIncludes: true, ignoreCache: true });
+	const cache = await graphParser.getDocs(`a.rpgle`, entry, { withIncludes: true, ignoreCache: true });
 
-  expect(cache).toBeDefined();
-  expect(fetchCounts[`b.rpgleinc`]).toBe(1);
-  expect(fetchCounts[`c.rpgleinc`]).toBe(1);
-  expect(fetchCounts[`d.rpgleinc`]).toBe(1);
+	expect(cache).toBeDefined();
+	expect(fetchCounts[`b.rpgleinc`]).toBe(1);
+	expect(fetchCounts[`c.rpgleinc`]).toBe(1);
+	expect(fetchCounts[`d.rpgleinc`]).toBe(1);
 });

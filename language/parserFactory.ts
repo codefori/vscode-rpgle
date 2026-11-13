@@ -3,8 +3,8 @@ import Parser from './ile/parser';
 import Cache from './models/cache';
 import Declaration from './models/declaration';
 import {
-  isIleFileByUri,
-  isOpmFileByUri,
+	isIleFileByUri,
+	isOpmFileByUri,
 } from './utils/fileRouting';
 
 export type tablePromise = (name: string, aliases?: boolean) => Promise<Declaration[]>;
@@ -15,31 +15,31 @@ export type includeFilePromise = (baseFile: string, includeString: string) => Pr
  * Common interface for both parsers
  */
 export interface IParser {
-  getDocs(uri: string, content: string, options?: any): Promise<Cache | undefined>;
-  setTableFetch(promise: tablePromise): void;
-  setIncludeFileFetch(promise: includeFilePromise): void;
-  clearParsedCache?(path: string): void;
-  clearTableCache?(): void;
+	getDocs(uri: string, content: string, options?: any): Promise<Cache | undefined>;
+	setTableFetch(promise: tablePromise): void;
+	setIncludeFileFetch(promise: includeFilePromise): void;
+	clearParsedCache?(path: string): void;
+	clearTableCache?(): void;
 }
 
 /**
  * Factory to get appropriate parser based on file extension
  */
 export class ParserFactory {
-  static getParser(uri: string): IParser {
-    if (ParserFactory.isOpmFile(uri)) {
-      return new OpmParser();
-    }
+	static getParser(uri: string): IParser {
+		if (ParserFactory.isOpmFile(uri)) {
+			return new OpmParser();
+		}
 
-    // Default to ILE parser for .rpgle, .sqlrpgle, etc.
-    return new Parser();
-  }
+		// Default to ILE parser for .rpgle, .sqlrpgle, etc.
+		return new Parser();
+	}
 
-  static isOpmFile(uri: string): boolean {
-    return isOpmFileByUri(uri);
-  }
+	static isOpmFile(uri: string): boolean {
+		return isOpmFileByUri(uri);
+	}
 
-  static isIleFile(uri: string): boolean {
-    return isIleFileByUri(uri);
-  }
+	static isIleFile(uri: string): boolean {
+		return isIleFileByUri(uri);
+	}
 }
