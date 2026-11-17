@@ -72,11 +72,11 @@ export interface FieldListRow {
  * @param udtfLibrary Library where FIELD_LIST UDTF is installed
  * @returns SQL SELECT statement
  */
-export function buildFieldListQuery(
+function buildFieldListQuery(
     library: string,
     fileName: string,
-    rcdfmt: string = '*ALL',
-    udtfLibrary: string = 'SQLTOOLS'
+    rcdfmt: string,
+    udtfLibrary: string
 ): string {
     const lib = library === '*LIBL' ? "'*LIBL'" : `'${library.toUpperCase()}'`;
     const file = `'${fileName.toUpperCase()}'`;
@@ -104,43 +104,19 @@ SELECT *
  * @param library Library containing the file
  * @param fileName File name to query
  * @param rcdfmt Record format (default '*ALL')
- * @param udtfLibrary Library where FIELD_LIST is installed (default 'SQLTOOLS')
- * @returns Array of FieldListRow objects, grouped by record format
+* @param udtfLibrary Library where FIELD_LIST UDTF is installed
+ * @returns Array of FIELD_LIST rows
  */
 export async function queryFieldList(
     connection: any,
     library: string,
     fileName: string,
-    rcdfmt: string = '*ALL',
-    udtfLibrary: string = 'SQLTOOLS'
+    rcdfmt: string,
+    udtfLibrary: string
 ): Promise<FieldListRow[]> {
     const sql = buildFieldListQuery(library, fileName, rcdfmt, udtfLibrary);
 
-    try {
-        const results = await connection.runSQL(sql);
-        return results as FieldListRow[];
-    } catch (e) {
-        console.error(`[vscode-rpgle] queryFieldList() threw: ${e}`);
-        throw e;
-    }
-}
-
-/**
- * Groups field list results by record format.
- *
- * @param rows Raw query results from queryFieldList
- * @returns Map of RCDFMT -> field rows
- */
-export function groupByRecordFormat(rows: FieldListRow[]): Map<string, FieldListRow[]> {
-    const groups = new Map<string, FieldListRow[]>();
-    for (const row of rows) {
-        const rcdfmt = row.RCDFMT?.trim() || '*UNKNOWN';
-        if (!groups.has(rcdfmt)) {
-            groups.set(rcdfmt, []);
-        }
-        groups.get(rcdfmt)!.push(row);
-    }
-    return groups;
+    return await connection.runSQL(sql) as FieldListRow[];
 }
 /**
  * Converts FIELD_LIST UDTF results to DSPFFD outfile-like format.

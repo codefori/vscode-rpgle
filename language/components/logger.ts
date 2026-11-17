@@ -9,8 +9,10 @@ export function initRpgleOutput(context: vscode.ExtensionContext) {
     }
 }
 
-function append(level: string, message: string) {
-    outputChannel?.appendLine(`[${level}] ${message}`);
+function formatLogLine(level: string, message: string) {
+    const now = new Date();
+    const timestamp = `${now.toTimeString().split(' ')[0]}.${now.getMilliseconds().toString().padStart(3, '0')}`;
+    return `[${timestamp}] [${level}] ${message}`;
 }
 
 function errorText(error: unknown): string {
@@ -30,22 +32,25 @@ function errorText(error: unknown): string {
 }
 
 export function logInfo(message: string) {
-    console.log(message);
-    append('INFO', message);
+    const line = formatLogLine('INFO', message);
+    console.log(line);
+    outputChannel?.appendLine(line);
 }
 
 export function logWarn(message: string) {
-    console.warn(message);
-    append('WARN', message);
+    const line = formatLogLine('WARN', message);
+    console.warn(line);
+    outputChannel?.appendLine(line);
 }
 
 export function logError(message: string, error?: unknown) {
+    const line = formatLogLine('ERROR', message);
     if (error !== undefined) {
-        console.error(message, error);
-        append('ERROR', `${message} ${errorText(error)}`);
+        console.error(line, error);
+        outputChannel?.appendLine(`${line} ${errorText(error)}`);
         return;
     }
 
-    console.error(message);
-    append('ERROR', message);
+    console.error(line);
+    outputChannel?.appendLine(line);
 }

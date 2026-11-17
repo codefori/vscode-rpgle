@@ -18,48 +18,26 @@
  * component manager can detect content drift independently of the version.
  */
 
-import * as vscode from 'vscode';
-import { createHash } from 'crypto';
+import { workspace } from 'vscode';
+import IBMi from '@halcyontech/vscode-ibmi-types/IBMi';
+import { ComponentIdentification, ComponentState, IBMiComponent, SecureComponentState } from '@halcyontech/vscode-ibmi-types/api/components/component';
 
 import { getFieldListRPGLESrc } from './fieldListRpgleSource';
 import { getFieldListSQLSrc } from './fieldListSqlSource';
-import { COMPONENT_SIGNATURE_LIBRARY_TOKEN, normalizeComponentSqlForSignature } from '../signatureUtils';
 import { logError, logInfo } from '../logger';
-
-export type ComponentState = 'NotChecked' | 'NotInstalled' | 'Installed' | 'NeedsUpdate' | 'Error';
-export type SecureComponentState = {
-    status: ComponentState;
-    remoteSignature?: string;
-};
-export type ComponentIdentification = {
-    name: string;
-    version: number;
-    signature: string;
-};
 
 type CompileResult = { ok: boolean; detail?: string };
 
 /**
- * Resolves the target library for FIELD_LIST UDTF.
- * *TEMPLIB (default) → Code for IBM i's configured temp library.
- * Any other value is used as-is (e.g. SQLTOOLS or a custom library name).
+ * FIELD_LIST is installed in Code for IBM i's per-connection temporary library.
  */
-function getUDTFLibrary(connection: any): string {
-    const configured = vscode.workspace
-        .getConfiguration('vscode-rpgle')
-        .get<string>('codeforiFunctionLibrary', '*TEMPLIB')
-        ?.trim()
-        .toUpperCase();
-
-    const config = connection?.config ?? connection?.getConfig?.();
-    const tempLib = (config?.tempLibrary as string | undefined)?.trim().toUpperCase();
-    const currentLib = (config?.currentLibrary as string | undefined)?.trim().toUpperCase();
-
-    if (!configured || configured === '*TEMPLIB') {
-        return tempLib || currentLib || 'ILEDITOR';
+function getUDTFLibrary(connection: IBMi): string {
+    const library = connection.getConfig().tempLibrary?.trim().toUpperCase();
+    if (!library) {
+        throw new Error('FIELD_LIST requires Code for IBM i to configure a temporary library.');
     }
 
-    return configured;
+    return library;
 }
 
 /**
@@ -81,7 +59,7 @@ function parseLeadingVersion(longComment: unknown): number {
  * Retrieves the installed version of FIELD_LIST from QSYS2.SYSROUTINES.
  * Returns -1 if not found (will trigger install on first use).
  */
-async function getFieldListVersion(connection: any, schema: string): Promise<number> {
+async function getFieldListVersion(connection: IBMi, schema: string): Promise<number> {
     const sql = `SELECT CAST(LONG_COMMENT AS VARCHAR(200)) AS LONG_COMMENT \
 FROM qsys2.sysroutines \
 WHERE ROUTINE_SCHEMA = '${schema.toUpperCase()}' \
@@ -93,7 +71,7 @@ WHERE ROUTINE_SCHEMA = '${schema.toUpperCase()}' \
 /**
  * FieldListChecker — UDTF component manager for FIELD_LIST.
  */
-export class FieldListChecker {
+export class FieldListChecker implements IBMiComponent {
     readonly id = 'field-list-udtf';
     /** Program object name — must match EXTERNAL NAME in the SQL DDL. */
     readonly PGM_NAME = 'FIELD_LIST';
@@ -109,70 +87,61 @@ export class FieldListChecker {
         return getFieldListSQLSrc(library, version);
     }
 
-    private getSignature(): string {
-        const normalizedSql = normalizeComponentSqlForSignature(
-            this.getSQLSrc(COMPONENT_SIGNATURE_LIBRARY_TOKEN, this.currentVersion),
-            COMPONENT_SIGNATURE_LIBRARY_TOKEN
-        );
-        return createHash('sha256')
-            .update(this.getSourceSrc())
-            .update(normalizedSql)
-            .digest('hex');
-    }
-
     getIdentification(): ComponentIdentification {
         return {
             name: this.id,
             version: this.currentVersion,
-            signature: this.getSignature(),
+            signature: '',
         };
     }
 
-    async getRemoteState(connection: any, _installDirectory?: string): Promise<SecureComponentState> {
+    async getRemoteState(connection: IBMi, _installDirectory?: string): Promise<SecureComponentState> {
+        if (workspace.getConfiguration('vscode-rpgle').get<string>('fieldMetadataProvider', 'CL') !== 'UDTF') {
+            return { status: 'Installed' };
+        }
+
         const library = getUDTFLibrary(connection);
-        const signature = this.getSignature();
         logInfo(`[vscode-rpgle] FIELD_LIST.getRemoteState() — library=${library}`);
 
         try {
+            const remoteSignature = await connection.getContent().getSQLRoutineSignature(library, this.UDTF_SPECIFIC, 'FUNCTION');
+            if (!remoteSignature) {
+                return { status: 'NotInstalled' };
+            }
+
+            if (remoteSignature.toUpperCase() !== `${library}/${this.PGM_NAME}`) {
+                return { status: 'NeedsUpdate', remoteSignature };
+            }
+
             const version = await getFieldListVersion(connection, library);
             const status: ComponentState = version >= this.currentVersion ? 'Installed' : 'NeedsUpdate';
-            logInfo(`[vscode-rpgle] FIELD_LIST.getRemoteState() — version=${version}, status=${status}`);
-            return { status, remoteSignature: signature };
+            logInfo(`[vscode-rpgle] FIELD_LIST.getRemoteState() — version=${version}, status=${status}, remoteSignature=${remoteSignature}`);
+            return { status, remoteSignature };
         } catch (e) {
-            logError(`[vscode-rpgle] FIELD_LIST.getRemoteState() — version query threw:`, e);
-            return { status: 'NeedsUpdate', remoteSignature: signature };
+            logError(`[vscode-rpgle] FIELD_LIST.getRemoteState() — remote check failed:`, e);
+            return { status: 'Error' };
         }
     }
 
-    async update(connection: any, _installDirectory?: string): Promise<SecureComponentState> {
+    async update(connection: IBMi, _installDirectory?: string): Promise<SecureComponentState> {
         logInfo(`[vscode-rpgle] FIELD_LIST.update() — starting install`);
         return connection.withTempDirectory(async (tempDir: string) => {
-            const content = connection.content ?? connection.getContent?.();
-            if (!content || typeof content.writeStreamfileRaw !== 'function') {
-                throw new Error('FIELD_LIST component requires a connection content adapter with writeStreamfileRaw().');
-            }
+            const content = connection.getContent();
 
             const encoder = new TextEncoder();
             const library = getUDTFLibrary(connection);
-            const signature = this.getSignature();
             logInfo(`[vscode-rpgle] FIELD_LIST.update() — tempDir=${tempDir}, library=${library}`);
+            const upload = async (path: string, text: string, label: string) => {
+                const error = await content.writeStreamfileRaw(path, encoder.encode(text));
+                if (error) {
+                    throw new Error(`Failed to write FIELD_LIST ${label} to ${path}: ${error}`);
+                }
+            };
 
             // ── Step 1: upload RPGLE source ─────────────────────────────────
             // tempDir is a unique path prefix, not a subdirectory — append with '_'
             const rpglePath = `${tempDir}_${this.PGM_NAME}.rpgle`;
-            const rpgleBytes = encoder.encode(this.getSourceSrc());
-            logInfo(`[vscode-rpgle] FIELD_LIST.update() — uploading RPGLE to ${rpglePath} (${rpgleBytes.length} bytes)`);
-
-            try {
-                const rpgleUploadErr = await content.writeStreamfileRaw(rpglePath, rpgleBytes);
-                if (rpgleUploadErr) {
-                    logError(`[vscode-rpgle] writeStreamfileRaw(rpgle) failed: ${rpgleUploadErr}`);
-                    throw new Error(`Failed to write FIELD_LIST RPGLE source to ${rpglePath}: ${rpgleUploadErr}`);
-                }
-            } catch (e) {
-                logError(`[vscode-rpgle] writeStreamfileRaw(rpgle) threw:`, e);
-                throw e;
-            }
+            await upload(rpglePath, this.getSourceSrc(), 'RPGLE source');
 
             // ── Step 2: ensure target library exists ─────────────────────────
             const crtlibResult = await connection.runCommand({ command: `CRTLIB LIB(${library})`, noLibList: true });
@@ -186,19 +155,7 @@ export class FieldListChecker {
 
             // ── Step 4: upload SQL DDL ───────────────────────────────────────
             const sqlPath = `${tempDir}_${this.UDTF_SPECIFIC}.sql`;
-            try {
-                const sqlUploadErr = await content.writeStreamfileRaw(
-                    sqlPath,
-                    encoder.encode(this.getSQLSrc(library, this.currentVersion))
-                );
-                if (sqlUploadErr) {
-                    logError(`[vscode-rpgle] writeStreamfileRaw(sql) failed: ${sqlUploadErr}`);
-                    throw new Error(`Failed to write FIELD_LIST SQL source to ${sqlPath}: ${sqlUploadErr}`);
-                }
-            } catch (e) {
-                logError(`[vscode-rpgle] writeStreamfileRaw(sql) threw:`, e);
-                throw e;
-            }
+            await upload(sqlPath, this.getSQLSrc(library, this.currentVersion), 'SQL source');
 
             // ── Step 5: drop existing specific function (ignore error) ───────
             try {
@@ -219,7 +176,7 @@ export class FieldListChecker {
             }
 
             logInfo(`[vscode-rpgle] FIELD_LIST.update() — successfully installed (version ${this.currentVersion})`);
-            return { status: 'Installed', remoteSignature: signature };
+            return this.getRemoteState(connection);
         });
     }
 
@@ -229,7 +186,7 @@ export class FieldListChecker {
      * reject depending on PTF level, so on failure the source is converted to
      * the job CCSID (or CCSID 37 as a last resort) and recompiled.
      */
-    private async compileRpgle(connection: any, library: string, sourcePath: string): Promise<CompileResult> {
+    private async compileRpgle(connection: IBMi, library: string, sourcePath: string): Promise<CompileResult> {
         const compileFromStream = async (path: string, useTargetCcsid: boolean): Promise<{ code: number; stderr: string; stdout: string }> => {
             const tgtCcsidParm = useTargetCcsid ? ' TGTCCSID(*JOB)' : '';
             const cmd = `CRTBNDRPG PGM(${library}/${this.PGM_NAME}) SRCSTMF('${path}')${tgtCcsidParm} OPTION(*SRCSTMT) DBGVIEW(*NONE) TGTRLS(*CURRENT)`;
@@ -243,31 +200,20 @@ export class FieldListChecker {
         };
 
         let compileResult = await compileFromStream(sourcePath, true);
+        const conversionErrors: string[] = [];
 
-        if (compileResult.code !== 0) {
-            logInfo(`[vscode-rpgle] CRTBNDRPG with TGTCCSID(*JOB) failed; retrying with TOCCSID(*JOBCCSID) conversion.`);
+        for (const ccsid of ['*JOBCCSID', '37']) {
+            if (compileResult.code === 0) break;
 
-            const jobCcsidPath = sourcePath.replace(/\.rpgle$/i, '_ccsid_job.rpgle');
-            const cpyToJobCcsid = await connection.runCommand({
-                command: `CPY OBJ('${sourcePath}') TOOBJ('${jobCcsidPath}') TOCCSID(*JOBCCSID) REPLACE(*YES)`
+            const convertedPath = sourcePath.replace(/\.rpgle$/i, `_ccsid_${ccsid.replace('*', '')}.rpgle`);
+            const conversion = await connection.runCommand({
+                command: `CPY OBJ('${sourcePath}') TOOBJ('${convertedPath}') TOCCSID(${ccsid}) REPLACE(*YES)`
             });
 
-            if (cpyToJobCcsid.code === 0) {
-                compileResult = await compileFromStream(jobCcsidPath, false);
+            if (conversion.code === 0) {
+                compileResult = await compileFromStream(convertedPath, false);
             } else {
-                logInfo(`[vscode-rpgle] TOCCSID(*JOBCCSID) conversion failed; retrying with TOCCSID(37).`);
-
-                const ccsid37Path = sourcePath.replace(/\.rpgle$/i, '_ccsid37.rpgle');
-                const cpyTo37 = await connection.runCommand({
-                    command: `CPY OBJ('${sourcePath}') TOOBJ('${ccsid37Path}') TOCCSID(37) REPLACE(*YES)`
-                });
-
-                if (cpyTo37.code === 0) {
-                    compileResult = await compileFromStream(ccsid37Path, false);
-                } else {
-                    logError(`[vscode-rpgle] CPY conversion failed for ${this.PGM_NAME}. *JOBCCSID: ${cpyToJobCcsid.stderr} | CCSID(37): ${cpyTo37.stderr}`);
-                    return { ok: false, detail: `${cpyToJobCcsid.stderr} ${cpyTo37.stderr}` };
-                }
+                conversionErrors.push(`${ccsid}: ${conversion.stderr}`);
             }
         }
 
@@ -275,14 +221,10 @@ export class FieldListChecker {
             logError(`[vscode-rpgle] CRTBNDRPG failed for ${this.PGM_NAME} (code=${compileResult.code})`);
             logError(`[vscode-rpgle] CRTBNDRPG stdout: ${compileResult.stdout}`);
             logError(`[vscode-rpgle] CRTBNDRPG stderr: ${compileResult.stderr}`);
-            return { ok: false, detail: compileResult.stderr || compileResult.stdout };
+            return { ok: false, detail: [compileResult.stderr || compileResult.stdout, ...conversionErrors].filter(Boolean).join(' | ') };
         }
 
         return { ok: true };
-    }
-
-    reset(): void {
-        // No per-connection state to clear — library is re-read from settings each time
     }
 }
 

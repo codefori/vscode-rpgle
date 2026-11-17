@@ -27,6 +27,7 @@ import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
 import { resolveWorkspaceIncludePath } from './includeResolver';
+import { pruneOldest } from '../../../language/utils/pruneOldest';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
@@ -44,11 +45,6 @@ const languageToolsEnabled = outsideMerlin;
 const formatterEnabled = outsideMerlin;
 
 let projectEnabled = false;
-const CROSS_REFERENCE_READY_NOTIFICATION = `vscode-rpgle/crossReferenceReady`;
-const CROSS_REFERENCE_STATE_NOTIFICATION = `vscode-rpgle/crossReferenceState`;
-const crossReferenceNotified = new Set<string>();
-const DEFAULT_LARGE_FILE_THRESHOLD = 6000;
-let crossReferenceReadyLineThreshold = DEFAULT_LARGE_FILE_THRESHOLD;
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -125,15 +121,6 @@ connection.onInitialize((params: InitializeParams) => {
 connection.onInitialized(() => {
 	initializeLogLevel();
 
-	void connection.workspace.getConfiguration('vscode-rpgle').then((config) => {
-		const configuredThreshold = Number(config?.bracketHighlightingMaxLines);
-		if (Number.isFinite(configuredThreshold) && configuredThreshold >= 0) {
-			crossReferenceReadyLineThreshold = configuredThreshold;
-		} else {
-			crossReferenceReadyLineThreshold = DEFAULT_LARGE_FILE_THRESHOLD;
-		}
-	});
-
 	if (projectEnabled) {
 		let lastPreParseOnStartup: boolean | undefined;
 		let lastFileLimit: number | undefined;
@@ -184,20 +171,14 @@ const normalizeUriForCache = (uri: string): string => {
 };
 
 const pruneIncludeCache = () => {
-	while (includeUriCache.size > INCLUDE_CACHE_LIMIT) {
-		const oldestKey = includeUriCache.keys().next().value;
-		if (oldestKey === undefined) break;
-
-		const oldestUri = includeUriCache.get(oldestKey);
-		includeUriCache.delete(oldestKey);
-
+	pruneOldest(includeUriCache, INCLUDE_CACHE_LIMIT, (oldestUri) => {
 		if (oldestUri) {
 			const stillReferenced = Array.from(includeUriCache.values()).includes(oldestUri);
 			if (!stillReferenced) {
 				includeContentCache.delete(oldestUri);
 			}
 		}
-	}
+	});
 };
 
 const getIncludeCacheKey = (baseUri: string, includeLiteral: string): string => {
@@ -457,18 +438,7 @@ function executeParse(uri: string, parseId: number, document: any) {
 	state.needsReparse = false;
 	const parseStartTime = Date.now();
 	state.parseStartTime = parseStartTime;
-	logWithTimestamp(`Parse started: ${fileName} (parseId: ${parseId})`, LogLevel.INFO);
-	const lineCount = document.lineCount || 0;
-	if (crossReferenceReadyLineThreshold > 0 && lineCount >= crossReferenceReadyLineThreshold) {
-		connection.sendNotification(CROSS_REFERENCE_STATE_NOTIFICATION, {
-			phase: `started`,
-			uri,
-			fileName,
-			lineCount,
-			parseId,
-			startedAt: parseStartTime,
-		});
-	}
+	logWithTimestamp(`Parse started: ${fileName} (parseId: ${parseId})`, LogLevel.DEBUG);
 
 
 	const activeParser = getParser(uri);
@@ -504,27 +474,6 @@ function executeParse(uri: string, parseId: number, document: any) {
 			}
 
 			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, diagnostics updated)`, LogLevel.INFO);
-
-			const lineCount = document.lineCount || 0;
-			if (crossReferenceReadyLineThreshold > 0 && lineCount >= crossReferenceReadyLineThreshold) {
-				connection.sendNotification(CROSS_REFERENCE_STATE_NOTIFICATION, {
-					phase: `completed`,
-					uri,
-					fileName,
-					lineCount,
-					parseId,
-					durationMs: duration,
-				});
-			}
-			if (crossReferenceReadyLineThreshold > 0 && lineCount >= crossReferenceReadyLineThreshold && !crossReferenceNotified.has(uri)) {
-				crossReferenceNotified.add(uri);
-				connection.sendNotification(CROSS_REFERENCE_READY_NOTIFICATION, {
-					uri,
-					fileName,
-					lineCount,
-					durationMs: duration,
-				});
-			}
 		} else if (cache) {
 			logWithTimestamp(`Parse completed: ${fileName} (parseId: ${parseId}, ${duration}ms, STALE - ignored)`, LogLevel.DEBUG);
 		} else {
@@ -607,34 +556,6 @@ documents.onDidChangeContent(handler => {
 		// Execute the parse
 		executeParse(uri, currentParseId, handler.document);
 	}, debounceDelay); // 0ms for first open, 300ms for edits
-});
-
-documents.onDidOpen(handler => {
-	const uri = handler.document.uri;
-	const fileName = getDisplayName(uri);
-	crossReferenceNotified.delete(uri);
-	if (!documentParseState[uri]) {
-		documentParseState[uri] = { parseId: 0, isParsing: false, needsReparse: false };
-	}
-
-	const state = documentParseState[uri];
-	state.parseId++;
-	const currentParseId = state.parseId;
-	logWithTimestamp(`Document opened: ${fileName} (parseId: ${currentParseId})`, LogLevel.DEBUG);
-
-	if (
-		handler.document.languageId === `rpgle`
-		|| handler.document.languageId === `rpg`
-		|| handler.document.languageId === `sqlrpgle`
-	) {
-		executeParse(uri, currentParseId, handler.document);
-	}
-});
-
-documents.onDidClose(handler => {
-	const uri = handler.document.uri;
-	crossReferenceNotified.delete(uri);
-	delete documentParseState[uri];
 });
 
 // Make the text document manager listen on the connection
