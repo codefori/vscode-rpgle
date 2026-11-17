@@ -187,12 +187,16 @@ export async function getLintOptions(workingUri: string): Promise<Rules> {
 }
 
 const hintDiagnositcs: (keyof Rules)[] = [`SQLRunner`, `StringLiteralDupe`]
+const lintResults = new WeakMap<TextDocument, {
+	version: number,
+	docs: Cache,
+	optionsKey: string,
+	detail: ReturnType<typeof Linter.getErrors>,
+}>();
 
 export async function refreshLinterDiagnostics(document: TextDocument, docs: Cache, updateDiagnostics = true) {
 	const isFree = (document.getText(Range.create(0, 0, 0, 6)).toUpperCase() === `**FREE`);
 	if (isFree) {
-		const text = document.getText();
-
 		const indentDiags: Diagnostic[] = [];
 		const generalDiags: Diagnostic[] = [];
 
@@ -210,6 +214,14 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 		options.SQLRunner = true;
 		
 		options.StringLiteralDupe = true;
+		// Read the version and text together after asynchronous config/include lookups.
+		const version = document.version;
+		const text = document.getText();
+		const optionsKey = JSON.stringify({ options, availableIncludes });
+		const cached = lintResults.get(document);
+		if (!updateDiagnostics && cached?.version === version && cached.docs === docs && cached.optionsKey === optionsKey) {
+			return cached.detail;
+		}
 
 		try {
 			detail = Linter.getErrors({
@@ -217,6 +229,7 @@ export async function refreshLinterDiagnostics(document: TextDocument, docs: Cac
 				content: text,
 				availableIncludes
 			}, options, docs);
+			lintResults.set(document, { version, docs, optionsKey, detail });
 		} catch (e: any) {
 			console.log(`Error linting ${document.uri}: ${e.message}`);
 			console.log(e.stack);

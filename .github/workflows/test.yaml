@@ -5,6 +5,8 @@ on:
       - 'tests/**'
       - 'extension/server/**'
       - 'package.json'
+      - 'cli/rpglint/**'
+      - 'eslint.config.mjs'
     
 jobs:
   release:
@@ -26,10 +28,7 @@ jobs:
         run: npm install
           
       - name: Run ESLint
-        run: node ./node_modules/eslint/bin/eslint src/** --no-error-on-unmatched-pattern
+        run: npm run lint
 
       - name: Run tests
         run: npm run test
-
-      - name: Lint server tests
-        run: npm run lint:server-tests

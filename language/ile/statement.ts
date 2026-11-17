@@ -79,13 +79,13 @@ export default class Statement {
 
 	static trimTokens(tokens: Token[]) {
 		if (tokens.length > 0) {
-			let realFirstToken = tokens.findIndex(t => t.type !== `newline`);
+			let realFirstToken = tokens.findIndex(t => ![`newline`, `tab`].includes(t.type));
 			if (realFirstToken < 0) realFirstToken = 0;
 
 			let realLastToken = 0;
 
 			for (let i = tokens.length - 1; i >= 0; i--) {
-				if (tokens[i].type !== `newline`) {
+				if (!["newline", "tab"].includes(tokens[i].type)) {
 					realLastToken = i + 1;
 					break;
 				}
