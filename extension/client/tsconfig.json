@@ -16,7 +16,7 @@
 	},
 	"include": [
 		"src",
-		"../../language/utils"
+		"../../language/**/*.ts"
 	],
 	"exclude": [
 		"node_modules",

@@ -27,6 +27,7 @@ import workspaceSymbolProvider from './providers/project/workspaceSymbol';
 import implementationProvider from './providers/implementation';
 import { dspffdToRecordFormats, isInMerlin, parseMemberUri } from './data';
 import { resolveWorkspaceIncludePath } from './includeResolver';
+import { pruneOldest } from '../../../language/utils/pruneOldest';
 import path = require('path');
 import { existsSync } from 'fs';
 import { renamePrepareProvider, renameRequestProvider } from './providers/rename';
@@ -170,20 +171,14 @@ const normalizeUriForCache = (uri: string): string => {
 };
 
 const pruneIncludeCache = () => {
-	while (includeUriCache.size > INCLUDE_CACHE_LIMIT) {
-		const oldestKey = includeUriCache.keys().next().value;
-		if (oldestKey === undefined) break;
-
-		const oldestUri = includeUriCache.get(oldestKey);
-		includeUriCache.delete(oldestKey);
-
+	pruneOldest(includeUriCache, INCLUDE_CACHE_LIMIT, (oldestUri) => {
 		if (oldestUri) {
 			const stillReferenced = Array.from(includeUriCache.values()).includes(oldestUri);
 			if (!stillReferenced) {
 				includeContentCache.delete(oldestUri);
 			}
 		}
-	}
+	});
 };
 
 const getIncludeCacheKey = (baseUri: string, includeLiteral: string): string => {

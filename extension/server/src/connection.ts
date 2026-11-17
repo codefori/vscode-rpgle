@@ -266,7 +266,7 @@ export function handleClientRequests() {
 		parser.clearTableCache();
 	});
 
-	connection.onRequest(`getCache`, (uri: string): any | undefined => {
+	connection.onRequest(`getCache`, (uri: string) => {
 		const doc = parser.getParsedCache(uri);
 		if (!doc) return undefined;
 		return {

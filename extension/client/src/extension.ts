@@ -25,10 +25,14 @@ import { getServerImplementationProvider, getServerSymbolProvider } from './lang
 import { checkAndWait, loadBase } from './base';
 import { registerCommands } from './commands';
 import { setLanguageSettings } from './language/config';
+import { fieldListChecker } from '../../../language/components/field_list';
+import { initRpgleOutput } from '../../../language/components/logger';
 
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
+	initRpgleOutput(context);
+
 	// The server is implemented in node
 	const serverModule = context.asAbsolutePath(
 		path.join('out', 'server.js')
@@ -47,8 +51,6 @@ export function activate(context: ExtensionContext) {
 			options: debugOptions
 		}
 	};
-
-	loadBase();
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
@@ -81,6 +83,13 @@ export function activate(context: ExtensionContext) {
 		const instance = await checkAndWait();
 		const base = loadBase();
 
+		if (base?.componentRegistry) {
+			logInfo(`[vscode-rpgle] Registering FIELD_LIST component checker`);
+			base.componentRegistry.registerComponent(context, fieldListChecker);
+		} else {
+			logInfo(`[vscode-rpgle] FIELD_LIST componentRegistry unavailable`);
+		}
+
 		// We need to clear table caches when the connection changes
 		if (instance && base) {
 			// When the connection is established
@@ -91,7 +100,7 @@ export function activate(context: ExtensionContext) {
 			// When the library list changes
 			context.subscriptions.push(
 				base.onCodeForIBMiConfigurationChange("connectionSettings", async () => {
-					clearTableCache(client);
+					await clearTableCache(client);
 				}),
 			);
 		}

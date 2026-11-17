@@ -72,6 +72,19 @@
 					"minimum": 0,
 					"description": "Maximum document size, in lines, for which bracket/block highlighting, mismatch detection and jump-to-matching-block run. Larger members are skipped to keep the editor responsive. Set to 0 to disable the limit."
 				},
+				"vscode-rpgle.fieldMetadataProvider": {
+					"type": "string",
+					"default": "CL",
+					"enum": [
+						"CL",
+						"UDTF"
+					],
+					"enumDescriptions": [
+						"Use the DSPFFD CL command (default)",
+						"Use the FIELD_LIST UDTF (recommended)"
+					],
+					"description": "Choose the provider used to fetch file field definitions when building field reference metadata. UDTF is generally a more streamlined approach when available."
+				},
 				"vscode-rpgle.enableLocalProjectPreparsing": {
 					"type": "boolean",
 					"default": true,
