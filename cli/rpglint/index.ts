@@ -7,6 +7,7 @@ import { readFileSync } from 'fs';
 
 import Parser from '../../language/ile/parser';
 import Linter from '../../language/ile/linter';
+import { getIndentationMessage } from '../../language/ile/indentation';
 import { Rules } from '../../language/ile/parserTypes';
 import path from 'path';
 
@@ -151,7 +152,8 @@ async function main() {
 						case `flc`:
 							if (lintResult.indentErrors.length) {
 								lintResult.indentErrors.forEach(indentError => {
-									console.log(`${filePath}:${indentError.line + 1}:${indentError.currentIndent}:Expected indent of ${indentError.expectedIndent}`);
+									const message = indentError.hasTabs ? getIndentationMessage(indentError) : `Expected indent of ${indentError.expectedIndent}`;
+									console.log(`${filePath}:${indentError.line + 1}:${indentError.currentIndent}:${message}`);
 								});
 							}
 		
@@ -172,7 +174,8 @@ async function main() {
 							console.log(`${relative}: ${totalErrors} error${totalErrors !== 1 ? `s` : ``}.`);
 							if (lintResult.indentErrors.length) {
 								lintResult.indentErrors.forEach(indentError => {
-									console.log(`\tLine ${indentError.line + 1}: expected indent of ${indentError.expectedIndent}, got ${indentError.currentIndent}`);
+									const message = indentError.hasTabs ? getIndentationMessage(indentError) : `expected indent of ${indentError.expectedIndent}, got ${indentError.currentIndent}`;
+									console.log(`\tLine ${indentError.line + 1}: ${message}`);
 								});
 							}
 		

@@ -7,6 +7,7 @@ import { ErrorType, IssueRange, Rules, SelectBlock } from "./parserTypes";
 import Declaration from "../models/declaration";
 import { IRange, Token } from "./types";
 import { NO_NAME } from "./statement";
+import { analyzeIndentation, getLeadingWhitespace, type IndentationSafety } from './indentation';
 
 const BANNED_FROM_INCLUDES: (`NoUnreferenced`)[] = [`NoUnreferenced`];
 const INCLUDE_EXTENSIONS = [`rpgleinc`, `rpgleh`];
@@ -58,10 +59,11 @@ const skipRules = {
 	singleRules: 3, // Skips rule check
 };
 
-type IndentError = {
-  line: number,
-  expectedIndent: number,
-  currentIndent: number,
+export type IndentError = {
+	line: number,
+	expectedIndent: number,
+	currentIndent: number,
+	hasTabs?: boolean,
 };
 
 type DeclarationBlockType = `DCL-DS` | `DCL-PR` | `DCL-PI` | `DCL-ENUM`;
@@ -386,7 +388,7 @@ export default class Linter {
 		return errorText[error];
 	}
 
-	static getErrors(data: { uri: string, content: string, availableIncludes?: string[] }, rules: Rules, globalScope?: Cache): { indentErrors: IndentError[], errors: IssueRange[], doc: Document } {
+	static getErrors(data: { uri: string, content: string, availableIncludes?: string[] }, rules: Rules, globalScope?: Cache): { indentErrors: IndentError[], errors: IssueRange[], doc: Document } & IndentationSafety {
 		const indentEnabled = rules.indent !== undefined;
 		const indent = rules.indent || 2;
 
@@ -415,7 +417,6 @@ export default class Linter {
     let inSubroutine: ReferenceInfo | undefined;
     let inStruct: OpenDeclaration[] = [];
     let inPrototype: OpenDeclaration | undefined;
-    let inOnExit = false;
 
     let lineNumber = -1;
 
@@ -425,12 +426,10 @@ export default class Linter {
 
     const errors: IssueRange[] = [];
 
-    let expectedIndent = 0;
     let currentIndent = 0;
 
     let skipIndentCheck = false;
 
-    let opcode: string;
 
     // Make all external refs uppercase.
     if (rules.NoExternalTo && rules.NoExternalTo.length) {
@@ -466,6 +465,7 @@ export default class Linter {
     };
 
     const doc = new Document(data.content);
+    const indentation = indentEnabled ? analyzeIndentation(doc, indent) : undefined;
 
     if (rules.MissingSemicolon) {
     	errors.push(...getMissingSemicolonErrors(data.content));
@@ -1321,77 +1321,19 @@ export default class Linter {
     			skipIndentCheck = [skipRules.singleIndent, skipRules.single].includes(currentRule);
     		}
 
-    		// We don't report lint issues for a statement that is on the same line as the last statement
-    		// While this isn't technically possible in RPG, we still check it because it's not an indent error
-
-    		if (doc.statements[si - 1] === undefined || (doc.statements[si - 1].range.line !== lineNumber)) {
-    			if (indentEnabled && skipIndentCheck === false) {
-    				opcode = firstValue.toUpperCase();
-
-    				if ([
-    					`ENDIF`, `ENDFOR`, `ENDDO`, `ELSE`, `ELSEIF`, `ON-ERROR`, `ON-EXCP`, `ENDMON`, `ENDSR`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `END-PROC`, `END-PI`, `END-PR`, `END-DS`, `END-ENUM`, `ENDSL`
-    				].includes(opcode)) {
-    					expectedIndent -= indent;
-
-    					//Special case for `ENDSL` and `END-PROC
-    					if ([
-    						`ENDSL`
-    					].includes(opcode)) {
-    						expectedIndent -= indent;
-    					}
-
-    					// Support for on-exit
-    					if (opcode === `END-PROC` && inOnExit) {
-    						inOnExit = false;
-    						expectedIndent -= indent;
-    					}
-    				}
-
-    				if (currentIndent !== expectedIndent) {
-    					indentErrors.push({
-    						line: lineNumber,
-    						expectedIndent,
-    						currentIndent
-    					});
-    				}
-
-    				if ([
-    					`IF`, `ELSE`, `ELSEIF`, `FOR`, `FOR-EACH`, `DOW`, `DOU`, `MONITOR`, `ON-ERROR`, `ON-EXCP`, `ON-EXIT`, `BEGSR`, `SELECT`, `WHEN`, `WHEN-IS`, `WHEN-IN`, `OTHER`, `DCL-PROC`, `DCL-PI`, `DCL-PR`, `DCL-DS`, `DCL-ENUM`
-    				].includes(opcode)) {
-    					const oneLineTriggerOps = [`DCL-DS`, `DCL-PI`, `DCL-PR`] as const;
-    					const isOneLineTriggerOp = (oneLineTriggerOps as readonly string[]).includes(opcode);
-    					if (isOneLineTriggerOp) {
-    						const hasInlineTerminal = oneLineTriggers[opcode as keyof typeof oneLineTriggers].some((trigger: string) =>
-    							statement.some(part => part.value && part.value.toUpperCase() === trigger)
-    						);
-    						if (!hasInlineTerminal) {
-    							if (opcode === `SELECT`) {
-    								if (skipIndentCheck === false) expectedIndent += (indent * 2);
-    							}
-    							else if (opcode === `ON-EXIT`) {
-    								expectedIndent += indent;
-    								inOnExit = true;
-    							}
-    							else
-    								expectedIndent += indent;
-    						}
-    					}
-    					else if (opcode === `SELECT`) {
-    						if (skipIndentCheck === false) expectedIndent += (indent * 2);
-    					}
-    					else if (opcode === `ON-EXIT`) {
-    						expectedIndent += indent;
-    						inOnExit = true;
-    					}
-    					else
-    						expectedIndent += indent;
-    				}
-
+    		// The shared analysis tracks depth even when this line's warning is skipped.
+    		if (indentation && !skipIndentCheck) {
+    			const expectedIndent = indentation.expectedIndents[si];
+    			// A later statement on a continuation line does not own that line's whitespace.
+    			const lineStart = data.content.lastIndexOf(`\n`, firstToken.range.start - 1) + 1;
+    			const prefix = data.content.substring(lineStart, firstToken.range.start);
+    			const startsLine = getLeadingWhitespace(prefix) === prefix;
+    			const hasTabs = prefix.includes(`\t`);
+    			if (startsLine && (prefix.length !== expectedIndent || hasTabs)) {
+    				indentErrors.push({ line: lineNumber, expectedIndent, currentIndent: prefix.length, ...(hasTabs ? { hasTabs: true } : {}) });
     			}
-
-    			// Reset the rule back.
-    			currentRule = skipRules.none;
     		}
+    		currentRule = skipRules.none;
     	}
 
     }
@@ -1562,7 +1504,9 @@ export default class Linter {
     return {
     	indentErrors,
     	errors,
-    	doc
+    	doc,
+    	indentationUnsafeFrom: indentation?.indentationUnsafeFrom,
+    	indentationUnsafeRanges: indentation?.indentationUnsafeRanges
     };
 	}
 }

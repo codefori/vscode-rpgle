@@ -5,6 +5,7 @@ import Cache from '../../../../language/models/cache';
 import { getLinterCodeActions } from './linter/codeActions';
 import { createExtract, caseInsensitiveReplaceAll } from './language';
 import { ParserFactory } from '../../../../language/parserFactory';
+import { lineAt, determineIndent } from './lines';
 
 export default async function genericCodeActionsProvider(params: CodeActionParams): Promise<CodeAction[] | undefined> {
 	const uri = params.textDocument.uri;
@@ -23,7 +24,7 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 			if (isFree) {
 				const subroutineOption = getSubroutineActions(document, docs, range);
 				if (subroutineOption) {
-					return [subroutineOption];
+					actions.push(subroutineOption);
 				}
 
 				const extractOption = getExtractProcedureAction(document, docs, range);
@@ -47,10 +48,6 @@ export default async function genericCodeActionsProvider(params: CodeActionParam
 	return actions;
 }
 
-function lineAt(document: TextDocument, line: number): string {
-	return document.getText(Range.create(line, 0, line, 1000)).trimEnd();
-}
-
 function getBodyRangeForRange(docs: Cache, rangeStart: number, rangeEnd: number, document: TextDocument) {
 	let validStart = -1;
 	let validEnd = -1;
@@ -71,14 +68,6 @@ function getBodyRangeForRange(docs: Cache, rangeStart: number, rangeEnd: number,
 	}
 
 	return { validStart, validEnd };
-}
-
-function determineIndent(line: string): number {
-	const match = line.match(/^\s+/);
-	if (match) {
-		return match[0].length;
-	}
-	return 0;
 }
 
 export function surroundWithMonitorAction(isFree: boolean, document: TextDocument, docs: Cache, range: Range): CodeAction | undefined {

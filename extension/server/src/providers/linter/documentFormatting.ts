@@ -3,6 +3,8 @@ import { DocumentFormattingParams, ProgressToken, Range, TextEdit, WorkDoneProgr
 import { calculateOffset, getActions, getLintOptions } from '.';
 import { documents, parser } from '..';
 import Linter from '../../../../../language/ile/linter';
+import { getFixableIndentationErrors } from '../../../../../language/ile/indentation';
+import { getIndentationEdits } from './indentation';
 
 export default async function documentFormattingProvider(params: DocumentFormattingParams): Promise<TextEdit[] | undefined> {
 	const uri = params.textDocument.uri;
@@ -28,7 +30,7 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 				});
 
 				// Next up, let's fix all the other things!
-				const { errors } = Linter.getErrors({
+				const detail = Linter.getErrors({
 					uri: document.uri,
 					content: document.getText()
 				}, options, docs);
@@ -36,7 +38,7 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 
 				const actions = getActions(
 					document,
-					errors.filter(error => error.type !== `RequiresProcedureDescription`)
+					detail.errors.filter(error => error.type !== `RequiresProcedureDescription`)
 				);
 
 				let linesChanged: number[] = [];
@@ -67,16 +69,7 @@ export default async function documentFormattingProvider(params: DocumentFormatt
 					});
 
 
-				// First we do all the indentation fixes.
-				const { indentErrors } = Linter.getErrors({
-					uri: document.uri,
-					content: document.getText()
-				}, options, docs);
-
-				const indentFixes = indentErrors.map(error => {
-					const range = Range.create(error.line, 0, error.line, error.currentIndent);
-					return TextEdit.replace(range, ``.padEnd(error.expectedIndent, ` `));
-				});
+				const indentFixes = getIndentationEdits(document, getFixableIndentationErrors(detail));
 
 				return [...fixes, ...indentFixes];
 			}
