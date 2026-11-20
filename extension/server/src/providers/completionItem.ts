@@ -1,4 +1,4 @@
-import path = require('path');
+import * as path from "path";
 import { CompletionItem, CompletionItemKind, CompletionParams, InsertTextFormat, InsertTextMode, Position, Range, TextEdit } from 'vscode-languageserver';
 import { documents, getWordRangeAtPosition, parser, prettyKeywords } from '.';
 import Cache, { RpgleType, RpgleVariableType } from '../../../../language/models/cache';
@@ -8,8 +8,9 @@ import skipRules from './linter/skipRules';
 import * as Project from "./project";
 import { getInterfaces } from './project/exportInterfaces';
 import Parser from '../../../../language/ile/parser';
-import { getBuiltIn, getBuiltIns, getBuiltInsForType } from './apis/bif';
+import { getBuiltIn, getBuiltInsForType } from './apis/bif';
 import { ParserFactory } from '../../../../language/parserFactory';
+import { getBuiltInCompletionItems } from './builtInCompletion';
 
 const completionKind = {
 	function: CompletionItemKind.Interface,
@@ -17,19 +18,6 @@ const completionKind = {
 };
 
 const eol = `\n`;
-
-const builtInFunctionCompletionItems: CompletionItem[] = getBuiltIns().map(builtIn => {
-	const item = CompletionItem.create(builtIn.name);
-	item.filterText = builtIn.name.substring(1);
-	item.kind = CompletionItemKind.Function;
-	item.detail = builtIn.returnType || `void`;
-	item.documentation = `Built-in function`;
-	item.insertText = builtIn.name + `(\${1})`;
-	item.insertTextFormat = InsertTextFormat.Snippet;
-	item.command = {command: `editor.action.triggerParameterHints`, title: `Trigger Parameter Hints`};
-	item.sortText = item.filterText;
-	return item;
-});
 
 export default async function completionItemProvider(handler: CompletionParams): Promise<CompletionItem[]> {
 	const items: CompletionItem[] = [];
@@ -414,7 +402,7 @@ export default async function completionItemProvider(handler: CompletionParams):
 					// Showing the available built-in functions
 					//================================================
 
-					items.push(...builtInFunctionCompletionItems);
+					items.push(...getBuiltInCompletionItems(currentLine, handler.position));
 				}
 			}
 		}

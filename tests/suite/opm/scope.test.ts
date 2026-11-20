@@ -7,270 +7,270 @@ import { setupParser } from "./setupParser";
 import { assertCache, assertFound } from "../../utils";
 
 async function readFixture(fixturePath: string): Promise<string> {
-  const fullPath = path.join(__dirname, '../../fixtures/opm', fixturePath);
-  return readFile(fullPath, 'utf-8');
+	const fullPath = path.join(__dirname, '../../fixtures/opm', fixturePath);
+	return readFile(fullPath, 'utf-8');
 }
 
 describe("Parser tests", () => {
-  it('Simple lines test', async () => {
-    const lines = [
-      `     I$APIER      DS`,
-      `     I I            80                    B   1   40$ERSIZ`
-    ].join('\n');
-    
-    const parser = new OpmParser();
-    const fileUri = "file:///test.rpg";
+	it('Simple lines test', async () => {
+		const lines = [
+			`     I$APIER      DS`,
+			`     I I            80                    B   1   40$ERSIZ`
+		].join('\n');
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines, {keepTree: true}));
+		const parser = new OpmParser();
+		const fileUri = "file:///test.rpg";
 
-    expect(cache.parseTree).toBeDefined();
-    expect(cache.parseTree![fileUri]).toBeDefined();
-    expect(cache.parseTree![fileUri].length).toBe(2);
+		const cache = assertCache(await parser.getDocs(fileUri, lines, { keepTree: true }));
 
-    const iSpec1 = cache.parseTree![fileUri][0] as InputDataStructureEntry;
+		expect(cache.parseTree).toBeDefined();
+		expect(cache.parseTree![fileUri]).toBeDefined();
+		expect(cache.parseTree![fileUri].length).toBe(2);
 
-    expect(iSpec1).toBeDefined();
-    expect(iSpec1.type).toBe("input");
-    expect(iSpec1.subtype).toBe("record");
-    expect(iSpec1.described).toBe("structure");
+		const iSpec1 = cache.parseTree![fileUri][0] as InputDataStructureEntry;
 
-    expect(iSpec1.name.value).toBe("$APIER");
-    expect(lines.substring(
-      iSpec1.name.range[0],
-      iSpec1.name.range[1]
-    )).toBe("$APIER");
+		expect(iSpec1).toBeDefined();
+		expect(iSpec1.type).toBe("input");
+		expect(iSpec1.subtype).toBe("record");
+		expect(iSpec1.described).toBe("structure");
 
-    const iSpec2 = cache.parseTree![fileUri][1] as InputField;
-    expect(iSpec2).toBeDefined();
-    expect(iSpec2.type).toBe("input");
-    expect(iSpec2.subtype).toBe("field");
-    expect(iSpec2.described).toBeFalsy();
+		expect(iSpec1.name.value).toBe("$APIER");
+		expect(lines.substring(
+			iSpec1.name.range[0],
+			iSpec1.name.range[1]
+		)).toBe("$APIER");
 
-    expect(iSpec2.name!.value).toBe("$ERSIZ");
-    expect(lines.substring(
-      iSpec2.name!.range[0],
-      iSpec2.name!.range[1]
-    )).toBe("$ERSIZ");
-  });
+		const iSpec2 = cache.parseTree![fileUri][1] as InputField;
+		expect(iSpec2).toBeDefined();
+		expect(iSpec2.type).toBe("input");
+		expect(iSpec2.subtype).toBe("field");
+		expect(iSpec2.described).toBeFalsy();
 
-  it('First struct', async () => {
-    const parser = new OpmParser();
-    const fileUri = `errcode.rpg`;
+		expect(iSpec2.name!.value).toBe("$ERSIZ");
+		expect(lines.substring(
+			iSpec2.name!.range[0],
+			iSpec2.name!.range[1]
+		)).toBe("$ERSIZ");
+	});
 
-    const lines = await readFixture(fileUri)
+	it('First struct', async () => {
+		const parser = new OpmParser();
+		const fileUri = `errcode.rpg`;
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines));
+		const lines = await readFixture(fileUri)
 
-    expect(cache.symbols.length).toBe(1);
-    expect(cache.symbols[0].name).toBe("$SYSER");
-    expect(cache.symbols[0].subItems.length).toBe(5);
+		const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    const subfieldNames = cache.symbols[0].subItems.map((s) => s.name);
-    expect(subfieldNames).toMatchObject([
-      `$ESIZ`,
-      `$ELEN`,
-      `$EMID`,
-      `$ERSV`,
-      `$EMSG`
-    ]);
+		expect(cache.symbols.length).toBe(1);
+		expect(cache.symbols[0].name).toBe("$SYSER");
+		expect(cache.symbols[0].subItems.length).toBe(5);
 
-    const subfieldKeywords = cache.symbols[0].subItems.map((s) => s.keyword);
-    expect(subfieldKeywords).toMatchObject([
-      { packed: "4", decimals: "0" },
-      { packed: "4", decimals: "0" },
-      { char: "7" },
-      { char: "1" },
-      { char: "80" }
-    ]);
-  });
+		const subfieldNames = cache.symbols[0].subItems.map((s) => s.name);
+		expect(subfieldNames).toMatchObject([
+			`$ESIZ`,
+			`$ELEN`,
+			`$EMID`,
+			`$ERSV`,
+			`$EMSG`
+		]);
 
-  it('tests for files, structs, no named structs, and C spec fields, PLIST, subroutine', async () => {
-    const parser = new OpmParser();
-    const fileUri = `objlist.rpg`;
+		const subfieldKeywords = cache.symbols[0].subItems.map((s) => s.keyword);
+		expect(subfieldKeywords).toMatchObject([
+			{ packed: "4", decimals: "0" },
+			{ packed: "4", decimals: "0" },
+			{ char: "7" },
+			{ char: "1" },
+			{ char: "80" }
+		]);
+	});
 
-    const lines = await readFixture(fileUri)
+	it('tests for files, structs, no named structs, and C spec fields, PLIST, subroutine', async () => {
+		const parser = new OpmParser();
+		const fileUri = `objlist.rpg`;
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines));
+		const lines = await readFixture(fileUri)
 
-    const qprint = cache.symbols[0];
-    expect(qprint.name).toBe("OUTFILE");
-    expect(qprint.type).toBe("file");
+		const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    const genhdr = cache.symbols[1];
-    expect(genhdr.name).toBe("CTLHDR");
-    expect(genhdr.type).toBe("struct");
-    expect(genhdr.subItems.length).toBe(16);
+		const qprint = cache.symbols[0];
+		expect(qprint.name).toBe("OUTFILE");
+		expect(qprint.type).toBe("file");
 
-    const firstSubfield = genhdr.subItems[0];
-    expect(firstSubfield.name).toBe("REGION");
-    expect(firstSubfield.type).toBe("variable");
-    expect(firstSubfield.keyword).toMatchObject({ char: "64" });
+		const genhdr = cache.symbols[1];
+		expect(genhdr.name).toBe("CTLHDR");
+		expect(genhdr.type).toBe("struct");
+		expect(genhdr.subItems.length).toBe(16);
 
-    const lastSubfield = genhdr.subItems[genhdr.subItems.length - 1];
-    expect(lastSubfield.name).toBe("LENTRY");
-    expect(lastSubfield.type).toBe("variable");
-    expect(lastSubfield.keyword).toMatchObject({ packed: "4", decimals: "0" });
+		const firstSubfield = genhdr.subItems[0];
+		expect(firstSubfield.name).toBe("REGION");
+		expect(firstSubfield.type).toBe("variable");
+		expect(firstSubfield.keyword).toMatchObject({ char: "64" });
 
-    // Note: The *N (unnamed struct) test is skipped as Cache class may handle unnamed structs differently
-    // const noName = cache.symbols.find(s => s.name === "*N");
-    // expect(noName).toBeDefined();
-    // expect(noName!.name).toBe("*N");
-    // expect(noName!.type).toBe("struct");
-    // expect(noName!.subItems.length).toBe(3);
+		const lastSubfield = genhdr.subItems[genhdr.subItems.length - 1];
+		expect(lastSubfield.name).toBe("LENTRY");
+		expect(lastSubfield.type).toBe("variable");
+		expect(lastSubfield.keyword).toMatchObject({ packed: "4", decimals: "0" });
 
-    const calls = cache.symbols.filter(s => s.type === "call");
-    const firstCall = calls[0];
-    expect(firstCall.name).toBe("QUSCRTUS");
-    expect(firstCall.type).toBe("call");
-    expect(firstCall.subItems.length).toBe(8);
+		// Note: The *N (unnamed struct) test is skipped as Cache class may handle unnamed structs differently
+		// const noName = cache.symbols.find(s => s.name === "*N");
+		// expect(noName).toBeDefined();
+		// expect(noName!.name).toBe("*N");
+		// expect(noName!.type).toBe("struct");
+		// expect(noName!.subItems.length).toBe(3);
 
-    expect(firstCall.subItems[0].name).toBe("BUFREF");
+		const calls = cache.symbols.filter(s => s.type === "call");
+		const firstCall = calls[0];
+		expect(firstCall.name).toBe("QUSCRTUS");
+		expect(firstCall.type).toBe("call");
+		expect(firstCall.subItems.length).toBe(8);
 
-    const definedInCall = firstCall.subItems[1];
-    expect(definedInCall.name).toBe("BUFATR");
-    const symbolLookup = cache.find("BUFATR");
-    expect(symbolLookup).toMatchObject(definedInCall);
+		expect(firstCall.subItems[0].name).toBe("BUFREF");
 
-    const initSubroutine = assertFound(cache.find(`*INZSR`), `*INZSR`);
-    expect(initSubroutine.name).toBe("*INZSR");
-    expect(initSubroutine.type).toBe("subroutine");
-    // Note: Position structure differs between Scope and Cache
-    // expect(initSubroutine.position.range[0]).toBe(200);
-    // expect(initSubroutine.position.range[1]).toBe(214);
+		const definedInCall = firstCall.subItems[1];
+		expect(definedInCall.name).toBe("BUFATR");
+		const symbolLookup = cache.find("BUFATR");
+		expect(symbolLookup).toMatchObject(definedInCall);
 
-    const entryPlist = assertFound(cache.find("*ENTRY"), `*ENTRY`);
-    expect(entryPlist.name).toBe("*ENTRY");
-    expect(entryPlist.type).toBe("plist");
-    // expect(entryPlist.position.range[0]).toBe(203);
-    // expect(entryPlist.position.range[1]).toBe(205);
-    expect(entryPlist.subItems.length).toBe(2);
-    
-    const parm1 = entryPlist.subItems[0];
-    expect(parm1.name).toBe("OBJ");
-    expect(parm1.type).toBe("variable");
-    expect(parm1.keyword).toMatchObject({ char: "10" });
+		const initSubroutine = assertFound(cache.find(`*INZSR`), `*INZSR`);
+		expect(initSubroutine.name).toBe("*INZSR");
+		expect(initSubroutine.type).toBe("subroutine");
+		// Note: Position structure differs between Scope and Cache
+		// expect(initSubroutine.position.range[0]).toBe(200);
+		// expect(initSubroutine.position.range[1]).toBe(214);
 
-    const parm2 = entryPlist.subItems[1];
-    expect(parm2.name).toBe("LOC");
-    expect(parm2.type).toBe("variable");
-    expect(parm2.keyword).toMatchObject({ char: "10" });
-  });
+		const entryPlist = assertFound(cache.find("*ENTRY"), `*ENTRY`);
+		expect(entryPlist.name).toBe("*ENTRY");
+		expect(entryPlist.type).toBe("plist");
+		// expect(entryPlist.position.range[0]).toBe(203);
+		// expect(entryPlist.position.range[1]).toBe(205);
+		expect(entryPlist.subItems.length).toBe(2);
 
-  it('tests multiple files, multiline C spec', async () => {
-    const parser = new OpmParser();
-    const fileUri = `filelevel.rpg`;
+		const parm1 = entryPlist.subItems[0];
+		expect(parm1.name).toBe("OBJ");
+		expect(parm1.type).toBe("variable");
+		expect(parm1.keyword).toMatchObject({ char: "10" });
 
-    const lines = await readFixture(fileUri)
+		const parm2 = entryPlist.subItems[1];
+		expect(parm2.name).toBe("LOC");
+		expect(parm2.type).toBe("variable");
+		expect(parm2.keyword).toMatchObject({ char: "10" });
+	});
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines));
+	it('tests multiple files, multiline C spec', async () => {
+		const parser = new OpmParser();
+		const fileUri = `filelevel.rpg`;
 
-    const files = cache.symbols.filter((s) => s.type === "file").map((s) => s.name);
-    expect(files.length).toBe(3);
-    expect(files).toMatchObject([`CURROBJS`, `PREVOBJS`, `PRTFILE`]);
+		const lines = await readFixture(fileUri)
 
-    const constants = cache.symbols.filter((s) => s.type === `constant`);
-    expect(constants.length).toBe(17);
+		const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    const optionIndex = constants.findIndex((c) => c.name === `OPTS`);
-    const toLibIndex = constants.findIndex((c) => c.name === `DSTLIB`);
+		const files = cache.symbols.filter((s) => s.type === "file").map((s) => s.name);
+		expect(files.length).toBe(3);
+		expect(files).toMatchObject([`CURROBJS`, `PREVOBJS`, `PRTFILE`]);
 
-    expect(optionIndex).toBe(toLibIndex-1);
+		const constants = cache.symbols.filter((s) => s.type === `constant`);
+		expect(constants.length).toBe(17);
 
-    const subroutines = cache.symbols.filter((s) => s.type === "subroutine");
-    expect(subroutines.length).toBe(3);
-  });
+		const optionIndex = constants.findIndex((c) => c.name === `OPTS`);
+		const toLibIndex = constants.findIndex((c) => c.name === `DSTLIB`);
 
-  it('can log klists without file provider', async () => {
-    const parser = new OpmParser();
-    const fileUri = `datamgmt2.rpg`;
+		expect(optionIndex).toBe(toLibIndex - 1);
 
-    const lines = await readFixture(fileUri)
+		const subroutines = cache.symbols.filter((s) => s.type === "subroutine");
+		expect(subroutines.length).toBe(3);
+	});
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines));
+	it('can log klists without file provider', async () => {
+		const parser = new OpmParser();
+		const fileUri = `datamgmt2.rpg`;
 
-    const klists = cache.symbols.filter((s) => s.type === "klist");
-    expect(klists.length).toBe(1);
-    expect(klists[0].name).toBe("DATAKEY");
-    expect(klists[0].subItems.length).toBe(2);
+		const lines = await readFixture(fileUri)
 
-    const firstKlistField = klists[0].subItems[0];
-    expect(firstKlistField.name).toBe("IDNUM");
-    expect(firstKlistField.type).toBe("variable");
-    expect(firstKlistField.keyword).toMatchObject({ unresolved: true });
+		const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    const lastKlistField = klists[0].subItems[1];
-    expect(lastKlistField.name).toBe("CATCOD");
-    expect(lastKlistField.type).toBe("variable");
-    expect(lastKlistField.keyword).toMatchObject({ unresolved: true });
-  });
+		const klists = cache.symbols.filter((s) => s.type === "klist");
+		expect(klists.length).toBe(1);
+		expect(klists[0].name).toBe("DATAKEY");
+		expect(klists[0].subItems.length).toBe(2);
 
-  it('can log klists without file provider', async () => {
-    const parser = setupParser();
-    const fileUri = `datamgmt.rpg`;
+		const firstKlistField = klists[0].subItems[0];
+		expect(firstKlistField.name).toBe("IDNUM");
+		expect(firstKlistField.type).toBe("variable");
+		expect(firstKlistField.keyword).toMatchObject({ unresolved: true });
 
-    const lines = await readFixture(fileUri)
+		const lastKlistField = klists[0].subItems[1];
+		expect(lastKlistField.name).toBe("CATCOD");
+		expect(lastKlistField.type).toBe("variable");
+		expect(lastKlistField.keyword).toMatchObject({ unresolved: true });
+	});
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines));
+	it('can log klists without file provider', async () => {
+		const parser = setupParser();
+		const fileUri = `datamgmt.rpg`;
 
-    const klists = cache.symbols.filter((s) => s.type === "klist");
-    expect(klists.length).toBe(1);
-    expect(klists[0].name).toBe("DATAKEY");
-    expect(klists[0].subItems.length).toBe(2);
+		const lines = await readFixture(fileUri)
 
-    const firstKlistField = klists[0].subItems[0];
-    expect(firstKlistField.name).toBe("IDNUM");
-    expect(firstKlistField.type).toBe("variable");
-    expect(firstKlistField.keyword).toMatchObject({ char: "10" });
+		const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    const lastKlistField = klists[0].subItems[1];
-    expect(lastKlistField.name).toBe("CATCOD");
-    expect(lastKlistField.type).toBe("variable");
-    expect(lastKlistField.keyword).toMatchObject({ char: "10" });
+		const klists = cache.symbols.filter((s) => s.type === "klist");
+		expect(klists.length).toBe(1);
+		expect(klists[0].name).toBe("DATAKEY");
+		expect(klists[0].subItems.length).toBe(2);
 
-    assertFound(cache.find(`DATAFILE`), `DATAFILE`);
-    assertFound(cache.find(`IDNUM`), `IDNUM`);
+		const firstKlistField = klists[0].subItems[0];
+		expect(firstKlistField.name).toBe("IDNUM");
+		expect(firstKlistField.type).toBe("variable");
+		expect(firstKlistField.keyword).toMatchObject({ char: "10" });
 
-    // Note: Position matching depends on external file resolution
-    // expect(file.position).toMatchObject(idnum.position);
-  });
+		const lastKlistField = klists[0].subItems[1];
+		expect(lastKlistField.name).toBe("CATCOD");
+		expect(lastKlistField.type).toBe("variable");
+		expect(lastKlistField.keyword).toMatchObject({ char: "10" });
 
-  it.skip('can parse SQL statements', async () => {
-    const parser = setupParser();
-    const fileUri = `ownchg0r.sqlrpg`;
+		assertFound(cache.find(`DATAFILE`), `DATAFILE`);
+		assertFound(cache.find(`IDNUM`), `IDNUM`);
 
-    const lines = await readFixture(fileUri)
+		// Note: Position matching depends on external file resolution
+		// expect(file.position).toMatchObject(idnum.position);
+	});
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines, {keepSqlInTree: true}));
+	it.skip('can parse SQL statements', async () => {
+		const parser = setupParser();
+		const fileUri = `ownchg0r.sqlrpg`;
 
-    const sqlStatements = assertFound(cache.parseTree, `parseTree`)[fileUri]
-    expect(sqlStatements.length).toBe(4);
-    expect(sqlStatements[0].rawLine).toBe("declare objcur cursor for select odlbnm, odobnm, odobtp, odobow from QADSPOBJ where odobow <> 'SYSOWNER '");
-    expect(sqlStatements[1].rawLine).toBe("open objcur");
-    expect(sqlStatements[2].rawLine).toBe("fetch objcur into :LOCNM, :OBJNM, :OBJTYP, :OBJOWN");
+		const lines = await readFixture(fileUri)
 
-  });
+		const cache = assertCache(await parser.getDocs(fileUri, lines, { keepSqlInTree: true }));
 
-  it('C spec with no factor1 field', async () => {
-    const parser = setupParser();
-    const fileUri = `noFactor1.rpg`;
+		const sqlStatements = assertFound(cache.parseTree, `parseTree`)[fileUri]
+		expect(sqlStatements.length).toBe(4);
+		expect(sqlStatements[0].rawLine).toBe("declare objcur cursor for select odlbnm, odobnm, odobtp, odobow from QADSPOBJ where odobow <> 'SYSOWNER '");
+		expect(sqlStatements[1].rawLine).toBe("open objcur");
+		expect(sqlStatements[2].rawLine).toBe("fetch objcur into :LOCNM, :OBJNM, :OBJTYP, :OBJOWN");
 
-    const lines = await readFixture(fileUri)
+	});
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines));
+	it('C spec with no factor1 field', async () => {
+		const parser = setupParser();
+		const fileUri = `noFactor1.rpg`;
 
-    expect(cache.symbols.length).toBe(1);
-    expect(cache.symbols[0].name).toBe("FIELD1");
-  });
+		const lines = await readFixture(fileUri)
 
-    it('No search for symbols if we find Local Data Area', async () => {
-    const parser = setupParser();
-    const fileUri = `ldaMarker.rpg`;
+		const cache = assertCache(await parser.getDocs(fileUri, lines));
 
-    const lines = await readFixture(fileUri)
+		expect(cache.symbols.length).toBe(1);
+		expect(cache.symbols[0].name).toBe("FIELD1");
+	});
 
-    const cache = assertCache(await parser.getDocs(fileUri, lines));
+	it('No search for symbols if we find Local Data Area', async () => {
+		const parser = setupParser();
+		const fileUri = `ldaMarker.rpg`;
 
-    expect(cache.symbols.length).toBe(1);
-    expect(cache.symbols[0].name).toBe("DATA");
-  });
+		const lines = await readFixture(fileUri)
+
+		const cache = assertCache(await parser.getDocs(fileUri, lines));
+
+		expect(cache.symbols.length).toBe(1);
+		expect(cache.symbols[0].name).toBe("DATA");
+	});
 });

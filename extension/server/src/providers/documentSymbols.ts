@@ -67,33 +67,33 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 		];
 
 		const lines = text.split('\n');
-		
+
 		for (let lineNum = startLine; lineNum <= endLine && lineNum < lines.length; lineNum++) {
 			const line = lines[lineNum];
-			
+
 			if (isCommentLine(line)) continue;
 
 			for (const { pattern, kind } of blockPatterns) {
 				pattern.lastIndex = 0;
 				const match = pattern.exec(line);
-				
+
 				if (match) {
 					if (isInString(line, match.index)) continue;
-					
+
 					const keyword = match[1].toLowerCase();
-					
+
 					// Skip SELECT if it's inside an SQL block
 					if (keyword === 'select' && document && isInSqlBlock(text, document.offsetAt({ line: lineNum, character: match.index }))) {
 						continue;
 					}
-					
+
 					const name = match[2] || '';
-					
+
 					// Build display name
 					// Check if this is a directive (starts with /)
 					const isDirective = match[0].startsWith('/');
 					let displayName = isDirective ? `/${keyword.toUpperCase()}` : keyword.toUpperCase();
-					
+
 					if (name) {
 						displayName += ` ${name}`;
 					} else if (isDirective) {
@@ -117,7 +117,7 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						Range.create(lineNum, 0, lineNum, line.length),
 						Range.create(lineNum, 0, lineNum, line.length)
 					));
-					
+
 					break;
 				}
 			}
@@ -148,25 +148,25 @@ export default async function documentSymbolProvider(handler: DocumentSymbolPara
 						Range.create(proc.range.start!, 0, proc.range.end!, 0),
 						Range.create(proc.range.start!, 0, proc.range.start!, 0),
 					);
-	
+
 					if (proc.scope) {
 						procDef.children = proc.subItems
-						.filter(subitem => subitem.position && subitem.position.path === currentPath)
-						.map(subitem => DocumentSymbol.create(
-							subitem.name,
-							prettyKeywords(subitem.keyword),
-							SymbolKind.Property,
-							Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
-							Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
-						));
+							.filter(subitem => subitem.position && subitem.position.path === currentPath)
+							.map(subitem => DocumentSymbol.create(
+								subitem.name,
+								prettyKeywords(subitem.keyword),
+								SymbolKind.Property,
+								Range.create(subitem.range.start!, 0, subitem.range.end!, 0),
+								Range.create(subitem.range.start!, 0, subitem.range.end!, 0)
+							));
 
 						procDef.children.push(...getScopeVars(proc.scope));
-						
+
 						// Add code block symbols (IF, DOW, FOR, etc.) as children
 						const blockSymbols = getCodeBlockSymbols(text, proc.range.start!, proc.range.end!);
 						procDef.children.push(...blockSymbols);
 					}
-	
+
 					currentScopeDefs.push(procDef);
 				});
 

@@ -1,407 +1,409 @@
-import { CacheProps, IncludeStatement, Keywords } from "../parserTypes";
+import { CacheProps, IncludeStatement, Keywords } from "../ile/parserTypes";
 import { trimQuotes } from "../ile/tokens";
 import { IRange } from "../ile/types";
 import Declaration, { DeclarationType } from "./declaration";
 
 const DEFAULT_INDICATORS = [
-  ...Array(98).keys(),
-  `LR`, `KL`, `MR`,
-  `L1`, `L2`, `L3`, `L4`, `L5`, `L6`, `L7`, `L8`, `L9`,
-  `U1`, `U2`, `U3`, `U4`, `U5`, `U6`, `U7`, `U8`,
-  `OA`, `OB`, `OC`, `OD`, `OE`, `OF`, `OG`, `OV`,
-  `KA`, `KB`, `KC`, `KD`, `KE`, `KF`, `KG`, `KH`, `KI`, `KJ`, `KK`, `KL`, `KM`, `KN`,
-  `KP`, `KQ`, `KR`, `KS`, `KT`, `KU`, `KV`, `KW`, `KX`, `KY`,
-  `H1`, `H2`, `H3`, `H4`, `H5`, `H6`, `H7`, `H8`, `H9`
+	...Array(98).keys(),
+	`LR`, `KL`, `MR`,
+	`L1`, `L2`, `L3`, `L4`, `L5`, `L6`, `L7`, `L8`, `L9`,
+	`U1`, `U2`, `U3`, `U4`, `U5`, `U6`, `U7`, `U8`,
+	`OA`, `OB`, `OC`, `OD`, `OE`, `OF`, `OG`, `OV`,
+	`KA`, `KB`, `KC`, `KD`, `KE`, `KF`, `KG`, `KH`, `KI`, `KJ`, `KK`, `KL`, `KM`, `KN`,
+	`KP`, `KQ`, `KR`, `KS`, `KT`, `KU`, `KV`, `KW`, `KX`, `KY`,
+	`H1`, `H2`, `H3`, `H4`, `H5`, `H6`, `H7`, `H8`, `H9`
 ];
 
 const newInds = () => {
-  return DEFAULT_INDICATORS.map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
-    const indDef = new Declaration(`indicator`);
-    indDef.name = ind;
-    indDef.keyword = { IND: true };
-    return indDef;
-  })
+	return DEFAULT_INDICATORS.map(val => `IN${val.toString().padStart(2, `0`)}`).map(ind => {
+		const indDef = new Declaration(`indicator`);
+		indDef.name = ind;
+		indDef.keyword = { IND: true };
+		return indDef;
+	})
 };
 
 export type SymbolRegister = Map<string, Declaration[]>;
 
-export type RpglePrimitiveType = `string`|`number`|`datetime`|`special`;
-export type RpgleType = RpgleVariableType|RpglePrimitiveType|`any`;
+export type RpglePrimitiveType = `string` | `number` | `datetime` | `special`;
+export type RpgleType = RpgleVariableType | RpglePrimitiveType | `any`;
 
-export function typeToPrimitive(rpgleType: RpgleType): RpglePrimitiveType|undefined {
-  switch (rpgleType) {
-    case `char`:
-    case `varchar`:
-    case `ucs2`:
-    case `varucs2`:
-    case `vargraph`:
-      return `string`;
+export function typeToPrimitive(rpgleType: RpgleType): RpglePrimitiveType | undefined {
+	switch (rpgleType) {
+		case `char`:
+		case `varchar`:
+		case `ucs2`:
+		case `varucs2`:
+		case `vargraph`:
+			return `string`;
 
-    case `int`:
-    case `uns`:
-    case `packed`:
-    case `zoned`:
-    case `float`:
-      return `number`;
+		case `int`:
+		case `uns`:
+		case `packed`:
+		case `zoned`:
+		case `float`:
+			return `number`;
 
-    case `date`:
-    case `time`:
-    case `timestamp`:
-      return `datetime`;
-  }
+		case `date`:
+		case `time`:
+		case `timestamp`:
+			return `datetime`;
+	}
 
-  return;
+	return;
 }
 
-export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned`  | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph` | `file`;
+export type RpgleVariableType = `char` | `varchar` | `ucs2` | `varucs2` | `int` | `uns` | `packed` | `zoned` | `float` | `ind` | `date` | `time` | `timestamp` | `pointer` | `graph` | `vargraph` | `file`;
 const validTypes: RpgleVariableType[] = [`char`, `varchar`, `ucs2`, `varucs2`, `int`, `uns`, `packed`, `zoned`, `float`, `ind`, `date`, `time`, `timestamp`, `pointer`, `graph`, `vargraph`, `file`];
 
 export interface RpgleTypeDetail {
-  type?: { name: RpgleVariableType, isArray: boolean, value?: string };
-  reference?: Declaration;
+	type?: { name: RpgleVariableType, isArray: boolean, value?: string };
+	reference?: Declaration;
 }
 
 export default class Cache {
-  keyword: Keywords;
-  sqlReferences: Declaration[];
-  includes: IncludeStatement[];
-  parseTree?: { [fileUri: string]: any[] };
-  private symbolRegister: SymbolRegister;
-
-  constructor(cache: CacheProps = {}, isProcedure: boolean = false) {
-    this.keyword = {};
-    // this.symbols = cache.symbols || [...newInds()];
-
-    if (isProcedure) {
-      this.symbolRegister = cache.symbolRegister || new Map();
-    } else {
-      this.symbolRegister = cache.symbolRegister || new Map();
-
-      newInds().forEach(ind => {
-        this.addSymbol(ind);
-      });
-    }
-
-
-    this.sqlReferences = cache.sqlReferences || [];
-    this.includes = cache.includes || [];
-    this.parseTree = cache.parseTree || {};
-  }
-
-  private symbolCache: Declaration[] | undefined;
-
-  get symbols() {
-    if (this.symbolCache) return this.symbolCache;
-
-    this.symbolCache = Array.from(this.symbolRegister.values()).flat(1).sort((a, b) => {
-      if (a.position && b.position) {
-        return a.position.range.line - b.position.range.line
-      } else if (a.range.start && b.range.start) {
-        return a.range.start - b.range.start;
-      } else if (a.position) {
-        return -1;
-      } else if (b.position) {
-        return 1;
-      }
-    });
-
-    return this.symbolCache;
-  }
-
-  get subroutines() {
-    return this.symbols.filter(s => s.type === `subroutine`);
-  }
-
-  get procedures() {
-    return this.symbols.filter(s => s.type === `procedure`);
-  }
-
-  get files() {
-    return this.symbols.filter(s => s.type === `file`);
-  }
-
-  get inputs() {
-    return this.symbols.filter(s => s.type === `input`);
-  }
-
-  get constants() {
-    return this.symbols.filter(s => s.type === `constant`);
-  }
-
-  get variables() {
-    return this.symbols.filter(s => s.type === `variable`);
-  }
-
-  get structs() {
-    return this.symbols.filter(s => s.type === `struct`);
-  }
-
-  get indicators() {
-    return this.symbols.filter(s => s.type === `indicator`);
-  }
-
-  get tags() {
-    return this.symbols.filter(s => s.type === `tag`);
-  }
-
-  get parameters() {
-    return this.symbols.filter(s => s.type === `parameter`);
-  }
-
-  addSymbol(symbol: Declaration) {
-    const name = symbol.name.toUpperCase();
-    if (this.symbolRegister.has(name)) {
-      // If the symbol already exists, we can merge it
-      const existing = this.symbolRegister.get(name);
-      existing.push(symbol);
-    } else {
-      this.symbolRegister.set(name, [symbol]);
-    }
-
-    this.symbolCache = undefined;
-  }
-
-  /**
-   * Returns 0-indexed line number where definition block starts for current scope
-   * @param {string} fsPath Path to check
-   * @returns {number} Line number
-   */
-  getDefinitionBlockEnd(fsPath: string) {
-    const checkTypes: DeclarationType[] = [`procedure`, `struct`, `file`, `variable`, `constant`];
-    const lasts = [
-      this.symbols.filter(d => checkTypes.includes(d.type) && d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined).pop(),
-    ].filter(d => d !== undefined);
-
-    const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.range.line).sort((a, b) => b - a);
-
-    return (lines.length >= 1 ? lines[0] : 0);
-  }
-
-  find(name: string, specificType?: DeclarationType, ignorePrefix?: boolean): Declaration | undefined {
-    name = name.toUpperCase();
-
-    const existing = this.symbolRegister.get(name);
-    if (existing) {
-      const symbols = Array.isArray(existing) ? existing : [existing];
-      // Loop through them all in case of duplicate names with different types
-      for (let i = symbols.length - 1; i >= 0; i--) {
-        // Scan symbols in reverse to determine the most recently defined
-        const symbol = symbols[i];
-        if (specificType && symbol.type !== specificType) {
-          return undefined;
-        }
-
-        if (symbol.name.toUpperCase() === name) {
-          return symbol;
-        }
-      }
-    }
-
-    // If we didn't find it, let's check for subfields
-    const [subfield] = this.findSubfields(name, ignorePrefix, true);
-
-    return subfield;
-  }
-
-  findAll(name: string, ignorePrefix?: boolean): Declaration[] {
-    name = name.toUpperCase();
-    let symbols = this.symbolRegister.get(name) || [];
-
-    symbols.push(...this.findSubfields(name, ignorePrefix));
-
-    // Remove duplicates by position, since we can have the same reference to symbols in structures due to I-spec
-    symbols = symbols.filter((s, index, self) => {
-      return self.findIndex(item => item.position.path === s.position.path && s.position.range.line === item.position.range.line) === index;
-    });
-
-    return symbols || [];
-  }
-
-  private findSubfields(name: string, ignorePrefix: boolean, onlyOne?: boolean): Declaration[] {
-    let symbols: Declaration[] = [];
-
-    // Additional logic to check for subItems in symbols
-    const symbolsWithSubs = [...this.structs, ...this.files, ...this.inputs];
-
-    const subNameIsValid = (sub: Declaration, name: string, prefix?: string) => {
-      if (prefix) {
-        name = `${prefix}${name}`;
-      }
-
-      return sub.name.toUpperCase() === name;
-    }
-
-    // First we do a loop to check all names without changing the prefix.
-    // This only applied to files
-    for (const struct of symbolsWithSubs) {
-      if (struct.keyword[`QUALIFIED`] !== true) {
-
-        // If the symbol is qualified, we need to check the subItems
-        const subItem = struct.subItems.find(sub => subNameIsValid(sub, name));
-        if (subItem) {
-          symbols.push(subItem);
-          if (onlyOne) return symbols;
-        }
-
-        // If it's a file, we also need to check the subItems of the file's recordformats
-        for (const subFile of struct.subItems) {
-          const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name));
-          if (subSubItem) {
-            symbols.push(subSubItem);
-            if (onlyOne) return symbols;
-          }
-        }
-      }
-    }
-
-    // Then we check the names, ignoring the prefix
-    if (ignorePrefix) {
-      for (const struct of symbolsWithSubs) {
-        if (struct.type === `file` && struct.keyword[`QUALIFIED`] !== true) {
-          const prefix = ignorePrefix && struct.keyword[`PREFIX`] && typeof struct.keyword[`PREFIX`] === `string` ? trimQuotes(struct.keyword[`PREFIX`].toUpperCase()) : ``;
-
-          // If it's a file, we also need to check the subItems of the file's recordformats
-          for (const subFile of struct.subItems) {
-            const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name, prefix));
-            if (subSubItem) {
-              symbols.push(subSubItem);
-              if (onlyOne) return symbols;
-            }
-          }
-        }
-      }
-    }
-
-    return symbols;
-  }
-
-  public findProcedurebyLine(lineNumber: number): Declaration | undefined {
-    return this.procedures.find(proc => proc.scope && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
-  }
-
-  findDefinition(lineNumber: number, word: string) {
-    // If they're typing inside of a procedure, let's get the stuff from there too
-    const currentProcedure = this.findProcedurebyLine(lineNumber);
-
-    if (currentProcedure) {
-      const localDef = currentProcedure.scope.find(word);
-
-      if (localDef) {
-        return localDef;
-      }
-    }
-
-    const globalDef = this.find(word);
-
-    if (globalDef) {
-      return globalDef;
-    }
-  }
-
-  findConstByValue(lineNumber: number, value: string) {
-    // If they're typing inside of a procedure, let's get the stuff from there too
-    const currentProcedure = this.findProcedurebyLine(lineNumber);
-
-    if (currentProcedure) {
-      const localDef = currentProcedure.scope.symbols.find(def => def.keyword[`CONST`] === value);
-
-      if (localDef) {
-        return localDef;
-      }
-    }
-
-    const globalDef = this.symbols.find(def => def.keyword[`CONST`] === value);
-
-    if (globalDef) {
-      return globalDef;
-    }
-  }
-
-  referencesInRange(baseUri: string, range: IRange): { dec: Declaration, refs: IRange[] }[] {
-    let list: { dec: Declaration, refs: IRange[] }[] = [];
-
-    for (let i = range.start; i <= range.end; i++) {
-      const ref = Cache.referenceByOffset(baseUri, this, i);
-      if (ref) {
-        // No duplicates allowed
-        if (list.some(item => item.dec.name === ref.name)) continue;
-
-        list.push({
-          dec: ref,
-          refs: ref.references.filter(r => r.offset.start >= range.start && r.offset.end <= range.end).map(r => r.offset)
-        })
-      };
-    }
-
-    return list;
-  }
-
-  /**
-   * Typically used to resolve the type of a procedure correctly.
-   */
-  resolveType(def: Declaration): RpgleTypeDetail {
-    const keywords = def.keyword;
-    let refName: string;
-    let reference: Declaration | undefined;
-
-    if (def.type === `file`) {
-      return { type: { name: `file`, isArray: false, value: def.name } };
-
-    } else if (typeof keywords[`LIKEDS`] === `string`) {
-      refName = (keywords[`LIKEDS`] as string).toUpperCase();
-      reference = this.symbols.find(s => s.name.toUpperCase() === refName);
-
-      return { reference };
-    } else if (typeof keywords[`LIKE`] === `string`) {
-      refName = (keywords[`LIKE`] as string).toUpperCase();
-      reference = this.symbols.find(s => s.name.toUpperCase() === refName);
-
-      if (reference && reference.type === `procedure`) {
-        // If the LIKE is a procedure, we need to resolve the return type of the procedure
-        return this.resolveType(reference);
-      }
-
-      return { reference };
-    } else {
-      const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
-      const isArray = keywords[`DIM`] ? true : false;
-      if (type) {
-        return { type: { name: (type.toLowerCase() as RpgleVariableType), isArray, value: keywords[type] as string } };
-      }
-    }
-
-    return {};
-  }
-
-  static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
-    for (const def of scope.symbols) {
-      let possibleRef: boolean;
-
-      // Search top level
-      possibleRef = def.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
-      if (possibleRef) return def;
-
-      // Search any subitems
-      if (def.subItems.length > 0) {
-        for (const subItem of def.subItems) {
-          possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
-          if (possibleRef) return subItem;
-
-          // Do one more level deep
-          if (subItem.subItems.length > 0) {
-            for (const subSubItem of subItem.subItems) {
-              possibleRef = subSubItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
-              if (possibleRef) return subSubItem;
-            }
-          }
-        }
-      }
-
-      // Search scope if any
-      if (def.scope) {
-        const inScope = Cache.referenceByOffset(baseUri, def.scope, offset);
-        if (inScope) return inScope;
-      }
-    }
-  }
+	keyword: Keywords;
+	sqlReferences: Declaration[];
+	includes: IncludeStatement[];
+	parseTree?: { [fileUri: string]: any[] };
+	private symbolRegister: SymbolRegister;
+
+	constructor(cache: CacheProps = {}, isProcedure: boolean = false) {
+		this.keyword = {};
+		// this.symbols = cache.symbols || [...newInds()];
+
+		if (isProcedure) {
+			this.symbolRegister = cache.symbolRegister || new Map();
+		} else {
+			this.symbolRegister = cache.symbolRegister || new Map();
+
+			newInds().forEach(ind => {
+				this.addSymbol(ind);
+			});
+		}
+
+
+		this.sqlReferences = cache.sqlReferences || [];
+		this.includes = cache.includes || [];
+		this.parseTree = cache.parseTree || {};
+	}
+
+	private symbolCache: Declaration[] | undefined;
+
+	get symbols() {
+		if (this.symbolCache) return this.symbolCache;
+
+		this.symbolCache = Array.from(this.symbolRegister.values()).flat(1).sort((a, b) => {
+			if (a.position && b.position) {
+				return a.position.range.line - b.position.range.line
+			} else if (a.range.start && b.range.start) {
+				return a.range.start - b.range.start;
+			} else if (a.position) {
+				return -1;
+			} else if (b.position) {
+				return 1;
+			}
+		});
+
+		return this.symbolCache;
+	}
+
+	get subroutines() {
+		return this.symbols.filter(s => s.type === `subroutine`);
+	}
+
+	get procedures() {
+		return this.symbols.filter(s => s.type === `procedure`);
+	}
+
+	get files() {
+		return this.symbols.filter(s => s.type === `file`);
+	}
+
+	get inputs() {
+		return this.symbols.filter(s => s.type === `input`);
+	}
+
+	get constants() {
+		return this.symbols.filter(s => s.type === `constant`);
+	}
+
+	get variables() {
+		return this.symbols.filter(s => s.type === `variable`);
+	}
+
+	get structs() {
+		return this.symbols.filter(s => s.type === `struct`);
+	}
+
+	get indicators() {
+		return this.symbols.filter(s => s.type === `indicator`);
+	}
+
+	get tags() {
+		return this.symbols.filter(s => s.type === `tag`);
+	}
+
+	get parameters() {
+		return this.symbols.filter(s => s.type === `parameter`);
+	}
+
+	addSymbol(symbol: Declaration) {
+		const name = symbol.name.toUpperCase();
+		if (this.symbolRegister.has(name)) {
+			// If the symbol already exists, we can merge it
+			const existing = this.symbolRegister.get(name);
+			if(existing) {
+				existing.push(symbol);
+			}
+		} else {
+			this.symbolRegister.set(name, [symbol]);
+		}
+
+		this.symbolCache = undefined;
+	}
+
+	/**
+	 * Returns 0-indexed line number where definition block starts for current scope
+	 * @param {string} fsPath Path to check
+	 * @returns {number} Line number
+	 */
+	getDefinitionBlockEnd(fsPath: string) {
+		const checkTypes: DeclarationType[] = [`procedure`, `struct`, `file`, `variable`, `constant`];
+		const lasts = [
+			this.symbols.filter(d => checkTypes.includes(d.type) && d.position.path === fsPath && d.keyword[`EXTPROC`] !== undefined).pop(),
+		].filter(d => d !== undefined);
+
+		const lines = lasts.map(d => d.range && d.range.end ? d.range.end : d.position.range.line).sort((a, b) => b - a);
+
+		return (lines.length >= 1 ? lines[0] : 0);
+	}
+
+	find(name: string, specificType?: DeclarationType, ignorePrefix?: boolean): Declaration | undefined {
+		name = name.toUpperCase();
+
+		const existing = this.symbolRegister.get(name);
+		if (existing) {
+			const symbols = Array.isArray(existing) ? existing : [existing];
+			// Loop through them all in case of duplicate names with different types
+			for (let i = symbols.length - 1; i >= 0; i--) {
+				// Scan symbols in reverse to determine the most recently defined
+				const symbol = symbols[i];
+				if (specificType && symbol.type !== specificType) {
+					return undefined;
+				}
+
+				if (symbol.name.toUpperCase() === name) {
+					return symbol;
+				}
+			}
+		}
+
+		// If we didn't find it, let's check for subfields
+		const [subfield] = this.findSubfields(name, ignorePrefix, true);
+
+		return subfield;
+	}
+
+	findAll(name: string, ignorePrefix?: boolean): Declaration[] {
+		name = name.toUpperCase();
+		let symbols = this.symbolRegister.get(name) || [];
+
+		symbols.push(...this.findSubfields(name, ignorePrefix));
+
+		// Remove duplicates by position, since we can have the same reference to symbols in structures due to I-spec
+		symbols = symbols.filter((s, index, self) => {
+			return self.findIndex(item => item.position.path === s.position.path && s.position.range.line === item.position.range.line) === index;
+		});
+
+		return symbols || [];
+	}
+
+	private findSubfields(name: string, ignorePrefix: boolean, onlyOne?: boolean): Declaration[] {
+		let symbols: Declaration[] = [];
+
+		// Additional logic to check for subItems in symbols
+		const symbolsWithSubs = [...this.structs, ...this.files, ...this.inputs];
+
+		const subNameIsValid = (sub: Declaration, name: string, prefix?: string) => {
+			if (prefix) {
+				name = `${prefix}${name}`;
+			}
+
+			return sub.name.toUpperCase() === name;
+		}
+
+		// First we do a loop to check all names without changing the prefix.
+		// This only applied to files
+		for (const struct of symbolsWithSubs) {
+			if (struct.keyword[`QUALIFIED`] !== true) {
+
+				// If the symbol is qualified, we need to check the subItems
+				const subItem = struct.subItems.find(sub => subNameIsValid(sub, name));
+				if (subItem) {
+					symbols.push(subItem);
+					if (onlyOne) return symbols;
+				}
+
+				// If it's a file, we also need to check the subItems of the file's recordformats
+				for (const subFile of struct.subItems) {
+					const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name));
+					if (subSubItem) {
+						symbols.push(subSubItem);
+						if (onlyOne) return symbols;
+					}
+				}
+			}
+		}
+
+		// Then we check the names, ignoring the prefix
+		if (ignorePrefix) {
+			for (const struct of symbolsWithSubs) {
+				if (struct.type === `file` && struct.keyword[`QUALIFIED`] !== true) {
+					const prefix = ignorePrefix && struct.keyword[`PREFIX`] && typeof struct.keyword[`PREFIX`] === `string` ? trimQuotes(struct.keyword[`PREFIX`].toUpperCase()) : ``;
+
+					// If it's a file, we also need to check the subItems of the file's recordformats
+					for (const subFile of struct.subItems) {
+						const subSubItem = subFile.subItems.find(sub => subNameIsValid(sub, name, prefix));
+						if (subSubItem) {
+							symbols.push(subSubItem);
+							if (onlyOne) return symbols;
+						}
+					}
+				}
+			}
+		}
+
+		return symbols;
+	}
+
+	public findProcedurebyLine(lineNumber: number): Declaration | undefined {
+		return this.procedures.find(proc => proc.scope && lineNumber >= proc.range.start && lineNumber <= proc.range.end);
+	}
+
+	findDefinition(lineNumber: number, word: string) {
+		// If they're typing inside of a procedure, let's get the stuff from there too
+		const currentProcedure = this.findProcedurebyLine(lineNumber);
+
+		if (currentProcedure) {
+			const localDef = currentProcedure.scope?.find(word);
+
+			if (localDef) {
+				return localDef;
+			}
+		}
+
+		const globalDef = this.find(word);
+
+		if (globalDef) {
+			return globalDef;
+		}
+	}
+
+	findConstByValue(lineNumber: number, value: string) {
+		// If they're typing inside of a procedure, let's get the stuff from there too
+		const currentProcedure = this.findProcedurebyLine(lineNumber);
+
+		if (currentProcedure) {
+			const localDef = currentProcedure.scope?.symbols.find(def => def.keyword[`CONST`] === value);
+
+			if (localDef) {
+				return localDef;
+			}
+		}
+
+		const globalDef = this.symbols.find(def => def.keyword[`CONST`] === value);
+
+		if (globalDef) {
+			return globalDef;
+		}
+	}
+
+	referencesInRange(baseUri: string, range: IRange): { dec: Declaration, refs: IRange[] }[] {
+		let list: { dec: Declaration, refs: IRange[] }[] = [];
+
+		for (let i = range.start; i <= range.end; i++) {
+			const ref = Cache.referenceByOffset(baseUri, this, i);
+			if (ref) {
+				// No duplicates allowed
+				if (list.some(item => item.dec.name === ref.name)) continue;
+
+				list.push({
+					dec: ref,
+					refs: ref.references.filter(r => r.offset.start >= range.start && r.offset.end <= range.end).map(r => r.offset)
+				})
+			};
+		}
+
+		return list;
+	}
+
+	/**
+	 * Typically used to resolve the type of a procedure correctly.
+	 */
+	resolveType(def: Declaration): RpgleTypeDetail {
+		const keywords = def.keyword;
+		let refName: string;
+		let reference: Declaration | undefined;
+
+		if (def.type === `file`) {
+			return { type: { name: `file`, isArray: false, value: def.name } };
+
+		} else if (typeof keywords[`LIKEDS`] === `string`) {
+			refName = (keywords[`LIKEDS`] as string).toUpperCase();
+			reference = this.symbols.find(s => s.name.toUpperCase() === refName);
+
+			return { reference };
+		} else if (typeof keywords[`LIKE`] === `string`) {
+			refName = (keywords[`LIKE`] as string).toUpperCase();
+			reference = this.symbols.find(s => s.name.toUpperCase() === refName);
+
+			if (reference && reference.type === `procedure`) {
+				// If the LIKE is a procedure, we need to resolve the return type of the procedure
+				return this.resolveType(reference);
+			}
+
+			return { reference };
+		} else {
+			const type = Object.keys(keywords).find(key => validTypes.includes(key.toLowerCase() as RpgleVariableType));
+			const isArray = keywords[`DIM`] ? true : false;
+			if (type) {
+				return { type: { name: (type.toLowerCase() as RpgleVariableType), isArray, value: keywords[type] as string } };
+			}
+		}
+
+		return {};
+	}
+
+	static referenceByOffset(baseUri: string, scope: Cache, offset: number): Declaration | undefined {
+		for (const def of scope.symbols) {
+			let possibleRef: boolean;
+
+			// Search top level
+			possibleRef = def.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
+			if (possibleRef) return def;
+
+			// Search any subitems
+			if (def.subItems.length > 0) {
+				for (const subItem of def.subItems) {
+					possibleRef = subItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
+					if (possibleRef) return subItem;
+
+					// Do one more level deep
+					if (subItem.subItems.length > 0) {
+						for (const subSubItem of subItem.subItems) {
+							possibleRef = subSubItem.references.some(r => r.uri === baseUri && offset >= r.offset.start && offset <= r.offset.end);
+							if (possibleRef) return subSubItem;
+						}
+					}
+				}
+			}
+
+			// Search scope if any
+			if (def.scope) {
+				const inScope = Cache.referenceByOffset(baseUri, def.scope, offset);
+				if (inScope) return inScope;
+			}
+		}
+	}
 }
