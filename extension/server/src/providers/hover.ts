@@ -107,7 +107,16 @@ export default async function hoverProvider(params: HoverParams): Promise<Hover 
 					markdown += `${header}\n\n`;
 
 					// Params
-					markdown += symbol.subItems.map((parm) => `*@param* \`${parm.name.replace(new RegExp(`\\*`, `g`), `\\*`)}\` ${parm.tags.find(t => t.tag === `description`)?.content || ``}`).join(`\n\n`);
+					markdown += symbol.subItems.map(parm => {
+						let description = parm.description;
+						const firstWord = description.match(/^\s*(\S+)/);
+						if (firstWord?.[1].toUpperCase() === parm.name.toUpperCase()) {
+							description = description.slice(firstWord[0].length).trimStart();
+						}
+
+						const name = parm.name.replace(/\*/g, `\\*`);
+						return `*@param* \`${name}\` ${description}`;
+					}).join(`\n\n`);
 
 					// Return value
 					if (returnTag) {
