@@ -64,10 +64,7 @@ export function initialise(context: ExtensionContext) {
 
 					configPath = `${library}/VSCODE/RPGLINT.JSON`;
 
-					exists = (await connection.runCommand({
-						command: `QSYS/CHKOBJ OBJ(${library}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
-						noLibList: true
-					})).code === 0;
+					exists = (await connection.runCL(`QSYS/CHKOBJ OBJ(${library}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`)).success;
 
 				} else if (editor) {
 					//@ts-ignore
@@ -91,10 +88,7 @@ export function initialise(context: ExtensionContext) {
 
 							configPath = memberUri.path;
 
-							exists = (await connection.runCommand({
-								command: `QSYS/CHKOBJ OBJ(${memberPath.library!.toLocaleUpperCase()}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`,
-								noLibList: true
-							})).code === 0;
+							exists = (await connection.runCL(`QSYS/CHKOBJ OBJ(${memberPath.library!.toLocaleUpperCase()}/VSCODE) OBJTYPE(*FILE) MBR(RPGLINT)`)).success;
 							break;
 
 						case `streamfile`:
@@ -124,19 +118,9 @@ export function initialise(context: ExtensionContext) {
 										if (configPath) {
 											const memberPath = configPath.split(`/`);
 
-											// Will not crash, even if it fails
-											await connection.runCommand(
-												{
-													'command': `QSYS/CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`
-												}
-											);
-
-											// Will not crash, even if it fails
-											await connection.runCommand(
-												{
-													command: `QSYS/ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`
-												}
-											);
+											// Both will not crash, even if it fails
+											await connection.runCL(`QSYS/CRTSRCPF FILE(${memberPath[0]}/VSCODE) RCDLEN(112)`);
+											await connection.runCL(`QSYS/ADDPFM FILE(${memberPath[0]}/VSCODE) MBR(RPGLINT) SRCTYPE(JSON)`);
 
 											try {
 												console.log(`Member path: ${[memberPath[0], `VSCODE`, `RPGLINT`].join(`/`)}`);

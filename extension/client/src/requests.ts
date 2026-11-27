@@ -128,14 +128,10 @@ export function buildRequestHandlers(client: LanguageClient) {
 
 			const connection = instance.getConnection();
 			if (connection) {
-				const content = connection.getContent();
-				const config = connection.getConfig();
-
+    			const tempLib = 'QTEMP';
 				const dateStr = Date.now().toString().substr(-6);
 				const randomFile = `R${table.substring(0, 3)}${dateStr}`.substring(0, 10);
-				const fullPath = `QTEMP/${randomFile}`;
-
-				console.log(`Temp OUTFILE: ${fullPath}`);
+				const fullPath = `${tempLib}/${randomFile}`;
 
 				const parts = {
 					schema: `*LIBL`,
@@ -150,26 +146,15 @@ export function buildRequestHandlers(client: LanguageClient) {
 					parts.table = table;
 				}
 
-				// TODO: handle .env file here?
-
 				const outfileRes: any = await connection.runCommand({
+					command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`,
 					environment: `ile`,
-					command: `QSYS/DSPFFD FILE(${parts.schema}/${parts.table}) OUTPUT(*OUTFILE) OUTFILE(${fullPath})`
-				});
-
-				console.log(outfileRes);
+					throughSQL: true
+				} as any);
 				const resultCode = outfileRes.code || 0;
-
 				if (resultCode === 0) {
-					const data: any[] = await content.getTable('QTEMP', randomFile, randomFile, true);
-
-					console.log(`Temp OUTFILE read. ${data.length} rows.`);
-
-					connection.runCommand({
-						environment: `ile`,
-						command: `QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`
-					});
-
+					const data = await connection.runSQL(`SELECT * FROM ${tempLib}.${randomFile}`);
+					connection.runCL(`QSYS/DLTOBJ OBJ(${fullPath}) OBJTYPE(*FILE)`, true);
 					return data;
 				}
 			}
